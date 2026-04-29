@@ -1,0 +1,363 @@
+/* ==========================================================================
+   Base Styles & Layout
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Inter:wght@400;600;800&display=swap');
+
+body { 
+    font-family: 'Inter', 'Cairo', sans-serif; 
+    scroll-behavior: smooth; 
+    font-size: 15px; /* تكبير الخط لراحة العين */
+    line-height: 1.6;
+}
+
+.tab-content { 
+    display: none; 
+    min-height: 85vh; 
+}
+
+.tab-content.active { 
+    display: block; 
+    animation: fadeIn 0.3s ease-in-out; 
+}
+
+.nav-btn.active { 
+    background: #000000; /* خلفية سوداء للزر النشط في الوضع النهاري */
+    border-left: 4px solid #0ea5e9; /* أزرق نيون ساطع للتمييز */
+    color: #ffffff !important; 
+    transform: translateX(5px); 
+    border-right: none; 
+    font-weight: 800;
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+/* حركة النوافذ المنبثقة (Modals Animation) */
+@keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================================================
+   Tables & Forms (الوضع النهاري الأساسي)
+   ========================================================================== */
+th { 
+    padding: 1rem 0.75rem; 
+    background-color: #ffffff; 
+    font-size: 14px; 
+    text-transform: uppercase;
+    font-weight: 800; 
+    color: #000000; 
+    border-bottom: 3px solid #000000; /* خط فاصل قوي للعناوين */
+    letter-spacing: 0.05em;
+    /* تثبيت رأس الجدول (Sticky Header) */
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: inset 0 -3px 0 #000000; /* الحفاظ على شكل الخط مع التمرير */
+}
+
+td { 
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #cccccc; /* خط فاصل واضح */
+    font-size: 15px; 
+    font-weight: 800; /* زيادة دكانة وسمك الخط */
+    color: #000000;
+    background-color: #ffffff;
+}
+
+tbody tr {
+    transition: all 0.2s ease;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #000000; /* حدود سوداء صريحة للحقول */
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 15px;
+    font-weight: 800;
+    color: #000000;
+    background-color: #ffffff;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #0ea5e9; 
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+/* ==========================================================================
+   Custom Scrollbars
+   ========================================================================== */
+::-webkit-scrollbar {
+    width: 10px; 
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #000000; /* شريط تمرير أسود في الوضع النهاري */
+    border-radius: 10px;
+}
+
+/* ==========================================================================
+   Modals & Panels
+   ========================================================================== */
+.modal-overlay {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background-color: rgba(0, 0, 0, 0.7); /* تعتيم قوي للخلفية */
+    transition: all 0.3s ease;
+}
+
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border: 2px solid #000000; /* إطار أسود للنافذة */
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    /* ربط حركة الظهور التدريجي */
+    animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel {
+    background: #ffffff;
+    border: 2px solid #000000;
+}
+
+/* ==========================================================================
+   Utility & State Classes
+   ========================================================================== */
+.hidden { display: none !important; }
+.active { display: block; }
+.text-danger { color: #dc2626 !important; font-weight: 800; }
+.bg-primary { background-color: #2563eb; color: white; }
+
+/* ==========================================================================
+   Global Theme Colors (Light Mode Automation - Pure White & Black Fix)
+   ========================================================================== */
+body:not(.dark-mode) { 
+    background-color: #ffffff !important; /* أبيض ناصع إجباري */
+    color: #000000 !important; /* أسود صريح إجباري */
+}
+
+/* إجبار كل الكروت والمربعات على اللون الأبيض بحدود سوداء */
+body:not(.dark-mode) .bg-white, 
+body:not(.dark-mode) .bg-slate-50, 
+body:not(.dark-mode) .bg-slate-100,
+body:not(.dark-mode) .bg-gray-50,
+body:not(.dark-mode) .glass-panel,
+body:not(.dark-mode) .modal-content {
+    background-color: #ffffff !important; 
+    border: 2px solid #000000 !important; 
+    color: #000000 !important;
+}
+
+/* إجبار كل النصوص على اللون الأسود */
+body:not(.dark-mode) h1, body:not(.dark-mode) h2, body:not(.dark-mode) h3, body:not(.dark-mode) h4, 
+body:not(.dark-mode) p, body:not(.dark-mode) span:not([class*="bg-"]), body:not(.dark-mode) label, 
+body:not(.dark-mode) a, body:not(.dark-mode) div:not(.cards-grid):not(.modal-overlay) { 
+    color: #000000 !important; 
+}
+
+body:not(.dark-mode) td {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* تعديل التمرير في الوضع النهاري لتبقى الخلفية بيضاء مع تمييز بخط أزرق */
+body:not(.dark-mode) tbody tr:hover td {
+    background-color: #ffffff !important; 
+    box-shadow: inset 4px 0 0 #0ea5e9; 
+}
+
+/* ==========================================================================
+   Global Theme Colors (Dark Mode Automation - Deep Dark Blue)
+   ========================================================================== */
+body.dark-mode { 
+    background-color: #0a192f !important; /* أزرق داكن عميق جداً للخلفية الأساسية */
+    color: #ffffff !important; /* نص أبيض ناصع */
+}
+
+body.dark-mode .bg-white, 
+body.dark-mode .bg-slate-50, 
+body.dark-mode .bg-slate-100,
+body.dark-mode .glass-panel,
+body.dark-mode .modal-content {
+    background-color: #112240 !important; /* أزرق داكن (أفتح قليلاً من الخلفية) للكروت والنوافذ */
+    border: 1px solid #233554 !important; /* حدود زرقاء رمادية للفصل */
+    color: #ffffff !important;
+}
+
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, 
+body.dark-mode p, body.dark-mode span:not([class*="bg-"]), body.dark-mode label, 
+body.dark-mode a, body.dark-mode div:not(.cards-grid):not(.modal-overlay) { 
+    color: #ffffff !important; 
+}
+
+/* حقول الإدخال في الوضع الليلي */
+body.dark-mode input, body.dark-mode select, body.dark-mode textarea, body.dark-mode .form-control { 
+    background-color: #0a192f !important; /* أزرق داكن للحقول */
+    color: #ffffff !important; 
+    border: 2px solid #0ea5e9 !important; /* حدود زرقاء ساطعة للحقول */
+}
+
+body.dark-mode input:focus, body.dark-mode select:focus, body.dark-mode textarea:focus {
+    /* تأثير النيون للحقل النشط في الوضع الليلي */
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.6) !important;
+}
+
+body.dark-mode table, body.dark-mode thead, body.dark-mode tr, body.dark-mode .border, body.dark-mode .border-b { 
+    border-color: #233554 !important; 
+}
+
+/* جداول الوضع الليلي */
+body.dark-mode th {
+    background-color: #0a192f !important; /* رأس الجدول أزرق داكن */
+    color: #ffffff !important; /* العناوين بيضاء ناصعة بدلاً من الأزرق لزيادة الوضوح */
+    border-bottom: 3px solid #0ea5e9 !important; /* خط أزرق سفلي */
+    font-size: 14px !important;
+    box-shadow: inset 0 -3px 0 #0ea5e9 !important;
+}
+
+body.dark-mode td {
+    background-color: #0a192f !important;
+    border-bottom: 1px solid #112240 !important;
+    color: #ffffff !important; /* بيانات الجدول بيضاء ناصعة */
+    font-size: 15px !important;
+}
+
+body.dark-mode tbody tr:hover td {
+    background-color: #112240 !important; /* صف أزرق أفتح قليلاً عند التمرير */
+    color: #ffffff !important; /* الحفاظ على النص أبيض */
+    box-shadow: inset 4px 0 0 #0ea5e9 !important; /* خط أزرق جانبي للتحديد */
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #0ea5e9; /* شريط تمرير أزرق في الوضع الليلي */
+}
+
+/* ==========================================================================
+   إصلاح شارات الحالة (Status Badges) في الوضع الليلي
+   ========================================================================== */
+body.dark-mode td span[class*="bg-emerald-"], 
+body.dark-mode td span[class*="bg-green-"],
+body.dark-mode td .bg-white.text-emerald-600 {
+    background-color: #00ff00 !important; /* أخضر نيون */
+    color: #000000 !important; /* نص أسود للقراءة المريحة داخل الشارة */
+    padding: 6px 14px !important;
+    border-radius: 6px !important;
+    font-weight: 800 !important;
+    border: none !important;
+}
+
+body.dark-mode td .bg-slate-100, 
+body.dark-mode td .bg-white {
+    background-color: #233554 !important; /* أزرق رمادي للشارات العادية */
+    color: #ffffff !important;
+    padding: 6px 14px !important;
+    border-radius: 6px !important;
+    border: none !important;
+}
+
+body.dark-mode td.font-mono {
+    color: #0ea5e9 !important;
+    font-weight: 800;
+}
+
+/* ==========================================================================
+   Auto-Hide Sidebar (Hover to Expand)
+   ========================================================================== */
+@media (min-width: 1025px) {
+    .sidebar {
+        position: fixed !important;
+        z-index: 60;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        background-color: #ffffff; /* أبيض في النهاري */
+        border-right: 2px solid #000000;
+    }
+    
+    body.dark-mode .sidebar {
+        background-color: #0a192f !important; /* أزرق داكن للشريط الجانبي في الليلي */
+        border-right: 1px solid #233554 !important;
+    }
+
+    html[dir="ltr"] .sidebar { transform: translateX(-265px); }
+    html[dir="ltr"] .sidebar:hover { transform: translateX(0); }
+    html[dir="ltr"] .main-content { margin-left: 23px !important; transition: margin 0.4s; width: calc(100% - 23px) !important; }
+    
+    html[dir="rtl"] .sidebar { transform: translateX(265px); }
+    html[dir="rtl"] .sidebar:hover { transform: translateX(0); }
+    html[dir="rtl"] .main-content { margin-right: 23px !important; transition: margin 0.4s; width: calc(100% - 23px) !important; }
+}
+
+/* ==========================================================================
+   CSS Grid الخاصة بالكروت (وتأثير 3D Hover)
+   ========================================================================== */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cards-grid > div {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.75rem;
+}
+
+/* تأثير الرفع والكارت النشط في الوضع النهاري */
+body:not(.dark-mode) .cards-grid > div:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.15);
+    border-color: #0ea5e9 !important;
+}
+
+/* تأثير النيون للكروت في الوضع الليلي */
+body.dark-mode .cards-grid > div:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.3);
+    border-color: #0ea5e9 !important;
+}
+
+/* ==========================================================================
+   Accountant Dashboard Tabs (الألسنة العلوية للمحاسب)
+   ========================================================================== */
+.acc-tab-btn {
+    padding: 12px 20px;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: inherit;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+body:not(.dark-mode) .acc-tab-btn.active {
+    border-bottom: 4px solid #000000;
+    background-color: #f0f0f0;
+}
+
+body.dark-mode .acc-tab-btn.active {
+    border-bottom: 4px solid #0ea5e9;
+    background-color: #112240 !important;
+    color: #0ea5e9 !important;
+}
+
+.acc-sub-tab {
+    animation: fadeIn 0.3s ease;
+}
+
+.acc-sub-tab.hidden {
+    display: none !important;
+}

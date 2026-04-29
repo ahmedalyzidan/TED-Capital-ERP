@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TED CAPITAL ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="text-slate-800">
+
+    <div id="systemLoadingOverlay" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center z-[1000] transition-all">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl flex flex-col items-center max-w-md w-full text-center transform scale-100 transition-transform">
+            <div class="w-20 h-20 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-6"></div>
+            <h2 id="systemLoadingTitle" class="text-2xl font-black text-slate-800 mb-2 tracking-tight">Processing...</h2>
+            <p id="systemLoadingDesc" class="text-slate-500 font-bold mb-6 text-sm">Please wait. Do not close or refresh the page.</p>
+            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div class="bg-blue-600 h-full rounded-full w-full animate-[pulse_1.5s_ease-in-out_infinite]"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[100]">
+        <div class="bg-white p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl text-center">
+            <h1 class="font-black text-4xl uppercase tracking-tighter mb-2">TED CAPITAL</h1>
+            <p class="font-bold text-blue-600 mb-8 text-lg">Secure ERP Login</p>
+            
+            <form id="loginForm" class="flex flex-col gap-4">
+                <input type="text" id="loginUsername" placeholder="Username" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" required>
+                <input type="password" id="loginPassword" placeholder="Password" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center" required>
+                <div id="loginError" class="text-red-500 font-bold text-sm hidden">Invalid credentials. Please try again.</div>
+                <button type="submit" id="loginBtn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl font-black transition-colors shadow-lg w-full">Sign In</button>
+            </form>
+            <p class="text-xs text-slate-400 mt-6 font-bold tracking-widest uppercase">Version 2.0 - Secure Access</p>
+        </div>
+    </div>
+
+    <div id="appScreen" class="hidden flex min-h-screen">
+        <aside class="w-72 bg-white border-r sticky top-0 h-screen flex flex-col shadow-xl overflow-y-auto text-left z-20">
+            <div class="p-8 border-b">
+                <h1 class="font-black text-2xl uppercase tracking-tighter">TED CAPITAL <br><span class="text-blue-600">ERP</span></h1>
+                <p id="currentUserDisplay" class="text-xs font-bold text-slate-400 mt-1">Checking User...</p>
+            </div>
+            <nav class="p-4 space-y-1 flex-1 text-sm" id="sidebarNav">
+                <button id="btn-ceoTab" onclick="showTab('ceoTab')" class="nav-btn active w-full p-3 text-left rounded-xl font-bold">📊 Executive Dashboard</button>
+                <button id="btn-projectsTab" onclick="showTab('projectsTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">🏗️ Projects Management</button>
+                <button id="btn-operationsTab" onclick="showTab('operationsTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">👷 Operations, BOQ & Subs</button>
+                <button id="btn-realestateTab" onclick="showTab('realestateTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">🏠 Real Estate & Sales</button>
+                <button id="btn-partnersTab" onclick="showTab('partnersTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">🤝 Partner Financials</button>
+                <button id="btn-procurementTab" onclick="showTab('procurementTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">🛒 Procurement (RFQ & PO)</button>
+                <button id="btn-inventoryTab" onclick="showTab('inventoryTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">📦 Store & Inventory Control</button>
+                <button id="btn-usageTab" onclick="showTab('usageTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">📉 Issue Vouchers & Returns</button>
+                <button id="btn-hrTab" onclick="showTab('hrTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">👥 HR & Payroll System</button>
+                <button id="btn-financeTab" onclick="showTab('financeTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">💰 General Ledger & COA</button>
+                <button id="btn-auditTab" onclick="showTab('auditTab')" class="nav-btn w-full p-3 text-left rounded-xl font-bold text-red-500 bg-red-50 mt-4 hover:bg-red-100 transition">🛡️ System Security & Audit</button>
+            </nav>
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="logout()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl font-bold transition-colors text-sm flex justify-center items-center gap-2">
+                    🔒 Secure Logout
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-x-hidden">
+            <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex-wrap gap-4 relative">
+                <h2 id="viewTitle" class="text-3xl font-black text-slate-900 text-left w-full md:w-auto">Executive Dashboard</h2>
+                <div class="flex-1 flex gap-2 w-full md:w-auto items-center justify-end relative">
+                    <div class="relative w-full max-w-md">
+                        <input type="text" id="globalSearchInput" onkeyup="triggerSearch()" placeholder="🔍 Global Database Search..." class="w-full p-4 pl-12 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-left shadow-inner">
+                    </div>
+                    
+                    <button onclick="toggleNotifications()" class="relative p-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition shadow-sm flex items-center justify-center cursor-pointer">
+                        <span class="text-xl">🔔</span>
+                        <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md hidden">0</span>
+                    </button>
+                    
+                    <select id="globalCurrencyToggle" onchange="loadCurrentTab()" class="hidden w-32 p-4 bg-blue-50 border border-blue-200 rounded-2xl font-black text-blue-700 focus:outline-none transition-all text-center cursor-pointer shadow-inner">
+                        <option value="EGP" selected>Default</option>
+                    </select>
+
+                    <div id="notifPanel" class="hidden absolute top-full right-0 mt-4 w-96 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-black text-slate-800">System Notifications</h3>
+                            <button onclick="markAllNotifsRead()" class="text-xs text-blue-600 font-bold hover:underline">Mark all as read</button>
+                        </div>
+                        <div id="notifList" class="overflow-y-auto max-h-80 flex flex-col">
+                            <div class="p-6 text-center text-sm text-slate-400 font-bold">Loading...</div>
+                        </div>
+                    </div>
+
+                </div>
+            </header>
+
+            <section id="ceoTab" class="tab-content active">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-blue-600 text-white p-6 rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition transform duration-200" onclick="showDashboardBreakdown('budget')" title="Click to view Breakdown">
+                        <p class="text-blue-200 font-bold text-xs uppercase tracking-wider mb-1">Total Operating Budget</p>
+                        <div id="ceoTotalProfit" class="text-3xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-6 rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition transform duration-200" onclick="showDashboardBreakdown('profit')" title="Click to view Breakdown">
+                        <p class="text-emerald-200 font-bold text-xs uppercase tracking-wider mb-1">Est. Net Profit</p>
+                        <div id="dashNetProfit" class="text-3xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-orange-500 text-white p-6 rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition transform duration-200" onclick="showDashboardBreakdown('ar')" title="Click to view Breakdown">
+                        <p class="text-orange-200 font-bold text-xs uppercase tracking-wider mb-1">Pending Receivables (AR)</p>
+                        <div id="dashPendingAR" class="text-3xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-red-500 text-white p-6 rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition transform duration-200" onclick="showDashboardBreakdown('stock')" title="Click to view Breakdown">
+                        <p class="text-red-200 font-bold text-xs uppercase tracking-wider mb-1">Low Stock Alerts</p>
+                        <div id="dashLowStock" class="text-3xl font-black font-mono">0 Items</div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 border-b pb-2">Income vs. Payables (Cashflow Projection)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                        <h4 class="font-bold text-slate-700 border-b pb-2 mb-3 text-center">📅 Daily (Today)</h4>
+                        <div class="flex justify-between mb-2"><span class="text-xs font-bold text-slate-500">Expected Income</span><span id="cfDailyInc" class="font-mono font-bold text-emerald-600">0</span></div>
+                        <div class="flex justify-between"><span class="text-xs font-bold text-slate-500">Due Payables</span><span id="cfDailyDue" class="font-mono font-bold text-red-500">0</span></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                        <h4 class="font-bold text-slate-700 border-b pb-2 mb-3 text-center">📅 Weekly (Next 7 Days)</h4>
+                        <div class="flex justify-between mb-2"><span class="text-xs font-bold text-slate-500">Expected Income</span><span id="cfWeeklyInc" class="font-mono font-bold text-emerald-600">0</span></div>
+                        <div class="flex justify-between"><span class="text-xs font-bold text-slate-500">Due Payables</span><span id="cfWeeklyDue" class="font-mono font-bold text-red-500">0</span></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                        <h4 class="font-bold text-slate-700 border-b pb-2 mb-3 text-center">📅 Monthly (Next 30 Days)</h4>
+                        <div class="flex justify-between mb-2"><span class="text-xs font-bold text-slate-500">Expected Income</span><span id="cfMonthlyInc" class="font-mono font-bold text-emerald-600">0</span></div>
+                        <div class="flex justify-between"><span class="text-xs font-bold text-slate-500">Due Payables</span><span id="cfMonthlyDue" class="font-mono font-bold text-red-500">0</span></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                        <h4 class="font-bold text-slate-700 border-b pb-2 mb-3 text-center">📅 Annually (This Year)</h4>
+                        <div class="flex justify-between mb-2"><span class="text-xs font-bold text-slate-500">Expected Income</span><span id="cfAnnualInc" class="font-mono font-bold text-emerald-600">0</span></div>
+                        <div class="flex justify-between"><span class="text-xs font-bold text-slate-500">Due Payables</span><span id="cfAnnualDue" class="font-mono font-bold text-red-500">0</span></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center">
+                        <h3 class="font-black text-slate-800 w-full text-left mb-4">Budget Distribution</h3>
+                        <div class="w-64 h-64"><canvas id="ceoFinanceChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center">
+                        <h3 class="font-black text-slate-800 w-full text-left mb-4">Profitability Variance</h3>
+                        <div class="w-full h-64"><canvas id="ceoBarChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="projectsTab" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-black text-xl text-slate-800">Projects Database</h3>
+                    <div class="flex gap-2">
+                        <button onclick="exportDataToExcel('projects', 'Projects')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition flex items-center gap-2">📊 Export Excel All</button>
+                        <button onclick="openModal('projects')" class="rbac-add bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition">+ Add Project</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm">
+                    <table class="w-full whitespace-nowrap text-center">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Project</th>
+                                <th>Budget LCY</th>
+                                <th>Budget FCY</th>
+                                <th>FX Rate</th>
+                                <th>Mgmt %</th>
+                                <th>Partners %</th>
+                                <th>Exp Profit %</th>
+                                <th>Exp Profit Val</th>
+                                <th>Actual Profit%</th>
+                                <th>Actual Profit Val</th>
+                                <th>Partners Count</th>
+                                <th>Start Date</th>
+                                <th>Maturity Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTableBody"></tbody>
+                    </table>
+                </div><div id="pg-projects"></div>
+            </section>
+
+            <section id="operationsTab" class="tab-content">
+                <div class="mb-4 bg-white p-4 rounded-xl border shadow-sm flex items-center gap-4 justify-center"><label class="font-bold text-slate-700">Filter by Project:</label><select id="operationsProjectFilter" onchange="loadCurrentTab()" class="p-3 border rounded-xl w-1/2 bg-slate-50 text-center font-bold text-slate-700"><option value="">-- All Projects --</option></select></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2">
+                    <span>1. Bill of Quantities (BOQ) Master</span> 
+                    <div class="flex gap-2">
+                        <button onclick="viewBoqTracking()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition flex items-center gap-1">📈 BOQ Tracking / Balance</button>
+                        <button onclick="exportDataToExcel('boq', 'BOQ')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button>
+                        <button onclick="openModal('boq')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add BOQ Item</button>
+                    </div>
+                </h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8">
+                    <table class="w-full text-center whitespace-nowrap">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Item</th>
+                                <th>Unit</th>
+                                <th>Est. Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total Value</th>
+                                <th class="text-emerald-600">Executed Qty</th>
+                                <th class="text-emerald-600">Execution %</th>
+                                <th class="text-blue-600">In Progress % (Assigned)</th>
+                                <th class="text-orange-600">Ideal % (Unassigned)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boqBody"></tbody>
+                    </table>
+                    <div id="pg-boq"></div>
+                </div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2 text-blue-700">
+                    <span>2. Subcontractors Contracts & Payment Apps</span> 
+                    <div class="flex gap-2">
+                        <button onclick="viewSubReports()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-slate-900 transition">📉 Sub Variance Reports</button>
+                        <button onclick="exportDataToExcel('subcontractors', 'Subcontractors')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button>
+                        <button onclick="openModal('subcontractors')" class="rbac-add bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">+ New Sub Contract</button>
+                    </div>
+                </h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Subcontractor</th><th>Project</th><th>Contract Value</th><th>Start Date</th><th>End Date</th><th>Completion %</th><th>Paid (Net)</th><th>Invoices</th><th>Status</th><th>Actions</th></tr></thead><tbody id="subcontractorBody"></tbody></table><div id="pg-subcontractors"></div></div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2"><span>3. Task & Milestone Tracking</span> <div class="flex gap-2"><button onclick="exportDataToExcel('tasks', 'Tasks')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('tasks')" class="rbac-add bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition">+ Add Task</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Project</th><th>Task / Milestone</th><th>Start Date</th><th>End Date</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tasksBody"></tbody></table><div id="pg-tasks"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2"><span>4. Daily Site Reports</span> <div class="flex gap-2"><button onclick="exportDataToExcel('daily_reports', 'Daily_Reports')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('daily_reports')" class="rbac-add bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">+ Add Report</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Project</th><th>Date</th><th>Weather</th><th>Manpower</th><th>Equipment Used</th><th>Notes / Remarks</th><th>Engineer (User)</th><th>Actions</th></tr></thead><tbody id="dailyReportsBody"></tbody></table><div id="pg-daily_reports"></div></div>
+            </section>
+
+            <section id="realestateTab" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-indigo-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-indigo-200 font-bold text-xs uppercase tracking-wider mb-1">Total Units Value</p>
+                        <div id="kpiReUnitsVal" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-blue-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-blue-200 font-bold text-xs uppercase tracking-wider mb-1">Total Contracts Value</p>
+                        <div id="kpiReContVal" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-orange-500 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-orange-200 font-bold text-xs uppercase tracking-wider mb-1">Pending Installments</p>
+                        <div id="kpiRePendInst" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-emerald-200 font-bold text-xs uppercase tracking-wider mb-1">Total Collected</p>
+                        <div id="kpiReCollected" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2"><span>1. Client Directory</span> <div class="flex gap-2"><button onclick="exportDataToExcel('customers', 'Customers')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export</button><button onclick="openModal('customers')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Client</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Client Name</th><th>Phone</th><th>Email</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customersBody"></tbody></table><div id="pg-customers"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2"><span>2. Property Units Master List</span> <div class="flex gap-2"><button onclick="exportDataToExcel('property_units', 'Units')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export</button><button onclick="openModal('property_units')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Unit</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Project</th><th>Unit Number</th><th>Type</th><th>Area (sqm)</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="propertyUnitsBody"></tbody></table><div id="pg-property_units"></div></div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2 text-indigo-600"><span>3. Contracts & Sales</span> <div class="flex gap-2"><button onclick="exportDataToExcel('contracts', 'Contracts')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export</button><button onclick="openModal('contracts')" class="rbac-add bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">+ Create Contract</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Contract ID</th><th>Client</th><th>Unit No</th><th>Type</th><th>Total Value</th><th>Down Payment</th><th>Start Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="contractsBody"></tbody></table><div id="pg-contracts"></div></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2 text-orange-600"><span>4. Installment Schedule</span> <div class="flex gap-2"><button onclick="openModal('installments')" class="rbac-add bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition">+ Add Due</button></div></h3>
+                        <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Contract ID</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="installmentsBody"></tbody></table><div id="pg-installments"></div></div>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center border-b pb-2 text-emerald-600"><span>5. Payment Receipts</span> <div class="flex gap-2"><button onclick="openModal('payment_receipts')" class="rbac-add bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">+ Collect Cash</button></div></h3>
+                        <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Receipt Date</th><th>Installment ID</th><th>Amount Collected</th><th>Method</th><th>Ref No.</th><th>Actions</th></tr></thead><tbody id="receiptsBody"></tbody></table><div id="pg-payment_receipts"></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="partnersTab" class="tab-content">
+                <div class="mb-4 bg-white p-4 rounded-xl border shadow-sm flex items-center gap-4 justify-center"><label class="font-bold text-slate-700">Filter by Project:</label><select id="partnerProjectFilter" onchange="loadCurrentTab()" class="p-3 border rounded-xl w-1/2 bg-slate-50 text-center font-bold text-slate-700"><option value="">-- All Projects --</option></select></div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-black text-xl text-slate-800">Partners Accounts</h3>
+                    <div class="flex gap-2">
+                        <button onclick="exportDataToExcel('partners', 'Partners')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition flex items-center gap-2">📊 Export Excel All</button>
+                        <button onclick="openModal('partners')" class="rbac-add bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition">+ Add Partner</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Company</th><th>Partner</th><th>Project</th><th>Share %</th><th>Investment</th><th>Expected Return</th><th>Actual Profit</th><th>Deposits</th><th>Withdrawals</th><th class="bg-orange-50">Net Balance (EP)</th><th class="bg-green-50">Net Balance (AP)</th><th>Status</th><th>Actions</th></tr></thead><tbody id="partnersBody"></tbody></table></div><div id="pg-partners"></div>
+            </section>
+
+            <section id="procurementTab" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="bg-indigo-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-indigo-200 font-bold text-xs uppercase tracking-wider mb-1">Total Active POs Value</p>
+                        <div id="kpiTotalPO" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-orange-500 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-orange-200 font-bold text-xs uppercase tracking-wider mb-1">Pending RFQs</p>
+                        <div id="kpiPendingRFQ" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-emerald-200 font-bold text-xs uppercase tracking-wider mb-1">Active Subcontractors</p>
+                        <div id="kpiActiveSubs" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 text-blue-600 border-b pb-2 flex justify-between items-center"><span>1. Requests for Quotation (RFQ)</span> <div class="flex gap-2"><button onclick="exportDataToExcel('rfq', 'RFQ')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('rfq')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Create RFQ</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Company</th><th>Project</th><th>Item</th><th>Qty</th><th class="bg-slate-50">Vendor 1 (Price)</th><th class="bg-slate-50">Vendor 2 (Price)</th><th class="bg-slate-50">Vendor 3 (Price)</th><th class="bg-emerald-50">Selected Vendor</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rfqBody"></tbody></table><div id="pg-rfq"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 border-b pb-2 flex justify-between items-center"><span>2. Purchase Orders (PO)</span> <div class="flex gap-2"><button onclick="exportDataToExcel('purchase_orders', 'Purchase_Orders')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('purchase_orders')" class="rbac-add bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">+ Issue PO</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>PO ID</th><th>Item</th><th>Specification</th><th>Supplier</th><th>Project</th><th>UOM</th><th>Qty</th><th>Unit Cost</th><th>Total Cost</th><th>Total Cost DDP</th><th>Status</th><th>Actions</th></tr></thead><tbody id="poBody"></tbody></table><div id="pg-purchase_orders"></div></div>
+            </section>
+
+            <section id="inventoryTab" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="bg-blue-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-blue-200 font-bold text-xs uppercase tracking-wider mb-1">Total Inventory Value</p>
+                        <div id="kpiInventoryValue" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-red-500 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-red-200 font-bold text-xs uppercase tracking-wider mb-1">Low Stock Alerts</p>
+                        <div id="kpiLowStock" class="text-2xl font-black font-mono">0 Items</div>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-emerald-200 font-bold text-xs uppercase tracking-wider mb-1">Total Transfers MTD</p>
+                        <div id="kpiTotalTransfers" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>1. Master Inventory & Stock Balance</span> <div class="flex gap-2"><button onclick="exportDataToExcel('inventory', 'Inventory')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('inventory')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Manual Stock</button></div></h3>
+                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Location/Project</th><th>Item Name</th><th>Total In (Historical)</th><th class="bg-blue-50 text-blue-800">Available Balance</th><th>Avg Unit Price</th><th>Total Value</th><th>Last Restock</th><th>Actions</th></tr></thead><tbody id="inventoryTableBody"></tbody></table><div id="pg-inventory"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 text-orange-600 flex justify-between items-center"><span>2. Multi-Warehouse Transfers Log</span> <div class="flex gap-2"><button onclick="exportDataToExcel('inventory_transfers', 'Transfers')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('inventory_transfers')" class="rbac-add bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition">+ Transfer Stock</button></div></h3>
+                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Date</th><th>Material</th><th>Qty Transferred</th><th class="bg-red-50 text-red-600">From (Source)</th><th class="bg-green-50 text-green-600">To (Destination)</th><th>Transferred By</th><th>Actions</th></tr></thead><tbody id="transfersBody"></tbody></table><div id="pg-inventory_transfers"></div></div>
+            </section>
+
+            <section id="usageTab" class="tab-content">
+                <div class="mb-4 bg-white p-4 rounded-xl border shadow-sm flex items-center gap-4 justify-center"><label class="font-bold text-slate-700">Filter by Project:</label><select id="usageProjectFilter" onchange="loadCurrentTab()" class="p-3 border rounded-xl w-1/2 bg-slate-50 text-center font-bold text-slate-700"><option value="">-- All Projects --</option></select></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <div class="bg-indigo-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-indigo-200 font-bold text-xs uppercase tracking-wider mb-1">Total Issued Material Value</p>
+                        <div id="kpiTotalIssued" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-5 rounded-2xl shadow-md flex flex-col justify-center">
+                        <p class="text-emerald-200 font-bold text-xs uppercase tracking-wider mb-1">Total Returned Value</p>
+                        <div id="kpiTotalReturned" class="text-2xl font-black font-mono">0</div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>1. Material Issue Vouchers (خصم من المخزن)</span> <div class="flex gap-2"><button onclick="exportDataToExcel('material_usage', 'Material_Usage')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('material_usage')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Issue Material</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Issue Date</th><th>Project (Destination)</th><th>Material Issued</th><th>Qty</th><th>Est. Cost</th><th>Issuer (User)</th><th>Actions</th></tr></thead><tbody id="usageTableBody"></tbody></table><div id="pg-material_usage"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 text-red-500 flex justify-between items-center"><span>2. Returns Management (إضافة للمخزن)</span> <div class="flex gap-2"><button onclick="exportDataToExcel('returns', 'Returns')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('returns')" class="rbac-add bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600 transition">+ Process Return</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Return Date</th><th>Project (Returned From)</th><th>Material</th><th>Qty Returned</th><th class="bg-blue-50 text-blue-600">Returned To</th><th>Processed By</th><th>Actions</th></tr></thead><tbody id="returnsBody"></tbody></table><div id="pg-returns"></div></div>
+            </section>
+
+            <section id="hrTab" class="tab-content">
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>1. Staff Directory</span> <div class="flex gap-2"><button onclick="exportDataToExcel('staff', 'Staff')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('staff')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Employee</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Company</th><th>Projects</th><th>Emp. Name</th><th>Position</th><th>Salary</th><th>Hiring Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="hrBody"></tbody></table><div id="pg-staff"></div></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div><h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>2. Time & Attendance</span> <div class="flex gap-2"><button onclick="exportDataToExcel('attendance', 'Attendance')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('attendance')" class="rbac-add bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">+ Record Time</button></div></h3><div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Date</th><th>Employee</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Actions</th></tr></thead><tbody id="attendanceBody"></tbody></table><div id="pg-attendance"></div></div></div>
+                    <div><h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>3. Leave Management</span> <div class="flex gap-2"><button onclick="exportDataToExcel('leaves', 'Leaves')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('leaves')" class="rbac-add bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition">+ Add Leave</button></div></h3><div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Employee</th><th>Leave Type</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leavesBody"></tbody></table><div id="pg-leaves"></div></div></div>
+                </div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>4. Payroll History</span> <div class="flex gap-2"><button onclick="exportDataToExcel('payroll', 'Payroll')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('payroll')" class="rbac-add bg-blue-800 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-900 transition">+ Generate Payroll</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Employee</th><th>Execution Date</th><th>Month</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net Salary</th><th>Actions</th></tr></thead><tbody id="payrollBody"></tbody></table><div id="pg-payroll"></div></div>
+            </section>
+
+            <section id="financeTab" class="tab-content">
+                <div class="mb-4 bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4 justify-center">
+                    <label class="font-black text-blue-900">Filter Financials by Project/Cost Center:</label>
+                    <select id="financeProjectFilter" onchange="fetchGLSummary()" class="p-3 border rounded-xl w-1/2 bg-white text-center font-bold text-slate-700">
+                        <option value="">-- Consolidated (All Projects & Overheads) --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                    <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden p-6 border border-slate-700 text-white">
+                        <h3 class="font-black text-xl mb-4 text-blue-400 border-b border-slate-700 pb-2">📊 Income Statement (P&L)</h3>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('revenue')" title="Click to view details"><span class="text-slate-300">Total Revenue (AR)</span><span id="plRevenue" class="font-mono font-bold text-emerald-400">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('subs')" title="Click to view details"><span class="text-slate-300">Subcontractors Cost</span><span id="plSubs" class="font-mono text-red-400">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('payroll')" title="Click to view details"><span class="text-slate-300">Payroll Cost</span><span id="plPayroll" class="font-mono text-red-400">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('material')" title="Click to view details"><span class="text-slate-300">Material Usage Cost</span><span id="plMaterial" class="font-mono text-red-400">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('expenses')" title="Click to view details"><span class="text-slate-300">General Expenses (Ledger)</span><span id="plLedgerExp" class="font-mono text-red-400">0</span></div>
+                        <div class="flex justify-between py-4 mt-2 border-t border-slate-700 cursor-pointer hover:bg-slate-800 px-2 rounded transition -mx-2" onclick="showBreakdown('net')" title="Click to view details"><span class="font-black text-lg">Net Profit / Loss</span><span id="plNet" class="font-mono font-black text-2xl">0</span></div>
+                    </div>
+                    <div class="bg-slate-800 rounded-2xl shadow-xl overflow-hidden p-6 border border-slate-700 text-white">
+                        <h3 class="font-black text-xl mb-4 text-emerald-400 border-b border-slate-700 pb-2">⚖️ Balance Sheet Summary</h3>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-700 px-2 rounded transition -mx-2" onclick="showBreakdown('assets')" title="Click to view details"><span class="text-slate-300">Total Assets (Debits)</span><span id="bsAssets" class="font-mono font-bold text-blue-300">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-700 px-2 rounded transition -mx-2" onclick="showBreakdown('equity')" title="Click to view details"><span class="text-slate-300">Partner Investments</span><span id="bsEquity" class="font-mono text-emerald-300">0</span></div>
+                        <div class="flex justify-between py-2 cursor-pointer hover:bg-slate-700 px-2 rounded transition -mx-2" onclick="showBreakdown('liabilities')" title="Click to view details"><span class="text-slate-300">Total Liabilities (Credits)</span><span id="bsLiabilities" class="font-mono text-red-300">0</span></div>
+                        <div class="flex justify-between py-4 mt-2 border-t border-slate-700"><span class="font-black text-lg text-slate-400">Equation Check</span><span id="bsCheck" class="font-mono font-black text-sm">Valid</span></div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-xl overflow-hidden p-6 border border-slate-100 flex flex-col items-center justify-center">
+                        <h3 class="font-black text-slate-800 w-full text-left mb-4 border-b pb-2">Cost Breakdown</h3>
+                        <div class="w-full h-48"><canvas id="financeCostChart"></canvas></div>
+                    </div>
+                </div>
+
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center">
+                    <span>1. Master Chart of Accounts (COA)</span>
+                    <div class="flex gap-2">
+                        <button onclick="exportDataToExcel('chart_of_accounts', 'Chart_of_Accounts')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button>
+                        <button onclick="openModal('chart_of_accounts')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Account</button>
+                    </div>
+                </h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8">
+                    <table class="w-full whitespace-nowrap text-center">
+                        <thead class="bg-slate-100 border-b">
+                            <tr><th>Code</th><th>Account Name</th><th>Entity/Dept</th><th>Level</th><th>Parent</th><th>Type</th><th>Currency</th><th>Manual</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="coaBody"></tbody>
+                    </table>
+                    <div id="pg-chart_of_accounts"></div>
+                </div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>2. Accounts Receivable (AR) & Sales</span> <div class="flex gap-2"><button onclick="exportDataToExcel('ar_invoices', 'AR_Invoices')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('ar_invoices')" class="rbac-add bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">+ Add Invoice</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto mb-8"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Inv Date</th><th>Client Name</th><th>Project</th><th>Base Amount</th><th>VAT (%)</th><th>Tax Amount</th><th class="bg-blue-50 text-blue-800">Total Invoice Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="arBody"></tbody></table><div id="pg-ar_invoices"></div></div>
+                
+                <h3 class="font-black text-lg mb-3 text-slate-800 flex justify-between items-center"><span>3. Detailed Journal Entries (GL)</span> <div class="flex gap-2"><button onclick="exportDataToExcel('ledger', 'Ledger')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">📊 Export All</button><button onclick="openModal('ledger')" class="rbac-add bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-700 transition">+ Add Journal Entry</button></div></h3>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full whitespace-nowrap text-center"><thead><tr><th>Date</th><th>Account Name</th><th>Cost Center/Project</th><th>Debit</th><th>Credit</th><th>Description</th><th>User</th><th>Actions</th></tr></thead><tbody id="financeBody"></tbody></table><div id="pg-ledger"></div></div>
+            </section>
+
+            <section id="auditTab" class="tab-content">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                    <h3 class="font-black text-xl text-slate-800">System Security & Audit</h3>
+                    <div class="flex gap-2 items-center flex-wrap">
+                        
+                        <button onclick="openUserManagement()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition">👤 User Management (RBAC)</button>
+                        
+                        <div class="w-px h-8 bg-slate-200 mx-2"></div> <input type="date" id="auditStartDate" class="p-2 border border-slate-200 rounded-xl text-sm font-bold bg-white text-slate-600" title="Start Date">
+                        <span class="text-slate-400 font-bold text-sm">To</span>
+                        <input type="date" id="auditEndDate" class="p-2 border border-slate-200 rounded-xl text-sm font-bold bg-white text-slate-600" title="End Date">
+                        <button onclick="loadCurrentTab()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-900 transition">🔍 Filter</button>
+                        
+                        <div class="w-px h-8 bg-slate-200 mx-2"></div> 
+                        
+                        <button onclick="manageSystemParameter('Company')" class="rbac-admin bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-indigo-700 transition">🏢 Manage Companies</button>
+                        <button onclick="manageSystemParameter('Project')" class="rbac-admin bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-teal-700 transition">🏗️ Manage Projects</button>
+                        
+                        <div class="w-px h-8 bg-slate-200 mx-2"></div> 
+                        
+                        <button onclick="systemWipeData()" class="rbac-admin bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-red-700 transition">🔴 Factory Reset</button>
+                        <button onclick="systemEOYClosure()" class="rbac-admin bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-purple-700 transition">📅 Execute EOY</button>
+                        
+                        <button onclick="openBackupManagement()" class="rbac-admin bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-800 transition">💾 Backups</button>
+
+                        <button onclick="openEmailLogs()" class="rbac-admin bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-900 transition">📧 Email Center</button>
+
+                        <button onclick="exportDataToExcel('audit_logs', 'Audit_Logs')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition">📊 Export Logs</button>
+                    </div>
+                </div>
+                <div class="bg-slate-900 rounded-2xl shadow-xl overflow-x-auto p-1 border border-slate-700"><table class="w-full whitespace-nowrap text-white text-center"><thead class="bg-slate-800 border-b border-slate-700"><tr><th class="bg-transparent text-slate-400">Timestamp</th><th class="bg-transparent text-slate-400">User</th><th class="bg-transparent text-slate-400">Action</th><th class="bg-transparent text-slate-400">Target</th><th class="bg-transparent text-slate-400">Data Footprint</th></tr></thead><tbody id="auditBody"></tbody></table><div id="pg-audit_logs"></div></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="mainModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left"><h2 id="modalTitle" class="text-2xl font-black text-slate-800 w-full text-left">Record Entry</h2><button onclick="toggleModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors absolute right-8">✕</button></div>
+            <form id="dynamicForm" class="p-8 overflow-y-auto">
+                <input type="hidden" id="modalRecordType" name="form_type">
+                <div id="formFields" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center"></div>
+                <div id="doubleEntryError" class="hidden mt-4 bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl font-bold text-center text-sm">⚠️ Double-Entry Validation Failed: Total Debits must equal Total Credits.</div>
+                <div class="mt-8 flex gap-3"><button id="submitBtn" type="submit" class="flex-1 bg-slate-900 hover:bg-blue-600 text-white p-4 rounded-2xl font-black transition-colors shadow-lg text-center">Save Record</button><button type="button" onclick="toggleModal()" class="sm:w-32 bg-slate-100 text-slate-500 p-4 rounded-2xl font-bold hover:bg-slate-200 transition-colors text-center">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="attachmentModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[70] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left"><h2 class="text-xl font-black text-slate-800 w-full text-left">📎 File Attachments</h2><button onclick="closeAttachmentModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button></div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <form id="uploadForm" class="flex flex-col gap-4 mb-6 pb-6 border-b">
+                    <input type="hidden" id="attach_record_type"><input type="hidden" id="attach_record_id">
+                    <input type="file" id="fileInput" class="p-3 border rounded-xl w-full text-sm" required>
+                    <button type="submit" class="bg-blue-600 text-white font-bold p-3 rounded-xl hover:bg-blue-700">Upload File</button>
+                </form>
+                <div id="attachmentsList" class="flex flex-col gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="boqTrackingModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 class="text-xl font-black text-slate-800 w-full text-left flex items-center gap-2">📈 BOQ Tracking Dashboard</h2>
+                <div class="flex gap-2">
+                    <button onclick="exportDataToExcel('boq_tracking', 'BOQ_Tracking')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-emerald-700 transition">Export Excel 📊</button>
+                    <button onclick="document.getElementById('boqTrackingModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr>
+                                <th>Project</th>
+                                <th>Item Description</th>
+                                <th>Unit</th>
+                                <th>Estimated Qty</th>
+                                <th class="text-blue-600">Assigned to Subs</th>
+                                <th class="text-orange-600">Unassigned (Ideal)</th>
+                                <th class="text-emerald-600">Executed Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boqTrackingBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="boqSubcontractorsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="boqSubsTitle" class="text-xl font-black text-slate-800 w-full text-left flex items-center gap-2">👷 Linked Subcontractors for Item</h2>
+                <button onclick="document.getElementById('boqSubcontractorsModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50 grid grid-cols-1 gap-6">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto p-4">
+                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-2">Assigned Contracts</h3>
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr><th>Subcontractor</th><th>Contract Item Desc</th><th>Assigned Qty</th><th>Unit Price</th><th>Total Price</th><th>Start Date</th><th>End Date</th></tr>
+                        </thead>
+                        <tbody id="boqSubsBody"></tbody>
+                    </table>
+                </div>
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto p-4">
+                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-2">Previous Payment Applications</h3>
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr><th>Contract Item</th><th>Date</th><th class="text-blue-600">Gross</th><th>Prev Qty</th><th>Curr Qty</th><th class="text-indigo-600">Total Qty</th><th class="text-purple-600">Item Comp %</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="boqInvoicesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="subcontractorItemsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[65] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="subItemsTitle" class="text-xl font-black text-slate-800 w-full text-left">Contract Items / BOQ</h2>
+                <div class="flex gap-2 items-center">
+                    <button onclick="exportDataToExcel('subcontractor_items', 'Contract_Items')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-emerald-700">Export Excel 📊</button>
+                    <button onclick="document.getElementById('subcontractorItemsModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto mb-6">
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr>
+                                <th>Item</th>
+                                <th>Project</th>
+                                <th>Assigned Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total Price</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subItemsBody"></tbody>
+                    </table>
+                </div>
+                <form id="subItemForm" class="bg-white p-6 border rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <div class="col-span-full mb-2 pb-2 border-b flex justify-between items-center">
+                        <h3 class="font-bold text-blue-700 text-left" id="subItemFormTitle">Add Item to Contract</h3>
+                        <button type="button" id="subItemCancelBtn" onclick="cancelEditSubItem()" class="hidden text-red-500 hover:text-red-700 text-xs font-bold">Cancel Edit ✕</button>
+                    </div>
+                    <input type="hidden" id="subItemsContractId" name="subcontractor_id">
+                    <input type="hidden" id="subItemIdEdit" name="item_id">
+                    
+                    <select name="boq_id" id="subBoqSelect" onchange="if(this.value) { document.getElementById('subItemDesc').value = this.options[this.selectedIndex].text.split(' - ')[0].replace('[BOQ] ', ''); }" class="p-3 border rounded-lg text-center md:col-span-4" required></select>
+                    <input type="text" name="item_desc" id="subItemDesc" placeholder="Item Description (Custom)" class="p-3 border rounded-lg text-center md:col-span-2" required>
+                    <input type="number" name="assigned_qty" id="subItemQty" step="0.01" placeholder="Assigned Qty" class="p-3 border rounded-lg text-center" required>
+                    <input type="number" name="unit_price" id="subItemPrice" step="0.01" placeholder="Sub Unit Price" class="p-3 border rounded-lg text-center" required>
+                    <div class="flex flex-col md:col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Item Start Date</label><input type="date" name="start_date" id="subItemStart" class="p-3 border rounded-lg text-center w-full"></div>
+                    <div class="flex flex-col md:col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Item End Date</label><input type="date" name="end_date" id="subItemEnd" class="p-3 border rounded-lg text-center w-full"></div>
+                    <button type="submit" id="subItemSubmitBtn" class="md:col-span-4 bg-emerald-600 text-white p-3 rounded-xl font-bold hover:bg-emerald-700 transition">Save Item</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="subReportsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left"><h2 class="text-xl font-black text-slate-800 w-full text-left">Subcontractor Reports</h2><button onclick="document.getElementById('subReportsModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button></div>
+            <div class="p-6 overflow-y-auto flex-1 grid grid-cols-1 gap-8">
+                <div>
+                    <h3 class="font-black text-lg mb-2 text-indigo-600">1. BOQ Variance & Profit Margin Report</h3>
+                    <div class="bg-white border rounded-xl shadow-sm overflow-x-auto"><table class="w-full text-center text-sm"><thead class="bg-indigo-50 border-b"><tr><th>Subcontractor</th><th>Item</th><th>Assigned Qty</th><th>Sub Price</th><th>Original BOQ Price</th><th class="text-emerald-600">Variance Profit</th></tr></thead><tbody id="repVarianceBody"></tbody></table></div>
+                </div>
+                <div>
+                    <h3 class="font-black text-lg mb-2 text-orange-600">2. Aging Payables (Approved but Unpaid)</h3>
+                    <div class="bg-white border rounded-xl shadow-sm overflow-x-auto"><table class="w-full text-center text-sm"><thead class="bg-orange-50 border-b"><tr><th>Subcontractor</th><th>Project</th><th class="text-red-600">Total Due</th><th>Oldest Invoice Date</th></tr></thead><tbody id="repAgingBody"></tbody></table></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="subcontractorModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[60] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-[95%] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="subHistoryTitle" class="text-2xl font-black text-slate-800 w-full text-left">Statement of Account / Payment App</h2>
+                <button onclick="closeSubcontractorModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors absolute right-8">✕</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50" id="printSection">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto h-full p-4">
+                    <h3 class="font-bold text-slate-700 mb-2 border-b pb-2 flex justify-between items-center">
+                        <span>Previous Payment Applications</span>
+                        <div class="flex gap-2">
+                            <button onclick="exportSubInvoiceExcel()" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold print:hidden">Export Excel 📊</button>
+                            <button onclick="window.print()" class="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold print:hidden">Print All 🖨️</button>
+                        </div>
+                    </h3>
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr>
+                                <th>Contract Item</th>
+                                <th>Date</th>
+                                <th class="text-blue-600">Gross</th>
+                                <th>Prev Qty</th>
+                                <th>Curr Qty</th>
+                                <th class="text-indigo-600">Total Qty</th>
+                                <th class="text-purple-600">Item Comp %</th>
+                                <th>Ret (Manual)</th>
+                                <th>DP Rec</th>
+                                <th>Mat Ded</th>
+                                <th>Tax Ded</th>
+                                <th class="text-emerald-600 font-bold">Net Paid</th>
+                                <th>Status</th>
+                                <th class="print:hidden">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="newPayAppModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[65] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 class="text-2xl font-black text-slate-800 w-full text-left" id="subInvoiceFormTitle">Create New Payment Application</h2>
+                <button onclick="closeNewPayAppModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors absolute right-8">✕</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
+                <form id="subInvoiceForm" class="bg-white p-6 border rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                    
+                    <input type="hidden" id="subInvoiceEditId" name="invoice_id" value="">
+                    <input type="hidden" id="subcontractorIdInput" name="subcontractor_id">
+                    <input type="hidden" id="subDpPct" value="0">
+
+                    <div class="col-span-full">
+                        <label class="text-xs font-bold text-slate-500 mb-1 text-left block">Contract Item (Link to Subcontractor BOQ)</label>
+                        <select name="sub_item_id" id="subInvItemSelect" onchange="handleSubItemChange(this)" class="p-3 border rounded-lg text-center w-full font-bold bg-slate-50" required>
+                            <option value="">-- Select Contract Item --</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">App Date</label><input type="date" name="date" id="subAppDate" class="p-3 border rounded-lg text-center w-full" required></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">App Description / Ref</label><input type="text" name="description" id="subAppDesc" placeholder="Ex: App #1 - Block A" class="p-3 border rounded-lg text-center w-full" required></div>
+                    
+                    <div class="col-span-full border-t pt-3 mt-1"><h4 class="text-xs font-black text-slate-400 uppercase tracking-widest text-left mb-2">Quantities & Gross Value</h4></div>
+
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Prev. Total Qty / Value</label><input type="number" name="prev_qty" id="subPrevQty" step="0.01" placeholder="Prev Value (Auto)" class="p-3 border rounded-lg text-center w-full bg-slate-100" readonly required></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Current Qty / Value</label><input type="number" name="curr_qty" id="subCurrQty" step="0.01" placeholder="Current Value" oninput="calcSubInvoiceNet()" class="p-3 border rounded-lg text-center w-full bg-blue-50 font-bold" required></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Total Prv. & Cur. Qty</label><input type="number" id="subTotalQty" step="0.01" placeholder="Total Qty (Auto)" class="p-3 border rounded-lg text-center w-full bg-slate-100 font-bold" readonly></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Total Gross Amount To Date</label><input type="number" name="gross_amount" id="subGross" placeholder="Total Gross" class="p-3 border rounded-lg text-center w-full font-bold text-blue-600 bg-blue-100" readonly required></div>
+                    <div class="flex flex-col col-span-full"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Cumulative Progress %</label><input type="number" name="progress_percent" id="subProgPct" step="0.1" placeholder="Total % (Auto)" class="p-3 border rounded-lg text-center w-full bg-slate-100" readonly required></div>
+
+                    <div class="col-span-full border-t pt-3 mt-1"><h4 class="text-xs font-black text-slate-400 uppercase tracking-widest text-left mb-2">Deductions (الاستقطاعات)</h4></div>
+
+                    <div class="flex flex-col"><label class="text-xs font-bold text-orange-500 mb-1 text-left">Retention Deduction (Manual)</label><input type="number" name="retention_deduction" id="subRetAmt" oninput="calcSubInvoiceNet()" placeholder="Manual Retention" class="p-3 border rounded-lg text-center w-full text-orange-600"></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-orange-500 mb-1 text-left">Advance Payment Recovery (Auto)</label><input type="number" name="dp_recovery" id="subDpAmt" readonly class="p-3 border rounded-lg text-center w-full bg-orange-50 text-orange-700"></div>
+                    
+                    <div class="flex flex-col"><label class="text-xs font-bold text-red-500 mb-1 text-left">Material Deductions (Manual)</label><input type="number" name="material_deduction" id="subMatAmt" oninput="calcSubInvoiceNet()" placeholder="Material Deductions" class="p-3 border rounded-lg text-center w-full text-red-600"></div>
+                    <div class="flex flex-col"><label class="text-xs font-bold text-red-500 mb-1 text-left">Taxes & Insurances (Manual)</label><input type="number" name="tax_deduction" id="subTaxAmt" oninput="calcSubInvoiceNet()" placeholder="Tax/Insurance Deductions" class="p-3 border rounded-lg text-center w-full text-red-600"></div>
+
+                    <div class="col-span-full border-t pt-3 mt-1"><h4 class="text-xs font-black text-slate-400 uppercase tracking-widest text-left mb-2">Net & Approval</h4></div>
+
+                    <div class="flex flex-col col-span-full"><label class="text-xs font-bold text-emerald-600 mb-1 text-left">Net Amount to Pay (Current Invoice)</label><input type="number" name="net_amount" id="subNet" readonly class="p-4 border-2 border-emerald-300 rounded-xl text-center w-full font-black text-2xl text-emerald-600 bg-emerald-50 shadow-inner"></div>
+
+                    <div class="flex flex-col col-span-full"><label class="text-xs font-bold text-slate-500 mb-1 text-left">Approval Workflow Status</label>
+                        <select name="status" id="subInvStatus" class="p-3 border rounded-lg text-center w-full font-bold bg-slate-100">
+                            <option value="إعداد">📝 إعداد (Draft / Engineer)</option>
+                            <option value="مراجعة فنية">🔍 مراجعة فنية (Tech Office Review)</option>
+                            <option value="اعتماد مالي">✅ اعتماد مالي (Financially Approved - Posts to GL)</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-full flex gap-3 mt-2">
+                        <button type="submit" id="subInvoiceSubmitBtn" class="flex-1 bg-blue-600 text-white p-4 rounded-xl font-black text-lg hover:bg-blue-700 transition shadow-lg">Save Application</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="inventoryUsageModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="invUsageTitle" class="text-xl font-black text-slate-800 w-full text-left">📉 Material Usage History</h2>
+                <button onclick="document.getElementById('inventoryUsageModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center whitespace-nowrap text-sm">
+                        <thead class="bg-slate-100 border-b"><tr><th>Issue Date</th><th>Project</th><th>Qty Issued</th><th>Est. Cost</th><th>Requested By</th></tr></thead>
+                        <tbody id="invUsageBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="partnerDepositModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[60] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left"><h2 id="partnerDepositTitle" class="text-2xl font-black text-slate-800 w-full text-left">Partner Deposits</h2><button onclick="document.getElementById('partnerDepositModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors absolute right-8">✕</button></div>
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto mb-8"><table class="w-full text-center"><thead class="bg-slate-100 border-b"><tr><th>Date</th><th>Amount LCY</th><th>Amount FCY</th><th>FX Rate</th><th>Description</th><th>Recorded By</th></tr></thead><tbody id="partnerDepositBody"></tbody></table></div>
+                <form id="partnerDepositForm" class="bg-white p-6 border rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <input type="hidden" id="depositPartnerIdInput" name="partner_id">
+                    <input type="date" name="date" class="p-3 border rounded-lg text-center w-full" required>
+                    <input type="number" step="0.01" name="amount_fcy" id="depAmountFCY" placeholder="Amount FCY" class="p-3 border rounded-lg text-center w-full" oninput="calcDep()">
+                    <input type="number" step="0.01" name="fx_rate" id="depFxRate" placeholder="FX Rate" value="1" class="p-3 border rounded-lg text-center w-full" oninput="calcDep()">
+                    <input type="number" step="0.01" name="amount" id="depAmountLCY" placeholder="Amount LCY" class="p-3 border rounded-lg text-center w-full font-bold text-blue-600 bg-blue-50" required>
+                    <input type="text" name="description" placeholder="Description/Memo" class="p-3 border rounded-lg text-center md:col-span-2 w-full" required>
+                    <button type="submit" class="md:col-span-3 bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition">Add Deposit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="partnerWithdrawalModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[60] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left"><h2 id="partnerWithdrawalTitle" class="text-2xl font-black text-slate-800 w-full text-left">Partner Withdrawals</h2><button onclick="document.getElementById('partnerWithdrawalModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors absolute right-8">✕</button></div>
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto mb-8"><table class="w-full text-center"><thead class="bg-slate-100 border-b"><tr><th>Date</th><th>Amount LCY</th><th>Amount FCY</th><th>FX Rate</th><th>Description</th><th>Recorded By</th></tr></thead><tbody id="partnerWithdrawalBody"></tbody></table></div>
+                <form id="partnerWithdrawalForm" class="bg-white p-6 border rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <input type="hidden" id="withdrawalPartnerIdInput" name="partner_id">
+                    <input type="date" name="date" class="p-3 border rounded-lg text-center w-full" required>
+                    <input type="number" step="0.01" name="amount_fcy" id="withAmountFCY" placeholder="Amount FCY" class="p-3 border rounded-lg text-center w-full" oninput="calcWith()">
+                    <input type="number" step="0.01" name="fx_rate" id="withFxRate" placeholder="FX Rate" value="1" class="p-3 border rounded-lg text-center w-full" oninput="calcWith()">
+                    <input type="number" step="0.01" name="amount" id="withAmountLCY" placeholder="Amount LCY" class="p-3 border rounded-lg text-center w-full font-bold text-red-600 bg-red-50" required>
+                    <input type="text" name="description" placeholder="Description/Memo" class="p-3 border rounded-lg text-center md:col-span-2 w-full" required>
+                    <button type="submit" class="md:col-span-3 bg-red-600 text-white p-3 rounded-xl font-bold hover:bg-red-700 transition">Add Withdrawal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="breakdownModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="breakdownTitle" class="text-xl font-black text-slate-800 w-full text-left">Breakdown Details</h2>
+                <button onclick="document.getElementById('breakdownModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b"><tr><th>Date / Period</th><th>Name / Item</th><th>Project / Cost Center</th><th>Amount</th></tr></thead>
+                        <tbody id="breakdownBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="userManagementModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 class="text-2xl font-black text-slate-800 w-full text-left">👤 User Management (RBAC)</h2>
+                <div class="flex gap-2">
+                    <button onclick="openUserForm()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition">+ Add New User</button>
+                    <button onclick="document.getElementById('userManagementModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr><th>ID</th><th>User Details (Name / Email)</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="usersListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="userFormModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[90] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="userFormTitle" class="text-xl font-black text-slate-800 w-full text-left">Create New User</h2>
+                <button onclick="document.getElementById('userFormModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="userForm" class="flex flex-col gap-6">
+                    <input type="hidden" id="userIdInput" name="id">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1">Username</label><input type="text" name="username" id="userNameInput" class="p-3 border rounded-xl font-bold bg-slate-50" required></div>
+                        <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1">Email (For Notifications)</label><input type="email" name="email" id="userEmailInput" placeholder="user@example.com" class="p-3 border rounded-xl font-bold bg-slate-50"></div>
+                        <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1">Password</label><input type="password" name="password" id="userPassInput" placeholder="Leave blank to keep current" class="p-3 border rounded-xl bg-slate-50"></div>
+                        <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1">Base Role</label>
+                            <select name="role" id="userRoleInput" class="p-3 border rounded-xl font-bold bg-slate-50">
+                                <option value="Engineer">Engineer (Site/Ops)</option>
+                                <option value="Accountant">Accountant (Finance)</option>
+                                <option value="HR">HR Manager</option>
+                                <option value="Admin">Administrator (Full Access)</option>
+                                <option value="Custom">Custom Role</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="customPermissionsDiv" class="border border-blue-200 rounded-2xl p-4 bg-blue-50/50">
+                        <h3 class="font-black text-blue-800 mb-4 border-b border-blue-200 pb-2">Custom Permissions Matrix</h3>
+                        
+                        <div class="mb-4">
+                            <h4 class="font-bold text-slate-700 text-sm mb-2">1. Allowed Screens (Tabs)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs" id="screensCheckboxGroup">
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="ceoTab"> CEO Dashboard</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="projectsTab"> Projects Mgt</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="operationsTab"> Operations/BOQ</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="realestateTab"> Real Estate</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="partnersTab"> Partners</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="procurementTab"> Procurement</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="inventoryTab"> Inventory</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="usageTab"> Issue/Returns</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="hrTab"> HR & Payroll</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="financeTab"> General Ledger</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border"><input type="checkbox" class="rbac-checkbox" value="auditTab"> Security/Audit</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h4 class="font-bold text-slate-700 text-sm mb-2">2. Allowed Projects (Data Filtering)</h4>
+                            <select multiple name="allowed_projects" id="userProjectsSelect" class="w-full p-2 border rounded-xl text-sm h-32 bg-white" title="Hold Ctrl to select multiple">
+                                </select>
+                            <p class="text-[10px] text-slate-500 mt-1">Leave unselected to allow ALL projects. Select specific projects to restrict data view.</p>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-slate-700 text-sm mb-2">3. Table Permissions (Advanced CRUD)</h4>
+                            <div class="overflow-x-auto bg-white border rounded-xl">
+                                <table class="w-full text-center text-xs whitespace-nowrap">
+                                    <thead class="bg-slate-100">
+                                        <tr>
+                                            <th class="text-left sticky left-0 bg-slate-100 z-10">Module / Table</th>
+                                            <th>Read</th><th>Add</th><th>Edit</th><th>Delete</th><th>Approve</th><th>Export</th><th>Import</th><th>Print</th><th>Audit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="crudMatrixBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 mt-4 pt-4 border-t border-blue-200">
+                            <h4 class="font-bold text-slate-700 text-sm mb-2">4. Email Notifications Triggers</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs" id="notificationsCheckboxGroup">
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border shadow-sm"><input type="checkbox" class="rbac-notif-cb" value="low_stock"> Low Stock Alerts</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border shadow-sm"><input type="checkbox" class="rbac-notif-cb" value="installments"> Installments Due</label>
+                                <label class="flex items-center gap-2 bg-white p-2 rounded border shadow-sm"><input type="checkbox" class="rbac-notif-cb" value="approvals"> Pending Tech Approvals</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col"><label class="text-xs font-bold text-slate-500 mb-1">Account Status</label><select name="status" id="userStatusInput" class="p-3 border rounded-xl font-bold bg-slate-50"><option value="Active">Active</option><option value="Inactive">Inactive / Suspended</option></select></div>
+                    
+                    <button type="submit" id="userSubmitBtn" class="w-full bg-slate-900 text-white p-4 rounded-xl font-black text-lg hover:bg-blue-600 transition shadow-lg mt-2">Save User & Permissions</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="projectPartnersModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 id="projPartnersModalTitle" class="text-2xl font-black text-slate-800 w-full text-left">Partners for Project</h2>
+                <button onclick="document.getElementById('projectPartnersModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr><th>Partner</th><th>Share %</th><th>Investment</th><th>Expected Return</th><th class="text-green-600">Actual Profit</th><th class="text-blue-600">Deposits</th><th class="text-red-500">Withdrawals</th><th class="bg-orange-50">Net Balance (EP)</th><th class="bg-green-50">Net Balance (AP)</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="projPartnersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="backupManagementModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 class="text-2xl font-black text-slate-800 w-full text-left flex items-center">
+                    💾 System Backups & Restore
+                    <button id="manualBackupBtn" onclick="triggerManualBackup()" class="ml-4 bg-emerald-600 text-white px-3 py-1 rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition">➕ Create Manual Backup</button>
+                </h2>
+                <button onclick="document.getElementById('backupManagementModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <div class="bg-white border rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-center text-sm whitespace-nowrap">
+                        <thead class="bg-slate-100 border-b">
+                            <tr>
+                                <th class="text-left">Backup File Name</th>
+                                <th>Date & Time</th>
+                                <th>File Size</th>
+                                <th>Storage Source</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupsListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="emailLogsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[85] p-4 transition-all">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-7xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                <h2 class="text-2xl font-black text-slate-800 w-full text-left">📧 Email Center</h2>
+                <button onclick="document.getElementById('emailLogsModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50 grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="col-span-1 bg-white p-6 border rounded-xl shadow-sm h-fit">
+                    <h3 class="font-black text-blue-700 border-b pb-2 mb-4">Send Manual Email</h3>
+                    <form onsubmit="sendManualEmail(event)" class="flex flex-col gap-4 text-sm">
+                        <div class="flex flex-col">
+                            <label class="font-bold text-slate-600 mb-1">To (Recipient)</label>
+                            <input type="email" name="to" placeholder="recipient@example.com" class="p-3 border rounded text-left" required>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="font-bold text-slate-600 mb-1">Subject</label>
+                            <input type="text" name="subject" placeholder="Email Subject" class="p-3 border rounded text-left font-bold" required>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="font-bold text-slate-600 mb-1">Body</label>
+                            <textarea name="body" placeholder="Write your message here..." class="p-3 border rounded text-left h-32 resize-none" required></textarea>
+                        </div>
+                        <button id="sendEmailBtn" type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm">Send Email 📤</button>
+                    </form>
+                </div>
+                
+                <div class="col-span-2 bg-white p-6 border rounded-xl shadow-sm">
+                    <h3 class="font-black text-slate-700 border-b pb-2 mb-4">Email Logs (Sent History)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-center text-xs whitespace-nowrap">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>To (Recipient)</th>
+                                    <th>Subject</th>
+                                    <th>Message Snippet</th>
+                                    <th>Sent By</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emailLogsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.closeSubcontractorModal = function() {
+            const modal = document.getElementById('subcontractorModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.closeNewPayAppModal = function() {
+            const modal = document.getElementById('newPayAppModal');
+            if (modal) modal.classList.add('hidden');
+            document.getElementById('subInvoiceForm').reset();
+            const totalQtyEl = document.getElementById('subTotalQty');
+            if(totalQtyEl) {
+                totalQtyEl.classList.add('bg-slate-100');
+                totalQtyEl.classList.remove('bg-red-100', 'text-red-700', 'border-red-500');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const origOpenModal = window.openModal;
+            window.openModal = function(type, editData = null) {
+                if(typeof origOpenModal === 'function') origOpenModal(type, editData);
+                if (type === 'boq') {
+                    const formFields = document.getElementById('formFields');
+                    if(formFields) {
+                        const unitVal = editData?.unit || '';
+                        const units = window.erpData?.system_units || ['m2', 'm3', 'LM', 'KG', 'Ton', 'Piece', 'LS'];
+                        const unitOpts = `<option value="">-- Select Unit --</option>` + units.map(u => `<option value="${u}" ${unitVal === u ? 'selected' : ''}>${u}</option>`).join('');
+                        
+                        const inputs = formFields.querySelectorAll('input[name="unit"]');
+                        if (inputs.length > 0) {
+                            const unitInput = inputs[0];
+                            const selectEl = document.createElement('select');
+                            selectEl.name = "unit";
+                            selectEl.className = unitInput.className;
+                            selectEl.innerHTML = unitOpts;
+                            unitInput.parentNode.replaceChild(selectEl, unitInput);
+                        }
+                    }
+                }
+            };
+        });
+    </script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/dashboards.js"></script>
+    <script src="js/subcontractors.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

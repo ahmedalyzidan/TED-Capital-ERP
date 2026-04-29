@@ -1,0 +1,18 @@
+import { defineConfig } from 'vite';
+import path from 'path';
+
+export default defineConfig({
+  root: 'frontend', // تحديد مجلد الواجهة الأمامية
+  build: {
+    outDir: '../dist/frontend',
+    emptyOutDir: true, // تم إضافة هذا السطر لحل التحذير
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // لضمان دمج الكود قدر الإمكان
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`
+      }
+    }
+  }
+});
