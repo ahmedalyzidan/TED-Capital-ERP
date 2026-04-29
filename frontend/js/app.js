@@ -245,3 +245,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// ================= PROJECT SUB-TABS LOGIC =================
+window.showProjectSubTab = function(tabId) {
+    // 1. إخفاء كل المحتوى
+    document.querySelectorAll('.proj-sub-content').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('block');
+    });
+
+    // 2. إزالة التنسيق النشط من كل الأزرار
+    document.querySelectorAll('.proj-sub-btn').forEach(btn => {
+        btn.classList.remove('active-sub-tab', 'bg-blue-50', 'text-blue-700', 'border-b-4', 'border-blue-600');
+        btn.classList.add('text-slate-500');
+    });
+
+    // 3. إظهار المحتوى المطلوب
+    const targetContent = document.getElementById(tabId);
+    if (targetContent) {
+        targetContent.classList.remove('hidden');
+        targetContent.classList.add('block');
+    }
+
+    // 4. تفعيل الزر المضغوط
+    const targetBtn = document.getElementById('btn-' + tabId);
+    if (targetBtn) {
+        targetBtn.classList.remove('text-slate-500');
+        targetBtn.classList.add('active-sub-tab', 'bg-blue-50', 'text-blue-700', 'border-b-4', 'border-blue-600');
+    }
+
+    // 5. جلب البيانات بناءً على التاب النشط
+    if (tabId === 'proj-companies' || tabId === 'proj-cards') {
+        if(typeof window.fetchTablePaginated === 'function') {
+            window.fetchTablePaginated('projects');
+        }
+    } else if (tabId === 'proj-expenses') {
+        // سيتم إضافة دالة جلب المصروفات هنا لاحقاً
+        console.log("Fetching project expenses...");
+    } else if (tabId === 'proj-profits') {
+        // سيتم إضافة دالة جلب الأرباح هنا لاحقاً
+        console.log("Fetching project profits...");
+    } else if (tabId === 'proj-transactions') {
+        // سيتم إضافة دالة جلب حركات الحساب هنا لاحقاً
+        console.log("Fetching project transactions...");
+    }
+};

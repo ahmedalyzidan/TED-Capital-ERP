@@ -5,8 +5,7 @@ let editingId = null;
 window.currentTab = 'ceoTab';
 let searchTimeout = null;
 
-// --- [حالة تتبع وضع العرض (جدول / كروت)] ---
-window.viewMode = {}; // 'table' | 'cards'
+window.viewMode = {}; 
 
 window.pageState = {
     projects: { page: 1, limit: 10, search: '', filter: '' }, partners: { page: 1, limit: 10, search: '', filter: '' },
@@ -28,104 +27,169 @@ window.pageState = {
     client_preorders: { page: 1, limit: 10, search: '', filter: '' }
 };
 
-// --- [دالة تبديل العرض بين الكروت والجداول] ---
 window.toggleViewMode = function(type) {
     window.viewMode[type] = window.viewMode[type] === 'cards' ? 'table' : 'cards';
     const btn = document.getElementById(`toggleViewBtn_${type}`);
-    if(btn) {
-        btn.innerHTML = window.viewMode[type] === 'cards' ? '<span class="text-xl">📊</span> عرض الجدول' : '<span class="text-xl">🔀</span> عرض الكروت';
-    }
-    if (window.pageState[type] && window.fetchTablePaginated) {
-        window.fetchTablePaginated(type);
-    }
+    if(btn) btn.innerHTML = window.viewMode[type] === 'cards' ? '<span class="text-xl">📊</span> عرض الجدول' : '<span class="text-xl">🔀</span> عرض الكروت';
+    if (window.pageState[type] && window.fetchTablePaginated) window.fetchTablePaginated(type);
 };
 
-// ================= CURRENCY & FORMATTING =================
-window.getCurrencyRate = function() { 
-    return document.getElementById('globalCurrencyToggle')?.value === 'EGP' ? 50 : 1; 
-};
-window.getCurrencySym = function() { 
-    return document.getElementById('globalCurrencyToggle')?.value === 'EGP' ? ' ج.م' : ' $'; 
-};
+window.getCurrencyRate = function() { return document.getElementById('globalCurrencyToggle')?.value === 'EGP' ? 50 : 1; };
+window.getCurrencySym = function() { return document.getElementById('globalCurrencyToggle')?.value === 'EGP' ? ' ج.م' : ' $'; };
 window.formatMoney = function(amount) {
     const val = (Number(amount) || 0) * getCurrencyRate();
     return val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + getCurrencySym();
 };
 
-// ================= AUTHENTICATION & SESSION MANAGEMENT =================
-window.logout = function() {
-    localStorage.removeItem('erp_token');
-    localStorage.removeItem('erp_user');
-    window.location.reload();
+// ================= TOAST NOTIFICATIONS (نظام الإشعارات الذكي) =================
+window.showToast = function(msg, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-blue-600');
+    const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+    
+    toast.className = `${bg} text-white px-6 py-4 rounded-xl shadow-2xl font-bold flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-auto max-w-sm`;
+    toast.innerHTML = `<span class="text-xl">${icon}</span> <span class="text-sm">${msg}</span>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 };
 
-// ================= SECURE API FETCH WRAPPER (JWT INTERCEPTOR) =================
+// ================= AUTHENTICATION & SESSION MANAGEMENT =================
+window.logout = async function(showMessage = true) {
+    const refreshToken = localStorage.getItem('erp_refresh_token');
+    if (refreshToken) {
+        try {
+            await fetch('/api/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: refreshToken })
+            });
+        } catch(e) {}
+    }
+    localStorage.removeItem('erp_token');
+    localStorage.removeItem('erp_refresh_token');
+    localStorage.removeItem('erp_user');
+    if(showMessage) window.showToast("تم تسجيل الخروج بنجاح", "success");
+    setTimeout(() => window.location.reload(), 1000);
+};
+
+// ================= SECURE API FETCH WRAPPER (DUAL-TOKEN INTERCEPTOR) =================
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function subscribeTokenRefresh(cb) { refreshSubscribers.push(cb); }
+function onRefreshed(token) {
+    refreshSubscribers.map(cb => cb(token));
+    refreshSubscribers = [];
+}
+
 window.apiFetch = async function(url, options = {}) {
-    const token = localStorage.getItem('erp_token');
+    let token = localStorage.getItem('erp_token');
+    const isAuthRoute = url.includes('/api/login') || url.includes('/api/refresh') || url.includes('/api/logout');
     
-    if (!token && !url.includes('/api/login')) {
-        console.warn("No token found. Request aborted to save server resources.");
+    if (!token && !isAuthRoute) {
+        window.showToast("لا توجد جلسة فعالة. يرجى تسجيل الدخول.", "error");
         return { ok: false, status: 401, json: async () => ({ message: "No token" }) };
     }
 
-    const headers = options.isFormData ? {} : { 'Content-Type': 'application/json' };
-    
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+    const getHeaders = (t) => {
+        const headers = options.isFormData ? {} : { 'Content-Type': 'application/json' };
+        if (t) headers['Authorization'] = `Bearer ${t}`;
+        return { ...headers, ...options.headers };
+    };
 
-    if (!options.isFormData) {
-        options.headers = { ...headers, ...options.headers };
-    } else {
-        options.headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
-    }
+    options.headers = getHeaders(token);
     
     try {
-        const response = await fetch(url, options);
-        if (response.status === 401 && !url.includes('/api/login')) {
-            alert("Session expired or Unauthorized. Please sign in again.");
-            window.logout();
-            throw new Error("Unauthorized");
+        let response = await fetch(url, options);
+        
+        if (response.status === 401 && !isAuthRoute) {
+            const errorData = await response.clone().json().catch(() => ({}));
+            
+            if (errorData.error === "TokenExpiredError" || errorData.message === "Token expired" || response.status === 401) {
+                const refreshToken = localStorage.getItem('erp_refresh_token');
+                
+                if (!refreshToken) {
+                    window.showToast("انتهت الجلسة بالكامل. جاري تحويلك...", "error");
+                    window.logout(false);
+                    throw new Error("Session completely expired.");
+                }
+
+                if (!isRefreshing) {
+                    isRefreshing = true;
+                    try {
+                        const refreshRes = await fetch('/api/refresh', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: refreshToken })
+                        });
+                        
+                        const refreshData = await refreshRes.json();
+                        if (refreshRes.ok && refreshData.success) {
+                            localStorage.setItem('erp_token', refreshData.token);
+                            localStorage.setItem('erp_user', JSON.stringify(refreshData.user));
+                            isRefreshing = false;
+                            onRefreshed(refreshData.token);
+                        } else {
+                            isRefreshing = false;
+                            window.showToast("تم إيقاف الجلسة. جاري تسجيل الخروج.", "error");
+                            window.logout(false);
+                            throw new Error("Refresh failed");
+                        }
+                    } catch (e) {
+                        isRefreshing = false;
+                        window.logout(false);
+                        throw e;
+                    }
+                }
+
+                return await new Promise((resolve) => {
+                    subscribeTokenRefresh((newToken) => {
+                        options.headers = getHeaders(newToken);
+                        resolve(fetch(url, options));
+                    });
+                });
+            } else {
+                window.showToast("غير مصرح لك. جاري الخروج.", "error");
+                window.logout(false);
+                throw new Error("Unauthorized");
+            }
         }
-        if (response.status === 403 && !url.includes('/api/login')) {
-            console.warn("Access Forbidden (403) for: " + url + " - Server blocked the request based on RBAC permissions.");
-            // يتم إرجاع الـ response ليقوم ملف auth.js (الواجهة الأمامية) باستخراج نص الخطأ منه وعرضه للمستخدم بدلاً من التحطم
+
+        if (response.status === 403 && !isAuthRoute) {
+            window.showToast("الخادم رفض العملية: لا تملك صلاحية الوصول.", "error");
             return response; 
         }
         return response;
     } catch (error) {
-        console.error("Network Fetch Error:", error);
         throw error;
     }
 };
 
-// ================= GLOBAL DATA FETCHERS (DROPDOWNS & TABLES) =================
 window.fetchDropdownData = async function() {
     try {
         const projRes = await window.apiFetch('/api/table/projects?limit=1000');
-        if (projRes.ok) {
-            const projJson = await projRes.json();
-            window.erpData.projects_dd = projJson.data || [];
-        }
-        
+        if (projRes.ok) window.erpData.projects_dd = (await projRes.json()).data || [];
         const accRes = await window.apiFetch('/api/table/chart_of_accounts?limit=1000');
-        if (accRes.ok) {
-            const accJson = await accRes.json();
-            window.erpData.accounts_dd = accJson.data || [];
-        }
-    } catch (err) {
-        console.error("[API ERROR] Failed to fetch dropdown data:", err);
-    }
+        if (accRes.ok) window.erpData.accounts_dd = (await accRes.json()).data || [];
+    } catch (err) {}
 };
 
 window.fetchTablePaginated = async function(table) {
-    if (!window.pageState[table]) {
-        console.warn(`[API WARNING] Table state for '${table}' is not defined in pageState.`);
-        return;
-    }
-    
+    if (!window.pageState[table]) return;
     const state = window.pageState[table];
-    
     try {
         let url = `/api/table/${table}?page=${state.page}&limit=${state.limit}`;
         if (state.search) url += `&search=${encodeURIComponent(state.search)}`;
@@ -134,69 +198,15 @@ window.fetchTablePaginated = async function(table) {
             if (state.startDate) url += `&startDate=${state.startDate}`;
             if (state.endDate) url += `&endDate=${state.endDate}`;
         }
-
         const res = await window.apiFetch(url);
         if (res && res.ok) {
             const json = await res.json();
             window.erpData[table] = json.data || [];
-            
             if (typeof window.renderSpecificTable === 'function') {
                 window.renderSpecificTable(table, state.page, Math.ceil((json.total || 0) / state.limit));
             } else if (typeof window.renderTable === 'function') {
                 window.renderTable(table, json.data, json.total);
             }
-
-            const cacheKey = `${state.search}_${state.filter}`;
-            if (window.erpData[`${table}_cache_key`] !== cacheKey || !window.erpData[`${table}_all`]) {
-                let allUrl = `/api/table/${table}?limit=100000`;
-                if (state.search) allUrl += `&search=${encodeURIComponent(state.search)}`;
-                if (state.filter) allUrl += `&filter=${encodeURIComponent(state.filter)}`;
-                
-                window.apiFetch(allUrl).then(r => r.json()).then(j => {
-                    window.erpData[`${table}_all`] = j.data || [];
-                    window.erpData[`${table}_cache_key`] = cacheKey;
-                    if (typeof window.renderSpecificTable === 'function') {
-                        window.renderSpecificTable(table, state.page, Math.ceil((json.total || 0) / state.limit));
-                    }
-                }).catch(e => console.error("Summary Background Fetch Error:", e));
-            }
-
-        } else {
-            console.error(`[API ERROR] Failed to fetch paginated data for ${table}`);
         }
-    } catch (err) {
-        console.error(`[API ERROR] Exception in fetchTablePaginated for ${table}:`, err);
-    }
+    } catch (err) {}
 };
-
-// ================= FIX ADMIN PRIVILEGES =================
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        // دالة آمنة لاستخراج بيانات المستخدم من الذاكرة المحلية
-        const getUserData = () => {
-            try { return JSON.parse(localStorage.getItem('erp_user') || '{}'); } catch(e) { return {}; }
-        };
-
-        if (window.hasPerm) {
-            const origHasPerm = window.hasPerm;
-            window.hasPerm = function(table, action) {
-                const u = getUserData();
-                if (u.role === 'Admin') return true;
-                // فحص إذا كانت العملية المطلوبة مدرجة ضمن الصلاحيات الوظيفية (Functions)
-                if (u.permissions && u.permissions.functions && (u.permissions.functions.includes(action) || u.permissions.functions.includes('ALL'))) {
-                    return true;
-                }
-                return origHasPerm(table, action);
-            };
-        } else {
-            window.hasPerm = function(table, action) {
-                const u = getUserData();
-                if (u.role === 'Admin') return true;
-                if (u.permissions && u.permissions.functions && (u.permissions.functions.includes(action) || u.permissions.functions.includes('ALL'))) {
-                    return true;
-                }
-                return false;
-            }
-        }
-    }, 1000);
-});

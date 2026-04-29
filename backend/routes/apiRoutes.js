@@ -16,8 +16,21 @@ router.get('/dropdowns', async (req, res) => {
             // 1. Schema Fixes (Upload error & DDP LCY Currency fields)
             await pool.query("ALTER TABLE attachments ADD COLUMN IF NOT EXISTS table_name VARCHAR(255) DEFAULT 'general'");
             await pool.query("ALTER TABLE attachments ADD COLUMN IF NOT EXISTS record_id INTEGER");
+            
+            // إضافة وتحديث حقول مصروفات DDP
             await pool.query("ALTER TABLE po_ddp_lcy_charges ADD COLUMN IF NOT EXISTS fcy_amount NUMERIC(12,2) DEFAULT 0");
             await pool.query("ALTER TABLE po_ddp_lcy_charges ADD COLUMN IF NOT EXISTS fx_rate NUMERIC(12,2) DEFAULT 1");
+            await pool.query("ALTER TABLE po_ddp_lcy_charges ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'Cash'");
+            await pool.query("ALTER TABLE po_ddp_lcy_charges ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100)");
+
+            // حقول إضافية لسجل مدفوعات العملاء (لتطوير شاشة السداد)
+            await pool.query("ALTER TABLE client_payment_history ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'Cash'");
+            await pool.query("ALTER TABLE client_payment_history ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100)");
+            await pool.query("ALTER TABLE client_payment_history ADD COLUMN IF NOT EXISTS notes TEXT");
+
+            // التأكد من وجود جداول السحب والإيداع للشركاء لضمان عمل واجهة Workspace
+            await pool.query(`CREATE TABLE IF NOT EXISTS partner_deposits (id SERIAL PRIMARY KEY, partner_id INTEGER, amount NUMERIC(15,2), date DATE, payment_method VARCHAR(50), reference_no VARCHAR(100), created_by VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            await pool.query(`CREATE TABLE IF NOT EXISTS partner_withdrawals (id SERIAL PRIMARY KEY, partner_id INTEGER, amount NUMERIC(15,2), date DATE, payment_method VARCHAR(50), reference_no VARCHAR(100), created_by VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
 
             // 2. Chart of Accounts Seeding
             const checkTree = await pool.query("SELECT id FROM chart_of_accounts WHERE account_code = '1000'");
@@ -547,6 +560,10 @@ router.get('/table/:type', async (req, res) => {
             prefix = "cr.";
             queryStr = `SELECT * FROM client_refunds cr`;
             countStr = `SELECT COUNT(*) FROM client_refunds cr`;
+        } else if (type === 'ddp_charges') {
+            prefix = "d.";
+            queryStr = `SELECT d.*, po.project_name, COALESCE(po.item_description, 'صنف غير محدد') AS item_name FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
+            countStr = `SELECT COUNT(*) FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
         }
 
         let conditions = []; let params = [];
@@ -557,8 +574,10 @@ router.get('/table/:type', async (req, res) => {
             else if (type === 'inventory_transfers') { conditions.push(`(${prefix}from_project = $${params.length + 1} OR ${prefix}to_project = $${params.length + 1})`); params.push(filter); } 
             else if (type === 'returns') { conditions.push(`(${prefix}project_name = $${params.length + 1} OR ${prefix}return_to = $${params.length + 1})`); params.push(filter); }
             else if (type === 'po_ddp_charges' || type === 'po_ddp_lcy_charges') { conditions.push(`po_id = $${params.length + 1}`); params.push(filter); }
+            else if (type === 'ddp_charges') { conditions.push(`po.project_name = $${params.length + 1}`); params.push(filter); }
             else if (type === 'client_consumptions') { conditions.push(`cc.client_id = $${params.length + 1}`); params.push(filter); }
             else if (type === 'client_refunds') { conditions.push(`cr.client_id = $${params.length + 1}`); params.push(filter); }
+            else if (type === 'partner_deposits' || type === 'partner_withdrawals') { conditions.push(`partner_id = $${params.length + 1}`); params.push(filter); }
         }
 
         if (search) {
@@ -620,7 +639,7 @@ router.post('/add/:type', async (req, res) => {
         let data = req.body;
         pNameForSync = data.project_name || (type === 'projects' ? data.name : null);
 
-        const calcFields = ['dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
+        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
         calcFields.forEach(f => delete data[f]);
         
         if (type === 'inventory' || type === 'inventory_sales') {
@@ -902,6 +921,34 @@ router.post('/add/:type', async (req, res) => {
             }
         }
 
+        // --- NEW LEDGER INTEGRATIONS (Partner Finance & DDP Charges) ---
+        if (type === 'partner_deposits' && !skipInsert) {
+            const amt = parseFloat(data.amount || 0);
+            const partnerRes = await client.query("SELECT name, project_name FROM partners WHERE id = $1", [data.partner_id]);
+            const pName = partnerRes.rows.length > 0 ? partnerRes.rows[0].project_name : 'General';
+            const partnerName = partnerRes.rows.length > 0 ? partnerRes.rows[0].name : '';
+            await autoLedgerEntry(client, 'صندوق نقدية - تيد كابيتال', pName, amt, 0, `إيداع شريك: ${partnerName} - ${data.reference_no || ''}`, req.user.username);
+            await autoLedgerEntry(client, 'جاري الشركاء', pName, 0, amt, `إيداع شريك: ${partnerName} - ${data.reference_no || ''}`, req.user.username);
+        }
+
+        if (type === 'partner_withdrawals' && !skipInsert) {
+            const amt = parseFloat(data.amount || 0);
+            const partnerRes = await client.query("SELECT name, project_name FROM partners WHERE id = $1", [data.partner_id]);
+            const pName = partnerRes.rows.length > 0 ? partnerRes.rows[0].project_name : 'General';
+            const partnerName = partnerRes.rows.length > 0 ? partnerRes.rows[0].name : '';
+            await autoLedgerEntry(client, 'جاري الشركاء', pName, amt, 0, `سحب شريك: ${partnerName} - ${data.reference_no || ''}`, req.user.username);
+            await autoLedgerEntry(client, 'صندوق نقدية - تيد كابيتال', pName, 0, amt, `سحب شريك: ${partnerName} - ${data.reference_no || ''}`, req.user.username);
+        }
+
+        if (type === 'po_ddp_lcy_charges' && !skipInsert) {
+            const amt = parseFloat(data.amount || 0);
+            const poRes = await client.query("SELECT project_name FROM purchase_orders WHERE id = $1", [data.po_id]);
+            const pName = poRes.rows.length > 0 ? poRes.rows[0].project_name : 'General';
+            await autoLedgerEntry(client, 'مصاريف استيراد وشحن مباشرة', pName, amt, 0, `مصروفات تخليص وشحن PO-${data.po_id}: ${data.description || data.charge_type || ''}`, req.user.username);
+            await autoLedgerEntry(client, 'صندوق نقدية - تيد كابيتال', pName, 0, amt, `مصروفات تخليص وشحن PO-${data.po_id}: ${data.description || data.charge_type || ''}`, req.user.username);
+        }
+        // ---------------------------------------------------------------
+
         if (type === 'ledger') await autoLedgerEntry(client, data.account_name, data.cost_center, cleanNumeric(data.debit), cleanNumeric(data.credit), data.description, req.user.username);
         
         if (pNameForSync) await syncProjectFinancials(pNameForSync, client);
@@ -931,7 +978,7 @@ router.put('/update/:type/:id', async (req, res) => {
         let data = req.body;
         let pNameForSync = data.project_name || (type === 'projects' ? data.name : null);
 
-        const calcFields = ['dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
+        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
         
         calcFields.forEach(f => delete data[f]);
         
@@ -1574,8 +1621,8 @@ router.post('/staff/payroll', async (req, res) => {
     }
 });
 
-router.post('/pay-delayed-balance', async (req, res) => {
-    const { client_id, amount_paid } = req.body;
+router.post(['/pay-delayed-balance', '/action/pay-delayed-balance'], async (req, res) => {
+    const { client_id, amount_paid, debt_id, payment_method, reference_no, notes } = req.body;
     let remainingPayment = parseFloat(amount_paid || 0);
 
     if (!client_id || !remainingPayment || remainingPayment <= 0) return res.status(400).json({ error: "المبلغ المدفوع غير صحيح." });
@@ -1584,9 +1631,20 @@ router.post('/pay-delayed-balance', async (req, res) => {
     try {
         await client.query("BEGIN"); 
 
-        const pendingDebts = await client.query(
-            "SELECT * FROM client_delayed_payments WHERE client_id = $1 AND status != 'Paid' AND amount > 0 ORDER BY due_date ASC", [client_id]
-        );
+        let pendingDebts;
+        if (debt_id) {
+            // سداد لمعاملة مخصصة بعينها
+            pendingDebts = await client.query(
+                "SELECT * FROM client_delayed_payments WHERE id = $1 AND client_id = $2 AND status != 'Paid' AND amount > 0", 
+                [debt_id, client_id]
+            );
+        } else {
+            // سداد عام لأقدم مديونية
+            pendingDebts = await client.query(
+                "SELECT * FROM client_delayed_payments WHERE client_id = $1 AND status != 'Paid' AND amount > 0 ORDER BY due_date ASC", 
+                [client_id]
+            );
+        }
 
         for (let debt of pendingDebts.rows) {
             if (remainingPayment <= 0) break;
@@ -1608,7 +1666,13 @@ router.post('/pay-delayed-balance', async (req, res) => {
 
             const newPaidTotal = parseFloat(debt.paid_amount || 0) + paidForThisDebt;
             const newAmount = debtAmount - paidForThisDebt;
-            const newHistory = { payment_date: new Date().toISOString(), amount_paid: paidForThisDebt };
+            const newHistory = { 
+                payment_date: new Date().toISOString(), 
+                amount_paid: paidForThisDebt,
+                payment_method: payment_method || 'Cash',
+                reference_no: reference_no || '',
+                notes: notes || ''
+            };
 
             await client.query(`
                 UPDATE client_delayed_payments 
@@ -1617,7 +1681,10 @@ router.post('/pay-delayed-balance', async (req, res) => {
                 WHERE id = $5
             `, [newAmount, newPaidTotal, newStatus, JSON.stringify(newHistory), debt.id]);
 
-            await client.query("INSERT INTO client_payment_history (client_id, delayed_payment_id, amount_paid, payment_date) VALUES ($1, $2, $3, CURRENT_DATE)", [client_id, debt.id, paidForThisDebt]);
+            await client.query(
+                "INSERT INTO client_payment_history (client_id, delayed_payment_id, amount_paid, payment_date, payment_method, reference_no, notes) VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6)", 
+                [client_id, debt.id, paidForThisDebt, payment_method || 'Cash', reference_no || '', notes || '']
+            );
 
             if (paidForThisDebt > 0) {
                 await client.query(`
@@ -1631,8 +1698,9 @@ router.post('/pay-delayed-balance', async (req, res) => {
                     )
                 `, [paidForThisDebt, client_id, debt.inventory_id || null]);
 
-                await autoLedgerEntry(client, 'صندوق نقدية - تيد كابيتال', 'General', paidForThisDebt, 0, `سداد مديونية متأخرة - عميل رقم ${client_id}`, req.user ? req.user.username : 'System');
-                await autoLedgerEntry(client, 'العملاء', 'General', 0, paidForThisDebt, `سداد مديونية متأخرة - عميل رقم ${client_id}`, req.user ? req.user.username : 'System');
+                const pmMethodStr = payment_method ? ` (${payment_method})` : '';
+                await autoLedgerEntry(client, 'صندوق نقدية - تيد كابيتال', 'General', paidForThisDebt, 0, `سداد مديونية للعميل رقم ${client_id}${pmMethodStr}`, req.user ? req.user.username : 'System');
+                await autoLedgerEntry(client, 'العملاء', 'General', 0, paidForThisDebt, `سداد مديونية للعميل رقم ${client_id}${pmMethodStr}`, req.user ? req.user.username : 'System');
             }
         }
         
@@ -1674,6 +1742,20 @@ router.post('/action/schedule_debt', async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
+        
+        // التحقق الأمني من أن مجموع الأقساط يساوي المديونية الأصلية بدقة
+        let totalScheduled = 0;
+        for (let s of schedules) {
+            totalScheduled += parseFloat(s.amount || 0);
+        }
+        
+        const debtRes = await client.query("SELECT SUM(amount) as total_debt FROM client_delayed_payments WHERE client_id = $1 AND (inventory_id = $2 OR (inventory_id IS NULL AND $2 IS NULL)) AND status != 'Paid'", [client_id, inventory_id || null]);
+        const originalTotal = parseFloat(debtRes.rows[0]?.total_debt || 0);
+
+        if (Math.abs(totalScheduled - originalTotal) > 0.1) {
+            throw new Error(`إجمالي الأقساط المجدولة (${totalScheduled}) لا يتطابق مع إجمالي المديونية المستحقة (${originalTotal}).`);
+        }
+
         await client.query("DELETE FROM client_delayed_payments WHERE client_id = $1 AND (inventory_id = $2 OR (inventory_id IS NULL AND $2 IS NULL)) AND status != 'Paid'", [client_id, inventory_id || null]);
 
         for (let s of schedules) {

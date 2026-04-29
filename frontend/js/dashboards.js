@@ -226,8 +226,17 @@ window.showDashboardBreakdown = function(type) {
 // ================= PARTNER FINANCIALS =================
 window.renderPartnerProfitMatrix = async function(projName) {
     try {
-        const response = await window.apiFetch(`/api/dashboard_stats?project=${encodeURIComponent(projName)}`);
+        const safeProjName = projName && projName !== 'undefined' ? projName : '';
+        const response = await window.apiFetch(`/api/dashboard_stats?project=${encodeURIComponent(safeProjName)}`);
+        
+        // 🚀 الإصلاح: التحقق من نجاح الطلب قبل محاولة تحويله إلى JSON لمنع الانهيار
+        if (!response.ok) return;
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) return;
+
         const data = await response.json();
+        if (data.error) return;
         
         const matrixContainer = document.getElementById('partnerProfitMatrixContainer');
         if (!matrixContainer) return;

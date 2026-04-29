@@ -100,7 +100,7 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
         inventory_sales: 'inventorySalesBody', inventory_transfers: 'transfersBody',
         returns: 'returnsBody', staff: 'hrBody', attendance: 'attendanceBody',
         leaves: 'leavesBody', payroll: 'payrollBody', ledger: 'financeBody',
-        email_logs: 'emailLogsBody', audit_logs: 'auditBody'
+        email_logs: 'emailLogsBody', audit_logs: 'auditBody', ddp_charges: 'ddpChargesBody'
     };
 
     try {
@@ -114,6 +114,8 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
                 tExp += budgetLcy * (safeNum(p.expected_profit_percent) / 100); 
                 tAct += budgetLcy * (safeNum(p.actual_profit_percent) / 100);
             });
+            
+            // 1. رسم عرض الكروت (التبويب الخامس - proj-cards)
             html = data.map(p => {
                 const company = p.company || '-';
                 const budgetFcy = safeNum(p.budget_fcy);
@@ -194,7 +196,39 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
                     </div>
                 </div>`;
             }).join('');
+            
             summaryHTML = data.length > 0 ? `<div class="col-span-full border-t-4 border-slate-800 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 p-4 rounded-xl flex flex-wrap justify-around gap-4 text-sm font-black mt-4"><div class="text-center"><span class="block text-slate-500 dark:text-slate-400 text-xs">إجمالي الميزانيات</span><span class="text-slate-800 dark:text-slate-200 font-mono text-lg">${formatMoney(tBudgetLCY)}</span></div><div class="text-center"><span class="block text-slate-500 dark:text-slate-400 text-xs">إجمالي الأرباح المتوقعة</span><span class="text-blue-500 font-mono text-lg">${formatMoney(tExp)}</span></div><div class="text-center"><span class="block text-slate-500 dark:text-slate-400 text-xs">إجمالي الأرباح الفعلية</span><span class="text-emerald-600 dark:text-emerald-400 font-mono text-lg">${formatMoney(tAct)}</span></div></div>` : '';
+
+            // 2. رسم عرض الجدول للشركات (التبويب الأول - proj-companies)
+            const listContainer = document.getElementById('projectsListViewBody');
+            if (listContainer) {
+                if (data.length === 0) {
+                    listContainer.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 font-bold italic">لا توجد مشاريع مسجلة</td></tr>`;
+                } else {
+                    listContainer.innerHTML = data.map(p => {
+                        const company = p.company || p.linked_company || '<span class="text-slate-400">Unlinked</span>';
+                        const budgetLcy = safeNum(p.budget);
+                        return `
+                        <tr class="border-b hover:bg-slate-50 dark:hover:bg-slate-800 transition text-center dark:border-slate-700 text-sm">
+                            <td class="p-3 font-black text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50">${company}</td>
+                            <td class="p-3 text-blue-600 dark:text-blue-400 font-black">${p.code || '-'}</td>
+                            <td class="p-3 font-bold text-slate-800 dark:text-slate-200">${p.name || '-'}</td>
+                            <td class="p-3">
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-slate-600 dark:text-slate-400">${p.manager || 'N/A'}</span>
+                                    <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400">${formatMoney(budgetLcy)}</span>
+                                </div>
+                            </td>
+                            <td class="p-3">
+                                <div class="flex justify-center items-center gap-2">
+                                    ${window.buildActionButtons('projects', p.id)}
+                                </div>
+                            </td>
+                        </tr>
+                        `;
+                    }).join('');
+                }
+            }
         }
         else if (type === 'partners') { 
             html = data.map(p => `
@@ -212,8 +246,10 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
                     <td class="text-center p-3 font-mono font-bold text-indigo-600">${formatMoney(p.net_balance_ep || 0)}</td>
                     <td class="text-center p-3 font-mono font-bold text-indigo-600">${formatMoney(p.net_balance_ap || 0)}</td>
                     <td class="text-center p-3 font-bold ${p.status === 'Active' ? 'text-emerald-600' : 'text-slate-500'}">${p.status||'Active'}</td>
-                    <td class="text-center p-3 flex justify-center items-center">
-                        <button type="button" onclick="openAttachments('partners', ${p.id})" class="text-slate-400 mr-2 hover:scale-110">📎</button>
+                    <td class="text-center p-3 flex justify-center items-center gap-1">
+                        <button type="button" onclick="window.openPartnerDepositModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px] font-bold border border-emerald-200 hover:bg-emerald-100 transition shadow-sm">إيداع 💵</button>
+                        <button type="button" onclick="window.openPartnerWithdrawalModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="text-red-500 bg-red-50 px-2 py-1 rounded text-[10px] font-bold border border-red-200 hover:bg-red-100 transition shadow-sm">سحب 💸</button>
+                        <button type="button" onclick="openAttachments('partners', ${p.id})" class="text-slate-400 mx-1 hover:scale-110">📎</button>
                         ${editBtnHtml(p.id)}${delBtnHtml(p.id)}
                     </td>
                 </tr>
@@ -271,7 +307,9 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
                 const invName = isCreditNote ? '<span class="text-emerald-700 dark:text-emerald-300 font-black">🟢 رصيد دائن للعميل (Credit)</span>' : (cc.inventory_name || '-');
                 const refundBtn = creditBalance > 0 ? `<button type="button" onclick="window.openRefundModal(${cc.client_id}, '${(cc.client_name || '').replace(/'/g, "\\'")}', ${creditBalance})" class="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 px-2 py-1 rounded text-xs font-bold mr-1 hover:bg-emerald-100 transition shadow-sm" title="صرف الرصيد النقدي للعميل">صرف 💰</button>` : '';
                 const statementBtn = `<button type="button" onclick="window.viewClientStatement(${cc.client_id || 'null'}, '${(cc.client_name || '').replace(/'/g, "\\'")}')" class="text-blue-600 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 px-2 py-1 rounded text-xs font-bold mr-1 hover:bg-blue-100 transition shadow-sm" title="كشف حساب عميل">كشف حساب 📄</button>`;
-                return `<tr class="${rowClass} text-sm transition"><td class="text-center p-3 font-bold text-slate-800 dark:text-slate-200">${cc.client_name || '-'}</td><td class="text-center p-3 font-bold text-blue-700 dark:text-blue-400">${invName}</td><td class="text-center p-3 font-mono font-bold">${safeNum(cc.consumed_qty)}</td><td class="text-center p-3 font-mono font-bold text-blue-600 dark:text-blue-400">${window.formatMoney(rev)}</td><td class="text-center p-3 font-mono text-emerald-600 dark:text-emerald-400 font-black">${window.formatMoney(paid)}</td><td class="text-center p-3 font-mono font-black text-red-500 dark:text-red-400">${window.formatMoney(bal)}</td><td class="text-center p-3 font-mono font-black text-indigo-600 dark:text-indigo-400">${window.formatMoney(creditBalance)}</td><td class="text-center p-3 text-slate-500 text-xs">${window.safeDateStr(cc.outstanding_date)}</td><td class="text-center p-3 flex justify-center items-center gap-1 flex-wrap w-[220px]">${refundBtn}${statementBtn}<button type="button" onclick="window.printPaymentReceipt(${cc.id})" class="text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-bold hover:bg-slate-200 transition" title="طباعة">🖨️</button><button type="button" onclick="window.openDelayedPaymentsModal(${cc.client_id || 'null'}, '${(cc.client_name || '').replace(/'/g, "\\'")}')" class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded text-xs font-bold hover:bg-indigo-100 transition shadow-sm" title="جدولة وسداد">سداد 🗓️</button>${delBtnHtml(cc.id)}</td></tr>`;
+                return `<tr class="${rowClass} text-sm transition"><td class="text-center p-3 font-bold text-slate-800 dark:text-slate-200">${cc.client_name || '-'}</td><td class="text-center p-3 font-bold text-blue-700 dark:text-blue-400">${invName}</td><td class="text-center p-3 font-mono font-bold">${safeNum(cc.consumed_qty)}</td><td class="text-center p-3 font-mono font-bold text-blue-600 dark:text-blue-400">${window.formatMoney(rev)}</td><td class="text-center p-3 font-mono text-emerald-600 dark:text-emerald-400 font-black">${window.formatMoney(paid)}</td><td class="text-center p-3 font-mono font-black text-red-500 dark:text-red-400">${window.formatMoney(bal)}</td><td class="text-center p-3 font-mono font-black text-indigo-600 dark:text-indigo-400">${window.formatMoney(creditBalance)}</td><td class="text-center p-3 text-slate-500 text-xs">${window.safeDateStr(cc.outstanding_date)}</td><td class="text-center p-3 flex justify-center items-center gap-1 flex-wrap w-[220px]">${refundBtn}${statementBtn}<button type="button" onclick="window.printPaymentReceipt(${cc.id})" class="text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-bold hover:bg-slate-200 transition" title="طباعة">🖨️</button><button type="button" onclick="window.openDelayedPaymentsModal(${cc.client_id || 'null'}, '${(cc.client_name || '').replace(/'/g, "\\'")}')" class="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded text-xs font-bold hover:bg-emerald-100 transition shadow-sm" title="سداد سريع">سداد 💵</button>
+<button type="button" onclick="window.openScheduleDebtModal(${cc.client_id || 'null'}, ${cc.inventory_id || 'null'}, ${cc.outstanding_balance || 0})" class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded text-xs font-bold hover:bg-indigo-100 transition shadow-sm" title="جدولة المديونية">جدولة 🗓️</button>
+${delBtnHtml(cc.id)}</td></tr>`;
             }).join('');
             summaryHTML = data.length > 0 ? `<tr class="border-t-4 border-slate-800 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-sm font-black"><td colspan="2" class="text-center p-3">الإجمالي</td><td class="text-center p-3">${tQty.toFixed(2)}</td><td class="text-center p-3">${window.formatMoney(tRev)}</td><td class="text-center p-3">${window.formatMoney(tPaid)}</td><td class="text-center p-3 text-red-500 dark:text-red-400">${window.formatMoney(tOut)}</td><td class="text-center p-3 text-indigo-600 dark:text-indigo-400">${window.formatMoney(tCredit)}</td><td colspan="2"></td></tr>` : '';
         }
@@ -478,6 +516,26 @@ window.renderSpecificTable = function(type, currentPage, totalPages) {
             } else {
                 html = data.map(l => `<tr class="border-b border-slate-700 text-xs font-mono hover:bg-slate-800 transition"><td class="text-center p-2 text-slate-400">${window.safeDateTimeStr(l.date || l.timestamp || l.created_at || Date.now())}</td><td class="text-center p-2 font-bold text-blue-400 flex items-center justify-center gap-1">🛡️ ${l.username}</td><td class="text-center p-2 ${(l.action||'').includes('DELETE') ? 'text-red-500 font-bold' : 'text-slate-300 font-bold'}">${l.action}</td><td class="text-center p-2 text-emerald-400">${l.table_name} (#${l.record_id || '-'})</td><td class="text-center p-2 text-slate-400 max-w-xs truncate" title="${l.details || ''}">${l.details || '-'}</td></tr>`).join('');
             }
+        }
+        else if(type === 'ddp_charges') {
+            let tFcy = 0, tLcy = 0;
+            summaryData.forEach(d => { tFcy += safeNum(d.fcy_amount); tLcy += safeNum(d.amount); });
+            html = data.map(d => `
+                <tr class="border-b dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <td class="text-center p-3 text-slate-500 font-bold text-xs">${safeDateStr(d.date)}</td>
+                    <td class="text-center p-3 font-bold text-blue-600">PO-${d.po_id||'-'}</td>
+                    <td class="text-center p-3 font-bold text-slate-700">${d.project_name||'-'}</td>
+                    <td class="text-center p-3 text-slate-600 max-w-[150px] truncate" title="${d.item_description}">${d.item_description||'-'}</td>
+                    <td class="text-center p-3 font-bold">${d.charge_type||d.description||'-'}</td>
+                    <td class="text-center p-3 text-xs"><span class="px-2 py-1 bg-slate-100 rounded border">${d.payment_method||'-'}</span></td>
+                    <td class="text-center p-3 text-xs font-mono">${d.reference_no||'-'}</td>
+                    <td class="text-center p-3 font-mono text-blue-600 bg-blue-50">${formatMoney(d.fcy_amount)}</td>
+                    <td class="text-center p-3 font-mono text-indigo-600">${safeNum(d.fx_rate, 1)}</td>
+                    <td class="text-center p-3 font-mono font-black text-emerald-600 bg-emerald-50">${formatMoney(d.amount)}</td>
+                    <td class="text-center p-3 text-xs text-slate-500">${d.provider_name||d.created_by||'-'}</td>
+                </tr>
+            `).join('');
+            summaryHTML = data.length > 0 ? `<tr class="border-t-4 border-slate-800 bg-slate-100 font-black"><td colspan="7" class="text-center p-3">الإجمالي (Totals)</td><td class="text-center p-3 font-mono text-blue-600">${formatMoney(tFcy)}</td><td></td><td class="text-center p-3 font-mono text-emerald-600">${formatMoney(tLcy)}</td><td></td></tr>` : '';
         }
     } catch(err) {
         console.error(`Error rendering table ${type}:`, err);
@@ -843,7 +901,7 @@ window.openDelayedPaymentsModal = function(clientId, clientName) {
     const modalIdEl = document.getElementById('delayedClientId');
     let cName = clientName && clientName !== 'undefined' ? clientName : 'غير معروف';
 
-    if(titleEl) titleEl.innerHTML = `سجل المدفوعات المتأخرة للعميل: <span class="text-blue-600 dark:text-blue-400">${cName}</span>`;
+    if(titleEl) titleEl.innerHTML = `سجل المدفوعات للعميل: <span class="text-blue-600 dark:text-blue-400">${cName}</span>`;
     if(modalIdEl) modalIdEl.value = clientId;
     
     const payOffInput = document.getElementById('payOffAmount');
@@ -1225,42 +1283,250 @@ window.renderPartnerProfitMatrix = async function(projName) {
 };
 
 // =====================================================================
-// --- PO DDP LCY Charges Table Fix ---
+// --- NEW: Partner Financial Modals Openers ---
+// =====================================================================
+window.openPartnerDepositModal = function(id, name) {
+    const modal = document.getElementById('partnerDepositModal');
+    if(!modal) return;
+    document.getElementById('depositPartnerIdInput').value = id;
+    document.getElementById('partnerDepositTitle').innerText = `إيداع شريك: ${name}`;
+    document.getElementById('partnerDepositForm').reset();
+    modal.classList.remove('hidden');
+    if(typeof window.fetchPartnerDeposits === 'function') window.fetchPartnerDeposits(id);
+};
+
+window.openPartnerWithdrawalModal = function(id, name) {
+    const modal = document.getElementById('partnerWithdrawalModal');
+    if(!modal) return;
+    document.getElementById('withdrawalPartnerIdInput').value = id;
+    document.getElementById('partnerWithdrawalTitle').innerText = `سحب شريك: ${name}`;
+    document.getElementById('partnerWithdrawalForm').reset();
+    modal.classList.remove('hidden');
+    if(typeof window.fetchPartnerWithdrawals === 'function') window.fetchPartnerWithdrawals(id);
+};
+
+// =====================================================================
+// --- PO DDP LCY Charges Table Fix & Upgrades ---
 // =====================================================================
 window.renderPoDdpLcyChargesTable = function(data, fxRate) {
-    const tbody = document.getElementById('ddpLcyChargesBody');
+    const tbody = document.getElementById('poDdpLcyBody'); 
     if(!tbody) return;
     
     let totalLcy = 0;
     let totalFcy = 0;
-    const safeFx = window.safeNum(fxRate, 1);
     
     const html = data.map(row => {
         const amtLcy = window.safeNum(row.amount);
-        const amtFcy = amtLcy / safeFx; 
+        const amtFcy = window.safeNum(row.fcy_amount);
+        const rate = window.safeNum(row.fx_rate, 1);
         
         totalLcy += amtLcy;
         totalFcy += amtFcy;
         
         return `
             <tr class="border-b dark:border-slate-700 text-sm text-center transition hover:bg-slate-50 dark:hover:bg-slate-800">
-                <td class="p-2 font-bold">${row.charge_type || '-'}</td>
-                <td class="p-2">${row.provider_name || '-'}</td>
-                <td class="p-2 font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20">${window.formatMoney(amtLcy)}</td>
-                <td class="p-2 font-mono text-orange-500 bg-orange-50 dark:bg-orange-900/20">${window.formatMoney(amtFcy)}</td>
-                <td class="p-2 text-xs text-slate-500">${window.safeDateStr(row.date)}</td>
+                <td class="p-2 text-xs text-slate-500 font-bold">${window.safeDateStr(row.date)}</td>
+                <td class="p-2 font-bold">${row.charge_type || row.description || '-'}</td>
+                <td class="p-2 text-xs"><span class="px-2 py-1 bg-slate-100 rounded">${row.payment_method || '-'}</span></td>
+                <td class="p-2 text-xs font-mono">${row.reference_no || '-'}</td>
+                <td class="p-2 font-mono text-blue-600 bg-blue-50">${window.formatMoney(amtFcy)}</td>
+                <td class="p-2 font-mono text-indigo-600">${rate}</td>
+                <td class="p-2 font-mono font-black text-emerald-600 bg-emerald-50">${window.formatMoney(amtLcy)}</td>
+                <td class="p-2 text-xs text-slate-500">${row.provider_name || row.created_by || '-'}</td>
+                <td class="p-2 text-center flex justify-center gap-1">
+                    <button type="button" onclick='window.editDdpCharge(${JSON.stringify(row).replace(/'/g, "&#39;")})' class="text-blue-500 bg-blue-50 px-3 py-1 rounded-lg text-xs font-bold shadow-sm border border-blue-200 hover:bg-blue-100 transition" title="تعديل">✏️</button>
+                    ${window.buildActionButtons('po_ddp_lcy_charges', row.id)}
+                </td>
             </tr>
         `;
     }).join('');
     
+    // ضمان التطابق الدقيق مع 9 أعمدة في الرأس
     const summaryHtml = `
-        <tr class="border-t-4 border-slate-800 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-sm font-black text-center">
-            <td colspan="2" class="p-3 text-slate-800 dark:text-slate-200">الإجمالي (Summary)</td>
-            <td class="p-3 font-mono text-emerald-600">${window.formatMoney(totalLcy)}</td>
-            <td class="p-3 font-mono text-orange-600">${window.formatMoney(totalFcy)}</td>
-            <td></td>
+        <tr class="border-t-4 border-slate-800 bg-slate-100 text-sm font-black text-center">
+            <td colspan="4" class="p-3">الإجمالي (Totals)</td>
+            <td class="p-3 text-blue-600 font-mono">${window.formatMoney(totalFcy)}</td>
+            <td class="p-3"></td>
+            <td class="p-3 text-emerald-600 font-mono">${window.formatMoney(totalLcy)}</td>
+            <td colspan="2" class="p-3"></td>
         </tr>
     `;
     
     tbody.innerHTML = html + summaryHtml;
+};
+
+window.editDdpCharge = function(row) {
+    document.getElementById('lcyAddChargeId').value = row.id;
+    document.querySelector('#poDdpLcyForm input[name="date"]').value = row.date ? row.date.split('T')[0] : '';
+    document.getElementById('lcyAddFcy').value = row.fcy_amount || '';
+    document.getElementById('lcyAddFx').value = row.fx_rate || 1;
+    document.getElementById('lcyAddLcy').value = row.amount || '';
+    document.getElementById('lcyAddDesc').value = row.charge_type || row.description || '';
+    document.getElementById('lcyAddMethod').value = row.payment_method || 'Cash';
+    document.getElementById('lcyAddRef').value = row.reference_no || '';
+    
+    // إبراز الفورم للمستخدم
+    const form = document.getElementById('poDdpLcyForm');
+    form.classList.add('ring-2', 'ring-emerald-500');
+    setTimeout(() => form.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+};
+
+window.printDdpTable = function() {
+    const thead = document.querySelector('#ddpChargesTable thead').outerHTML;
+    const tbody = document.querySelector('#ddpChargesBody').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html dir="rtl">
+        <head>
+            <title>مصروفات الشحن والتخليص</title>
+            <style>
+                body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; } 
+                table { width: 100%; border-collapse: collapse; margin-top:20px; font-size:12px; } 
+                th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: center; } 
+                th { background-color: #1e293b !important; color: white !important; font-weight: bold; }
+                tr:nth-child(even) { background-color: #f8fafc; }
+                h2 { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom:10px; color:#1e293b; }
+            </style>
+        </head>
+        <body>
+            <h2>سجل مصروفات الشحن والتخليص (DDP)</h2>
+            <p>تاريخ استخراج التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+            <table>${thead}<tbody>${tbody}</tbody></table>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+};
+// =====================================================================
+// --- NEW: Fix Missing Form Functions & Add Specific Debt Payment ---
+// =====================================================================
+window.viewPartnerWithdrawals = function(id) {
+    if(typeof window.fetchTablePaginated === 'function') window.fetchTablePaginated('partners');
+};
+window.viewPartnerDeposits = function(id) {
+    if(typeof window.fetchTablePaginated === 'function') window.fetchTablePaginated('partners');
+};
+
+window.paySpecificDebt = async function(debtId, amount) {
+    const method = prompt("طريقة الدفع (Cash, Bank Transfer, Cheque):", "Cash") || "Cash";
+    const ref = prompt("الرقم المرجعي (اختياري):", "") || "";
+    const notes = prompt("ملاحظات (اختياري):", "") || "";
+    const clientId = document.getElementById('delayedClientId').value;
+
+    if(!confirm(`تأكيد سداد مبلغ ${window.formatMoney(amount)} لهذه المعاملة المحددة؟`)) return;
+
+    try {
+        const res = await window.apiFetch('/api/pay-delayed-balance', {
+            method: 'POST',
+            body: JSON.stringify({
+                client_id: clientId,
+                amount_paid: amount,
+                debt_id: debtId,
+                payment_method: method,
+                reference_no: ref,
+                notes: notes
+            })
+        });
+        if(res.ok) {
+            if(typeof window.showToast === 'function') window.showToast("تم السداد بنجاح", "success");
+            if (typeof window.viewClientDelayedPayments === 'function') window.viewClientDelayedPayments(clientId);
+        } else {
+            const err = await res.json();
+            if(typeof window.showToast === 'function') window.showToast(err.error || "حدث خطأ أثناء السداد", "error");
+        }
+    } catch(e) {
+        if(typeof window.showToast === 'function') window.showToast("خطأ في الاتصال بالخادم", "error");
+    }
+};
+// =====================================================================
+// --- NEW: Partner Deposits & Withdrawals Fetchers ---
+// =====================================================================
+window.fetchPartnerDeposits = async function(partnerId) {
+    const tbody = document.getElementById('partnerDepositBody');
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 font-bold">جاري تحميل الإيداعات...⏳</td></tr>';
+    try {
+        const res = await window.apiFetch(`/api/table/partner_deposits?filter=${partnerId}`);
+        if(res.ok) {
+            const json = await res.json();
+            const data = json.data || [];
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 font-bold italic">لا توجد إيداعات مسجلة لهذا الشريك.</td></tr>';
+            } else {
+                let totalLcy = 0;
+                let totalFcy = 0;
+                const rowsHtml = data.map(d => {
+                    totalLcy += parseFloat(d.amount || 0);
+                    totalFcy += parseFloat(d.amount_fcy || 0);
+                    return `
+                    <tr class="border-b dark:border-slate-700 text-sm text-center hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                        <td class="p-3 text-slate-500 font-bold">${window.safeDateStr(d.date || d.created_at)}</td>
+                        <td class="p-3 font-mono text-blue-600 font-bold bg-blue-50 dark:bg-blue-900/30">${window.formatMoney(d.amount)}</td>
+                        <td class="p-3 font-mono text-slate-600 dark:text-slate-400">${window.formatMoney(d.amount_fcy || 0)}</td>
+                        <td class="p-3 font-mono text-slate-500">${d.fx_rate || 1}</td>
+                        <td class="p-3 text-slate-700 dark:text-slate-300 font-bold">${d.description || '-'}</td>
+                        <td class="p-3 text-xs text-slate-400 font-bold">${d.created_by || '-'}</td>
+                    </tr>
+                `}).join('');
+                
+                const summaryHtml = `
+                    <tr class="border-t-4 border-slate-800 bg-slate-100 dark:bg-slate-800 text-sm font-black text-center">
+                        <td class="p-3 text-slate-800 dark:text-slate-200">الإجمالي</td>
+                        <td class="p-3 text-blue-600 font-mono">${window.formatMoney(totalLcy)}</td>
+                        <td class="p-3 text-slate-600 font-mono">${window.formatMoney(totalFcy)}</td>
+                        <td colspan="3"></td>
+                    </tr>
+                `;
+                tbody.innerHTML = rowsHtml + summaryHtml;
+            }
+        }
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">حدث خطأ في تحميل البيانات ❌</td></tr>';
+    }
+};
+
+window.fetchPartnerWithdrawals = async function(partnerId) {
+    const tbody = document.getElementById('partnerWithdrawalBody');
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 font-bold">جاري تحميل المسحوبات...⏳</td></tr>';
+    try {
+        const res = await window.apiFetch(`/api/table/partner_withdrawals?filter=${partnerId}`);
+        if(res.ok) {
+            const json = await res.json();
+            const data = json.data || [];
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500 font-bold italic">لا توجد مسحوبات مسجلة لهذا الشريك.</td></tr>';
+            } else {
+                let totalLcy = 0;
+                let totalFcy = 0;
+                const rowsHtml = data.map(d => {
+                    totalLcy += parseFloat(d.amount || 0);
+                    totalFcy += parseFloat(d.amount_fcy || 0);
+                    return `
+                    <tr class="border-b dark:border-slate-700 text-sm text-center hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                        <td class="p-3 text-slate-500 font-bold">${window.safeDateStr(d.date || d.created_at)}</td>
+                        <td class="p-3 font-mono text-red-600 font-bold bg-red-50 dark:bg-red-900/30">${window.formatMoney(d.amount)}</td>
+                        <td class="p-3 font-mono text-slate-600 dark:text-slate-400">${window.formatMoney(d.amount_fcy || 0)}</td>
+                        <td class="p-3 font-mono text-slate-500">${d.fx_rate || 1}</td>
+                        <td class="p-3 text-slate-700 dark:text-slate-300 font-bold">${d.description || '-'}</td>
+                        <td class="p-3 text-xs text-slate-400 font-bold">${d.created_by || '-'}</td>
+                    </tr>
+                `}).join('');
+                
+                const summaryHtml = `
+                    <tr class="border-t-4 border-slate-800 bg-slate-100 dark:bg-slate-800 text-sm font-black text-center">
+                        <td class="p-3 text-slate-800 dark:text-slate-200">الإجمالي</td>
+                        <td class="p-3 text-red-600 font-mono">${window.formatMoney(totalLcy)}</td>
+                        <td class="p-3 text-slate-600 font-mono">${window.formatMoney(totalFcy)}</td>
+                        <td colspan="3"></td>
+                    </tr>
+                `;
+                tbody.innerHTML = rowsHtml + summaryHtml;
+            }
+        }
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">حدث خطأ في تحميل البيانات ❌</td></tr>';
+    }
 };

@@ -972,10 +972,13 @@ window.submitScheduleDebt = async function(e) {
     e.preventDefault(); 
     const clientId = document.getElementById('scheduleClientId').value;
     const inventoryId = document.getElementById('scheduleInventoryId').value;
+    const totalTargetAmount = parseFloat(document.getElementById('scheduleTotalAmount')?.value || 0);
     
     const schedules = [];
     const container = document.getElementById('scheduleRowsContainer');
     const rows = container.querySelectorAll('.schedule-row'); 
+    
+    let currentTotal = 0;
     
     rows.forEach(row => {
         const amtInput = row.querySelector('.schedule-amount');
@@ -984,8 +987,10 @@ window.submitScheduleDebt = async function(e) {
         const refInput = row.querySelector('.schedule-ref');
 
         if(amtInput && dateInput && amtInput.value && dateInput.value) {
+            const amt = parseFloat(amtInput.value);
+            currentTotal += amt;
             schedules.push({ 
-                amount: parseFloat(amtInput.value), 
+                amount: amt, 
                 date: dateInput.value, 
                 method: methodInput ? methodInput.value : 'Transfer', 
                 reference: refInput ? refInput.value : '' 
@@ -995,6 +1000,12 @@ window.submitScheduleDebt = async function(e) {
     
     if(schedules.length === 0) {
         alert("الرجاء إضافة قسط واحد على الأقل وإدخال المبالغ والتواريخ.");
+        return;
+    }
+
+    // 🚀 التحقق الصارم: التأكد من أن مجموع الأقساط يساوي المديونية بالضبط
+    if(Math.abs(currentTotal - totalTargetAmount) > 0.01) {
+        alert(`❌ فشل في الجدولة:\nإجمالي مبالغ الأقساط (${window.formatMoney ? window.formatMoney(currentTotal) : currentTotal}) لا يساوي قيمة المديونية المتبقية المطلوبة (${window.formatMoney ? window.formatMoney(totalTargetAmount) : totalTargetAmount}).\n\nبرجاء ضبط المبالغ لتتطابق تماماً.`);
         return;
     }
 
@@ -1011,7 +1022,11 @@ window.submitScheduleDebt = async function(e) {
         if (res.ok) {
             alert("✅ " + data.message);
             document.getElementById('scheduleDebtModal').classList.add('hidden');
-            if (typeof window.loadDelayedPayments === 'function') window.loadDelayedPayments(clientId);
+            if (typeof window.viewClientDelayedPayments === 'function') {
+                const clientNameEl = document.getElementById('delayedPaymentsTitle');
+                const clientName = clientNameEl ? clientNameEl.innerText.replace("سجل المدفوعات للعميل: ", "") : '';
+                window.viewClientDelayedPayments(clientId, clientName);
+            }
         } else { alert("❌ خطأ: " + data.error); }
     } catch (err) {
         alert("❌ حدث خطأ أثناء الاتصال بالخادم.");
@@ -1262,16 +1277,21 @@ window.deleteDelayedPayment = async function(paymentId, clientId, clientName) {
     }
 };
 
-window.payDelayedBalance = async function(clientId, amountToPay) {
-    const numAmountToPay = parseFloat(amountToPay);
+window.payDelayedBalance = async function(clientIdOverride, amountToPayOverride) {
+    const clientId = clientIdOverride || document.getElementById('delayedClientId').value;
+    const amountInput = document.getElementById('payOffAmount');
+    const numAmountToPay = parseFloat(amountToPayOverride || (amountInput ? amountInput.value : 0));
+    
+    const method = document.getElementById('payOffMethod')?.value || 'Cash';
+    const ref = document.getElementById('payOffRef')?.value || '';
+    const notes = document.getElementById('payOffNotes')?.value || '';
     
     if (!clientId || !numAmountToPay || numAmountToPay <= 0) {
         alert("برجاء إدخال مبلغ صحيح للسداد.");
         return;
     }
 
-    const amountInput = document.getElementById('payOffAmount');
-    if (amountInput) {
+    if (amountInput && !amountToPayOverride) {
         const maxBal = parseFloat(amountInput.getAttribute('data-max-balance') || 0);
         if (maxBal > 0 && numAmountToPay > maxBal) {
             alert(`خطأ: المبلغ المدخل أكبر من المديونية المتبقية للعميل.`);
@@ -1287,7 +1307,13 @@ window.payDelayedBalance = async function(clientId, amountToPay) {
     try {
         const res = await window.apiFetch('/api/pay-delayed-balance', {
             method: 'POST',
-            body: JSON.stringify({ client_id: clientId, amount_paid: numAmountToPay })
+            body: JSON.stringify({ 
+                client_id: clientId, 
+                amount_paid: numAmountToPay,
+                payment_method: method,
+                reference_no: ref,
+                notes: notes
+            })
         });
         const result = await res.json();
         
@@ -1295,10 +1321,13 @@ window.payDelayedBalance = async function(clientId, amountToPay) {
             alert("تم تسجيل السداد وتحديث الجداول وتوليد القيود المحاسبية بنجاح.");
             
             const clientNameEl = document.getElementById('delayedPaymentsTitle');
-            const clientName = clientNameEl ? clientNameEl.innerText.replace("سجل المدفوعات المتأخرة للعميل: ", "") : '';
+            const clientName = clientNameEl ? clientNameEl.innerText.replace("سجل المدفوعات للعميل: ", "") : '';
             
             await window.viewClientDelayedPayments(clientId, clientName);
+            
             if(amountInput) amountInput.value = '';
+            if(document.getElementById('payOffRef')) document.getElementById('payOffRef').value = '';
+            if(document.getElementById('payOffNotes')) document.getElementById('payOffNotes').value = '';
 
             await window.safeSystemRefresh('client_consumptions');
             
@@ -1423,4 +1452,56 @@ window.seedDefaultGLMappings = async function() {
     
     alert("✅ تم الانتهاء من حصر وبرمجة كافة القيود بنجاح.");
     if(typeof window.safeSystemRefresh === 'function') window.safeSystemRefresh('gl_mappings');
+};
+// =====================================================================
+// --- NEW: Fix Missing Form Functions & Add Specific Debt Payment ---
+// =====================================================================
+
+// حل الخطأ الذي يظهر بعد حفظ معاملات الشركاء (السحب والإيداع وتحديث النوافذ آلياً)
+window.viewPartnerWithdrawals = function(partnerId) {
+    if(typeof window.fetchPartnerWithdrawals === 'function') window.fetchPartnerWithdrawals(partnerId);
+    if(typeof window.fetchTablePaginated === 'function') window.fetchTablePaginated('partners');
+};
+
+window.viewPartnerDeposits = function(partnerId) {
+    if(typeof window.fetchPartnerDeposits === 'function') window.fetchPartnerDeposits(partnerId);
+    if(typeof window.fetchTablePaginated === 'function') window.fetchTablePaginated('partners');
+};
+
+// دالة لدعم السداد المخصص لمعاملة معينة (يتم استدعاؤها من جدول المديونيات)
+window.paySpecificDebt = async function(debtId, amount) {
+    const method = prompt("طريقة الدفع (Cash, Bank Transfer, Cheque):", "Cash") || "Cash";
+    const ref = prompt("الرقم المرجعي (اختياري):", "") || "";
+    const notes = prompt("ملاحظات (اختياري):", "") || "";
+    const clientId = document.getElementById('delayedClientId').value;
+
+    if(!confirm(`تأكيد سداد مبلغ ${window.formatMoney ? window.formatMoney(amount) : amount} لهذه المعاملة المحددة؟`)) return;
+
+    try {
+        const res = await window.apiFetch('/api/pay-delayed-balance', {
+            method: 'POST',
+            body: JSON.stringify({
+                client_id: clientId,
+                amount_paid: amount,
+                debt_id: debtId,
+                payment_method: method,
+                reference_no: ref,
+                notes: notes
+            })
+        });
+        if(res.ok) {
+            alert("تم السداد بنجاح");
+            
+            if (typeof window.viewClientDelayedPayments === 'function') {
+                const clientNameEl = document.getElementById('delayedPaymentsTitle');
+                const clientName = clientNameEl ? clientNameEl.innerText.replace("سجل المدفوعات للعميل: ", "") : '';
+                window.viewClientDelayedPayments(clientId, clientName);
+            }
+        } else {
+            const err = await res.json();
+            alert(err.error || "حدث خطأ أثناء السداد");
+        }
+    } catch(e) {
+        alert("خطأ في الاتصال بالخادم");
+    }
 };

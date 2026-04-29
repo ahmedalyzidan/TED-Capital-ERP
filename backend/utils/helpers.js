@@ -70,15 +70,19 @@ const logAdvancedAudit = async (poolOrClient, username, tableName, recordId, act
     }
 };
 
-// تم التعديل لدعم الـ Transactions عبر المعامل client وتنظيف القيم الرقمية
+// تم التعديل لدعم الـ Transactions عبر المعامل client وتنظيف القيم الرقمية وضمان عدم الفشل
 async function autoLedgerEntry(client, accountName, costCenter, debit, credit, desc, user) {
     const cleanDebit = cleanNumeric(debit);
     const cleanCredit = cleanNumeric(credit);
     if (cleanDebit === 0 && cleanCredit === 0) return;
     
+    // التحقق من الحساب إذا كان فارغاً لضمان عدم فشل القيد
+    const finalAccount = accountName || 'حساب غير محدد (تسوية)';
+    const finalCostCenter = costCenter || 'General';
+
     await client.query(
         "INSERT INTO ledger (account_name, cost_center, debit, credit, description, created_by) VALUES ($1, $2, $3, $4, $5, $6)", 
-        [accountName, costCenter, cleanDebit, cleanCredit, desc, user]
+        [finalAccount, finalCostCenter, cleanDebit, cleanCredit, desc, user]
     );
 }
 

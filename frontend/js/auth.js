@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             btn.disabled = true; 
             btn.innerText = "Authenticating..."; 
-            err.classList.add('hidden');
+            if(err) err.classList.add('hidden');
             
             try {
                 const res = await window.apiFetch('/api/login', {
@@ -40,15 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (data.success) {
                     localStorage.setItem('erp_token', data.token);
+                    localStorage.setItem('erp_refresh_token', data.refreshToken);
                     localStorage.setItem('erp_user', JSON.stringify(data.user));
-                    window.location.reload();
+                    
+                    if(typeof window.showToast === 'function') window.showToast("تم تسجيل الدخول بنجاح", "success");
+                    setTimeout(() => window.location.reload(), 500);
                 } else {
-                    err.innerText = data.error || "Login failed. Invalid credentials.";
-                    err.classList.remove('hidden');
+                    if(err) { err.innerText = data.error || "Login failed. Invalid credentials."; err.classList.remove('hidden'); }
+                    else if(typeof window.showToast === 'function') window.showToast(data.error || "خطأ في بيانات الدخول", "error");
                 }
             } catch (error) {
-                err.innerText = "Network Error. Check Server connection.";
-                err.classList.remove('hidden');
+                if(err) { err.innerText = "Network Error. Check Server connection."; err.classList.remove('hidden'); }
+                else if(typeof window.showToast === 'function') window.showToast("خطأ في الاتصال بالخادم", "error");
             } finally {
                 btn.disabled = false; 
                 btn.innerText = "Sign In";
@@ -57,32 +60,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-window.logout = function() {
+window.logout = async function(showMessage = true) {
+    const refreshToken = localStorage.getItem('erp_refresh_token');
+    if (refreshToken) {
+        try {
+            await fetch('/api/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: refreshToken })
+            });
+        } catch(e) {}
+    }
     localStorage.removeItem('erp_token');
+    localStorage.removeItem('erp_refresh_token');
     localStorage.removeItem('erp_user');
-    window.location.reload();
+    
+    if(showMessage && typeof window.showToast === 'function') window.showToast("تم تسجيل الخروج بنجاح", "success");
+    setTimeout(() => window.location.reload(), 800);
 };
 
 // ================= RBAC UI LOGIC & HELPERS =================
 window.hasPerm = function(table, action) {
     const user = JSON.parse(localStorage.getItem('erp_user') || '{}');
     const userRole = (user.role || '').toLowerCase();
+    let perms = user.permissions || {};
+    if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch(e) { perms = {}; } }
     
-    // 1. فحص رتبة المدير (غير حساس لحالة الأحرف)
-    if (userRole === 'admin') return true;
+    if (userRole.includes('admin')) return true;
+
+    if (perms.tables) {
+        if (perms.tables['ALL']) return true;
+        if (perms.tables[table] && perms.tables[table].includes(action)) return true;
+        if (Object.keys(perms.tables).length > 0) return false;
+    }
     
-    const perms = user.permissions || {};
-    
-    // 2. فحص الصلاحيات الوظيفية الديناميكية (System Functions)
     if (perms.functions && (perms.functions.includes(action) || perms.functions.includes('ALL'))) return true;
 
-    // 3. فحص صلاحيات الجداول
-    if (perms.tables && perms.tables['ALL']) return true;
-    if (perms.tables && perms.tables[table] && perms.tables[table].includes(action)) return true;
-    
-    if (userRole === 'custom') return false; 
-    
-    // 4. الصلاحيات الثابتة
     const STATIC_PERMS = {
         'hr': ['staff', 'attendance', 'leaves', 'payroll', 'system_parameters', 'projects', 'audit_logs'],
         'accountant': ['ledger', 'chart_of_accounts', 'ar_invoices', 'payment_receipts', 'installments', 'contracts', 'customers', 'subcontractor_invoices', 'partners', 'partner_deposits', 'partner_withdrawals', 'projects', 'system_parameters', 'property_units'],
@@ -92,7 +105,7 @@ window.hasPerm = function(table, action) {
     if (STATIC_PERMS[userRole] && STATIC_PERMS[userRole].includes(table)) {
         if(['read', 'create', 'update'].includes(action)) return true;
         if(action === 'delete' && userRole !== 'engineer') return true;
-        if(action === 'export' || action === 'print') return true; 
+        return true; 
     }
     return false;
 };
@@ -100,27 +113,30 @@ window.hasPerm = function(table, action) {
 window.applyRBAC = function() {
     const user = JSON.parse(localStorage.getItem('erp_user') || '{}');
     const role = (user.role || 'engineer').toLowerCase();
-    const perms = user.permissions || {};
+    let perms = user.permissions || {};
+    if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch(e) { perms = {}; } }
     
-    const allTabs = ['ceoTab', 'projectsTab', 'operationsTab', 'realestateTab', 'partnersTab', 'procurementTab', 'inventoryTab', 'usageTab', 'hrTab', 'financeTab', 'auditTab'];
+    const allTabs = ['ceoTab', 'projectsTab', 'operationsTab', 'realestateTab', 'customersTab', 'partnersTab', 'procurementTab', 'inventoryTab', 'usageTab', 'hrTab', 'financeTab', 'accountantTab', 'auditTab'];
     let allowedTabs = [];
     
-    if (role === 'admin' || (perms.screens && perms.screens.includes('ALL'))) {
-        allowedTabs = allTabs;
-    } else if (perms.screens && perms.screens.length > 0) {
-        allowedTabs = perms.screens;
+    if (perms.screens && perms.screens.length > 0) {
+        if (perms.screens.includes('ALL')) allowedTabs = allTabs;
+        else allowedTabs = perms.screens; 
     } else {
-        if (role === 'admin') allowedTabs = allTabs;
-        else if (role === 'hr') allowedTabs = ['hrTab', 'projectsTab', 'auditTab'];
-        else if (role === 'accountant') allowedTabs = ['financeTab', 'realestateTab', 'partnersTab', 'projectsTab', 'auditTab'];
-        else if (role === 'engineer') allowedTabs = ['projectsTab', 'operationsTab', 'procurementTab', 'inventoryTab', 'usageTab'];
+        if (role.includes('admin')) allowedTabs = allTabs;
+        else if (role.includes('hr')) allowedTabs = ['hrTab', 'projectsTab', 'auditTab'];
+        else if (role.includes('accountant') || role.includes('finance')) allowedTabs = ['financeTab', 'accountantTab', 'realestateTab', 'partnersTab', 'projectsTab', 'auditTab'];
+        else allowedTabs = ['projectsTab', 'operationsTab', 'procurementTab', 'inventoryTab', 'usageTab'];
     }
 
     allTabs.forEach(t => {
         const btn = document.getElementById('btn-' + t);
         if (btn) {
-            if (allowedTabs.includes(t)) btn.style.display = 'block';
-            else btn.style.display = 'none';
+            if (allowedTabs.includes(t)) {
+                btn.style.setProperty('display', 'block', 'important');
+            } else {
+                btn.style.setProperty('display', 'none', 'important');
+            }
         }
     });
 
@@ -128,10 +144,10 @@ window.applyRBAC = function() {
         if(typeof window.showTab === 'function') window.showTab(allowedTabs[0]);
     }
     
-    if (role !== 'admin') {
-        document.querySelectorAll('.rbac-admin').forEach(el => el.style.display = 'none');
+    if (!role.includes('admin')) {
+        document.querySelectorAll('.rbac-admin').forEach(el => el.style.setProperty('display', 'none', 'important'));
     } else {
-        document.querySelectorAll('.rbac-admin').forEach(el => el.style.display = 'inline-block');
+        document.querySelectorAll('.rbac-admin').forEach(el => el.style.setProperty('display', 'inline-block', 'important'));
     }
 };
 
@@ -142,149 +158,141 @@ window.openUserManagement = async function() {
 };
 
 window.loadUsersList = async function() {
+    const tbody = document.getElementById('usersListBody');
+    if (!tbody) return;
     try {
         const res = await window.apiFetch('/api/users');
-        if (!res.ok) {
-            let errorMsg = "Failed to load users list. Access Denied.";
-            try { const errData = await res.json(); if(errData.error) errorMsg = `Server Blocked: ${errData.error}`; } catch(e){}
-            throw new Error(errorMsg);
-        }
+        if (!res.ok) throw new Error("Unauthorized");
         const json = await res.json();
-        const tbody = document.getElementById('usersListBody');
-        tbody.innerHTML = json.data.map(u => `
-            <tr class="border-b hover:bg-slate-50 text-sm transition">
-                <td class="p-3 text-slate-500 font-bold">#${u.id}</td>
-                <td class="p-3 font-bold text-blue-700">${u.username} <span class="text-xs text-slate-400 block">${u.email||''}</span></td>
-                <td class="p-3 font-bold">${u.role}</td>
-                <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${u.status==='Active'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}">${u.status}</span></td>
-                
-                <td class="p-3 text-slate-400 font-bold text-center">-</td>
-                
-                <td class="p-3 text-xs text-slate-500">${new Date(u.created_at).toLocaleDateString()}</td>
-                <td class="p-3">
-                    <button onclick="openUserForm(${u.id})" class="text-blue-500 hover:scale-110 mr-2">✏️</button>
-                    ${u.username.toLowerCase() !== 'admin' ? `<button onclick="deleteUser(${u.id})" class="text-red-500 hover:scale-110">🗑️</button>` : ''}
-                </td>
-            </tr>
-        `).join('') || '<tr><td colspan="7" class="p-4 text-slate-400 font-bold text-center">No users found</td></tr>';
+        const users = json.data || [];
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center font-bold">لا يوجد مستخدمين مسجلين</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+            try {
+                const username = u.username || 'N/A';
+                const role = u.role || 'User';
+                const status = u.status || 'Inactive';
+                const date = u.created_at ? new Date(u.created_at).toLocaleDateString() : '-';
+
+                return `
+                    <tr class="border-b hover:bg-slate-50 text-sm transition">
+                        <td class="p-3 text-slate-500 font-bold">#${u.id}</td>
+                        <td class="p-3 font-bold text-blue-700">${username} <span class="text-[10px] text-slate-400 block">${u.email||''}</span></td>
+                        <td class="p-3 font-bold">${role}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${status}</span></td>
+                        <td class="p-3 text-center font-bold text-slate-400">-</td>
+                        <td class="p-3 text-xs text-slate-500">${date}</td>
+                        <td class="p-3 flex gap-1 justify-center">
+                            <button onclick="editUser(${u.id})" class="text-blue-500 hover:scale-110" title="تعديل الصلاحيات">✏️</button>
+                            ${username.toLowerCase() !== 'admin' ? `
+                                <button onclick="revokeUserSession(${u.id})" class="bg-orange-100 text-orange-600 px-2 rounded font-bold hover:bg-orange-200 text-[10px]" title="طرد من النظام">طرد 🚫</button>
+                                <button onclick="deleteUser(${u.id})" class="text-red-500 hover:scale-110 ml-1" title="حذف">🗑️</button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            } catch (err) { return ''; }
+        }).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-red-500 font-bold">خطأ في التحميل</td></tr>'; }
+};
+
+window.revokeUserSession = async function(id) {
+    if(!confirm("إنهاء كافة جلسات المستخدم فوراً وطرده من النظام؟")) return;
+    try {
+        const res = await window.apiFetch(`/api/users/${id}/revoke`, { method: 'POST' });
+        if (res.ok) {
+            if(typeof window.showToast === 'function') window.showToast("تم طرد المستخدم بنجاح.", "success");
+            else alert("تم طرد المستخدم بنجاح.");
+        }
     } catch(e) { 
-        alert(e.message || "Failed to load users list. Are you Admin?"); 
+        if(typeof window.showToast === 'function') window.showToast("خطأ في الاتصال بالخادم.", "error");
     }
 };
-window.openUserForm = async function(id = null) {
-    document.getElementById('userForm').reset();
-    document.getElementById('userIdInput').value = id || '';
-    document.getElementById('userFormTitle').innerText = id ? 'Edit User Permissions' : 'Create New User';
 
-    const projSelect = document.getElementById('userProjectsSelect');
-    if (projSelect && window.erpData && window.erpData.projects_dd) {
-        projSelect.innerHTML = window.erpData.projects_dd.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+window.openUserForm = async function(id = null) {
+    const form = document.getElementById('userForm');
+    if (!form) return;
+    form.reset();
+    document.getElementById('userIdInput').value = id || '';
+    document.getElementById('userFormTitle').innerText = id ? 'تعديل صلاحيات المستخدم' : 'إنشاء مستخدم جديد';
+
+    const matrixContainer = document.getElementById('crudMatrixBody');
+    if (matrixContainer) {
+        // تفريغ الجدول لضمان التحديث
+        matrixContainer.innerHTML = '';
+        
+        // الجداول الشاملة لكل قطاعات النظام
+        const allTables = [
+            { id: 'projects', name: 'المشاريع' }, { id: 'boq', name: 'المقايسات (BOQ)' },
+            { id: 'subcontractors', name: 'المقاولين' }, { id: 'subcontractor_items', name: 'بنود العقود' },
+            { id: 'subcontractor_invoices', name: 'مستخلصات المقاولين' }, { id: 'tasks', name: 'المهام' },
+            { id: 'daily_reports', name: 'تقارير الموقع' }, { id: 'customers', name: 'العملاء' },
+            { id: 'property_units', name: 'الوحدات العقارية' }, { id: 'contracts', name: 'العقود' },
+            { id: 'installments', name: 'الأقساط والتحصيل' }, { id: 'payment_receipts', name: 'سندات القبض' },
+            { id: 'partners', name: 'الشركاء والأرباح' }, { id: 'rfq', name: 'طلبات عروض الأسعار' },
+            { id: 'purchase_orders', name: 'أوامر الشراء' }, { id: 'pre_orders', name: 'الحجوزات المسبقة' },
+            { id: 'inventory', name: 'المخزون والرصيد' }, { id: 'inventory_sales', name: 'المبيعات والمنصرف' },
+            { id: 'returns', name: 'المرتجعات' }, { id: 'inventory_transfers', name: 'تحويلات المخازن' },
+            { id: 'client_consumptions_balances', name: 'مسحوبات العملاء' }, { id: 'staff', name: 'الموظفين' },
+            { id: 'attendance', name: 'الحضور والانصراف' }, { id: 'leaves', name: 'الإجازات' },
+            { id: 'payroll', name: 'الرواتب' }, { id: 'chart_of_accounts', name: 'شجرة الحسابات' },
+            { id: 'ledger', name: 'دفتر الأستاذ العام' }, { id: 'ar_invoices', name: 'فواتير المبيعات' },
+            { id: 'gl_mappings', name: 'التوجيه المحاسبي' }, { id: 'users', name: 'إدارة المستخدمين' },
+            { id: 'audit_logs', name: 'سجل الرقابة' }
+        ];
+
+        const actions = ['read', 'create', 'update', 'delete', 'approve', 'export', 'import', 'print', 'audit'];
+
+        matrixContainer.innerHTML = allTables.map(t => `
+            <tr class="border-b hover:bg-slate-50 transition tables-row" data-table="${t.id}">
+                <td class="p-3 font-bold text-slate-600 bg-white sticky left-0 shadow-sm rbac-table-label" style="min-width:160px">${t.name}</td>
+                ${actions.map(act => `
+                    <td class="p-3 text-center">
+                        <input type="checkbox" class="rbac-table-checkbox w-4 h-4 text-blue-600 rounded" data-table="${t.id}" data-action="${act}" value="${act}">
+                    </td>
+                `).join('')}
+            </tr>
+        `).join('');
     }
 
-    const screens = ['ceoTab', 'projectsTab', 'operationsTab', 'realestateTab', 'partnersTab', 'procurementTab', 'inventoryTab', 'usageTab', 'hrTab', 'financeTab', 'auditTab'];
-    const tables = ['projects', 'partners', 'customers', 'property_units', 'contracts', 'installments', 'payment_receipts', 'boq', 'subcontractors', 'subcontractor_items', 'subcontractor_invoices', 'tasks', 'daily_reports', 'inventory', 'inventory_transfers', 'material_usage', 'returns', 'rfq', 'purchase_orders', 'staff', 'attendance', 'leaves', 'payroll', 'chart_of_accounts', 'ledger', 'audit_logs', 'client_consumptions_balances'];
-    const systemFunctions = ['manage_users', 'approve_payments', 'view_reports', 'system_config', 'manage_backups'];
-    const advancedActions = ['read', 'create', 'update', 'delete', 'approve', 'export', 'import', 'print', 'audit'];
-    
-    let matrixHTML = '';
-
-    // 1. Screens Group
-    matrixHTML += `<tr class="bg-slate-200"><td colspan="${advancedActions.length + 1}" class="p-2 font-bold text-slate-700 uppercase">📺 Screens & Dashboards</td></tr>`;
-    screens.forEach(s => {
-        matrixHTML += `
-            <tr class="border-b hover:bg-slate-50 transition screens-row" data-screen="${s}">
-                <td class="p-3 font-bold text-left text-slate-600 sticky left-0 bg-white shadow-[1px_0_5px_rgba(0,0,0,0.05)]">${s.replace('Tab', '')} Module</td>
-                <td colspan="${advancedActions.length}" class="p-3">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" class="rbac-screen-cb w-4 h-4 text-blue-600 rounded border-gray-300" value="${s}">
-                        <span class="text-sm text-slate-600 font-semibold">Allow Access</span>
-                    </label>
-                </td>
-            </tr>
-        `;
-    });
-
-    // 2. Tables Group
-    matrixHTML += `<tr class="bg-slate-200"><td colspan="${advancedActions.length + 1}" class="p-2 font-bold text-slate-700 uppercase">🗄️ Database Tables</td></tr>`;
-    matrixHTML += `
-        <tr class="bg-slate-100 text-xs text-slate-500 uppercase">
-            <td class="p-2 font-bold sticky left-0 bg-slate-100">Table Name</td>
-            ${advancedActions.map(act => `<td class="p-2 font-bold text-center">${act}</td>`).join('')}
-        </tr>
-    `;
-    tables.forEach(t => {
-        matrixHTML += `
-            <tr class="border-b hover:bg-slate-50 transition tables-row" data-table="${t}">
-                <td class="p-3 font-bold text-left text-slate-600 sticky left-0 bg-white shadow-[1px_0_5px_rgba(0,0,0,0.05)]">${t.replace(/_/g, ' ').toUpperCase()}</td>
-                ${advancedActions.map(act => {
-                    let isDisabled = '';
-                    if (t === 'client_consumptions_balances' && (act === 'update' || act === 'delete')) {
-                        isDisabled = 'disabled title="Read-only integrity enforced"';
-                    }
-                    return `<td class="p-3 text-center"><input type="checkbox" class="rbac-checkbox crud-${act} w-4 h-4 text-blue-600 rounded" value="${act}" ${isDisabled}></td>`;
-                }).join('')}
-            </tr>
-        `;
-    });
-
-    // 3. System Functions Group
-    matrixHTML += `<tr class="bg-slate-200"><td colspan="${advancedActions.length + 1}" class="p-2 font-bold text-slate-700 uppercase">⚙️ System Functions</td></tr>`;
-    systemFunctions.forEach(f => {
-        matrixHTML += `
-            <tr class="border-b hover:bg-slate-50 transition functions-row" data-function="${f}">
-                <td class="p-3 font-bold text-left text-slate-600 sticky left-0 bg-white shadow-[1px_0_5px_rgba(0,0,0,0.05)]">${f.replace(/_/g, ' ').toUpperCase()}</td>
-                <td colspan="${advancedActions.length}" class="p-3">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" class="rbac-function-cb w-4 h-4 text-blue-600 rounded border-gray-300" value="${f}">
-                        <span class="text-sm text-slate-600 font-semibold">Enable Function</span>
-                    </label>
-                </td>
-            </tr>
-        `;
-    });
-
-    document.getElementById('crudMatrixBody').innerHTML = matrixHTML;
-    document.querySelectorAll('.rbac-notif-cb').forEach(cb => cb.checked = false);
+    // تصفير شاشات العرض قبل التعبئة
+    document.querySelectorAll('#screensCheckboxGroup input').forEach(cb => cb.checked = false);
 
     if (id) {
         try {
             const res = await window.apiFetch('/api/users');
-            if (!res.ok) {
-                let errorMsg = "Failed to fetch user details.";
-                try { const errData = await res.json(); if(errData.error) errorMsg = errData.error; } catch(e){}
-                throw new Error(errorMsg);
-            }
             const json = await res.json();
-            const user = json.data.find(u => u.id === id);
+            const user = json.data.find(u => String(u.id) === String(id));
             if (user) {
-                document.getElementById('userNameInput').value = user.username;
-                if (document.getElementById('userEmailInput')) document.getElementById('userEmailInput').value = user.email || '';
-                document.getElementById('userRoleInput').value = user.role;
-                document.getElementById('userStatusInput').value = user.status;
+                if(document.getElementById('userNameInput')) document.getElementById('userNameInput').value = user.username || '';
+                if(document.getElementById('userEmailInput')) document.getElementById('userEmailInput').value = user.email || '';
+                if(document.getElementById('userRoleInput')) document.getElementById('userRoleInput').value = user.role || 'Engineer';
+                if(document.getElementById('userStatusInput')) document.getElementById('userStatusInput').value = user.status || 'Active';
                 
-                const perms = user.permissions || {};
-                
+                let perms = user.permissions;
+                if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch(e) { perms = {}; } }
+
                 if (perms.screens) {
-                    if (perms.screens.includes('ALL')) document.querySelectorAll('.rbac-screen-cb').forEach(cb => cb.checked = true);
-                    else document.querySelectorAll('.rbac-screen-cb').forEach(cb => { if (perms.screens.includes(cb.value)) cb.checked = true; });
+                    document.querySelectorAll('#screensCheckboxGroup input').forEach(cb => {
+                        if (perms.screens.includes('ALL') || perms.screens.includes(cb.value)) cb.checked = true;
+                    });
                 }
-                
-                if (perms.projects && projSelect) { Array.from(projSelect.options).forEach(opt => { if (perms.projects.includes(opt.value)) opt.selected = true; }); }
                 
                 if (perms.tables) {
-                    if (perms.tables['ALL']) document.querySelectorAll('.tables-row input[type="checkbox"]:not([disabled])').forEach(cb => cb.checked = true);
-                    else Object.keys(perms.tables).forEach(t => { const tr = document.querySelector(`tr.tables-row[data-table="${t}"]`); if (tr) { perms.tables[t].forEach(action => { const cb = tr.querySelector(`.crud-${action}`); if (cb && !cb.disabled) cb.checked = true; }); } });
+                    document.querySelectorAll('.rbac-table-checkbox').forEach(cb => {
+                        const tName = cb.getAttribute('data-table');
+                        const action = cb.getAttribute('data-action');
+                        if (perms.tables['ALL'] || (perms.tables[tName] && perms.tables[tName].includes(action))) cb.checked = true;
+                    });
                 }
-
-                if (perms.functions) {
-                    if (perms.functions.includes('ALL')) document.querySelectorAll('.rbac-function-cb').forEach(cb => cb.checked = true);
-                    else document.querySelectorAll('.rbac-function-cb').forEach(cb => { if (perms.functions.includes(cb.value)) cb.checked = true; });
-                }
-
-                if (perms.notifications) { document.querySelectorAll('.rbac-notif-cb').forEach(cb => { if (perms.notifications.includes(cb.value)) cb.checked = true; }); }
             }
-        } catch(e) {
-            alert(e.message || "Failed to load user details.");
+        } catch (e) { 
+            if(typeof window.showToast === 'function') window.showToast("خطأ في تحميل بيانات المستخدم.", "error");
+            else alert("خطأ في تحميل بيانات المستخدم.");
         }
     }
     document.getElementById('userFormModal').classList.remove('hidden');
@@ -293,75 +301,69 @@ window.openUserForm = async function(id = null) {
 document.getElementById('userForm').onsubmit = async (e) => {
     e.preventDefault();
     const id = document.getElementById('userIdInput').value;
-    const username = document.getElementById('userNameInput').value;
-    const email = document.getElementById('userEmailInput') ? document.getElementById('userEmailInput').value : null;
-    const password = document.getElementById('userPassInput').value;
-    const role = document.getElementById('userRoleInput').value;
-    const status = document.getElementById('userStatusInput').value;
+    const payload = {
+        username: document.getElementById('userNameInput').value,
+        email: document.getElementById('userEmailInput') ? document.getElementById('userEmailInput').value : '',
+        role: document.getElementById('userRoleInput') ? document.getElementById('userRoleInput').value : 'Engineer',
+        status: document.getElementById('userStatusInput') ? document.getElementById('userStatusInput').value : 'Active',
+        permissions: {
+            screens: Array.from(document.querySelectorAll('#screensCheckboxGroup input:checked')).map(cb => cb.value),
+            tables: {}
+        }
+    };
+    
+    if (document.getElementById('userPassInput') && document.getElementById('userPassInput').value) {
+        payload.password = document.getElementById('userPassInput').value;
+    }
 
-    const screens = Array.from(document.querySelectorAll('.rbac-screen-cb:checked')).map(cb => cb.value);
-    const projSelect = document.getElementById('userProjectsSelect');
-    const projects = projSelect ? Array.from(projSelect.selectedOptions).map(opt => opt.value) : [];
-    const notifications = Array.from(document.querySelectorAll('.rbac-notif-cb:checked')).map(cb => cb.value);
-    const functions = Array.from(document.querySelectorAll('.rbac-function-cb:checked')).map(cb => cb.value);
-
-    const tables = {};
-    document.querySelectorAll('tr.tables-row').forEach(tr => {
-        const tName = tr.getAttribute('data-table');
-        const actions = Array.from(tr.querySelectorAll('input:checked')).map(cb => cb.value);
-        if (actions.length > 0) tables[tName] = actions;
+    document.querySelectorAll('.rbac-table-checkbox:checked').forEach(cb => {
+        const t = cb.getAttribute('data-table');
+        const a = cb.getAttribute('data-action');
+        if (!payload.permissions.tables[t]) payload.permissions.tables[t] = [];
+        payload.permissions.tables[t].push(a);
     });
 
-    const allScreensCount = document.querySelectorAll('.rbac-screen-cb').length;
-    if (screens.length === allScreensCount && allScreensCount > 0) { screens.length = 0; screens.push('ALL'); }
-    
-    const allFunctionsCount = document.querySelectorAll('.rbac-function-cb').length;
-    if (functions.length === allFunctionsCount && allFunctionsCount > 0) { functions.length = 0; functions.push('ALL'); }
-
-    const allTablesCount = document.querySelectorAll('tr.tables-row').length;
-    if (Object.keys(tables).length === allTablesCount && allTablesCount > 0) { 
-        Object.keys(tables).forEach(k => delete tables[k]); 
-        tables['ALL'] = ['read', 'create', 'update', 'delete', 'approve', 'export', 'import', 'print', 'audit']; 
-    }
-
-    const payload = { username, email, role, status, permissions: { screens, projects, tables, functions, notifications } };
-    if (password) payload.password = password;
-
     try {
-        const res = await window.apiFetch(id ? `/api/users/${id}` : `/api/users`, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
-        if (res.ok) { 
-            document.getElementById('userFormModal').classList.add('hidden'); 
-            window.loadUsersList(); 
-        } 
-        else { 
-            let errorMsg = "Failed to save user. Access Denied.";
-            try { const errData = await res.json(); if(errData.error) errorMsg = `Server Error: ${errData.error}`; } catch(err){}
-            throw new Error(errorMsg);
+        const res = await window.apiFetch(id ? `/api/users/${id}` : `/api/users`, { 
+            method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) 
+        });
+        
+        if (res.ok) {
+            if(typeof window.showToast === 'function') window.showToast("تم الحفظ بنجاح وتحديث الصلاحيات.", "success");
+            else alert("تم الحفظ بنجاح.");
+            
+            document.getElementById('userFormModal').classList.add('hidden');
+            window.loadUsersList();
+            
+            const currentUser = JSON.parse(localStorage.getItem('erp_user') || '{}');
+            if (String(currentUser.id) === String(id)) {
+                localStorage.setItem('erp_user', JSON.stringify({...currentUser, role: payload.role, permissions: payload.permissions}));
+                window.applyRBAC();
+            }
+        } else {
+            const err = await res.json();
+            if(typeof window.showToast === 'function') window.showToast(err.error || "فشل الحفظ", "error");
+            else alert(err.error || "فشل الحفظ");
         }
     } catch(e) { 
-        alert(e.message || "Network error"); 
+        if(typeof window.showToast === 'function') window.showToast("خطأ في الاتصال بالخادم.", "error");
+        else alert("خطأ في الاتصال بالخادم.");
     }
 };
+
+window.editUser = function(id) { window.openUserForm(id); };
 
 window.deleteUser = async function(id) {
-    if(!confirm("Delete this user permanently?")) return;
+    if(!confirm("هل أنت متأكد من حذف هذا المستخدم بشكل نهائي؟")) return;
     try { 
         const res = await window.apiFetch(`/api/users/${id}`, { method: 'DELETE' }); 
-        if (!res.ok) {
-            let errorMsg = "Error deleting user. Access Denied.";
-            try { const errData = await res.json(); if(errData.error) errorMsg = `Server Error: ${errData.error}`; } catch(err){}
-            throw new Error(errorMsg);
+        if (res.ok) {
+            if(typeof window.showToast === 'function') window.showToast("تم الحذف بنجاح.", "success");
+            window.loadUsersList(); 
+        } else {
+            if(typeof window.showToast === 'function') window.showToast("خطأ أثناء الحذف.", "error");
         }
-        window.loadUsersList(); 
     } catch(e) { 
-        alert(e.message || "Error deleting user"); 
-    }
-};
-// هذا السطر يحل مشكلة اختلاف اسم الدالة في أزرار HTML
-window.editUser = function(id) {
-    if (typeof window.openUserForm === 'function') {
-        window.openUserForm(id);
-    } else {
-        console.error("Error: openUserForm function is missing!");
+        if(typeof window.showToast === 'function') window.showToast("خطأ في الاتصال بالخادم.", "error");
     }
 };
