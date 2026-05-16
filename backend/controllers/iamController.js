@@ -216,7 +216,10 @@ const createUser = async (req, res) => {
         await logAudit(req.user.username, 'CREATE_USER', 'users', userId, `Created new user: ${username} with role: ${role}`);
         await logSecurityEvent(req.user.username, 'ACCOUNT_CREATED', `User:${username}`, 'MEDIUM', `Admin created a new user account with role ${role}`);
         res.json({ success: true, userId });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        console.error("❌ [IAM] createUser Error:", err);
+        res.status(500).json({ error: err.message });
+    }
 };
 
 const updateUser = async (req, res) => {

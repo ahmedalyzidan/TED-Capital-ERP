@@ -76,6 +76,9 @@ const initDB = async () => {
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_employee_id INTEGER");
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor BOOLEAN DEFAULT FALSE");
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE");
+        await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_company VARCHAR(255)");
+        await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_project VARCHAR(255)");
+        await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS primary_org_unit_id INTEGER");
 
         const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@tedcapital.com';
         const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD || 'admin123';
