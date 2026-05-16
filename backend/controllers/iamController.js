@@ -50,16 +50,18 @@ const getSecurityMetadata = async (req, res) => {
             matrixCodes = matrixRes.rows.map(m => `${m.module_name.toUpperCase()}_${m.action_name.toUpperCase()}`);
         }
 
-        // 3. Super Admin Logic (Fallback to users table role if junction table is empty)
+        // 3. Super Admin Logic (Explicitly Hardcoded for 'admin' user)
         const userBasicRes = await pool.query("SELECT role, is_superadmin FROM users WHERE id = $1", [userId]);
-        const dbRole = userBasicRes.rows[0]?.role || '';
+        const dbRole = (userBasicRes.rows[0]?.role || '').toLowerCase().trim();
         const isDbSuper = userBasicRes.rows[0]?.is_superadmin === true;
+        const normalizedUsername = currentUsername.toLowerCase().trim();
         
         const isSuperAdmin = 
-            currentUsername.toLowerCase() === 'admin' || 
+            normalizedUsername === 'admin' || 
+            req.user.isSuperAdmin === true ||
             isDbSuper ||
-            dbRole.toLowerCase().trim() === 'super admin' || 
-            dbRole.toLowerCase().trim() === 'admin' ||
+            dbRole === 'super admin' || 
+            dbRole === 'admin' ||
             roleRes.rows.some(r => r.name && (r.is_system_role || r.name.toLowerCase().trim() === 'super admin' || r.name.toLowerCase().trim() === 'admin'));
         
         console.log(`🛡️ [IAM] User ${currentUsername} - Matrix Permissions: ${matrixCodes.length}`);
