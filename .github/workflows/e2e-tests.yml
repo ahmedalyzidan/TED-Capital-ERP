@@ -1,0 +1,129 @@
+name: E2E Tests & System Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 02:00 UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ted_erp
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Install Playwright browsers
+        run: cd backend/playwright-e2e-tests && npx playwright install chromium
+      
+      - name: Load environment variables
+        run: |
+          if [ -f .env ]; then
+            cat .env >> $GITHUB_ENV
+          else
+            echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ted_erp" >> $GITHUB_ENV
+            echo "PORT=4000" >> $GITHUB_ENV
+            echo "NODE_ENV=test" >> $GITHUB_ENV
+          fi
+      
+      - name: Run backend server
+        run: |
+          timeout 30 npm start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ted_erp
+          PORT: 4000
+          NODE_ENV: test
+      
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:4000/api/health; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 1
+          done
+          echo "Backend health check failed"
+          exit 1
+      
+      - name: Run Playwright E2E tests
+        run: |
+          cd backend/playwright-e2e-tests
+          npx playwright test --project=chromium --reporter=html
+        env:
+          BASE_URL: http://127.0.0.1:4000
+      
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: backend/playwright-e2e-tests/playwright-report/
+          retention-days: 30
+      
+      - name: Upload test videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-videos
+          path: backend/playwright-e2e-tests/test-results/
+          retention-days: 7
+      
+      - name: Report test results
+        if: always()
+        run: |
+          if [ -f "backend/playwright-e2e-tests/test-results/.last-run.json" ]; then
+            cat backend/playwright-e2e-tests/test-results/.last-run.json
+          fi
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run linter
+        run: npm run lint --if-present
+        continue-on-error: true
+      
+      - name: Check for syntax errors
+        run: |
+          find backend -name "*.js" -type f ! -path "*/node_modules/*" -exec node -c {} \;
+        continue-on-error: true

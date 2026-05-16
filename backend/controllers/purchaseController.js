@@ -219,8 +219,8 @@ const getMPO360 = async (req, res) => {
         const depositsRes = await pool.query("SELECT * FROM ledger WHERE (description ILIKE $1 OR reference_no ILIKE $1) AND is_deleted = false", [`%${mpo}%`]);
         const deposits = depositsRes.rows;
 
-        // 3. Fetch Landed Costs (DDP) from the unified po_expenses table
-        const ddpRes = await pool.query("SELECT * FROM po_expenses WHERE po_id = ANY($1) OR master_po_no = $2", [poIds, mpo]);
+        // 3. Fetch Landed Costs (DDP) from po_ddp_lcy_charges
+        const ddpRes = await pool.query("SELECT d.*, po.master_po_no FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id WHERE d.po_id = ANY($1) OR po.master_po_no = $2", [poIds, mpo]);
         const ddp = ddpRes.rows;
 
         // 4. Fetch Stock Items

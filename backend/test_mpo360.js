@@ -14,7 +14,7 @@ async function run() {
         console.log('3: Fetch DDP');
         // Fallback for poIds being empty
         const safePoIds = poIds.length > 0 ? poIds : [-1];
-        await client.query('SELECT * FROM po_expenses WHERE po_id = ANY($1) OR master_po_no = $2', [safePoIds, mpo]);
+        await client.query('SELECT d.*, po.master_po_no FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id WHERE d.po_id = ANY($1) OR po.master_po_no = $2', [safePoIds, mpo]);
         
         console.log('4: Fetch Stock');
         const stockRes = await client.query('SELECT * FROM inventory_items WHERE po_id = ANY($1)', [safePoIds]);

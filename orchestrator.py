@@ -36,7 +36,7 @@ def update_ai_context():
         print(f"[ERROR] Failed to update context: {e}")
 
 def run_tests():
-    """Run financial and UI tests"""
+    """Run financial, UI, and E2E tests"""
     print("\n[TEST] Running Financial Tests...")
     try:
         res = subprocess.run(["pytest", "-m", "finance"], capture_output=True, text=True, encoding='utf-8', errors='ignore')
@@ -46,10 +46,52 @@ def run_tests():
             print("[OK] Finance Logic OK. Running UI Tests...")
             ui_res = subprocess.run(["pytest", "-m", "ui"], capture_output=True, text=True, encoding='utf-8', errors='ignore')
             print(ui_res.stdout)
+            
+            if ui_res.returncode == 0:
+                print("[OK] UI Tests Passed. Running E2E Tests...")
+                run_e2e_tests()
+            else:
+                print("[WARN] UI Tests Failed. Skipping E2E.")
         else:
             print("[CRITICAL] Financial Calculation Error Detected!")
     except Exception as e:
         print(f"[ERROR] Failed to run tests: {e}")
+
+def run_e2e_tests():
+    """Run Playwright E2E tests"""
+    print("\n[E2E] Starting Playwright E2E Test Suite...")
+    try:
+        # Set base URL from environment or use default
+        env = os.environ.copy()
+        env['BASE_URL'] = env.get('BASE_URL', 'http://127.0.0.1:4000')
+        
+        # Run playwright tests
+        res = subprocess.run(
+            ["npx", "playwright", "test", "--project=chromium", "--reporter=list"],
+            cwd="backend/playwright-e2e-tests",
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='ignore',
+            env=env
+        )
+        
+        print(res.stdout)
+        if res.stderr:
+            print("[WARN] Playwright stderr:", res.stderr)
+        
+        if res.returncode == 0:
+            print("[SUCCESS] ✅ All E2E Tests Passed!")
+            return True
+        else:
+            print("[WARN] ⚠️ Some E2E Tests Failed. Review logs above.")
+            return False
+    except FileNotFoundError:
+        print("[WARN] Playwright not installed. Install with: npm install")
+        return False
+    except Exception as e:
+        print(f"[ERROR] E2E Test Execution Failed: {e}")
+        return False
 
 class MasterHandler(FileSystemEventHandler):
     def on_modified(self, event):

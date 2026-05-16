@@ -8,7 +8,7 @@ module.exports = defineConfig({
   workers: 1, 
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: process.env.BASE_URL || 'http://127.0.0.1:4000',
     trace: 'on',
     screenshot: 'on',
     video: 'on',

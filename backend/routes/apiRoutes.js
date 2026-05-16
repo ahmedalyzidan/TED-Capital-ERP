@@ -547,6 +547,23 @@ router.get('/table/:type', async (req, res) => {
             prefix = "d.";
             queryStr = `SELECT d.*, po.project_name, COALESCE(po.item_description, 'صنف غير محدد') AS item_name FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
             countStr = `SELECT COUNT(*) FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
+        } else if (type === 'po_expenses') {
+            prefix = "d.";
+            queryStr = `
+                SELECT d.*, 
+                       d.expense_name, 
+                       d.amount as local_amount, 
+                       d.amount, 
+                       d.currency, 
+                       d.fx_rate as exchange_rate, 
+                       COALESCE(d.date, d.created_at) as expense_date, 
+                       po.project_name, 
+                       po.master_po_no,
+                       COALESCE(po.item_description, 'صنف غير محدد') AS item_name 
+                FROM po_ddp_lcy_charges d 
+                LEFT JOIN purchase_orders po ON d.po_id = po.id
+            `;
+            countStr = `SELECT COUNT(*) FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
         } else if (type === 'chart_of_accounts') {
             prefix = "c.";
             const companyId = req.query.company_id;
@@ -616,7 +633,7 @@ router.get('/table/:type', async (req, res) => {
             else if (type === 'inventory_transfers') { conditions.push(`(${prefix}from_project = $${params.length + 1} OR ${prefix}to_project = $${params.length + 1})`); params.push(filter); }
             else if (type === 'returns') { conditions.push(`(${prefix}project_name = $${params.length + 1} OR ${prefix}return_to = $${params.length + 1})`); params.push(filter); }
             else if (type === 'po_ddp_charges' || type === 'po_ddp_lcy_charges') { conditions.push(`po_id = $${params.length + 1}`); params.push(filter); }
-            else if (type === 'ddp_charges') { conditions.push(`po.project_name = $${params.length + 1}`); params.push(filter); }
+            else if (type === 'ddp_charges' || type === 'po_expenses') { conditions.push(`po.project_name = $${params.length + 1}`); params.push(filter); }
             else if (type === 'client_consumptions') { conditions.push(`cc.client_id = $${params.length + 1}`); params.push(filter); }
             else if (type === 'client_refunds') { conditions.push(`cr.client_id = $${params.length + 1}`); params.push(filter); }
             else if (type === 'partner_deposits' || type === 'partner_withdrawals') { conditions.push(`partner_id = $${params.length + 1}`); params.push(filter); }

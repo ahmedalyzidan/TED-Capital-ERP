@@ -2,15 +2,15 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://127.0.0.1:5173",
+      "origin": "http://127.0.0.1:4000",
       "localStorage": [
         {
           "name": "token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJTdXBlciBBZG1pbiIsInBlcm1pc3Npb25zIjp7InRhYmxlcyI6eyJBTEwiOlsicmVhZCIsImNyZWF0ZSIsInVwZGF0ZSIsImRlbGV0ZSIsImFwcHJvdmUiLCJleHBvcnQiLCJpbXBvcnQiLCJwcmludCIsImF1ZGl0Il19LCJzY3JlZW5zIjpbIkFMTCJdfSwiaXMyRkFFbmFibGVkIjpmYWxzZSwiaXNQYXJ0aWFsMkZBIjpmYWxzZSwiaWF0IjoxNzc4NjQwMDYzLCJleHAiOjE3Nzg2ODMyNjN9.aigzu1OAY1wHkMqdrPGDkhTBgGJH9TILE8ieCeSKx2I"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJTdXBlciBBZG1pbiIsInBlcm1pc3Npb25zIjp7InRhYmxlcyI6eyJBTEwiOlsicmVhZCIsImNyZWF0ZSIsInVwZGF0ZSIsImRlbGV0ZSIsImFwcHJvdmUiLCJleHBvcnQiLCJpbXBvcnQiLCJwcmludCIsImF1ZGl0Il19LCJzY3JlZW5zIjpbIkFMTCJdfSwiaXMyRkFFbmFibGVkIjpmYWxzZSwiaXNQYXJ0aWFsMkZBIjpmYWxzZSwiaWF0IjoxNzc4OTQ2MDE2LCJleHAiOjE3Nzg5ODkyMTZ9.WL9CuPMbiFswHS7ive9Ye4oPs0lmMw_6s3fJztmBq9M"
         },
         {
           "name": "ted-theme",
-          "value": "dark"
+          "value": "light"
         },
         {
           "name": "ted-lang",
@@ -22,7 +22,7 @@
         },
         {
           "name": "refresh_token",
-          "value": "39158cbd557019acdb3f053b108db1e30660c570dc4f0cd617ecd8b5c2dda9ca4a859197f5eef43c"
+          "value": "f773cf50fa5db816029a38703a717397c346cb94ecfa27961b12c8af3600608f8d094127a77e0261"
         }
       ]
     }
