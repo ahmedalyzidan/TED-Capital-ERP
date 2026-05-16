@@ -229,6 +229,7 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
         const result = await pool.query(`
             SELECT id, username, email, role, status, is_2fa_enabled,
             COALESCE(permissions, '{}'::jsonb) as permissions, 
+            linked_company, linked_project,
             created_at 
             FROM users 
             ORDER BY id DESC

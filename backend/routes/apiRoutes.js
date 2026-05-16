@@ -130,7 +130,7 @@ router.get('/dropdowns', async (req, res) => {
 
 router.get('/users', async (req, res) => {
     try {
-        const query = "SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, two_factor, created_at FROM users ORDER BY id ASC";
+        const query = "SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, created_at FROM users ORDER BY id ASC";
         const result = await pool.query(query);
         res.json({ success: true, data: result.rows });
     } catch (err) {
@@ -141,7 +141,7 @@ router.get('/users', async (req, res) => {
 
 router.get('/table/users', async (req, res) => {
     try {
-        const result = await pool.query("SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, two_factor, created_at FROM users ORDER BY id ASC");
+        const result = await pool.query("SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, created_at FROM users ORDER BY id ASC");
         res.json({ data: result.rows, total: result.rows.length });
     } catch (err) {
         console.error("Users Table Fetch Error:", err);
