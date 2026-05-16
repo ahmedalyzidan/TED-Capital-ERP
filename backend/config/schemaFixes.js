@@ -124,6 +124,7 @@ const applySchemaFixes = async () => {
 
     await runQuery("Security Audit Trail Timestamp Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
     await runQuery("Security Audit Trail EventType Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS event_type VARCHAR(100)`);
+    await runQuery("Security Audit Trail CreatedAt Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
     await runQuery("Active Sessions Table", `CREATE TABLE IF NOT EXISTS active_sessions (
         id SERIAL PRIMARY KEY,
@@ -530,7 +531,7 @@ const applySchemaFixes = async () => {
     for (const w of defaultWarehouses) {
         await runQuery("Insert Default Warehouse", `
             INSERT INTO warehouses (name)
-            SELECT $1
+            SELECT $1::VARCHAR
             WHERE NOT EXISTS (SELECT 1 FROM warehouses WHERE name = $1)
         `, [w]);
     }
