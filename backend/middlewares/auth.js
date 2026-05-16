@@ -42,8 +42,8 @@ const authenticateToken = (req, res, next) => {
 
 // 2. دالة فحص صلاحيات الجداول 
 function hasAccess(user, table, action = 'read') {
-    const role = (user.role || '').toLowerCase();
-    if (role === 'admin' || role === 'super admin' || role === 'superadmin') return true;
+    const role = (user.role || '').toLowerCase().trim();
+    if (['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) return true;
     
     if (user.permissions && user.permissions.tables) {
         if (user.permissions.tables['ALL']) return true; 
@@ -69,8 +69,8 @@ const requireAdmin = (req, res, next) => {
         return res.status(403).json({ error: "Access Denied. User not authenticated." });
     }
 
-    const role = (req.user.role || '').toLowerCase();
-    if (role === 'admin' || role === 'super admin' || role === 'superadmin') {
+    const role = (req.user.role || '').toLowerCase().trim();
+    if (['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
         return next();
     }
     

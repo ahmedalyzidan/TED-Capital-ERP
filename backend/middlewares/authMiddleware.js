@@ -58,7 +58,9 @@ const authGuard = async (req, res, next) => {
         const normalizedRole = (req.user.role || '').toLowerCase().trim();
         const normalizedUsername = (req.user.username || '').toLowerCase().trim();
         
-        if (normalizedUsername === 'admin' || normalizedRole === 'admin' || normalizedRole === 'super admin') {
+        const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
+        
+        if (normalizedUsername === 'admin' || isAdminRole) {
             req.user.isSuperAdmin = true;
         }
 
@@ -80,10 +82,11 @@ const checkPermission = (resource, action) => {
     return async (req, res, next) => {
         try {
             const userId = req.user.id || req.user.userId;
-            const userRole = (req.user.role || '').toLowerCase();
+            const normalizedRole = (req.user.role || '').toLowerCase().trim();
+            const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
             
             // 1. Super Admin Bypass (Zero Database Check for Admin)
-            if (userRole === 'super admin' || userRole === 'admin' || req.user.isSuperAdmin) {
+            if (isAdminRole || req.user.isSuperAdmin) {
                 console.log(`🚀 SUPER ADMIN BYPASS: Granted for ${req.user.username} on ${resource}:${action}`);
                 return next();
             }

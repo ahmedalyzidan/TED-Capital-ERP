@@ -55,14 +55,15 @@ const getSecurityMetadata = async (req, res) => {
         const dbRole = (userBasicRes.rows[0]?.role || '').toLowerCase().trim();
         const isDbSuper = userBasicRes.rows[0]?.is_superadmin === true;
         const normalizedUsername = currentUsername.toLowerCase().trim();
+
+        const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(dbRole) ||
+                           roleRes.rows.some(r => r.name && (r.is_system_role || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(r.name.toLowerCase().trim())));
         
         const isSuperAdmin = 
             normalizedUsername === 'admin' || 
             req.user.isSuperAdmin === true ||
             isDbSuper ||
-            dbRole === 'super admin' || 
-            dbRole === 'admin' ||
-            roleRes.rows.some(r => r.name && (r.is_system_role || r.name.toLowerCase().trim() === 'super admin' || r.name.toLowerCase().trim() === 'admin'));
+            isAdminRole;
         
         console.log(`🛡️ [IAM] User ${currentUsername} - Matrix Permissions: ${matrixCodes.length}`);
 
