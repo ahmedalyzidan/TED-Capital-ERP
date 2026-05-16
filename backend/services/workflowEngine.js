@@ -7,6 +7,10 @@ const notificationService = require('./notificationService');
  */
 const processApprovalWorkflow = async (moduleName, recordId, action, username, userRole, amount = 0) => {
     try {
+        const normalizedUsername = (username || '').toLowerCase().trim();
+        const normalizedRole = (userRole || '').toLowerCase().trim();
+        const isSuperAdmin = normalizedUsername === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
+
         // 1. جلب تعريف مسار العمل للموديول
         const defRes = await pool.query(
             "SELECT * FROM workflow_definitions WHERE module_name = $1 AND is_active = TRUE",
@@ -24,7 +28,11 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
         if (definition.require_maker_checker && amount >= (parseFloat(definition.min_amount) || 0)) {
             
             if (action === 'Submit') {
-                // الموديول يتطلب مراجعة، نضعه في حالة "قيد المراجعة"
+                // 🌟 Hardcoded Admin Bypass: Submission by Admin can be auto-approved if not strictly requiring checker
+                // But usually, we still want it to go through the status change if needed.
+                // However, the user wants "SUPER ACCESS", so let's allow them to bypass the "Pending" status if they are the maker?
+                // Actually, let's keep it consistent but ensure they can approve ANYTHING.
+                
                 const instRes = await pool.query(
                     "INSERT INTO workflow_instances (definition_id, record_id, current_step, status, maker_username) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     [definition.id, recordId, 1, 'Pending Authorization', username]
@@ -37,20 +45,25 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
             }
 
             if (action === 'Approve') {
-                // التحقق من صلاحية المراجع (Checker) من مصفوفة الأمان
-                const permRes = await pool.query(
-                    `SELECT is_allowed, financial_limit FROM elite_security_matrix 
-                     WHERE role_id = (SELECT id FROM roles WHERE name = $1) 
-                     AND module_name = $2 AND action_name = 'Authorize'`,
-                    [userRole, moduleName]
-                );
+                // 🌟 Hardcoded Super Admin Bypass (Zero Limit Check) 🌟
+                if (isSuperAdmin) {
+                    console.log(`👑 [WORKFLOW_BYPASS] Super Admin ${username} approved ${moduleName}:${recordId} regardless of limits.`);
+                } else {
+                    // التحقق من صلاحية المراجع (Checker) من مصفوفة الأمان
+                    const permRes = await pool.query(
+                        `SELECT is_allowed, financial_limit FROM elite_security_matrix 
+                         WHERE role_id = (SELECT id FROM roles WHERE name = $1) 
+                         AND module_name = $2 AND action_name = 'Authorize'`,
+                        [userRole, moduleName]
+                    );
 
-                if (permRes.rows.length === 0 || !permRes.rows[0].is_allowed) {
-                    throw new Error("ليس لديك صلاحية اعتماد (Authorizer) لهذا الموديول.");
-                }
+                    if (permRes.rows.length === 0 || !permRes.rows[0].is_allowed) {
+                        throw new Error("ليس لديك صلاحية اعتماد (Authorizer) لهذا الموديول.");
+                    }
 
-                if (amount > parseFloat(permRes.rows[0].financial_limit)) {
-                    throw new Error(`المبلغ (${amount}) يتجاوز حد الاعتماد المسموح لك (${permRes.rows[0].financial_limit}).`);
+                    if (amount > parseFloat(permRes.rows[0].financial_limit)) {
+                        throw new Error(`المبلغ (${amount}) يتجاوز حد الاعتماد المسموح لك (${permRes.rows[0].financial_limit}).`);
+                    }
                 }
 
                 // تحديث حالة المسار
@@ -61,7 +74,7 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
 
                 await pool.query(
                     "INSERT INTO workflow_history (workflow_id, record_id, status, action_by, comments) VALUES ($1, $2, $3, $4, $5)",
-                    [definition.id, recordId, 'Authorized', username, 'تم الاعتماد من قبل المراجع']
+                    [definition.id, recordId, 'Authorized', username, 'تم الاعتماد من قبل المراجع (Super Admin Bypass)']
                 );
 
                 return { newStatus: 'Approved', isFinalApproval: true };

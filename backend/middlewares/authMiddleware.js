@@ -30,11 +30,10 @@ const authGuard = async (req, res, next) => {
 
         req.user = decoded;
         req.user.userId = userId;
-        console.log("🎟️ AuthGuard: Decoded User:", req.user.username, "Role:", req.user.role);
-
+        
         // 2. Fetch IAM Metadata (Permissions, Role & Org Unit)
         const [userRes, orgRes, permRes] = await Promise.all([
-            pool.query("SELECT role, linked_company, linked_project FROM users WHERE id = $1", [userId]),
+            pool.query("SELECT role, username, linked_company, linked_project FROM users WHERE id = $1", [userId]),
             pool.query("SELECT org_unit_id FROM user_org_units WHERE user_id = $1 AND is_primary = TRUE LIMIT 1", [userId]),
             pool.query(`
                 SELECT p.code 
@@ -47,6 +46,7 @@ const authGuard = async (req, res, next) => {
 
         if (userRes.rows.length > 0) {
             req.user.role = userRes.rows[0].role;
+            req.user.username = userRes.rows[0].username;
             req.user.linkedCompany = userRes.rows[0].linked_company;
             req.user.linkedProject = userRes.rows[0].linked_project;
         }
@@ -54,14 +54,20 @@ const authGuard = async (req, res, next) => {
         req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
         req.user.permissions = permRes.rows.map(r => r.code);
         
-        // 3. Admin Override (Hardcoded safety for 'admin' user)
+        // 3. 🌟 SUPER ACCESS OVERRIDE (Hardcoded Mandate) 🌟
         const normalizedRole = (req.user.role || '').toLowerCase().trim();
         const normalizedUsername = (req.user.username || '').toLowerCase().trim();
         
         const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
         
+        // If username is 'admin' or has any admin role, they get TOTAL SYSTEM BYPASS
         if (normalizedUsername === 'admin' || isAdminRole) {
             req.user.isSuperAdmin = true;
+            req.user.role = 'Admin'; // Force display as Admin
+            // Set linked data to null to ensure TOTAL visibility (no isolation)
+            req.user.linkedCompany = null;
+            req.user.linkedProject = null;
+            console.log("👑 [SUPER_AUTH] Hardcoded Super Access granted to:", normalizedUsername);
         }
 
         next();
@@ -71,9 +77,6 @@ const authGuard = async (req, res, next) => {
 };
 
 /**
- * RBAC Permission Guard
- */
-/**
  * RBAC Permission Guard (Strictly Typed)
  * @param {string} resource - e.g., 'INVENTORY', 'SALES'
  * @param {string} action - e.g., 'READ', 'CREATE', 'UPDATE', 'DELETE'
@@ -82,16 +85,14 @@ const checkPermission = (resource, action) => {
     return async (req, res, next) => {
         try {
             const userId = req.user.id || req.user.userId;
-            const normalizedRole = (req.user.role || '').toLowerCase().trim();
-            const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
             
-            // 1. Super Admin Bypass (Zero Database Check for Admin)
-            if (isAdminRole || req.user.isSuperAdmin) {
-                console.log(`🚀 SUPER ADMIN BYPASS: Granted for ${req.user.username} on ${resource}:${action}`);
+            // 1. 🌟 Hardcoded Super Admin Bypass (Absolute Authorization) 🌟
+            if (req.user.isSuperAdmin) {
+                console.log(`👑 [SUPER_BYPASS] Absolute Authorization granted for ${req.user.username} on ${resource}:${action}`);
                 return next();
             }
 
-            // 2. Database Granular Check
+            // 2. Database Granular Check for Regular Users
             const permRes = await pool.query(`
                 SELECT p.id 
                 FROM permissions p
@@ -103,7 +104,6 @@ const checkPermission = (resource, action) => {
             `, [userId, resource, action]);
 
             if (permRes.rows.length > 0) {
-                console.log(`✅ ACCESS GRANTED: User ${req.user.username} has permission ${resource}:${action}`);
                 return next();
             }
 
@@ -112,8 +112,8 @@ const checkPermission = (resource, action) => {
 
             await pool.query(`
                 INSERT INTO security_audit_trail (user_id, username, action, resource, impact_level, ip_address, details, timestamp, event_type)
-                VALUES ($1, $2, 'RBAC_DENIED', $3, 'High', $4, $5, CURRENT_TIMESTAMP, 'RBAC_DENIED')
-            `, [userId, req.user.username, `${resource}:${action}`, req.ip, JSON.stringify({ 
+                VALUES ($1, $2, 'RBAC_DENIED', $3, $4, $5, $6, CURRENT_TIMESTAMP, 'RBAC_DENIED')
+            `, [userId, req.user.username, `${resource}:${action}`, 'High', req.ip, JSON.stringify({ 
                 requested_url: req.originalUrl,
                 required: { resource, action }
             })]);
@@ -130,10 +130,16 @@ const checkPermission = (resource, action) => {
 };
 
 /**
- * ABAC / Approval Matrix Guard
+ * ABAC / Approval Matrix Guard (Hardcoded Admin Bypass)
  */
 const checkApprovalLimit = (transactionType) => {
     return async (req, res, next) => {
+        // 🌟 Hardcoded Super Admin Bypass for Approval Limits 🌟
+        if (req.user.isSuperAdmin) {
+            console.log(`👑 [APPROVAL_BYPASS] Admin ${req.user.username} bypassing limits for ${transactionType}`);
+            return next();
+        }
+
         const { amount } = req.body;
         if (!amount) return next();
 

@@ -43,7 +43,12 @@ const authenticateToken = (req, res, next) => {
 // 2. دالة فحص صلاحيات الجداول 
 function hasAccess(user, table, action = 'read') {
     const role = (user.role || '').toLowerCase().trim();
-    if (['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) return true;
+    const username = (user.username || '').toLowerCase().trim();
+
+    // 🌟 Hardcoded Super Access 🌟
+    if (username === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
+        return true;
+    }
     
     if (user.permissions && user.permissions.tables) {
         if (user.permissions.tables['ALL']) return true; 
@@ -70,7 +75,10 @@ const requireAdmin = (req, res, next) => {
     }
 
     const role = (req.user.role || '').toLowerCase().trim();
-    if (['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
+    const username = (req.user.username || '').toLowerCase().trim();
+
+    // 🌟 Hardcoded Super Access 🌟
+    if (username === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
         return next();
     }
     

@@ -101,7 +101,9 @@ class DynamicController {
 
             // --- 🌟 RLS (Resource Level Security) Injection 🌟 ---
             const userRole = (req.user.role || '').toLowerCase();
-            const isAdmin = req.user.isSuperAdmin || userRole.includes('admin') || req.user.username === 'admin';
+            const normalizedUsername = (req.user.username || '').toLowerCase().trim();
+            // Hardcoded Admin Bypass for TOTAL visibility across all companies and projects
+            const isAdmin = req.user.isSuperAdmin || userRole.includes('admin') || normalizedUsername === 'admin';
 
             if (!isAdmin) {
                 // Determine permissions array (supporting both legacy array and new object format)
