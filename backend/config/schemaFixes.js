@@ -515,6 +515,26 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS portal_access_active BOOLEAN DEFAULT FALSE
     `);
 
+    // --- Seed Default Warehouses ---
+    const defaultWarehouses = [
+        'Main Store',
+        'branch 1',
+        'branch 2',
+        'branch 3',
+        'branch 4',
+        'branch 5',
+        'branch 6',
+        'branch 7',
+        'branch 8'
+    ];
+    for (const w of defaultWarehouses) {
+        await runQuery("Insert Default Warehouse", `
+            INSERT INTO warehouses (name)
+            SELECT $1
+            WHERE NOT EXISTS (SELECT 1 FROM warehouses WHERE name = $1)
+        `, [w]);
+    }
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 
