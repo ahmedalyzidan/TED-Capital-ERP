@@ -109,6 +109,8 @@ const initDB = async () => {
         // --- Workflow Fixes ---
         await pool.query("ALTER TABLE workflow_instances ADD COLUMN IF NOT EXISTS amount NUMERIC(20,6) DEFAULT 0");
         await pool.query("ALTER TABLE workflow_instances ADD COLUMN IF NOT EXISTS module_name VARCHAR(100)");
+        await pool.query("ALTER TABLE workflow_definitions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE");
+        await pool.query("ALTER TABLE workflow_definitions ADD COLUMN IF NOT EXISTS auto_approve_below NUMERIC(20,6) DEFAULT 0");
 
         console.log("✅ Database, IAM Roles, and default Admin verified successfully.");
 
