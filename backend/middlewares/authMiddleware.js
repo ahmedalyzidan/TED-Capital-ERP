@@ -54,9 +54,11 @@ const authGuard = async (req, res, next) => {
         req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
         req.user.permissions = permRes.rows.map(r => r.code);
         
-        // 3. Admin Override
+        // 3. Admin Override (Hardcoded safety for 'admin' user)
         const normalizedRole = (req.user.role || '').toLowerCase().trim();
-        if (normalizedRole === 'admin' || normalizedRole === 'super admin') {
+        const normalizedUsername = (req.user.username || '').toLowerCase().trim();
+        
+        if (normalizedUsername === 'admin' || normalizedRole === 'admin' || normalizedRole === 'super admin') {
             req.user.isSuperAdmin = true;
         }
 

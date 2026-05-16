@@ -165,8 +165,16 @@ router.put('/users/:id', requireAdmin, async (req, res) => {
 
 router.delete('/users/:id', requireAdmin, async (req, res) => {
     try {
-        await pool.query("DELETE FROM users WHERE id=$1", [req.params.id]);
-        await logAudit(req.user.username, 'DELETE_USER', 'users', req.params.id, `Deleted user ID ${req.params.id}`);
+        const { id } = req.params;
+        const checkRes = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
+        const targetUsername = (checkRes.rows[0]?.username || '').toLowerCase().trim();
+
+        if (targetUsername === 'admin') {
+            return res.status(403).json({ error: "The root 'admin' user is protected and cannot be deleted." });
+        }
+
+        await pool.query("DELETE FROM users WHERE id=$1", [id]);
+        await logAudit(req.user.username, 'DELETE_USER', 'users', id, `Deleted user ID ${id}`);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

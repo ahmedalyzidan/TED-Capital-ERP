@@ -220,6 +220,13 @@ const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
         const { username, email, password, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor } = req.body;
+
+        // Protection for hardcoded 'admin' user
+        const checkRes = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
+        const existingUsername = (checkRes.rows[0]?.username || '').toLowerCase().trim();
+        if (existingUsername === 'admin') {
+            return res.status(403).json({ error: "The root 'admin' user is protected and cannot be modified or re-assigned." });
+        }
         
         if (password) {
             const passwordError = validatePasswordStrength(password);
