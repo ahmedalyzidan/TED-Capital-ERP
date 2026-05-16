@@ -164,6 +164,34 @@ async function initializeDatabase() {
             }
         }
 
+        // =========================================================================
+        // 8. IAM & HR Expansion (Operational Roles & Access Control)
+        // =========================================================================
+        console.log("🔐 Expanding IAM & HR Schema...");
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_project VARCHAR(255)`);
+        await client.query(`CREATE TABLE IF NOT EXISTS job_titles (id SERIAL PRIMARY KEY, title VARCHAR(255) UNIQUE, department VARCHAR(100))`);
+        
+        const rolesToSeed = [
+            'Engineer', 'Financial Manager', 'HR Director', 
+            'Inventory Keeper', 'Operations Manager', 'Project Engineer'
+        ];
+        
+        for (let roleName of rolesToSeed) {
+            // Seed into IAM roles table (if it exists, using direct SQL for compatibility)
+            await client.query(`
+                INSERT INTO roles (name, description) 
+                VALUES ($1, $2) 
+                ON CONFLICT (name) DO NOTHING
+            `, [roleName, `${roleName} Operational Role`]);
+
+            // Seed into job_titles table for HR dropdowns
+            await client.query(`
+                INSERT INTO job_titles (title) 
+                VALUES ($1) 
+                ON CONFLICT (title) DO NOTHING
+            `, [roleName]);
+        }
+
         await client.query('COMMIT');
         console.log("✅ Database Schema Initialized and Updated Successfully.");
 

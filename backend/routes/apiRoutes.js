@@ -71,7 +71,12 @@ router.get('/dropdowns', async (req, res) => {
         const staffComps = await pool.query("SELECT DISTINCT company FROM staff WHERE company IS NOT NULL AND company != ''");
         const rfqComps = await pool.query("SELECT DISTINCT company FROM rfq WHERE company IS NOT NULL AND company != ''");
         const poComps = await pool.query("SELECT DISTINCT supplier AS company FROM purchase_orders WHERE supplier IS NOT NULL AND supplier != ''");
-        const jobTitles = await pool.query("SELECT DISTINCT job_title FROM staff WHERE job_title IS NOT NULL AND job_title != ''");
+        const jobTitlesQuery = await pool.query("SELECT title FROM job_titles");
+        const existingStaffTitles = await pool.query("SELECT DISTINCT job_title FROM staff WHERE job_title IS NOT NULL AND job_title != ''");
+        const allJobTitles = [...new Set([
+            ...jobTitlesQuery.rows.map(r => r.title),
+            ...existingStaffTitles.rows.map(r => r.job_title)
+        ])];
         const roles = await pool.query("SELECT id, name FROM roles ORDER BY name ASC");
         const staffList = await pool.query("SELECT id, name, job_title FROM staff ORDER BY name ASC");
 
@@ -113,7 +118,7 @@ router.get('/dropdowns', async (req, res) => {
             system_units: units.rows.map(r => r.value),
             companies_dd: allCompanies,
             project_companies_dd: projectComps.rows.map(r => r.company),
-            job_titles_dd: jobTitles.rows.map(r => r.job_title),
+            job_titles_dd: allJobTitles,
             installments_dd: instsWithStatus
         });
     } catch (err) {

@@ -11,6 +11,8 @@ export default function Users() {
   const [employees, setEmployees] = useState([]); 
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [projectsList, setProjectsList] = useState([]);
+  const [projectCompaniesList, setProjectCompaniesList] = useState([]);
 
   const t = {
     ar: {
@@ -66,6 +68,8 @@ export default function Users() {
         status: "حالة الحساب",
         twoFactor: "المصادقة الثنائية (2FA)",
         twoFactorDesc: "إرسال كود التحقق للجوال عند كل دخول للنظام",
+        linkCompany: "🏢 ربط بشركة محددة",
+        linkProject: "🏗️ ربط بمشروع محدد",
         save: "ترحيل وحفظ هوية المستخدم"
       },
       departments: [
@@ -136,6 +140,8 @@ export default function Users() {
         status: "Account Status",
         twoFactor: "Two-Factor Auth (2FA)",
         twoFactorDesc: "Send verification code to mobile upon login",
+        linkCompany: "🏢 Linked Company",
+        linkProject: "🏗️ Linked Project",
         save: "Post & Save User Identity"
       },
       departments: [
@@ -165,7 +171,7 @@ export default function Users() {
   const [newUser, setNewUser] = useState({ 
     username: '', full_name: '', email: '', password: '', role: 'Custom', 
     status: 'Active', phone: '', department: '', employee_id: '', 
-    linked_employee_id: '', two_factor: false
+    linked_employee_id: '', linked_company: '', linked_project: '', two_factor: false
   });
 
   useEffect(() => {
@@ -182,6 +188,9 @@ export default function Users() {
         setUsers(uRes.data.data || []);
         const rRes = await api.get('/iam/roles');
         setRoles(rRes.data || []);
+        const ddRes = await api.get('/dropdowns');
+        setProjectCompaniesList(ddRes.data.companies_dd || []);
+        setProjectsList(ddRes.data.projects || []);
       } else if (activeTab === 'roles') {
         const rRes = await api.get('/iam/roles');
         setRoles(rRes.data || []);
@@ -568,6 +577,31 @@ export default function Users() {
                        </select>
                     </div>
                  </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.linkCompany}</label>
+                       <select 
+                         value={isEditModalOpen ? (selectedUser?.linked_company || '') : newUser.linked_company} 
+                         onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, linked_company: e.target.value}) : setNewUser({...newUser, linked_company: e.target.value})} 
+                         className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                       >
+                          <option value="">-- All Companies --</option>
+                          {projectCompaniesList.map(comp => <option key={comp} value={comp}>{comp}</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.linkProject}</label>
+                       <select 
+                         value={isEditModalOpen ? (selectedUser?.linked_project || '') : newUser.linked_project} 
+                         onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, linked_project: e.target.value}) : setNewUser({...newUser, linked_project: e.target.value})} 
+                         className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                       >
+                          <option value="">-- All Projects --</option>
+                          {projectsList.map(proj => <option key={proj} value={proj}>{proj}</option>)}
+                       </select>
+                    </div>
+                  </div>
+
                  <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white flex items-center justify-between shadow-xl">
                     <div className={language === 'ar' ? 'text-right' : 'text-left'}>
                        <p className="font-black text-sm">{cur.modal.twoFactor}</p>
