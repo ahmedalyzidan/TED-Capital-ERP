@@ -221,6 +221,19 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    const defaultJobTitles = [
+        'Project Manager', 'Site Engineer', 'Accountant', 'HR Manager', 
+        'Operations Manager', 'Sales Executive', 'Procurement Officer', 
+        'Technical Office Engineer', 'General Manager', 'Draftsman',
+        'Storekeeper', 'Safety Officer', 'Quality Control'
+    ];
+
+    for (const title of defaultJobTitles) {
+        await runQuery(`Seed Job Title ${title}`, `
+            INSERT INTO job_titles (title) VALUES ($1) ON CONFLICT (title) DO NOTHING
+        `, [title]);
+    }
+
     await runQuery("Staff Table", `CREATE TABLE IF NOT EXISTS staff (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
