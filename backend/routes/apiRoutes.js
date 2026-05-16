@@ -14,6 +14,7 @@ const { sendEmailNotification, checkAndSendLowStockEmail } = require('../config/
 // 🌟 استيراد الصلاحيات (يتم مرة واحدة فقط لتجنب خطأ Identifier has already been declared)
 const { hasAccess, requireAdmin, authenticateToken } = require('../middlewares/auth');
 const { authGuard, checkPermission } = require('../middlewares/authMiddleware');
+const { isolateData } = require('../middlewares/dataIsolationMiddleware');
 
 // ============================================================================
 // 🌟 صمام الأمان المالي (Local GL Wrapper): تم نقله لـ AccountingService (محرك القيود المحاسبية)
@@ -358,6 +359,24 @@ router.post('/action/approve_sub_invoice/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     } finally {
         client.release();
+    }
+});
+
+router.get('/table/staff', authGuard, isolateData, async (req, res) => {
+    try {
+        let query = "SELECT * FROM staff WHERE 1=1";
+        let params = [];
+
+        if (req.isolation && req.isolation.company) {
+            query += ` AND (company = $1 OR company IS NULL OR company = '')`;
+            params.push(req.isolation.company);
+        }
+
+        query += " ORDER BY id DESC";
+        const result = await pool.query(query, params);
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
