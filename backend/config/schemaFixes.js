@@ -277,6 +277,7 @@ const applySchemaFixes = async () => {
         ['2000', 'الالتزامات (Liabilities)', 'All', 1, null, 'Liability', 'EGP', false],
         ['2100', 'الالتزامات المتداولة', 'All', 2, '2000', 'Liability', 'EGP', false],
         ['2110', 'موردين (حسابات دائنة - AP)', 'All', 3, '2100', 'Liability', 'EGP', false],
+        ['2160', 'ضرائب الخصم والإضافة (WHT)', 'All', 3, '2100', 'Liability', 'EGP', false],
         ['2200', 'الضرائب والقيمة المضافة (VAT)', 'All', 2, '2100', 'Liability', 'EGP', false],
         ['3000', 'حقوق الملكية (Equity)', 'All', 1, null, 'Equity', 'EGP', false],
         ['4000', 'الإيرادات (Revenues)', 'All', 1, null, 'Revenue', 'EGP', false],
