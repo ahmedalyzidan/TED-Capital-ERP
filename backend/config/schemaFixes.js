@@ -327,6 +327,49 @@ const applySchemaFixes = async () => {
     }
 
     // --- 7. Enterprise Structures (Dropdowns Support) ---
+    await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        base_currency VARCHAR(10) DEFAULT 'EGP',
+        tax_number VARCHAR(100),
+        commercial_reg VARCHAR(100),
+        authorized_capital NUMERIC(15,2) DEFAULT 0,
+        issued_capital NUMERIC(15,2) DEFAULT 0,
+        legal_form VARCHAR(100),
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    const defaultCompanies = [
+        [1, 'TED Capital', 'EGP'],
+        [2, 'Design Concept', 'EGP'],
+        [3, 'Master Builder', 'EGP']
+    ];
+
+    for (const comp of defaultCompanies) {
+        await runQuery(`Seed Company ${comp[1]}`, `
+            INSERT INTO companies (id, name, base_currency) 
+            VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_currency = EXCLUDED.base_currency
+        `, comp);
+    }
+
+    await runQuery("Backfill Projects Company ID", `
+        UPDATE projects p
+        SET company_id = c.id
+        FROM companies c
+        WHERE p.company_id IS NULL AND (UPPER(p.company) = UPPER(c.name) OR p.company ILIKE '%' || c.name || '%')
+    `);
+
+    await runQuery("Backfill Ledger Company ID", `
+        UPDATE ledger l
+        SET company_id = c.id, company = c.name
+        FROM companies c
+        WHERE (l.company_id IS NULL OR l.company IS NULL OR l.company = '') AND (UPPER(l.company) = UPPER(c.name) OR l.cost_center IN (SELECT name FROM projects WHERE company_id = c.id))
+    `);
+
     await runQuery("Committees Table", `CREATE TABLE IF NOT EXISTS committees (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
