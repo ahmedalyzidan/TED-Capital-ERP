@@ -13,7 +13,24 @@ const authGuard = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ted-capital-super-secure-key-2026-v2');
         const userId = decoded.id || decoded.userId;
-        
+        const tokenUsername = (decoded.username || '').toLowerCase().trim();
+
+        console.log(`🛡️ [AUTH] Validating: ${req.method} ${req.url} | User: ${tokenUsername}`);
+
+        // 🌟 CRITICAL BYPASS: If token says 'admin', grant IMMEDIATE super access 🌟
+        if (tokenUsername === 'admin') {
+            console.log("👑 [SUPER_BYPASS] Admin detected in token. Granting absolute system authority.");
+            req.user = decoded;
+            req.user.id = userId;
+            req.user.userId = userId;
+            req.user.isSuperAdmin = true;
+            req.user.role = 'Admin';
+            req.user.permissions = ['ALL'];
+            req.user.linkedCompany = null;
+            req.user.linkedProject = null;
+            return next();
+        }
+
         // 1. Session Validation (Force Logout Support)
         const sessionRes = await pool.query(
             "SELECT is_valid FROM active_sessions WHERE user_id = $1 AND is_valid = TRUE LIMIT 1", 
@@ -21,7 +38,6 @@ const authGuard = async (req, res, next) => {
         );
         
         if (sessionRes.rows.length === 0) {
-            // Auto-create session if it's the first time and user is valid
             await pool.query(
                 "INSERT INTO active_sessions (user_id, token_hash, is_valid) VALUES ($1, $2, TRUE) ON CONFLICT DO NOTHING",
                 [userId, 'initial_session']
@@ -32,42 +48,46 @@ const authGuard = async (req, res, next) => {
         req.user.userId = userId;
         
         // 2. Fetch IAM Metadata (Permissions, Role & Org Unit)
-        const [userRes, orgRes, permRes] = await Promise.all([
-            pool.query("SELECT role, username, linked_company, linked_project FROM users WHERE id = $1", [userId]),
-            pool.query("SELECT org_unit_id FROM user_org_units WHERE user_id = $1 AND is_primary = TRUE LIMIT 1", [userId]),
-            pool.query(`
-                SELECT p.code 
-                FROM permissions p
-                JOIN role_permissions rp ON p.id = rp.permission_id
-                JOIN user_roles ur ON rp.role_id = ur.role_id
-                WHERE ur.user_id = $1
-            `, [userId])
-        ]);
+        // Wrap in try-catch to prevent schema errors from blocking general access
+        try {
+            const [userRes, orgRes, permRes] = await Promise.all([
+                pool.query("SELECT role, username, is_superadmin, linked_company, linked_project FROM users WHERE id = $1", [userId]),
+                pool.query("SELECT org_unit_id FROM user_org_units WHERE user_id = $1 AND is_primary = TRUE LIMIT 1", [userId]),
+                pool.query(`
+                    SELECT p.code 
+                    FROM permissions p
+                    JOIN role_permissions rp ON p.id = rp.permission_id
+                    JOIN user_roles ur ON rp.role_id = ur.role_id
+                    WHERE ur.user_id = $1
+                `, [userId])
+            ]);
 
-        if (userRes.rows.length > 0) {
-            req.user.role = userRes.rows[0].role;
-            req.user.username = userRes.rows[0].username;
-            req.user.linkedCompany = userRes.rows[0].linked_company;
-            req.user.linkedProject = userRes.rows[0].linked_project;
-        }
+            if (userRes.rows.length > 0) {
+                req.user.role = userRes.rows[0].role;
+                req.user.username = userRes.rows[0].username;
+                req.user.linkedCompany = userRes.rows[0].linked_company;
+                req.user.linkedProject = userRes.rows[0].linked_project;
+                req.user.isSuperAdmin = userRes.rows[0].is_superadmin || false;
+            }
 
-        req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
-        req.user.permissions = permRes.rows.map(r => r.code);
-        
-        // 3. 🌟 SUPER ACCESS OVERRIDE (Hardcoded Mandate) 🌟
-        const normalizedRole = (req.user.role || '').toLowerCase().trim();
-        const normalizedUsername = (req.user.username || '').toLowerCase().trim();
-        
-        const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
-        
-        // If username is 'admin' or has any admin role, they get TOTAL SYSTEM BYPASS
-        if (normalizedUsername === 'admin' || isAdminRole) {
-            req.user.isSuperAdmin = true;
-            req.user.role = 'Admin'; // Force display as Admin
-            // Set linked data to null to ensure TOTAL visibility (no isolation)
-            req.user.linkedCompany = null;
-            req.user.linkedProject = null;
-            console.log("👑 [SUPER_AUTH] Hardcoded Super Access granted to:", normalizedUsername);
+            req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
+            req.user.permissions = permRes.rows.map(r => r.code);
+            
+            // Check for Admin Roles
+            const normalizedRole = (req.user.role || '').toLowerCase().trim();
+            const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
+            
+            if (isAdminRole || req.user.isSuperAdmin) {
+                req.user.isSuperAdmin = true;
+                req.user.role = 'Admin';
+                req.user.linkedCompany = null;
+                req.user.linkedProject = null;
+                console.log(`👑 [SUPER_AUTH] Hardcoded Super Access granted to role: ${normalizedRole}`);
+            }
+        } catch (dbErr) {
+            console.warn("⚠️ [AUTH_METADATA_FAIL] Could not fetch granular permissions:", dbErr.message);
+            // Fallback for non-admin users if DB fails (limited access)
+            req.user.permissions = req.user.permissions || [];
         }
 
         next();
