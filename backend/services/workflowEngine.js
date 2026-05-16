@@ -30,8 +30,8 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
                     [definition.id, recordId, 1, 'Pending Authorization', username]
                 );
 
-                // 🚀 TRIGGER OMNICHANNEL ALERT
-                await notificationService.notifyPendingAuthorization(moduleName, recordId, amount, username);
+                // 🚀 TRIGGER OMNICHANNEL ALERT (Backgrounded to prevent timeouts)
+                notificationService.notifyPendingAuthorization(moduleName, recordId, amount, username);
 
                 return { newStatus: 'Pending Authorization', isFinalApproval: false, instanceId: instRes.rows[0].id };
             }

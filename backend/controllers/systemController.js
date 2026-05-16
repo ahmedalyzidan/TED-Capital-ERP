@@ -181,8 +181,9 @@ class SystemController {
     async runIntelligenceDiagnostics(req, res) {
         const intelligenceEngine = require('../services/intelligenceEngine');
         try {
-            await intelligenceEngine.runDiagnostics();
-            res.json({ success: true, message: 'Intelligence diagnostic cycle completed successfully.' });
+            // Background the diagnostic cycle to prevent timeout for the requester
+            intelligenceEngine.runDiagnostics();
+            res.json({ success: true, message: 'Intelligence diagnostic cycle started in background.' });
         } catch (err) { 
             console.error("Manual Intelligence Trigger Error:", err);
             res.status(500).json({ error: err.message }); 
