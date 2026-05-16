@@ -106,6 +106,10 @@ const initDB = async () => {
             await pool.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [adminUser.rows[0].id, superAdminRole.rows[0].id]);
         }
 
+        // --- Workflow Fixes ---
+        await pool.query("ALTER TABLE workflow_instances ADD COLUMN IF NOT EXISTS amount NUMERIC(20,6) DEFAULT 0");
+        await pool.query("ALTER TABLE workflow_instances ADD COLUMN IF NOT EXISTS module_name VARCHAR(100)");
+
         console.log("✅ Database, IAM Roles, and default Admin verified successfully.");
 
         // تطبيق إصلاحات الجدول وتهيئة شجرة الحسابات

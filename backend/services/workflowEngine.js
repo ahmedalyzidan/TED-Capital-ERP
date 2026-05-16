@@ -34,8 +34,8 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
                 // Actually, let's keep it consistent but ensure they can approve ANYTHING.
                 
                 const instRes = await pool.query(
-                    "INSERT INTO workflow_instances (definition_id, record_id, current_step, status, maker_username) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-                    [definition.id, recordId, 1, 'Pending Authorization', username]
+                    "INSERT INTO workflow_instances (definition_id, record_id, current_step, status, maker_username, amount, module_name) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                    [definition.id, recordId, 1, 'Pending Authorization', username, amount, moduleName]
                 );
 
                 // 🚀 TRIGGER OMNICHANNEL ALERT (Backgrounded to prevent timeouts)
