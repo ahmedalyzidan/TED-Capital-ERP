@@ -402,6 +402,7 @@ export default function Layout() {
                           <span className="text-xl opacity-70 group-hover:scale-110 transition-transform">{res.icon}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] font-bold text-slate-900 truncate">{res.title}</p>
+                            {res.subtitle && <p className="text-[11px] text-slate-500 truncate">{res.subtitle}</p>}
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{res.category}</p>
                           </div>
                           <span className="text-slate-300 group-hover:translate-x-1 transition-transform opacity-0 group-hover:opacity-100">

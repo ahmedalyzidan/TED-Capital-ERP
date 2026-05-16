@@ -2708,18 +2708,34 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
         const term = `%${q}%`;
 
         const queries = [
-            { table: 'customers', label: 'العملاء', path: '/clients', cols: ['name', 'company_name', 'phone'], icon: '👥' },
-            { table: 'projects', label: 'المشاريع', path: '/projects', cols: ['name', 'project_manager', 'project_serial'], icon: '🏗️' },
-            { table: 'purchase_orders', label: 'أوامر الشراء', path: '/inventory', cols: ['master_po_no', 'item_description', 'supplier'], icon: '🛒' },
-            { table: 'inventory_items', label: 'المخزون', path: '/inventory', cols: ['item_name', 'master_po_no'], icon: '📦' },
-            { table: 'chart_of_accounts', label: 'دليل الحسابات', path: '/finance', cols: ['account_name', 'account_code'], icon: '💰' }
+            { table: 'customers', label: 'العملاء', path: '/clients', title_col: 'name', subtitle_cols: ['company_name', 'phone'], icon: '👥' },
+            { table: 'projects', label: 'المشاريع', path: '/projects', title_col: 'name', subtitle_cols: ['project_manager', 'project_serial'], icon: '🏗️' },
+            { table: 'purchase_orders', label: 'أوامر الشراء', path: '/inventory', title_col: 'master_po_no', subtitle_cols: ['item_description', 'supplier'], icon: '🛒' },
+            { table: 'inventory_items', label: 'المخزون', path: '/inventory', title_col: 'item_name', subtitle_cols: ['master_po_no'], icon: '📦' },
+            { table: 'chart_of_accounts', label: 'دليل الحسابات', path: '/finance', title_col: 'account_name', subtitle_cols: ['account_code'], icon: '💰' }
         ];
 
         let results = [];
         for (const qry of queries) {
             try {
-                const condition = qry.cols.map(col => `CAST(${col} AS TEXT) ILIKE $1`).join(' OR ');
-                let sql = `SELECT id, ${qry.cols[0]} as title, '${qry.label}' as category, '${qry.path}' as path, '${qry.icon}' as icon FROM ${qry.table} WHERE (${condition})`;
+                const allCols = [qry.title_col, ...qry.subtitle_cols];
+                const condition = allCols.map(col => `CAST(${col} AS TEXT) ILIKE $1`).join(' OR ');
+                
+                let sql = `
+                    SELECT 
+                        id, 
+                        ${qry.title_col} as title, 
+                        (CASE 
+                            ${qry.subtitle_cols.map(col => `WHEN CAST(${col} AS TEXT) ILIKE $1 THEN CAST(${col} AS TEXT)`).join(' ')}
+                            ELSE ''
+                        END) as subtitle,
+                        '${qry.label}' as category, 
+                        '${qry.path}' as path, 
+                        '${qry.icon}' as icon 
+                    FROM ${qry.table} 
+                    WHERE (${condition})
+                `;
+                
                 let params = [term];
                 if (req.isolation && req.isolation.company) {
                     sql += ` AND (company = $2 OR company IS NULL OR company = '')`;
