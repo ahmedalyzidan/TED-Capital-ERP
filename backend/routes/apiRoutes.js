@@ -2722,12 +2722,16 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
                 const condition = allCols.map(col => `CAST(${col} AS TEXT) ILIKE $1`).join(' OR ');
                 
                 let sql = `
-                    SELECT 
+                    SELECT DISTINCT 
                         id, 
-                        ${qry.title_col} as title, 
                         (CASE 
+                            WHEN CAST(${qry.title_col} AS TEXT) ILIKE $1 THEN CAST(${qry.title_col} AS TEXT)
                             ${qry.subtitle_cols.map(col => `WHEN CAST(${col} AS TEXT) ILIKE $1 THEN CAST(${col} AS TEXT)`).join(' ')}
-                            ELSE ''
+                            ELSE CAST(${qry.title_col} AS TEXT)
+                        END) as title,
+                        (CASE 
+                            WHEN CAST(${qry.title_col} AS TEXT) ILIKE $1 THEN ''
+                            ELSE CAST(${qry.title_col} AS TEXT)
                         END) as subtitle,
                         '${qry.label}' as category, 
                         '${qry.path}' as path, 
