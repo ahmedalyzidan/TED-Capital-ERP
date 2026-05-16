@@ -213,6 +213,129 @@ const applySchemaFixes = async () => {
 
     await runQuery("Inventory Items LCY FX Rate", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lcy_fx_rate NUMERIC(15,4) DEFAULT 1`);
     await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
+    await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
+    
+    await runQuery("Job Titles Table", `CREATE TABLE IF NOT EXISTS job_titles (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Staff Table", `CREATE TABLE IF NOT EXISTS staff (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        job_title VARCHAR(255),
+        salary NUMERIC(15,2) DEFAULT 0,
+        company VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'Active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Subcontractors Table", `CREATE TABLE IF NOT EXISTS subcontractors (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        specialty VARCHAR(255),
+        phone VARCHAR(50),
+        email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Customers Table", `CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255),
+        phone VARCHAR(50),
+        email VARCHAR(255),
+        address TEXT,
+        credit_balance NUMERIC(15,2) DEFAULT 0,
+        legal_id VARCHAR(100),
+        customer_type VARCHAR(50) DEFAULT 'Individual',
+        referral VARCHAR(255),
+        customer_since DATE DEFAULT CURRENT_DATE,
+        product VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("RFQ Table", `CREATE TABLE IF NOT EXISTS rfq (
+        id SERIAL PRIMARY KEY,
+        project_name VARCHAR(255),
+        item_description TEXT,
+        qty NUMERIC(20,6),
+        status VARCHAR(50) DEFAULT 'Pending',
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Warehouses Table", `CREATE TABLE IF NOT EXISTS warehouses (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        location VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("BOQ Table", `CREATE TABLE IF NOT EXISTS boq (
+        id SERIAL PRIMARY KEY,
+        project_name VARCHAR(255),
+        item_name VARCHAR(255),
+        uom VARCHAR(50),
+        est_qty NUMERIC(20,6) DEFAULT 0,
+        est_unit_price NUMERIC(15,2) DEFAULT 0,
+        est_total_price NUMERIC(15,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Subcontractor Items Table", `CREATE TABLE IF NOT EXISTS subcontractor_items (
+        id SERIAL PRIMARY KEY,
+        subcontractor_id INTEGER REFERENCES subcontractors(id),
+        boq_id INTEGER REFERENCES boq(id),
+        assigned_qty NUMERIC(20,6) DEFAULT 0,
+        unit_price NUMERIC(15,2) DEFAULT 0,
+        total_price NUMERIC(15,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Subcontractor Invoices Table", `CREATE TABLE IF NOT EXISTS subcontractor_invoices (
+        id SERIAL PRIMARY KEY,
+        subcontractor_id INTEGER REFERENCES subcontractors(id),
+        project_name VARCHAR(255),
+        description TEXT,
+        curr_qty NUMERIC(20,6) DEFAULT 0,
+        net_amount NUMERIC(15,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("System Parameters Table", `CREATE TABLE IF NOT EXISTS system_parameters (
+        id SERIAL PRIMARY KEY,
+        category VARCHAR(100),
+        value TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Projects Table", `CREATE TABLE IF NOT EXISTS projects (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        description TEXT,
+        budget NUMERIC(15,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Active',
+        company VARCHAR(255),
+        company_id INTEGER,
+        project_manager VARCHAR(255),
+        org_unit_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("PO Expenses Table", `CREATE TABLE IF NOT EXISTS po_expenses (
+        id SERIAL PRIMARY KEY,
+        po_id INTEGER REFERENCES purchase_orders(id),
+        expense_name VARCHAR(255),
+        amount NUMERIC(15,2) DEFAULT 0,
+        currency VARCHAR(10) DEFAULT 'EGP',
+        fx_rate NUMERIC(15,4) DEFAULT 1,
+        date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     await runQuery("PO Expenses Master PO", `ALTER TABLE po_expenses ADD COLUMN IF NOT EXISTS master_po_no VARCHAR(100)`);
 
     // --- 3. Finance & Installments ---
