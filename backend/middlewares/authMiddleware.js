@@ -34,7 +34,7 @@ const authGuard = async (req, res, next) => {
 
         // 2. Fetch IAM Metadata (Permissions, Role & Org Unit)
         const [userRes, orgRes, permRes] = await Promise.all([
-            pool.query("SELECT role FROM users WHERE id = $1", [userId]),
+            pool.query("SELECT role, linked_company, linked_project FROM users WHERE id = $1", [userId]),
             pool.query("SELECT org_unit_id FROM user_org_units WHERE user_id = $1 AND is_primary = TRUE LIMIT 1", [userId]),
             pool.query(`
                 SELECT p.code 
@@ -45,15 +45,18 @@ const authGuard = async (req, res, next) => {
             `, [userId])
         ]);
 
-        if (!req.user.role && userRes.rows.length > 0) {
+        if (userRes.rows.length > 0) {
             req.user.role = userRes.rows[0].role;
+            req.user.linkedCompany = userRes.rows[0].linked_company;
+            req.user.linkedProject = userRes.rows[0].linked_project;
         }
 
         req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
         req.user.permissions = permRes.rows.map(r => r.code);
         
         // 3. Admin Override
-        if (req.user.role && req.user.role.toLowerCase() === 'admin') {
+        const normalizedRole = (req.user.role || '').toLowerCase().trim();
+        if (normalizedRole === 'admin' || normalizedRole === 'super admin') {
             req.user.isSuperAdmin = true;
         }
 

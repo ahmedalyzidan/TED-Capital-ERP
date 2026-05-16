@@ -465,14 +465,51 @@ router.get('/table/:type', async (req, res) => {
         let countStr = `SELECT COUNT(*) FROM ${type}`;
         let prefix = "";
 
+        // =========================================================================
+        // [Data Isolation] Inject filters based on req.user.linkedCompany / linkedProject
+        // =========================================================================
+        let isolationFilters = [];
+        const isRestricted = !req.user.isSuperAdmin && (req.user.linkedCompany || req.user.linkedProject);
+
+        if (isRestricted) {
+            if (req.user.linkedCompany) {
+                const c = req.user.linkedCompany;
+                if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company = '${c}'`);
+                else if (type === 'customers') isolationFilters.push(`company_name = '${c}'`);
+                else if (type === 'purchase_orders') isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company = '${c}')`);
+                else if (type === 'inventory_items') isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company = '${c}')`);
+                else if (type === 'ledger') isolationFilters.push(`cost_center IN (SELECT name FROM projects WHERE company = '${c}') OR cost_center = '${c}'`);
+            }
+            if (req.user.linkedProject) {
+                const p = req.user.linkedProject;
+                if (type === 'projects') isolationFilters.push(`name = '${p}'`);
+                else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items') isolationFilters.push(`project_name = '${p}'`);
+                else if (type === 'ledger') isolationFilters.push(`cost_center = '${p}'`);
+            }
+        }
+
+        const applyIsolation = (base) => {
+            if (isolationFilters.length === 0) return base;
+            const clause = isolationFilters.join(" AND ");
+            return base.toLowerCase().includes("where") ? base + ` AND (${clause})` : base + ` WHERE ${clause}`;
+        };
+
         if (type === 'projects') {
             prefix = "p.";
             queryStr = `SELECT p.*, (SELECT COUNT(*) FROM partners WHERE project_name = p.name) AS partners_count FROM projects p`;
             countStr = `SELECT COUNT(*) FROM projects p`;
+            if (isRestricted) {
+                queryStr = applyIsolation(queryStr);
+                countStr = applyIsolation(countStr);
+            }
         } else if (type === 'partners') {
             prefix = "p.";
             queryStr = `SELECT p.*, pr.company AS project_company, pr.budget AS proj_budget, (pr.budget * pr.expected_profit_percent / 100) AS proj_exp_amt, (pr.budget * pr.actual_profit_percent / 100) AS proj_act_amt, COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS deposits, COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS withdrawals FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name`;
             countStr = `SELECT COUNT(*) FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name`;
+            if (isRestricted && req.user.linkedCompany) {
+                queryStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
+                countStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
+            }
         } else if (type === 'subcontractors') {
             prefix = "s.";
             queryStr = `SELECT s.*, (SELECT COUNT(*) FROM subcontractor_invoices WHERE subcontractor_id = s.id) AS issued_invoices FROM subcontractors s`;
@@ -481,10 +518,18 @@ router.get('/table/:type', async (req, res) => {
             prefix = "si.";
             queryStr = `SELECT si.*, b.project_name FROM subcontractor_items si LEFT JOIN boq b ON si.boq_id = b.id`;
             countStr = `SELECT COUNT(*) FROM subcontractor_items si`;
+            if (isRestricted && req.user.linkedProject) {
+                queryStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+                countStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+            }
         } else if (type === 'boq') {
             prefix = "b.";
             queryStr = `SELECT b.*, COALESCE((SELECT SUM(assigned_qty) FROM subcontractor_items WHERE boq_id = b.id), 0) AS assigned_qty, (b.est_qty - COALESCE((SELECT SUM(assigned_qty) FROM subcontractor_items WHERE boq_id = b.id), 0)) AS unassigned_qty, COALESCE((SELECT SUM(curr_qty) FROM subcontractor_invoices WHERE sub_item_id IN (SELECT id FROM subcontractor_items WHERE boq_id = b.id) AND status='اعتماد مالي'), 0) AS dynamic_act_qty FROM boq b`;
             countStr = `SELECT COUNT(*) FROM boq b`;
+            if (isRestricted && req.user.linkedProject) {
+                queryStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+                countStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+            }
         } else if (type === 'contracts') {
             prefix = "c.";
             queryStr = `SELECT c.*, cu.name AS customer_name, pu.unit_number FROM contracts c LEFT JOIN customers cu ON c.customer_id = cu.id LEFT JOIN property_units pu ON c.unit_id = pu.id`;
@@ -2771,7 +2816,7 @@ router.get('/clients/:client_id/statement', authenticateToken, getClientStatemen
 const {
     getSecurityMetadata, createRole, terminateUserSessions,
     getAllRoles, getAllPermissions, updateRolePermissions,
-    assignUserToRole, getOrgUnits, getRolePermissions, createUser
+    assignUserToRole, getOrgUnits, getRolePermissions, createUser, updateUser
 } = require('../controllers/iamController');
 
 router.get('/iam/metadata', authGuard, getSecurityMetadata);
@@ -2781,6 +2826,7 @@ router.get('/iam/permissions', authGuard, getAllPermissions);
 router.get('/iam/org-units', authGuard, getOrgUnits);
 
 router.post('/iam/users', authGuard, checkPermission('IAM_MANAGE_USERS'), createUser);
+router.put('/iam/users/:id', authGuard, checkPermission('IAM_MANAGE_USERS'), updateUser);
 router.post('/iam/roles', authGuard, checkPermission('IAM_MANAGE_ROLES'), createRole);
 router.post('/iam/roles/permissions', authGuard, checkPermission('IAM_MANAGE_ROLES'), updateRolePermissions);
 router.post('/iam/users/assign-role', authGuard, checkPermission('IAM_MANAGE_ROLES'), assignUserToRole);
