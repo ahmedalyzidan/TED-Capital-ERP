@@ -39,6 +39,7 @@ export default function Inventory() {
     { value: 'PCS', label: language === 'ar' ? 'قطعة (PCS)' : 'Pieces (PCS)' },
     { value: 'KG', label: language === 'ar' ? 'كيلوجرام (KG)' : 'Kilograms (KG)' },
     { value: 'M', label: language === 'ar' ? 'متر (M)' : 'Meters (M)' },
+    { value: 'LM', label: language === 'ar' ? 'متر طولي (LM)' : 'Linear Meter (LM)' },
     { value: 'M2', label: language === 'ar' ? 'متر مربع (M2)' : 'Square Meters (M2)' },
     { value: 'M3', label: language === 'ar' ? 'متر مكعب (M3)' : 'Cubic Meters (M3)' },
     { value: 'L', label: language === 'ar' ? 'لتر (L)' : 'Liters (L)' },
@@ -2444,69 +2445,6 @@ export default function Inventory() {
                     ))}
                   </div>
 
-                  {/* --- ADVANCE PAYMENT SECTION (SANITIZED) --- */}
-                  <div className="p-10 bg-emerald-50/30 border-2 border-emerald-100 rounded-[3rem] space-y-8">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-emerald-600 text-white rounded-3xl flex items-center justify-center text-2xl shadow-xl shadow-emerald-600/20">💰</div>
-                        <div>
-                          <h4 className="text-2xl font-black text-emerald-900 tracking-tight">{t.modals.supplierDeposit.title}</h4>
-                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{language === 'ar' ? 'إضافة دفعات مقدمة (بدون سعر صرف حالياً)' : 'Initial Advance Payments (FX-Less)'}</p>
-                        </div>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer scale-125">
-                        <input type="checkbox" checked={poMasterForm.has_down_payment} onChange={e => setPOMasterForm({ ...poMasterForm, has_down_payment: e.target.checked })} className="sr-only peer" />
-                        <div className="w-16 h-8 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
-                      </label>
-                    </div>
-
-                    {poMasterForm.has_down_payment && (
-                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pt-6 border-t border-emerald-100">
-                        <div className="space-y-6">
-                          <div className="flex justify-between items-center px-2">
-                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Pending Deposits Queue</span>
-                            <button type="button" onClick={() => setPOMasterForm({ ...poMasterForm, deposits: [...poMasterForm.deposits, { amount: '', fx_rate: 1, payment_method: 'Cash', reference_no: '', date: new Date().toISOString().split('T')[0] }] })} className="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-xl shadow-emerald-600/20">+ Add Deposit Entry</button>
-                          </div>
-
-                          {(poMasterForm.deposits || []).map((dep, dIdx) => (
-                            <div key={dIdx} className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 bg-white rounded-[2.5rem] border border-emerald-100 shadow-sm relative group">
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest ml-1">{t.modals.supplierDeposit.amount}</label>
-                                <input type="number" step="0.01" value={dep.amount} onChange={e => { const nd = [...poMasterForm.deposits]; nd[dIdx].amount = e.target.value; setPOMasterForm({ ...poMasterForm, deposits: nd }); }} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent font-black text-slate-900 text-sm outline-none focus:bg-white focus:border-emerald-500 transition-all" placeholder="0.00" />
-                              </div>
-
-                              {/* FX Rate Hidden as per request */}
-                              <div style={{ display: 'none' }}>
-                                <input type="number" value={dep.fx_rate} readOnly />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest ml-1">{t.modals.supplierDeposit.paymentMethod}</label>
-                                <select value={dep.payment_method} onChange={e => { const nd = [...poMasterForm.deposits]; nd[dIdx].payment_method = e.target.value; setPOMasterForm({ ...poMasterForm, deposits: nd }); }} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-emerald-500 transition-all appearance-none cursor-pointer">
-                                  <option value="Cash">Cash (Safe)</option>
-                                  <option value="Bank Transfer">Bank Transfer</option>
-                                  <option value="Check">Check / PDC</option>
-                                </select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest ml-1">{t.modals.supplierDeposit.reference}</label>
-                                <input type="text" value={dep.reference_no} onChange={e => { const nd = [...poMasterForm.deposits]; nd[dIdx].reference_no = e.target.value; setPOMasterForm({ ...poMasterForm, deposits: nd }); }} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-emerald-500 transition-all" placeholder="Ref No..." />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest ml-1">{language === 'ar' ? 'التاريخ' : 'Date'}</label>
-                                <div className="flex gap-3">
-                                  <input type="date" value={dep.date} onChange={e => { const nd = [...poMasterForm.deposits]; nd[dIdx].date = e.target.value; setPOMasterForm({ ...poMasterForm, deposits: nd }); }} className="flex-1 p-4 bg-slate-50 rounded-2xl border border-transparent font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-emerald-500 transition-all" />
-                                  {dIdx > 0 && (
-                                    <button type="button" onClick={() => setPOMasterForm({ ...poMasterForm, deposits: poMasterForm.deposits.filter((_, i) => i !== dIdx) })} className="w-14 h-14 flex items-center justify-center bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-100 active:scale-95">✕</button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 {/* Submit Section */}
