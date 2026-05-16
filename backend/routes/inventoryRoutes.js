@@ -20,8 +20,8 @@ router.get('/usage_history', async (req, res) => {
         q += " ORDER BY id DESC";
         const result = await pool.query(q, params);
         res.json({ data: result.rows });
-    } catch (err) { 
-        res.status(500).json({ error: err.message }); 
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

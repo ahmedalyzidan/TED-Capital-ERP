@@ -7,7 +7,7 @@ const receivePO = async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        
+
         // Use req.user or fallback for audit
         const username = req.user ? req.user.username : 'System';
 
@@ -36,24 +36,24 @@ const receivePO = async (req, res) => {
         const q = parseFloat(po.qty) || 1;
         const ucFcy = parseFloat(po.estimated_cost) || 0;
         const fx = parseFloat(po.fx_rate) || 1;
-        
+
         const exWorkLocal = q * ucFcy * fx;
         const finalTotalCost = exWorkLocal + totalLandedCostLocal;
         const unitCostLcy = q > 0 ? (finalTotalCost / q) : 0;
-        
+
         const itemName = po.item_description || `Item from PO-${po.id}`;
 
         let finalValuationPrice = unitCostLcy;
-        
+
         const checkInv = await client.query("SELECT remaining_qty, buy_price FROM inventory_items WHERE item_name = $1 LIMIT 1", [itemName]);
-        
+
         if (checkInv.rows.length > 0) {
             const currentQty = parseFloat(checkInv.rows[0].remaining_qty) || 0;
             const currentPrice = parseFloat(checkInv.rows[0].buy_price) || 0;
-            
+
             const totalQty = currentQty + q;
             finalValuationPrice = totalQty > 0 ? ((currentQty * currentPrice) + (q * unitCostLcy)) / totalQty : unitCostLcy;
-            
+
             await client.query("UPDATE inventory_items SET buy_price = $1, avg_cost = $1, lcy_fx_rate = $2 WHERE item_name = $3", [finalValuationPrice, po.lcy_fx_rate || po.fx_rate || 1, itemName]);
         }
 
@@ -93,13 +93,13 @@ const receivePO = async (req, res) => {
         });
 
         await logAudit(username, 'RECEIVE_PO', 'purchase_orders', po.id, `Received PO #${po.id} into Inventory`);
-        
+
         await client.query('COMMIT');
         res.json({ success: true, message: "تم استلام البضاعة وتوليد القيود المحاسبية بنجاح!" });
-    } catch (err) { 
+    } catch (err) {
         await client.query('ROLLBACK');
         console.error("[API ERROR] POST /action/receive_po:", err);
-        res.status(500).json({ error: err.message || "حدث خطأ داخلي أثناء استلام البضاعة." }); 
+        res.status(500).json({ error: err.message || "حدث خطأ داخلي أثناء استلام البضاعة." });
     } finally {
         client.release();
     }
@@ -112,28 +112,28 @@ const reReceivePO = async (req, res) => {
             throw new Error("Access Denied.");
         }
         await client.query('BEGIN');
-        
+
         const username = req.user ? req.user.username : 'System';
 
         const poRes = await client.query("SELECT * FROM purchase_orders WHERE id = $1", [req.params.id]);
         if (poRes.rows.length === 0) throw new Error("PO not found.");
         const po = poRes.rows[0];
-        
+
         const checkExist = await client.query("SELECT id FROM inventory_items WHERE po_id = $1", [req.params.id]);
         if (checkExist.rows.length > 0) {
             throw new Error("هذه البضاعة موجودة بالفعل في المخزن ولا يمكن إعادة استلامها مرة أخرى.");
         }
-        
+
         let totalLandedCostLocal = 0;
         try {
             const expensesRes = await client.query("SELECT SUM(local_amount) as sum FROM po_expenses WHERE po_id = $1", [po.id]);
             totalLandedCostLocal += parseFloat(expensesRes.rows[0]?.sum || 0);
-        } catch (e) {}
+        } catch (e) { }
 
         const q = parseFloat(po.qty) || 1;
         const ucFcy = parseFloat(po.estimated_cost) || 0;
         const fx = parseFloat(po.fx_rate) || 1;
-        
+
         const exWorkLocal = q * ucFcy * fx;
         const finalTotalCost = exWorkLocal + totalLandedCostLocal;
         const unitCostLcy = q > 0 ? (finalTotalCost / q) : 0;
@@ -152,7 +152,7 @@ const reReceivePO = async (req, res) => {
                 unit_cost_after_ddp = $3
             WHERE id = $1
         `, [req.params.id, finalTotalCost, unitCostLcy]);
-        
+
         // Accounting Integration: Double Entry for Goods Receipt
         await AccountingService.recordDoubleEntry(client, {
             debitAccount: '1130',
@@ -164,13 +164,13 @@ const reReceivePO = async (req, res) => {
         });
 
         await logAudit(username, 'RE-RECEIVE_PO', 'purchase_orders', req.params.id, `Re-received PO #${req.params.id} into Inventory`);
-        
+
         await client.query('COMMIT');
         res.json({ success: true, message: "تم إعادة الاستلام بنجاح وتحديث الأرصدة والقيود المحاسبية." });
-    } catch (err) { 
+    } catch (err) {
         await client.query('ROLLBACK');
         console.error("[API ERROR] POST /action/rereceive_po:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     } finally {
         client.release();
     }
@@ -197,9 +197,9 @@ const convertRFQtoPO = async (req, res) => {
         await pool.query("UPDATE rfq SET status = 'Converted to PO' WHERE id = $1", [req.params.id]);
         await logAudit(req.user.username, 'CREATE_PO', 'purchase_orders', insertRes.rows[0].id, `Created PO from RFQ #${req.params.id}`);
         res.json({ success: true });
-    } catch (err) { 
+    } catch (err) {
         console.error("[API ERROR] convertRFQtoPO:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
 };
 
@@ -212,7 +212,7 @@ const getMPO360 = async (req, res) => {
         const posRes = await pool.query("SELECT * FROM purchase_orders WHERE (master_po_no = $1 OR id::text = $1) AND is_deleted = false", [mpo]);
         const pos = posRes.rows;
         const poIds = pos.map(p => p.id);
-        
+
         if (pos.length === 0) return res.json({ pos: [], deposits: [], ddp: [], stock: [], sales: [], bookings: [], clientTxns: [], summary: {} });
 
         // 2. Fetch Supplier Deposits (Payments to Supplier)
@@ -227,7 +227,7 @@ const getMPO360 = async (req, res) => {
         const stockRes = await pool.query("SELECT * FROM inventory_items WHERE po_id = ANY($1)", [poIds]);
         const stock = stockRes.rows;
         const stockIds = stock.map(s => s.id);
-        
+
         // 5. Fetch Sales & Bookings
         let sales = [];
         let bookings = [];
@@ -244,7 +244,7 @@ const getMPO360 = async (req, res) => {
         let clientTxns = [];
         if (clientNames.length > 0) {
             const txnsRes = await pool.query(
-                "SELECT * FROM ledger WHERE (account_name = ANY($1) OR description ILIKE ANY($2)) AND credit > 0 AND is_deleted = false ORDER BY created_at DESC LIMIT 50", 
+                "SELECT * FROM ledger WHERE (account_name = ANY($1) OR description ILIKE ANY($2)) AND credit > 0 AND is_deleted = false ORDER BY created_at DESC LIMIT 50",
                 [clientNames, clientNames.map(n => `%${n}%`)]
             );
             clientTxns = txnsRes.rows;
@@ -258,13 +258,13 @@ const getMPO360 = async (req, res) => {
         const totalPoCostLcy = pos.reduce((sum, p) => sum + (Number(p.lcy_total || (p.qty * p.estimated_cost * (p.lcy_fx_rate || 1)))), 0);
         const totalDdpLcy = ddp.reduce((sum, d) => sum + Number(d.amount), 0);
         const totalInvestedLcy = totalPoCostLcy + totalDdpLcy;
-        
+
         const totalRevenueLcy = sales.reduce((sum, s) => sum + (Number(s.qty) * Number(s.sell_price)), 0);
         const totalCollectionsLcy = clientTxns.reduce((sum, t) => sum + Number(t.amount), 0);
-        
+
         const remainingQty = stock.reduce((sum, s) => sum + Number(s.remaining_qty), 0);
         const remainingValueLcy = stock.reduce((sum, s) => sum + (Number(s.remaining_qty) * Number(s.avg_cost || s.buy_price)), 0);
-        
+
         const cogsLcy = sales.reduce((sum, s) => {
             const item = stock.find(i => i.id === s.inventory_id);
             return sum + (Number(s.sold_qty) * Number(item?.avg_cost || item?.buy_price || 0));
@@ -353,7 +353,7 @@ const allocateExpense = async (req, res) => {
                     FROM (SELECT (qty * estimated_cost * fx_rate) as total FROM purchase_orders WHERE id = $1) q,
                          (SELECT SUM(qty * estimated_cost * fx_rate) as total FROM purchase_orders WHERE master_po_no = $2) m
                 `, [po.id, master_po_no]);
-                
+
                 const ratio = parseFloat(ratioRes.rows[0]?.ratio || 0);
                 const poDistributedAmount = localAmount * ratio;
                 const unitIncrement = poDistributedAmount / (parseFloat(po.qty) || 1);
@@ -396,7 +396,7 @@ const allocateExpense = async (req, res) => {
         }
 
         await logAudit(username, 'ALLOCATE_DDP', 'purchase_orders', master_po_no || po_id, `Allocated ${expense_name} to ${allocation_type}`);
-        
+
         await client.query('COMMIT');
         res.json({ success: true, message: "تم توزيع المصاريف وتحديث تكلفة المخزون والقيود المحاسبية بنجاح!" });
     } catch (err) {
@@ -454,7 +454,7 @@ const deletePO = async (req, res) => {
             }
             await client.query("DELETE FROM inventory_items WHERE po_id = $1", [poId]);
         }
-        
+
         await client.query('COMMIT');
         res.json({ success: true, message: "تم حذف أمر الشراء وعكس القيود المحاسبية المرتبطة به بنجاح مع تسجيل التدقيق الكامل." });
     } catch (err) {

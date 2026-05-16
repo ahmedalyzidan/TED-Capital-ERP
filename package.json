@@ -142,8 +142,9 @@
   },
   "scripts": {
     "build": "npm install && cd backend/client && npm install && npm run build",
-    "start": "node backend/server.js",
+    "start": "node initDb.js && node backend/server.js",
     "serve:backend": "node backend/server.js",
+    "migrate": "node initDb.js",
     "e2e": "cd backend/playwright-e2e-tests && npx playwright test",
     "e2e:local": "set BASE_URL=http://127.0.0.1:4000 && cd backend/playwright-e2e-tests && npx playwright test",
     "test": "echo \"Error: no test specified\" && exit 1"

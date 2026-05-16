@@ -155,9 +155,15 @@ export default function Inventory() {
         title: "🚢 تكاليف إضافية (Landed Cost)",
         addExpense: "+ إضافة مصروف DDP",
         table: {
+          masterPo: "الماستر (MPO)",
+          poId: "أمر الشراء (PO)",
           expenseName: "نوع المصروف",
+          expenseType: "وصف المصروف",
           item: "مخصص لـ:",
-          allocatedAmount: "المبلغ المخصص"
+          allocatedAmount: "المبلغ المخصص",
+          currency: "العملة",
+          fxRate: "سعر الصرف",
+          actions: "إجراءات"
         },
         allocateSuccess: "تم تخصيص المصروف بنجاح!"
       },
@@ -363,9 +369,15 @@ export default function Inventory() {
         title: "🚢 Additional Costs (Landed Cost)",
         addExpense: "+ Add DDP Expense",
         table: {
+          masterPo: "Master PO (MPO)",
+          poId: "PO ID",
           expenseName: "Expense Type",
+          expenseType: "Expense Description",
           item: "Allocated to:",
-          allocatedAmount: "Allocated Amount"
+          allocatedAmount: "Allocated Amount",
+          currency: "Currency",
+          fxRate: "FX Rate",
+          actions: "Actions"
         },
         allocateSuccess: "Allocated Successfully!"
       },
@@ -563,6 +575,7 @@ export default function Inventory() {
   });
 
   const [ddpForm, setDDPForm] = useState({
+    id: null,
     allocation_type: 'single', po_id: '', master_po_no: '',
     expense_name: '', amount: '', currency: 'EGP', fx_rate: 1,
     expense_date: new Date().toISOString().split('T')[0]
@@ -600,9 +613,9 @@ export default function Inventory() {
       wht_rate: 0
     });
   };
-  const [bookingForm, setBookingForm] = useState({ 
-    client_id: '', customer_name: '', qty: '', sell_price: '', deposit_amount: '', 
-    project_name: 'General', payment_method: 'Cash', debit_account: '', reference_no: '', 
+  const [bookingForm, setBookingForm] = useState({
+    client_id: '', customer_name: '', qty: '', sell_price: '', deposit_amount: '',
+    project_name: 'General', payment_method: 'Cash', debit_account: '', reference_no: '',
     expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default 7 days
   });
   const [transferForm, setTransferForm] = useState({ inventory_id: '', qty: '', to_warehouse: '', to_project: '' });
@@ -634,10 +647,10 @@ export default function Inventory() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const endpoint = balanceForm.action_type === 'refund' 
-        ? `/inventory/bookings/${balanceForm.booking_id}/refund` 
+      const endpoint = balanceForm.action_type === 'refund'
+        ? `/inventory/bookings/${balanceForm.booking_id}/refund`
         : `/inventory/bookings/${balanceForm.booking_id}/transfer-credit`;
-      
+
       await api.post(endpoint, balanceForm);
       alert(language === 'ar' ? "تمت العملية بنجاح!" : "Action completed successfully!");
       setIsBalanceModalOpen(false);
@@ -655,16 +668,16 @@ export default function Inventory() {
       const res = await api.get('/inventory/financial-accounts');
       const accounts = res.data.data || [];
       setFinancialAccounts(accounts);
-      
+
       // 2. Set form state with context
-      setSupplierDepositForm(prev => ({ 
-        ...prev, 
-        master_po_no: mpo, 
-        supplier_name: supplier, 
+      setSupplierDepositForm(prev => ({
+        ...prev,
+        master_po_no: mpo,
+        supplier_name: supplier,
         project_name: project,
         credit_account: accounts.length > 0 ? accounts[0].account_name : ''
       }));
-      
+
       setIsSupplierDepositModalOpen(true);
     } catch (err) {
       console.error("Failed to load financial accounts for deposit:", err);
@@ -821,8 +834,8 @@ export default function Inventory() {
       setIntelligenceData(intelRes.data?.data || intelRes.data);
 
       // Filter for supplier deposits from journal entries (Only Debit side to avoid duplicates)
-      const deposits = (depRes.data?.data || []).filter(j => 
-        j.description?.includes('Supplier Deposit:') && 
+      const deposits = (depRes.data?.data || []).filter(j =>
+        j.description?.includes('Supplier Deposit:') &&
         Number(j.debit) > 0
       );
       setSupplierDeposits(deposits);
@@ -861,10 +874,48 @@ export default function Inventory() {
     catch (error) { alert(error.response?.data?.error || t.common.error); } finally { setLoading(false); }
   };
 
+  const handleDDPDelete = async (id) => {
+    if (!window.confirm(t.common.confirmDelete || 'Are you sure you want to delete this record?')) return;
+    try {
+      setLoading(true);
+      await api.delete(`/delete/po_ddp_lcy_charges/${id}`);
+      alert(t.common.deleteSuccess || 'Deleted successfully');
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || t.common.error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDDPSubmit = async (e) => {
-    e.preventDefault(); setIsSubmitting(true);
-    try { await api.post('/inventory/allocate-expense', ddpForm); alert(t.ddp.allocateSuccess); setIsDDPModalOpen(false); fetchData(); }
-    catch (error) { alert(error.response?.data?.error || t.common.error); } finally { setIsSubmitting(false); }
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (ddpForm.id) {
+        // Prepare filtered payload for generic UPDATE route
+        const localAmount = parseFloat(ddpForm.amount) * parseFloat(ddpForm.fx_rate || 1);
+        const updatePayload = {
+          po_id: ddpForm.po_id,
+          expense_name: ddpForm.expense_name,
+          amount: localAmount, // LCY
+          fcy_amount: ddpForm.amount, // FCY
+          currency: ddpForm.currency,
+          fx_rate: ddpForm.fx_rate,
+          date: ddpForm.expense_date
+        };
+        await api.put(`/update/po_ddp_lcy_charges/${ddpForm.id}`, updatePayload);
+      } else {
+        await api.post('/inventory/allocate-expense', ddpForm);
+      }
+      alert(t.ddp.allocateSuccess);
+      setIsDDPModalOpen(false);
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || t.common.error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const submitSaleOrder = async (e) => {
@@ -880,7 +931,7 @@ export default function Inventory() {
     const balance = total - paid;
 
     if (Math.abs(balance) > 0.01) {
-      alert(language === 'ar' 
+      alert(language === 'ar'
         ? `لا يمكن إتمام البيع وهناك مبلغ متبقي (${balance.toLocaleString()}) غير مجدول! يرجى التأكد من أن مجموع (المحفظة + الدفعة المقدمة + الأقساط) يساوي إجمالي الفاتورة.`
         : `Cannot complete sale! Remaining balance (${balance.toLocaleString()}) must be scheduled. Ensure (Wallet + Down Payment + Installments) equals total.`);
       return;
@@ -1067,7 +1118,7 @@ export default function Inventory() {
                         <td className={`px-6 py-4 sticky ${language === 'ar' ? 'right-0' : 'left-0'} bg-inherit z-10 group-hover:bg-slate-50 transition-colors`}>
                           <div className="flex flex-col">
                             <span className="text-[10px] text-slate-400 font-bold font-mono uppercase">{new Date(po.created_at).toLocaleDateString()}</span>
-                            <span 
+                            <span
                               onClick={() => handleOpenMPO360(po.master_po_no)}
                               className="font-bold text-slate-900 text-xs mt-1 bg-white border border-slate-200 px-2 py-0.5 rounded-md w-fit shadow-sm cursor-pointer hover:border-violet-500 hover:text-violet-600 transition-all"
                             >
@@ -1077,7 +1128,7 @@ export default function Inventory() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span 
+                            <span
                               onClick={() => handleOpenMPO360(po.master_po_no)}
                               className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors cursor-pointer"
                             >
@@ -1209,8 +1260,8 @@ export default function Inventory() {
                                     setSelectedItem(po);
                                     const accRes = await api.get('/inventory/financial-accounts');
                                     setFinancialAccounts(accRes.data.data || []);
-                                    setBookingForm(prev => ({ 
-                                      ...prev, 
+                                    setBookingForm(prev => ({
+                                      ...prev,
                                       project_name: po.project_name || 'General',
                                       debit_account: accRes.data.data?.[0]?.account_name || ''
                                     }));
@@ -1288,7 +1339,7 @@ export default function Inventory() {
                       <tr key={item.id} className="hover:bg-slate-50/50 transition-all group">
                         <td className={`px-6 py-4 sticky ${language === 'ar' ? 'right-0' : 'left-0'} bg-inherit z-10 group-hover:bg-slate-50 transition-colors`}>
                           <div className="flex flex-col">
-                            <span 
+                            <span
                               onClick={() => handleOpenMPO360(item.master_po_no)}
                               className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors leading-tight cursor-pointer"
                             >
@@ -1296,7 +1347,7 @@ export default function Inventory() {
                             </span>
                             <div className="flex flex-wrap gap-2 mt-1.5">
                               {item.master_po_no && (
-                                <span 
+                                <span
                                   onClick={(e) => { e.stopPropagation(); handleOpenMPO360(item.master_po_no); }}
                                   className="text-[9px] text-violet-600 font-bold tracking-tight font-mono uppercase bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-md shadow-sm cursor-pointer hover:bg-violet-100"
                                 >
@@ -1369,8 +1420,8 @@ export default function Inventory() {
                                     setSelectedItem(item);
                                     const accRes = await api.get('/inventory/financial-accounts');
                                     setFinancialAccounts(accRes.data.data || []);
-                                    setBookingForm(prev => ({ 
-                                      ...prev, 
+                                    setBookingForm(prev => ({
+                                      ...prev,
                                       project_name: item.project_name || 'General',
                                       debit_account: accRes.data.data?.[0]?.account_name || ''
                                     }));
@@ -1561,6 +1612,7 @@ export default function Inventory() {
                   <button onClick={() => {
                     setSelectedItem(null);
                     setDDPForm({
+                      id: null,
                       allocation_type: 'single', po_id: '', master_po_no: '',
                       expense_name: '', amount: '', currency: 'EGP', fx_rate: 1,
                       expense_date: new Date().toISOString().split('T')[0]
@@ -1576,7 +1628,13 @@ export default function Inventory() {
                   {poExpenses.map(exp => (
                     <div key={exp.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                       <div className="flex justify-between items-start mb-6">
-                        <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-lg shadow-lg shadow-slate-900/20 group-hover:scale-110 transition-transform">💸</div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-lg shadow-lg shadow-slate-900/20 group-hover:scale-110 transition-transform">💸</div>
+                          <div>
+                            <span className="text-xs font-black text-violet-600 block font-mono">{exp.master_po_no || 'N/A'}</span>
+                            <span className="text-[10px] font-bold text-slate-400 block font-mono">PO-{exp.po_id || 'N/A'}</span>
+                          </div>
+                        </div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">EXP-{exp.id}</span>
                       </div>
                       <h4 className="text-xl font-bold text-slate-900 mb-1 leading-tight">{exp.expense_name}</h4>
@@ -1595,7 +1653,24 @@ export default function Inventory() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">{exp.currency}</span>
-                          {exp.fx_rate > 1 && <span className="text-[8px] font-bold text-slate-400 mt-1">Rate: {exp.fx_rate}</span>}
+                          <div className="flex items-center gap-2 mt-2">
+                             <button onClick={() => {
+                                   setSelectedItem({ id: exp.po_id });
+                                   setDDPForm({
+                                     id: exp.id,
+                                     allocation_type: exp.master_po_no ? 'master' : 'single',
+                                     po_id: exp.po_id,
+                                     master_po_no: exp.master_po_no || '',
+                                     expense_name: exp.expense_name,
+                                     amount: exp.amount,
+                                     currency: exp.currency,
+                                     fx_rate: exp.fx_rate,
+                                     expense_date: exp.expense_date?.split('T')[0]
+                                   });
+                                   setIsDDPModalOpen(true);
+                             }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-colors">✍️</button>
+                             <button onClick={() => handleDDPDelete(exp.id)} className="p-1.5 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors">🗑️</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1607,24 +1682,61 @@ export default function Inventory() {
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr className="text-slate-500 text-[11px] font-black uppercase tracking-widest">
                         <th className="px-6 py-4 font-bold">ID</th>
+                        <th className="px-6 py-4 font-bold">{t.ddp.table.masterPo}</th>
+                        <th className="px-6 py-4 font-bold">{t.ddp.table.poId}</th>
                         <th className="px-6 py-4 font-bold text-right">{t.ddp.table.item}</th>
                         <th className="px-6 py-4 font-bold">{t.ddp.table.expenseType}</th>
                         <th className="px-6 py-4 font-bold">{t.ddp.table.allocatedAmount}</th>
                         <th className="px-6 py-4 font-bold">{t.ddp.table.currency}</th>
                         <th className="px-6 py-4 font-bold">{t.ddp.table.fxRate}</th>
                         <th className="px-6 py-4 font-bold text-center">Date</th>
+                        <th className="px-6 py-4 font-bold text-center">{t.ddp.table.actions || 'Actions'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {poExpenses.map(exp => (
                         <tr key={exp.id} className="hover:bg-slate-50 transition-all">
                           <td className="px-6 py-4 font-bold text-slate-400 text-xs">EXP-{exp.id}</td>
+                          <td className="px-6 py-4 font-bold text-violet-600 text-xs font-mono">{exp.master_po_no || 'N/A'}</td>
+                          <td className="px-6 py-4 font-bold text-slate-600 text-xs font-mono">PO-{exp.po_id || 'N/A'}</td>
                           <td className="px-6 py-4 font-bold text-slate-900 text-sm">{exp.item_name}</td>
                           <td className="px-6 py-4 font-bold text-slate-600 text-xs uppercase">{exp.expense_name}</td>
                           <td className="px-6 py-4 font-bold text-slate-900 font-mono text-sm">{Number(exp.amount).toLocaleString()}</td>
                           <td className="px-6 py-4"><span className="bg-slate-100 px-2 py-0.5 rounded-md font-bold text-[10px] border border-slate-200">{exp.currency}</span></td>
                           <td className="px-6 py-4 font-mono text-slate-400 font-bold text-xs">{exp.fx_rate}</td>
                           <td className="px-6 py-4 text-center text-slate-500 font-bold text-xs">{new Date(exp.expense_date).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedItem({ id: exp.po_id });
+                                  setDDPForm({
+                                    id: exp.id,
+                                    allocation_type: exp.master_po_no ? 'master' : 'single',
+                                    po_id: exp.po_id,
+                                    master_po_no: exp.master_po_no || '',
+                                    expense_name: exp.expense_name,
+                                    amount: exp.amount,
+                                    currency: exp.currency,
+                                    fx_rate: exp.fx_rate,
+                                    expense_date: exp.expense_date?.split('T')[0]
+                                  });
+                                  setIsDDPModalOpen(true);
+                                }}
+                                className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-colors"
+                                title={t.common.edit || 'Edit'}
+                              >
+                                ✍️
+                              </button>
+                              <button
+                                onClick={() => handleDDPDelete(exp.id)}
+                                className="p-1.5 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                                title={t.common.delete || 'Delete'}
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -2993,7 +3105,10 @@ export default function Inventory() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.ddp.currency}</label>
-                    <select value={ddpForm.currency} onChange={(e) => setDDPForm({ ...ddpForm, currency: e.target.value })} className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 font-bold text-slate-900 text-sm outline-none focus:border-slate-900">
+                    <select value={ddpForm.currency} onChange={(e) => {
+                      const val = e.target.value;
+                      setDDPForm({ ...ddpForm, currency: val, fx_rate: val === 'EGP' ? 1 : ddpForm.fx_rate });
+                    }} className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 font-bold text-slate-900 text-sm outline-none focus:border-slate-900">
                       <option value="EGP">EGP</option>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -3430,33 +3545,33 @@ export default function Inventory() {
                     return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
                   })()}
                   className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-2xl transition-all flex items-center justify-center gap-4 transform active:scale-95 ${isSubmitting || (() => {
-                      const mpo = supplierDepositForm.master_po_no;
-                      if (!mpo) return false;
-                      const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
-                      const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
-                      const mpoTxns = (supplierDeposits || []).filter(d => (d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`)));
-                      let paid = 0;
-                      mpoTxns.forEach(d => {
-                        const parts = (d.description || '').split('|');
-                        if (parts.length >= 2) {
-                          const amtPart = parts[1].trim().split(' ')[0];
-                          let fcy = parseFloat(amtPart);
-                          if (isNaN(fcy)) { fcy = parseFloat(d.debit || 0); }
-                          if (!isNaN(fcy)) paid += fcy;
-                        }
-                      });
-                      return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
-                    })()
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/30'
+                    const mpo = supplierDepositForm.master_po_no;
+                    if (!mpo) return false;
+                    const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
+                    const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
+                    const mpoTxns = (supplierDeposits || []).filter(d => (d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`)));
+                    let paid = 0;
+                    mpoTxns.forEach(d => {
+                      const parts = (d.description || '').split('|');
+                      if (parts.length >= 2) {
+                        const amtPart = parts[1].trim().split(' ')[0];
+                        let fcy = parseFloat(amtPart);
+                        if (isNaN(fcy)) { fcy = parseFloat(d.debit || 0); }
+                        if (!isNaN(fcy)) paid += fcy;
+                      }
+                    });
+                    return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
+                  })()
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/30'
                     }`}
-                  >
-                    {isSubmitting ? (
-                      <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <>💰 {t.modals.supplierDeposit.submit}</>
-                    )}
-                  </button>
+                >
+                  {isSubmitting ? (
+                    <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>💰 {t.modals.supplierDeposit.submit}</>
+                  )}
+                </button>
               </form>
             </div>
           </div>
@@ -3553,8 +3668,8 @@ export default function Inventory() {
                     <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-[24px] flex items-start gap-4 animate-in slide-in-from-top-2">
                       <span className="text-2xl mt-1">ℹ️</span>
                       <p className="text-xs font-bold text-blue-900/70 leading-relaxed">
-                        {language === 'ar' 
-                          ? 'سيتم تحويل هذا المبلغ إلى محفظة الرصيد العام للعميل. يمكن استخدامه لاحقاً كخصم في أي عمليات شراء أو حجز أخرى.' 
+                        {language === 'ar'
+                          ? 'سيتم تحويل هذا المبلغ إلى محفظة الرصيد العام للعميل. يمكن استخدامه لاحقاً كخصم في أي عمليات شراء أو حجز أخرى.'
                           : 'This amount will be transferred to the customer general credit balance. It can be used later as a discount in any future purchases or bookings.'}
                       </p>
                     </div>
@@ -3671,7 +3786,7 @@ export default function Inventory() {
       {isMPO360ModalOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-12 bg-slate-950/90 backdrop-blur-[40px] animate-in fade-in duration-700 overflow-y-auto">
           <div className="bg-white/95 w-full max-w-7xl rounded-[4rem] shadow-[0_80px_160px_rgba(0,0,0,0.6)] border border-white flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-20 duration-700 max-h-[92vh] overflow-hidden">
-            
+
             {/* Glossy Header */}
             <div className="p-12 border-b border-slate-100 bg-white/50 backdrop-blur-md flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 sticky top-0 z-50">
               <div className="flex items-center gap-8">
@@ -3682,7 +3797,7 @@ export default function Inventory() {
                     <span className="px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] shadow-lg shadow-indigo-500/40">Elite Protocol</span>
                   </div>
                   <p className="text-slate-400 font-bold text-base mt-2 uppercase tracking-[0.2em] flex items-center gap-3">
-                    Ref: <span className="text-slate-900 font-black">#{mpo360Data.mpo}</span> 
+                    Ref: <span className="text-slate-900 font-black">#{mpo360Data.mpo}</span>
                     <span className="w-2 h-2 bg-slate-200 rounded-full"></span>
                     Entity: <span className="text-slate-900 font-black">{mpo360Data.pos?.[0]?.supplier || 'Internal Stock'}</span>
                   </p>
@@ -3696,8 +3811,8 @@ export default function Inventory() {
                     <span className="text-sm font-black text-slate-900">SYSTEM SECURE</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setIsMPO360ModalOpen(false)} 
+                <button
+                  onClick={() => setIsMPO360ModalOpen(false)}
                   className="w-20 h-20 bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-[2rem] flex items-center justify-center text-4xl transition-all duration-500 border border-slate-200 hover:border-rose-100 group"
                 >
                   <span className="group-hover:rotate-180 transition-transform duration-500">✕</span>
@@ -3706,7 +3821,7 @@ export default function Inventory() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-12 space-y-16 custom-scrollbar bg-slate-50/50">
-              
+
               {/* --- THE 6-CARD EXECUTIVE DASHBOARD (JAMDA & SHIK) --- */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
                 {[
@@ -3717,17 +3832,17 @@ export default function Inventory() {
                   { id: 'stock', label: 'Inventory Value', value: (mpo360Data.summary?.remainingValueLcy || 0), icon: '📦', color: 'violet', sub: `${mpo360Data.summary?.remainingQty || 0} Units On-Hand` },
                   { id: 'roi', label: 'MPO Viability', value: (((mpo360Data.summary?.projectedProfitLcy || 0) / (mpo360Data.summary?.totalInvestedLcy || 1)) * 100), icon: '🚀', color: 'rose', sub: 'Est. Cycle Return', isPercent: true }
                 ].map((stat, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     onClick={() => setDetailView(stat.id)}
                     className={`group relative p-10 rounded-[3.5rem] border transition-all duration-700 cursor-pointer overflow-hidden
-                      ${detailView === stat.id 
-                        ? 'bg-slate-900 border-indigo-500 shadow-[0_40px_80px_rgba(79,70,229,0.25)] -translate-y-4' 
+                      ${detailView === stat.id
+                        ? 'bg-slate-900 border-indigo-500 shadow-[0_40px_80px_rgba(79,70,229,0.25)] -translate-y-4'
                         : 'bg-white border-white shadow-2xl shadow-slate-200/50 hover:border-slate-100 hover:-translate-y-2'
                       }`}
                   >
                     <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-[80px] opacity-10 -mr-20 -mt-20 bg-indigo-500 group-hover:opacity-30 transition-opacity`}></div>
-                    
+
                     <div className="relative z-10">
                       <div className="flex justify-between items-start mb-8">
                         <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-3xl transition-all duration-700 shadow-xl
@@ -3741,16 +3856,16 @@ export default function Inventory() {
                           {detailView === stat.id ? 'Selected' : 'View'}
                         </span>
                       </div>
-                      
+
                       <p className={`text-[11px] font-black uppercase tracking-[0.4em] mb-3 ${detailView === stat.id ? 'text-slate-400' : 'text-slate-500'}`}>
                         {stat.label}
                       </p>
-                      
+
                       <h4 className={`text-3xl font-black font-mono tracking-tighter transition-all duration-500 ${detailView === stat.id ? 'text-white' : 'text-slate-900'}`}>
                         {stat.isPercent ? `${stat.value.toFixed(1)}%` : stat.value.toLocaleString()}
                         {!stat.isPercent && <span className="text-sm ml-1 opacity-40">EGP</span>}
                       </h4>
-                      
+
                       <p className={`text-[10px] font-bold mt-4 uppercase tracking-widest ${detailView === stat.id ? 'text-slate-500' : 'text-slate-400'}`}>
                         {stat.sub}
                       </p>
@@ -3772,14 +3887,14 @@ export default function Inventory() {
                         </div>
                         <p className="text-slate-500 font-bold text-sm uppercase tracking-[0.4em] ml-24">Real-time ledger reconciliation & traceability</p>
                       </div>
-                      <button 
-                        onClick={() => setDetailView('summary')} 
+                      <button
+                        onClick={() => setDetailView('summary')}
                         className="px-12 py-6 bg-white/5 hover:bg-white text-white hover:text-slate-900 rounded-3xl text-xs font-black uppercase tracking-[0.3em] border border-white/10 transition-all duration-500 shadow-2xl active:scale-95"
                       >
                         ← Back to Cockpit
                       </button>
                     </div>
-                    
+
                     <div className="overflow-hidden rounded-[3.5rem] border border-white/5 bg-white/[0.03] backdrop-blur-2xl">
                       <table className="w-full text-left">
                         <thead className="bg-white/5 text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">
@@ -3843,72 +3958,72 @@ export default function Inventory() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                   {/* Performance Chart & Risk Map */}
-                   <div className="bg-slate-900 rounded-[4rem] p-16 text-white relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/10 to-transparent"></div>
-                      <div className="relative z-10">
-                        <h3 className="text-3xl font-black tracking-tightest mb-12">Business Radar</h3>
-                        <div className="space-y-10">
-                          <div>
-                            <div className="flex justify-between items-end mb-4">
-                              <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Stock Liquidity Velocity</span>
-                              <span className="text-3xl font-black text-indigo-400">
-                                {(( (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) - (mpo360Data.summary?.remainingQty || 0)) / (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) || 1) ) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/5 p-1">
-                              <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.6)] animate-pulse" 
-                                style={{ width: `${(( (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) - (mpo360Data.summary?.remainingQty || 0)) / (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) || 1) ) * 100)}%` }}></div>
-                            </div>
+                  {/* Performance Chart & Risk Map */}
+                  <div className="bg-slate-900 rounded-[4rem] p-16 text-white relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/10 to-transparent"></div>
+                    <div className="relative z-10">
+                      <h3 className="text-3xl font-black tracking-tightest mb-12">Business Radar</h3>
+                      <div className="space-y-10">
+                        <div>
+                          <div className="flex justify-between items-end mb-4">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Stock Liquidity Velocity</span>
+                            <span className="text-3xl font-black text-indigo-400">
+                              {(((mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) - (mpo360Data.summary?.remainingQty || 0)) / (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) || 1)) * 100).toFixed(1)}%
+                            </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-10 pt-10">
-                            <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 group-hover:border-indigo-500/30 transition-all duration-500">
-                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Realized Margin</p>
-                              <h5 className="text-3xl font-black text-emerald-400 font-mono">
-                                {(( (mpo360Data.summary?.currentProfitLcy || 0) / (mpo360Data.summary?.totalRevenueLcy || 1) ) * 100).toFixed(1)}%
-                              </h5>
-                            </div>
-                            <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 group-hover:border-violet-500/30 transition-all duration-500">
-                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Retention Value</p>
-                              <h5 className="text-3xl font-black text-indigo-400 font-mono">
-                                {(( (mpo360Data.summary?.remainingValueLcy || 0) / (mpo360Data.summary?.totalInvestedLcy || 1) ) * 100).toFixed(1)}%
-                              </h5>
-                            </div>
+                          <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/5 p-1">
+                            <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.6)] animate-pulse"
+                              style={{ width: `${(((mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) - (mpo360Data.summary?.remainingQty || 0)) / (mpo360Data.pos.reduce((s, p) => s + Number(p.qty), 0) || 1)) * 100)}%` }}></div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-10 pt-10">
+                          <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 group-hover:border-indigo-500/30 transition-all duration-500">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Realized Margin</p>
+                            <h5 className="text-3xl font-black text-emerald-400 font-mono">
+                              {(((mpo360Data.summary?.currentProfitLcy || 0) / (mpo360Data.summary?.totalRevenueLcy || 1)) * 100).toFixed(1)}%
+                            </h5>
+                          </div>
+                          <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 group-hover:border-violet-500/30 transition-all duration-500">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Retention Value</p>
+                            <h5 className="text-3xl font-black text-indigo-400 font-mono">
+                              {(((mpo360Data.summary?.remainingValueLcy || 0) / (mpo360Data.summary?.totalInvestedLcy || 1)) * 100).toFixed(1)}%
+                            </h5>
                           </div>
                         </div>
                       </div>
-                   </div>
+                    </div>
+                  </div>
 
-                   {/* Impact Summary */}
-                   <div className="bg-white rounded-[4rem] p-16 border border-slate-100 shadow-3xl shadow-slate-200/40 flex flex-col justify-center">
-                     <div className="flex items-center gap-8 mb-12">
-                       <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-rose-500/20">⚖️</div>
-                       <div>
-                         <h3 className="text-3xl font-black text-slate-900 tracking-tightest">Exposure Ledger</h3>
-                         <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Final Financial Reconciliation</p>
-                       </div>
-                     </div>
-                     <div className="space-y-6">
-                       {[
-                         { label: 'Unpaid Supplier Balance', value: ( (mpo360Data.summary?.totalPoCostLcy || 0) - mpo360Data.deposits.reduce((s, d) => s + Number(d.amount), 0) ), status: 'Payable', icon: '🔴' },
-                         { label: 'Uncollected Revenue', value: ( (mpo360Data.summary?.totalRevenueLcy || 0) - (mpo360Data.summary?.totalCollectionsLcy || 0) ), status: 'Receivable', icon: '🟡' },
-                         { label: 'Available Asset Stock', value: (mpo360Data.summary?.remainingQty || 0), status: 'On-Hand', icon: '🟢', suffix: ' Units' }
-                       ].map((item, i) => (
-                         <div key={i} className="flex justify-between items-center p-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-50 hover:bg-white hover:shadow-2xl hover:border-slate-100 transition-all duration-500 group">
-                           <div className="flex items-center gap-5">
-                             <span className="text-xl">{item.icon}</span>
-                             <div>
-                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{item.status}</span>
-                               <h6 className="text-lg font-black text-slate-900 mt-1">{item.label}</h6>
-                             </div>
-                           </div>
-                           <span className="text-2xl font-black text-slate-900 font-mono group-hover:text-indigo-600 transition-colors">
-                             {item.value.toLocaleString()}{item.suffix || ' EGP'}
-                           </span>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
+                  {/* Impact Summary */}
+                  <div className="bg-white rounded-[4rem] p-16 border border-slate-100 shadow-3xl shadow-slate-200/40 flex flex-col justify-center">
+                    <div className="flex items-center gap-8 mb-12">
+                      <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-rose-500/20">⚖️</div>
+                      <div>
+                        <h3 className="text-3xl font-black text-slate-900 tracking-tightest">Exposure Ledger</h3>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Final Financial Reconciliation</p>
+                      </div>
+                    </div>
+                    <div className="space-y-6">
+                      {[
+                        { label: 'Unpaid Supplier Balance', value: ((mpo360Data.summary?.totalPoCostLcy || 0) - mpo360Data.deposits.reduce((s, d) => s + Number(d.amount), 0)), status: 'Payable', icon: '🔴' },
+                        { label: 'Uncollected Revenue', value: ((mpo360Data.summary?.totalRevenueLcy || 0) - (mpo360Data.summary?.totalCollectionsLcy || 0)), status: 'Receivable', icon: '🟡' },
+                        { label: 'Available Asset Stock', value: (mpo360Data.summary?.remainingQty || 0), status: 'On-Hand', icon: '🟢', suffix: ' Units' }
+                      ].map((item, i) => (
+                        <div key={i} className="flex justify-between items-center p-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-50 hover:bg-white hover:shadow-2xl hover:border-slate-100 transition-all duration-500 group">
+                          <div className="flex items-center gap-5">
+                            <span className="text-xl">{item.icon}</span>
+                            <div>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{item.status}</span>
+                              <h6 className="text-lg font-black text-slate-900 mt-1">{item.label}</h6>
+                            </div>
+                          </div>
+                          <span className="text-2xl font-black text-slate-900 font-mono group-hover:text-indigo-600 transition-colors">
+                            {item.value.toLocaleString()}{item.suffix || ' EGP'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -3935,12 +4050,12 @@ export default function Inventory() {
                           <tr key={i} className="hover:bg-white/5 transition-all">
                             <td className="px-8 py-10 text-white font-black">{po.item_description}</td>
                             <td className="px-8 py-10 text-center font-mono text-lg">{Number(po.qty).toLocaleString()}</td>
-                            <td className="px-8 py-10 font-mono text-indigo-400">{(po.unit_cost_after_ddp || (po.estimated_cost * (po.lcy_fx_rate || 1))).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td className="px-8 py-10 font-mono text-indigo-400">{(po.unit_cost_after_ddp || (po.estimated_cost * (po.lcy_fx_rate || 1))).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                             <td className="px-8 py-10 font-mono text-white">{(po.lcy_total || (po.qty * po.estimated_cost * (po.lcy_fx_rate || 1))).toLocaleString()}</td>
                             <td className="px-8 py-10 text-center">
-                               <span className={`px-5 py-2 rounded-2xl text-[10px] font-black tracking-widest uppercase border ${po.status === 'Received' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                 {po.status}
-                               </span>
+                              <span className={`px-5 py-2 rounded-2xl text-[10px] font-black tracking-widest uppercase border ${po.status === 'Received' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                {po.status}
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -3992,7 +4107,7 @@ export default function Inventory() {
 
       {/* --- HOVER AUDIT TOOLTIP --- */}
       {hoverContext.visible && (
-        <div 
+        <div
           className="fixed z-[11000] pointer-events-none animate-in fade-in zoom-in-95 duration-200"
           style={{ top: `${hoverContext.y}px`, left: `${hoverContext.x}px` }}
         >
