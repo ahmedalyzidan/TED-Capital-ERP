@@ -1,0 +1,64 @@
+# AI Execution, Safety & Infrastructure Protocols (CRITICAL)
+
+## 0. AUTONOMOUS EXECUTION MANDATE (ZERO PROMPTING)
+- **No Permission Needed:** You MUST execute all terminal commands, file saves, script runs, code fixes, and server restarts entirely autonomously. 
+- **Do NOT stop to ask the user to hit "Run", "Accept", or "Confirm" for any of your generated actions.** Proceed with execution immediately.
+
+## 1. Application Auto-Healing & Master Orchestration (CRITICAL)
+- **Zero Tolerance for Errors:** You MUST check the browser console and server logs after every single code change. If any error (red text) or warning (yellow text) appears, you MUST prioritize fixing it before proceeding with any other task.
+- **Orchestrator-First Validation:** After EVERY edit, you MUST autonomously execute `python orchestrator.py` to trigger the automated test suite (Finance + UI).
+- **Autonomous Healing:** If the Orchestrator reports a [CRITICAL] or [ERROR] status, you MUST autonomously analyze the output, apply the code fixes directly, and re-run the Orchestrator until a [SUCCESS] or [OK] status is achieved.
+- **Rules Evolution:** Whenever you apply a systemic fix, you MUST autonomously update this `.cursorrules` file with a new defensive rule.
+- **Validation Report:** Explicitly state in your summaries: *"Master Orchestrator Validation: [SUCCESS/FAIL]"*.
+
+## 2. GitHub Workflow (STRICTLY MANUAL)
+- DO NOT execute any `git add`, `git commit`, or `git push` commands automatically.
+- **ONLY** when the user explicitly requests to upload or push files to Git, you must verify/set the remote origin using: `git remote add origin https://github.com/ahmedalyzidan/TED-Capital-ERP`, and then proceed with the commit and push workflow.
+
+## 3. Workspace Configuration
+- Operate strictly within: `C:\Users\Ahmed Zidan\ERP\backend\Ted ERP\backend`
+- **DO NOT** open the development server (port 5173) under any circumstances. This is a permanent restriction.
+
+## 4. Zero Code Truncation & Non-Destructive Operations
+- NEVER use placeholders like `// ... existing code ...`. Output the ENTIRE file perfectly.
+- Prioritize adding new features as separate components. Do NOT delete core legacy logic (use Soft Deletion).
+- Work module by module, layer by layer. Ensure 100% backward compatibility.
+
+## 5. Defensive UI & Schema Integrity Protocol (NEW)
+- **Optional Chaining Mandatory:** All frontend components fetching data from the API MUST use optional chaining (`?.`) for nested properties (e.g., `data.profile?.name`) to prevent runtime crashes during state hydration.
+- **Schema First Development:** Before adding a new module or endpoint, verify that the corresponding SQL table exists in `schemaFixes.js` or through a direct schema check.
+- **Reconciliation-First Pattern:** When rendering lists or profiles, always provide fallback/placeholder values (e.g., `|| 'Default'`) to handle null/unlinked records gracefully.
+- **Zero-Tolerance for Console Errors:** After any update, you MUST clear all red console errors immediately. Update this rule file whenever a systemic fix is applied.
+- **Systemic Fixes Applied:** 
+  - [2026-05-09] Fixed Asset Engine: Synchronized `fixed_assets` and `asset_categories` schema.
+  - [2026-05-09] Real Estate UI: Standardized "Minimalist White" enterprise aesthetic with defensive rendering.
+  - [2026-05-10] Server Restriction: Added permanent rule to avoid opening the development server on port 5173.
+  - [2026-05-11] Analytical Cockpit: Stabilized SQL intelligence engine (valuation/trends) and implemented elite drill-down UI with viewport-fixed positioning and background scroll-lock.
+  - [2026-05-14] Production Deployment: Successfully deployed the modernized ERP system to the production cloud server (46.224.144.166). Verified financial and ledger integrity.
+
+## 7. Gated Cloud Deployment Protocol (STRICTLY ENFORCED)
+- **Zero Autonomous Cloud Action:** You MUST NOT push to GitHub or execute remote scripts without explicit, step-by-step confirmation.
+- **Mandatory Gated Workflow:**
+  1. **Phase 1: Local Implementation:** Complete all coding and verification on the local server. ALL changes must be saved locally.
+  2. **Phase 2: Staging Gate:** After local verification, you MUST ask the user: *"All changes are verified locally. Would you like to push to the Staging/Test server now?"*
+  3. **Phase 3: Staging Deployment:** ONLY after the user says "Yes" or "Proceed", push to GitHub and run `bash deploy-staging.sh` on the server.
+  4. **Phase 4: Production Gate:** After staging verification, you MUST ask the user: *"Staging is updated. Would you like to deploy to the Production server now?"*
+  5. **Phase 5: Production Deployment:** ONLY after a second explicit confirmation, run `bash update-erp.sh` on the server.
+- **Storage Rule:** All modifications must remain in the local workspace until the Staging Gate (Phase 2) is cleared.
+- **Status Announcement:** Explicitly output: *"Workflow Status: [LOCAL/STAGING/PRODUCTION] - Awaiting User Gate Approval."*
+
+## 7. Master Orchestrator & Continuity Protocol (CRITICAL)
+- **Background Orchestration Mandatory:** At the start of every session, you MUST autonomously check if `orchestrator.py` is running. If not, execute `python orchestrator.py` in a background terminal.
+- **Context Synchronization:** Ensure `project_context.txt` is being updated by the orchestrator. This file is the primary source of truth for the AI's understanding of the full-stack architecture.
+- **Continuous Validation & Reporting:** You MUST explicitly report the status of the Orchestrator tests in your turn summaries. Do not commit or push any financial logic changes unless the Orchestrator has confirmed that the `pytest -m finance` tests have passed successfully.
+- **Auto-Startup:** If the local development environment is required, prioritize using the `start_erp_dev.bat` script to ensure all dependencies (Vite + Orchestrator) are initialized correctly.
+- **Integrity Lock:** After any code change, wait for the Orchestrator to finish its cycle and verify that the logs show "[SUCCESS] Context updated" and "[OK] Finance Logic OK" before declaring the task complete.
+
+## 8. Production Server Infrastructure (CONFIRMED)
+- **Primary IP:** `46.224.144.166`
+- **SSH User:** `root`
+- **Password:** `Zid@n2026` (Note: SSH Password Authentication is currently active).
+- **Project Root:** `/root`
+- **Deployment Script:** `git fetch origin && git reset --hard origin/main && bash deploy.sh` (Hard Reset Mandated).
+- **Gated Protocol Status:** Phase 5 (Production Deployment) Completed Successfully on 2026-05-14.
+- **SSH Key Authorization:** Key `ahmedalyzidan2013@gmail.com` is present in the account settings but requires manual authorization in `/root/.ssh/authorized_keys` if Password Authentication is ever disabled.

@@ -1,0 +1,86 @@
+[2026-05-09T09:13:46.953Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:14:14.400Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:14:28.147Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:14:28.161Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:15:14.162Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:15:14.202Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:15:27.380Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:15:34.203Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:16:33.169Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:16:51.095Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:18:28.056Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:18:28.099Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:18:28.879Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:19:42.402Z] SELECT * FROM employees ORDER BY emp_id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:20:39.726Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:20:39.773Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.406Z] SELECT p.*, pr.company AS project_company, pr.budget AS proj_budget, (pr.budget * pr.expected_profit_percent / 100) AS proj_exp_amt, (pr.budget * pr.actual_profit_percent / 100) AS proj_act_amt, COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS deposits, COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS withdrawals FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.408Z] SELECT * FROM partner_transactions ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.410Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.461Z] SELECT * FROM partner_transactions ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.464Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:18.468Z] SELECT p.*, pr.company AS project_company, pr.budget AS proj_budget, (pr.budget * pr.expected_profit_percent / 100) AS proj_exp_amt, (pr.budget * pr.actual_profit_percent / 100) AS proj_act_amt, COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS deposits, COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS withdrawals FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:25.260Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:21:25.268Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:22:00.837Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:22:00.906Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:22:00.912Z] 
+                    SELECT c.*, 
+                        COALESCE(
+                            (SELECT SUM(
+                                CASE 
+                                    WHEN sub.account_type IN ('Asset', 'Expense') THEN (l.debit - l.credit)
+                                    ELSE (l.credit - l.debit)
+                                END
+                            ) 
+                            FROM ledger l 
+                            JOIN chart_of_accounts sub ON l.account_name = sub.account_name
+                            WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
+                            ), 
+                        0) AS balance 
+                    FROM chart_of_accounts c
+                 ORDER BY c.id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:22:00.914Z] SELECT * FROM ledger WHERE cost_center = $1 ORDER BY id DESC LIMIT $2 OFFSET $3 | PARAMS: ["Abdullah Zidan",2000,0]
+[2026-05-09T09:22:00.936Z] 
+                    SELECT c.*, 
+                        COALESCE(
+                            (SELECT SUM(
+                                CASE 
+                                    WHEN sub.account_type IN ('Asset', 'Expense') THEN (l.debit - l.credit)
+                                    ELSE (l.credit - l.debit)
+                                END
+                            ) 
+                            FROM ledger l 
+                            JOIN chart_of_accounts sub ON l.account_name = sub.account_name
+                            WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
+                            ), 
+                        0) AS balance 
+                    FROM chart_of_accounts c
+                 ORDER BY c.id DESC LIMIT $1 OFFSET $2 | PARAMS: [500,0]
+[2026-05-09T09:22:00.969Z] SELECT * FROM ledger WHERE cost_center = $1 ORDER BY id DESC LIMIT $2 OFFSET $3 | PARAMS: ["Abdullah Zidan",2000,0]
+[2026-05-09T09:22:19.724Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:22:19.762Z] SELECT p.* FROM projects p ORDER BY p.id DESC LIMIT $1 OFFSET $2 | PARAMS: [100,0]
+[2026-05-09T09:25:18.925Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:25:18.934Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:25:20.375Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:25:20.801Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:26:43.491Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:26:43.500Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:27:05.434Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:27:49.417Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:27:49.429Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:28:46.189Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:29:35.964Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:29:43.099Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:01.844Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:01.855Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:02.054Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:02.064Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:07.030Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:20.426Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:20.435Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:23.399Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:23.408Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:30:29.024Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:31:01.236Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
+[2026-05-09T09:31:02.090Z] SELECT * FROM staff ORDER BY id DESC LIMIT $1 OFFSET $2 | PARAMS: [1000,0]
