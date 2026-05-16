@@ -549,6 +549,11 @@ router.get('/table/:type', async (req, res) => {
             countStr = `SELECT COUNT(*) FROM po_ddp_lcy_charges d LEFT JOIN purchase_orders po ON d.po_id = po.id`;
         } else if (type === 'chart_of_accounts') {
             prefix = "c.";
+            const companyId = req.query.company_id;
+            let ledgerCompanyFilter = "";
+            if (companyId && companyId !== 'all') {
+                ledgerCompanyFilter = ` AND l.company_id = ${parseInt(companyId)}`;
+            }
             queryStr = `
                 SELECT c.*, 
                     COALESCE(
@@ -561,6 +566,7 @@ router.get('/table/:type', async (req, res) => {
                         FROM ledger l 
                         JOIN chart_of_accounts sub ON l.account_name = sub.account_name
                         WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
+                        ${ledgerCompanyFilter}
                         ), 
                     0) AS balance 
                 FROM chart_of_accounts c
@@ -586,6 +592,23 @@ router.get('/table/:type', async (req, res) => {
         }
 
         let conditions = []; let params = [];
+
+        const companyId = req.query.company_id;
+        if (companyId && companyId !== 'all') {
+            if (type === 'chart_of_accounts') {
+                let entityName = "";
+                if (companyId === '1') entityName = 'TED Capital';
+                if (companyId === '2') entityName = 'Design Concept';
+                if (companyId === '3') entityName = 'Master Builder';
+                if (entityName) {
+                    conditions.push(`(c.company_entity = 'All' OR c.company_entity = $${params.length + 1})`);
+                    params.push(entityName);
+                }
+            } else if (type === 'ledger') {
+                conditions.push(`l.company_id = $${params.length + 1}`);
+                params.push(parseInt(companyId));
+            }
+        }
 
         if (filter) {
             if (['contracts', 'installments', 'payment_receipts'].includes(type)) { conditions.push(`pu.project_name = $${params.length + 1}`); params.push(filter); }

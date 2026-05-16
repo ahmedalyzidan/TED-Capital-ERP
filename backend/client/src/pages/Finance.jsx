@@ -342,10 +342,10 @@ export default function Finance() {
             const res = await api.get(`/finance/dashboard${compQuery}`);
             setDashData(res.data.data);
          } else if (activeTab === 'coa') {
-            const res = await api.get('/table/chart_of_accounts?limit=500');
+            const res = await api.get(`/table/chart_of_accounts${compQuery}&limit=500`);
             setAccounts(res.data.data || []);
          } else if (activeTab === 'ledger') {
-            const res = await api.get('/table/ledger?limit=200');
+            const res = await api.get(`/table/ledger${compQuery}&limit=200`);
             setLedger(res.data.data || []);
          } else if (activeTab === 'mappings') {
             const res = await api.get('/table/gl_mappings?limit=100');

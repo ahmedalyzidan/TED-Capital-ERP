@@ -248,6 +248,7 @@ const applySchemaFixes = async () => {
         manual_entry_allowed BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+    await runQuery("COA Unique Constraint", `ALTER TABLE chart_of_accounts ADD CONSTRAINT chart_of_accounts_account_code_key UNIQUE (account_code)`);
 
     // --- 5. Global Columns (Soft-Delete & Metadata) ---
     const allTablesRes = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
@@ -265,9 +266,11 @@ const applySchemaFixes = async () => {
         ['1100', 'الأصول المتداولة', 'All', 2, '1000', 'Asset', 'EGP', false],
         ['1101', 'صندوق نقدية - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
         ['1102', 'صندوق نقدية - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
+        ['1103', 'صندوق نقدية - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
         ['1105', 'صندوق المصروفات النثرية', 'All', 3, '1100', 'Asset', 'EGP', true],
         ['1111', 'بنك CIB - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
         ['1112', 'بنك الأهلي - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
+        ['1113', 'بنك مصر - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
         ['1120', 'عملاء (حسابات مدينة - AR)', 'All', 3, '1100', 'Asset', 'EGP', false],
         ['1130', 'مخزون خامات ومواد', 'All', 3, '1100', 'Asset', 'EGP', false],
         ['1200', 'الأصول الثابتة (Fixed Assets)', 'All', 1, null, 'Asset', 'EGP', false],
