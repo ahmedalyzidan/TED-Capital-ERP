@@ -72,6 +72,7 @@ const authGuard = async (req, res, next) => {
 
         next();
     } catch (err) {
+        console.error("🔥 [AUTH_GUARD_ERROR]:", err.message, err.stack);
         return res.sendStatus(403);
     }
 };
