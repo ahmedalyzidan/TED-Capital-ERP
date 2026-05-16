@@ -1,0 +1,30 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:5173",
+      "localStorage": [
+        {
+          "name": "token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJTdXBlciBBZG1pbiIsInBlcm1pc3Npb25zIjp7InRhYmxlcyI6eyJBTEwiOlsicmVhZCIsImNyZWF0ZSIsInVwZGF0ZSIsImRlbGV0ZSIsImFwcHJvdmUiLCJleHBvcnQiLCJpbXBvcnQiLCJwcmludCIsImF1ZGl0Il19LCJzY3JlZW5zIjpbIkFMTCJdfSwiaXMyRkFFbmFibGVkIjpmYWxzZSwiaXNQYXJ0aWFsMkZBIjpmYWxzZSwiaWF0IjoxNzc4NjQwMDYzLCJleHAiOjE3Nzg2ODMyNjN9.aigzu1OAY1wHkMqdrPGDkhTBgGJH9TILE8ieCeSKx2I"
+        },
+        {
+          "name": "ted-theme",
+          "value": "dark"
+        },
+        {
+          "name": "ted-lang",
+          "value": "en"
+        },
+        {
+          "name": "user",
+          "value": "{\"id\":1,\"username\":\"admin\",\"email\":\"admin@ted-erp.local\",\"role\":\"Super Admin\",\"permissions\":[\"CLIENTS:CREATE\",\"CLIENTS:DELETE\",\"CLIENTS:READ\",\"CLIENTS:UPDATE\",\"FINANCE:CREATE\",\"FINANCE:DELETE\",\"FINANCE:READ\",\"FINANCE:UPDATE\",\"HR:CREATE\",\"HR:DELETE\",\"HR:READ\",\"HR:UPDATE\",\"INVENTORY:CREATE\",\"INVENTORY:DELETE\",\"INVENTORY:READ\",\"INVENTORY:UPDATE\",\"PROJECTS:CREATE\",\"PROJECTS:DELETE\",\"PROJECTS:READ\",\"PROJECTS:UPDATE\",\"REPORTS:CREATE\",\"REPORTS:DELETE\",\"REPORTS:READ\",\"REPORTS:UPDATE\",\"SALES:CREATE\",\"SALES:DELETE\",\"SALES:READ\",\"SALES:UPDATE\",\"USERS:CREATE\",\"USERS:DELETE\",\"USERS:READ\",\"USERS:UPDATE\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\",\"null:null\"],\"isSuperAdmin\":true}"
+        },
+        {
+          "name": "refresh_token",
+          "value": "39158cbd557019acdb3f053b108db1e30660c570dc4f0cd617ecd8b5c2dda9ca4a859197f5eef43c"
+        }
+      ]
+    }
+  ]
+}

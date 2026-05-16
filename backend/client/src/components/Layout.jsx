@@ -1,0 +1,406 @@
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../hooks/useSecurity';
+import { useLanguage } from '../contexts/LanguageContext';
+import api from '../services/api';
+import NotificationCenter from './NotificationCenter';
+
+export default function Layout() {
+  const { logout, user } = useAuth();
+  const context = useLanguage();
+
+  const language = context?.language || 'ar';
+  const theme = context?.theme || 'light';
+  const updatePreferences = context?.updatePreferences || (() => { });
+
+  const { hasPermission, loading: securityLoading } = useSecurity();
+  const navigate = useNavigate();
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const translations = {
+    ar: {
+      enterprise: "نظام المؤسسات",
+      searchPlaceholder: "بحث ذكي...",
+      identityCheck: "جاري التحقق...",
+      logout: "خروج",
+      workspace: "بيئة العمل",
+      connected: "متصل",
+      noResults: "لا توجد نتائج.",
+      searching: "جاري البحث...",
+      results: "نتائج البحث",
+      notifsTitle: "التنبيهات",
+      noNotifs: "لا توجد تنبيهات.",
+      admin: "مدير النظام 🛡️",
+      user: "مستخدم معتمد ✅",
+      menuGroups: {
+        core: "الأساسية",
+        ops: "العمليات",
+        relations: "العملاء",
+        admin: "الإدارة",
+        personal: "بوابتي"
+      },
+      menu: {
+        dashboard: "لوحة القيادة",
+        reports: "التقارير",
+        command: "مركز القيادة",
+        approvals: "الاعتمادات",
+        projects: "المشاريع",
+        finance: "المالية",
+        assets: "الأصول",
+        realEstate: "العقارات",
+        partners: "الشركاء",
+        crm: "العملاء",
+        inventory: "المخازن",
+        invoices: "المستخلصات",
+        subcontractors: "المقاولين",
+        hr: "الموارد البشرية",
+        corporate: "الحوكمة",
+        hcm: "بوابتي",
+        users: "المستخدمين",
+        expenses: "المصروفات",
+        accountant360: "المحاسب 360 ⚡",
+        settings: "الإعدادات"
+      }
+    },
+    en: {
+      enterprise: "Enterprise System",
+      searchPlaceholder: "Search...",
+      identityCheck: "Verifying...",
+      logout: "Logout",
+      workspace: "Workspace",
+      connected: "Connected",
+      noResults: "No results.",
+      searching: "Searching...",
+      results: "Search Results",
+      notifsTitle: "Alerts",
+      noNotifs: "No alerts.",
+      admin: "System Admin 🛡️",
+      user: "Verified User ✅",
+      menuGroups: {
+        core: "Core",
+        ops: "Operations",
+        relations: "CRM",
+        admin: "Admin",
+        personal: "My Portal"
+      },
+      menu: {
+        dashboard: "Dashboard",
+        reports: "Reports",
+        command: "Command Center",
+        approvals: "Approvals",
+        projects: "Projects",
+        finance: "Finance",
+        assets: "Assets",
+        realEstate: "Real Estate",
+        partners: "Partners",
+        crm: "CRM",
+        inventory: "Inventory",
+        invoices: "Certificates",
+        subcontractors: "Subcontractors",
+        hr: "HR",
+        corporate: "Governance",
+        hcm: "My Portal",
+        users: "IAM",
+        expenses: "Expenses",
+        accountant360: "Accountant 360 ⚡",
+        settings: "Settings"
+      }
+    }
+  };
+
+  const t = translations[language] || translations['ar'];
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(prev => !prev); }
+      if (e.key === 'Escape') setIsSearchOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) { setSearchResults([]); return; }
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const { data } = await api.get(`/search/global?q=${encodeURIComponent(searchQuery)}`);
+        setSearchResults(data.results || []);
+      } catch (err) { console.error(err); }
+      finally { setIsSearching(false); }
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const menuGroups = [
+    {
+      title: t.menuGroups.core,
+      items: [
+        { path: '/', icon: '📊', label: t.menu.dashboard },
+        { path: '/reports', icon: '📈', label: t.menu.reports, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/notifications', icon: '🛰️', label: t.menu.command, badgeKey: 'command' },
+        { path: '/approval-inbox', icon: '⚡', label: t.menu.approvals, badgeKey: 'approvals' },
+      ]
+    },
+    {
+      title: t.menuGroups.ops,
+      items: [
+        { path: '/projects', icon: '🏗️', label: t.menu.projects, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory', icon: '📦', label: t.menu.inventory, perm: 'INV_MANAGE_STOCK', badgeKey: 'inventory' },
+        { path: '/fixed-assets', icon: '🏗️', label: t.menu.assets, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/subcontractors', icon: '👷', label: t.menu.subcontractors, perm: 'INV_MANAGE_STOCK' },
+        { path: '/real-estate', icon: '🏢', label: t.menu.realEstate, perm: 'INV_MANAGE_STOCK' },
+      ]
+    },
+    {
+      title: t.menuGroups.relations,
+      items: [
+        { path: '/partners', icon: '🤝', label: t.menu.partners, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/clients', icon: '🤝', label: t.menu.crm, perm: 'INV_MANAGE_STOCK' },
+      ]
+    },
+    {
+      title: t.menuGroups.admin,
+      items: [
+        { path: '/finance/360', icon: '⚡', label: t.menu.accountant360, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/finance', icon: '💰', label: t.menu.finance, perm: 'FIN_VIEW_LEDGER', badgeKey: 'finance' },
+        { path: '/expenses', icon: '💸', label: t.menu.expenses, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/invoices', icon: '🧾', label: t.menu.invoices, perm: 'FIN_POST_ENTRY' },
+        { path: '/hr', icon: '👥', label: t.menu.hr, perm: 'HR_VIEW_STAFF' },
+        { path: '/corporate', icon: '🏛️', label: t.menu.corporate, perm: 'HR_VIEW_STAFF' },
+        { path: '/users', icon: '🔐', label: t.menu.users, perm: 'IAM_MANAGE_ROLES' },
+        { path: '/settings', icon: '⚙️', label: t.menu.settings, perm: 'IAM_MANAGE_ROLES' },
+      ]
+    },
+    {
+      title: t.menuGroups.personal,
+      items: [
+        { path: '/me', icon: '👤', label: t.menu.hcm },
+      ]
+    }
+  ];
+
+  const [sidebarStats, setSidebarStats] = useState({ approvals: 0, inventory: 0, command: 0, finance: 0 });
+
+  const fetchSidebarStats = async () => {
+    try {
+      const { data } = await api.get('/system/sidebar-stats');
+      if (data.success) setSidebarStats(data.stats);
+    } catch (err) { console.error("Sidebar Stats Error:", err); }
+  };
+
+  useEffect(() => {
+    fetchSidebarStats();
+    const interval = setInterval(fetchSidebarStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (securityLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-bold text-slate-900 animate-pulse tracking-widest text-xs uppercase">{t.identityCheck}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'dark' : ''} bg-white relative`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside 
+        style={{ zoom: '0.8' }}
+        className={`
+        flex flex-col transition-all duration-500 ease-in-out
+        ${isSidebarCollapsed ? 'w-[7.5rem]' : 'w-[22.5rem]'} 
+        ${theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-50 border-slate-200'}
+        ${language === 'ar' ? 'border-l' : 'border-r'} print:hidden
+        fixed inset-y-0 z-40 lg:relative
+        ${isMobileMenuOpen ? 'translate-x-0' : (language === 'ar' ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}
+      `}>
+        <div className={`p-8 flex items-center justify-between min-h-[100px] relative overflow-hidden`}>
+          {theme === 'dark' && (
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/10 to-transparent opacity-30"></div>
+          )}
+          <div className={`flex items-center gap-4 transition-all duration-500 relative z-10 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>T</div>
+            <div className="whitespace-nowrap">
+              <h1 className={`text-2xl font-black tracking-tighter leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>TED ERP</h1>
+              <p className={`text-[11px] font-black uppercase tracking-[0.3em] mt-2 opacity-80 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{t.enterprise}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className={`
+              w-10 h-10 rounded-xl border transition-all shadow-lg cursor-pointer hidden lg:flex items-center justify-center z-50
+              ${theme === 'dark' 
+                ? 'bg-white/5 border-white/10 text-white/40 hover:bg-emerald-500 hover:text-white' 
+                : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white'}
+              ${isSidebarCollapsed ? 'mx-auto' : ''}
+            `}
+          >
+            <svg 
+              className={`w-5 h-5 transition-transform duration-500 ${isSidebarCollapsed ? (language === 'ar' ? 'rotate-180' : 'rotate-0') : (language === 'ar' ? 'rotate-0' : 'rotate-180')}`} 
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth px-4">
+          <div className="py-8 space-y-12">
+            {menuGroups.map((group, gIdx) => (
+              <div key={gIdx} className="space-y-4">
+                <h3 className={`px-5 text-[12px] font-black uppercase tracking-[0.25em] ${theme === 'dark' ? 'text-white/20' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
+                  {isSidebarCollapsed ? '••' : group.title}
+                </h3>
+                <div className="space-y-1.5">
+                    {group.items.filter(i => !i.perm || hasPermission(i.perm)).map((item, iIdx) => (
+                      <NavLink
+                        key={iIdx}
+                        to={item.path}
+                        className={({ isActive }) => `
+                          flex items-center gap-6 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden
+                          ${isActive 
+                            ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20') 
+                            : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
+                          ${isSidebarCollapsed ? 'justify-center px-0' : ''}
+                        `}
+                      >
+                        {({ isActive }) => (
+                          <>
+                            {isActive && (
+                              <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
+                            )}
+                            <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
+                              {item.icon}
+                            </span>
+                            {!isSidebarCollapsed && (
+                              <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
+                                {item.label}
+                              </span>
+                            )}
+                            {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
+                              <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
+                                {sidebarStats[item.badgeKey]}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </nav>
+
+        <div className={`p-6 mt-auto transition-all duration-300 ${isSidebarCollapsed ? 'items-center' : ''}`}>
+          <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="overflow-hidden">
+                  <p className={`text-[15px] font-black truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.username || 'User'}</p>
+                  <p className={`text-[11px] font-black uppercase tracking-widest mt-1 opacity-70 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
+                </div>
+              </div>
+            )}
+
+            <div className={`flex ${isSidebarCollapsed ? 'flex-col gap-3 items-center' : 'gap-3'} transition-all`}>
+              <button
+                onClick={() => updatePreferences({ theme: theme === 'dark' ? 'light' : 'dark' })}
+                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+              >
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </button>
+              <button
+                onClick={() => updatePreferences({ language: language === 'ar' ? 'en' : 'ar' })}
+                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all text-[11px] font-black ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+              >
+                {language === 'ar' ? 'EN' : 'AR'}
+              </button>
+              <button
+                onClick={() => { logout(); navigate('/login'); }}
+                className={`h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border ${theme === 'dark' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500 hover:text-white' : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white'} ${isSidebarCollapsed ? 'w-12 h-12' : 'flex-[2]'}`}
+              >
+                {isSidebarCollapsed ? '🚪' : t.logout}
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden relative transition-colors duration-300">
+        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 z-50 print:hidden">
+          <div className="flex items-center gap-4 lg:gap-8 flex-1">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-100 text-slate-600 shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <div className="relative w-full max-w-xl group">
+              <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-4' : 'left-4'} flex items-center pointer-events-none text-slate-400`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
+                placeholder={t.searchPlaceholder}
+                className={`
+                    w-full bg-slate-50 border border-slate-100 
+                    ${language === 'ar' ? 'pr-10 lg:pr-12 pl-4 lg:pl-16' : 'pl-10 lg:pl-12 pr-4 lg:pr-16'} 
+                    py-2.5 lg:py-3 rounded-xl lg:rounded-2xl text-[12px] lg:text-[13px] font-bold text-slate-900
+                    focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-300 
+                    outline-none transition-all placeholder:text-slate-400 placeholder:font-medium
+                   `}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-8">
+            <NotificationCenter />
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">{t.workspace}</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
+                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-tighter">{t.connected}</span>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar print:p-0 print:overflow-visible bg-slate-50/50">
+          <div className="max-w-full">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
