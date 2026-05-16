@@ -2701,7 +2701,7 @@ router.post('/partners/transactions', authenticateToken, partnerController.addTr
 // =========================================================================
 // 🌟 GLOBAL SEARCH (Command Palette Engine)
 // =========================================================================
-router.get('/search/global', authenticateToken, async (req, res) => {
+router.get('/search/global', authenticateToken, isolateData, async (req, res) => {
     try {
         const { q } = req.query;
         if (!q || q.length < 2) return res.json({ results: [] });
@@ -2719,9 +2719,15 @@ router.get('/search/global', authenticateToken, async (req, res) => {
         for (const qry of queries) {
             try {
                 const condition = qry.cols.map(col => `CAST(${col} AS TEXT) ILIKE $1`).join(' OR ');
-                const sql = `SELECT id, ${qry.cols[0]} as title, '${qry.label}' as category, '${qry.path}' as path, '${qry.icon}' as icon FROM ${qry.table} WHERE ${condition} LIMIT 5`;
-                console.log(`[SEARCH DEBUG] Querying ${qry.table} with cols ${qry.cols.join(',')}`);
-                const resData = await pool.query(sql, [term]);
+                let sql = `SELECT id, ${qry.cols[0]} as title, '${qry.label}' as category, '${qry.path}' as path, '${qry.icon}' as icon FROM ${qry.table} WHERE (${condition})`;
+                let params = [term];
+                if (req.isolation && req.isolation.company) {
+                    sql += ` AND (company = $2 OR company IS NULL OR company = '')`;
+                    params.push(req.isolation.company);
+                }
+                sql += ` LIMIT 5`;
+
+                const resData = await pool.query(sql, params);
                 results = [...results, ...resData.rows];
             } catch (queryErr) {
                 console.error(`[SEARCH ERROR] Table ${qry.table} failed:`, queryErr.message);

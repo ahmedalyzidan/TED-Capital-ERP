@@ -379,6 +379,44 @@ export default function Layout() {
                     outline-none transition-all placeholder:text-slate-400 placeholder:font-medium
                    `}
               />
+              
+              {isSearchOpen && (searchQuery.length >= 2) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.results}</span>
+                    {isSearching && <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>}
+                  </div>
+                  
+                  <div className="max-h-[400px] overflow-y-auto p-2 space-y-1">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((res, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            navigate(res.path);
+                            setIsSearchOpen(false);
+                            setSearchQuery('');
+                          }}
+                          className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-all group text-right"
+                        >
+                          <span className="text-xl opacity-70 group-hover:scale-110 transition-transform">{res.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-bold text-slate-900 truncate">{res.title}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{res.category}</p>
+                          </div>
+                          <span className="text-slate-300 group-hover:translate-x-1 transition-transform opacity-0 group-hover:opacity-100">
+                            {language === 'ar' ? '←' : '→'}
+                          </span>
+                        </button>
+                      ))
+                    ) : !isSearching && (
+                      <div className="p-8 text-center">
+                        <p className="text-slate-400 text-sm font-medium">{t.noResults}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-8">
