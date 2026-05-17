@@ -38,17 +38,17 @@ test.describe('Finance Integrity & Cross-Module Sync', () => {
     console.log('📝 Filling Sale Modal...');
     await page.waitForSelector('select[required]');
     await page.selectOption('select[required]', { label: customerName });
-    await page.locator('input[type="number"][max]').fill(qty.toString());
-    await page.locator('input[placeholder*="Price"], input[placeholder*="سعر"]').fill(price.toString());
+    await page.fill('input[name="qty"]', qty.toString());
+    await page.fill('input[name="sell_price"]', price.toString());
     
     // VAT & WHT
-    await page.locator('select').filter({ hasText: '0%' }).first().selectOption('14');
-    await page.locator('select').filter({ hasText: '0%' }).last().selectOption('1');
+    await page.selectOption('select[name="vat_rate"]', '14');
+    await page.selectOption('select[name="wht_rate"]', '1');
 
     // Payment
-    await page.selectOption('select:has-text("Cash 💵")', 'Bank');
-    await page.fill('input[placeholder="0.00"]', downPayment.toString());
-    await page.fill('input[placeholder="Transaction Ref No"]', testRef);
+    await page.selectOption('select[name="payment_method"]', 'Bank');
+    await page.fill('input[name="down_payment"]', downPayment.toString());
+    await page.fill('input[name="reference_no"]', testRef);
 
     // Balance Installment
     const balance = (qty * price) + (qty * price * (vatRate/100)) - (qty * price * (whtRate/100)) - downPayment;

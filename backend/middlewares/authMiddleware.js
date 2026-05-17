@@ -33,10 +33,10 @@ const authGuard = async (req, res, next) => {
 
         // 1. Session Validation (Force Logout Support)
         const sessionRes = await pool.query(
-            "SELECT is_valid FROM active_sessions WHERE user_id = $1 AND is_valid = TRUE LIMIT 1", 
+            "SELECT is_valid FROM active_sessions WHERE user_id = $1 AND is_valid = TRUE LIMIT 1",
             [userId]
         );
-        
+
         if (sessionRes.rows.length === 0) {
             await pool.query(
                 "INSERT INTO active_sessions (user_id, token_hash, is_valid) VALUES ($1, $2, TRUE) ON CONFLICT DO NOTHING",
@@ -46,7 +46,7 @@ const authGuard = async (req, res, next) => {
 
         req.user = decoded;
         req.user.userId = userId;
-        
+
         // 2. Fetch IAM Metadata (Permissions, Role & Org Unit)
         // Wrap in try-catch to prevent schema errors from blocking general access
         try {
@@ -72,11 +72,11 @@ const authGuard = async (req, res, next) => {
 
             req.user.primaryOrgUnitId = orgRes.rows[0]?.org_unit_id || null;
             req.user.permissions = permRes.rows.map(r => r.code);
-            
+
             // Check for Admin Roles
             const normalizedRole = (req.user.role || '').toLowerCase().trim();
             const isAdminRole = ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
-            
+
             if (isAdminRole || req.user.isSuperAdmin) {
                 req.user.isSuperAdmin = true;
                 req.user.role = 'Admin';
@@ -106,7 +106,7 @@ const checkPermission = (resource, action) => {
     return async (req, res, next) => {
         try {
             const userId = req.user.id || req.user.userId;
-            
+
             // 1. 🌟 Hardcoded Super Admin Bypass (Absolute Authorization) 🌟
             if (req.user.isSuperAdmin) {
                 console.log(`👑 [SUPER_BYPASS] Absolute Authorization granted for ${req.user.username} on ${resource}:${action}`);
@@ -134,13 +134,13 @@ const checkPermission = (resource, action) => {
             await pool.query(`
                 INSERT INTO security_audit_trail (user_id, username, action, resource, impact_level, ip_address, details, timestamp, event_type)
                 VALUES ($1, $2, 'RBAC_DENIED', $3, $4, $5, $6, CURRENT_TIMESTAMP, 'RBAC_DENIED')
-            `, [userId, req.user.username, `${resource}:${action}`, 'High', req.ip, JSON.stringify({ 
+            `, [userId, req.user.username, `${resource}:${action}`, 'High', req.ip, JSON.stringify({
                 requested_url: req.originalUrl,
                 required: { resource, action }
             })]);
 
-            res.status(403).json({ 
-                error: "Forbidden", 
+            res.status(403).json({
+                error: "Forbidden",
                 message: `You do not have permission to ${action} ${resource}.`,
                 required: { resource, action }
             });
@@ -175,7 +175,7 @@ const checkApprovalLimit = (transactionType) => {
             const maxLimit = limitRes.rows[0]?.max_amount || 0;
 
             if (amount > maxLimit) {
-                return res.status(403).json({ 
+                return res.status(403).json({
                     error: `Transaction amount (${amount}) exceeds your approval limit (${maxLimit}).`,
                     requires_higher_approval: true
                 });

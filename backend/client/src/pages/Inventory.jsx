@@ -1654,22 +1654,22 @@ export default function Inventory() {
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">{exp.currency}</span>
                           <div className="flex items-center gap-2 mt-2">
-                             <button onClick={() => {
-                                   setSelectedItem({ id: exp.po_id });
-                                   setDDPForm({
-                                     id: exp.id,
-                                     allocation_type: exp.master_po_no ? 'master' : 'single',
-                                     po_id: exp.po_id,
-                                     master_po_no: exp.master_po_no || '',
-                                     expense_name: exp.expense_name,
-                                     amount: exp.amount,
-                                     currency: exp.currency,
-                                     fx_rate: exp.fx_rate,
-                                     expense_date: exp.expense_date?.split('T')[0]
-                                   });
-                                   setIsDDPModalOpen(true);
-                             }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-colors">✍️</button>
-                             <button onClick={() => handleDDPDelete(exp.id)} className="p-1.5 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors">🗑️</button>
+                            <button onClick={() => {
+                              setSelectedItem({ id: exp.po_id });
+                              setDDPForm({
+                                id: exp.id,
+                                allocation_type: exp.master_po_no ? 'master' : 'single',
+                                po_id: exp.po_id,
+                                master_po_no: exp.master_po_no || '',
+                                expense_name: exp.expense_name,
+                                amount: exp.amount,
+                                currency: exp.currency,
+                                fx_rate: exp.fx_rate,
+                                expense_date: exp.expense_date?.split('T')[0]
+                              });
+                              setIsDDPModalOpen(true);
+                            }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-colors">✍️</button>
+                            <button onClick={() => handleDDPDelete(exp.id)} className="p-1.5 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors">🗑️</button>
                           </div>
                         </div>
                       </div>
@@ -2744,16 +2744,16 @@ export default function Inventory() {
                       <label className="block text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{t.modals.sale.qty}</label>
                       <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">Avail: {Number(selectedItem?.remaining_qty).toLocaleString()}</span>
                     </div>
-                    <input type="number" max={selectedItem?.remaining_qty} value={saleForm.qty} onChange={(e) => setSaleForm({ ...saleForm, qty: e.target.value })} required className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 transition-all font-mono text-center" />
+                    <input type="number" name="qty" max={selectedItem?.remaining_qty} value={saleForm.qty} onChange={(e) => setSaleForm({ ...saleForm, qty: e.target.value })} required className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 transition-all font-mono text-center" />
                   </div>
                   <div className="space-y-2">
                     <label className="block text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'سعر البيع' : 'Sale Price'}</label>
-                    <input type="number" placeholder={t.modals.sale.price} value={saleForm.sell_price} onChange={e => setSaleForm({ ...saleForm, sell_price: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 font-mono text-center transition-all" required />
+                    <input type="number" name="sell_price" placeholder={t.modals.sale.price} value={saleForm.sell_price} onChange={e => setSaleForm({ ...saleForm, sell_price: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 font-mono text-center transition-all" required />
                   </div>
                   <div className="space-y-2">
                     <label className="block text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">VAT %</label>
                     <div className="relative group">
-                      <select value={saleForm.vat_rate} onChange={e => setSaleForm({ ...saleForm, vat_rate: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 appearance-none text-center cursor-pointer transition-all">
+                      <select name="vat_rate" value={saleForm.vat_rate} onChange={e => setSaleForm({ ...saleForm, vat_rate: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 appearance-none text-center cursor-pointer transition-all">
                         <option value="0">0%</option>
                         <option value="14">14%</option>
                       </select>
@@ -2763,7 +2763,7 @@ export default function Inventory() {
                   <div className="space-y-2">
                     <label className="block text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">WHT %</label>
                     <div className="relative group">
-                      <select value={saleForm.wht_rate} onChange={e => setSaleForm({ ...saleForm, wht_rate: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 appearance-none text-center cursor-pointer transition-all">
+                      <select name="wht_rate" value={saleForm.wht_rate} onChange={e => setSaleForm({ ...saleForm, wht_rate: e.target.value })} className="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-200 font-black text-slate-900 text-xs outline-none focus:bg-white focus:border-slate-900 appearance-none text-center cursor-pointer transition-all">
                         <option value="0">0%</option>
                         <option value="1">1%</option>
                         <option value="3">3%</option>
@@ -2877,7 +2877,7 @@ export default function Inventory() {
                       <div className="flex justify-between items-center">
                         <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Immediate Down Payment</label>
                         <div className="relative group">
-                          <select value={saleForm.payment_method} onChange={e => setSaleForm({ ...saleForm, payment_method: e.target.value })} className="p-2 bg-slate-50 rounded-xl text-[10px] font-black outline-none border border-slate-200 appearance-none pr-8 cursor-pointer hover:border-slate-400 transition-all">
+                          <select name="payment_method" value={saleForm.payment_method} onChange={e => setSaleForm({ ...saleForm, payment_method: e.target.value })} className="p-2 bg-slate-50 rounded-xl text-[10px] font-black outline-none border border-slate-200 appearance-none pr-8 cursor-pointer hover:border-slate-400 transition-all">
                             <option value="Cash">Cash 💵</option>
                             <option value="Bank">Bank 🏦</option>
                             <option value="Check">Check 📄</option>
@@ -2889,6 +2889,7 @@ export default function Inventory() {
                       <div className="flex gap-4">
                         <input
                           type="number"
+                          name="down_payment"
                           value={saleForm.down_payment}
                           onChange={e => setSaleForm({ ...saleForm, down_payment: e.target.value })}
                           className="flex-1 p-4 bg-slate-50 rounded-2xl font-black text-sm outline-none border border-transparent focus:bg-white focus:border-slate-900 font-mono transition-all"
@@ -2896,6 +2897,7 @@ export default function Inventory() {
                         />
                         <input
                           type="text"
+                          name="reference_no"
                           placeholder="Transaction Ref No"
                           value={saleForm.reference_no}
                           onChange={e => setSaleForm({ ...saleForm, reference_no: e.target.value })}

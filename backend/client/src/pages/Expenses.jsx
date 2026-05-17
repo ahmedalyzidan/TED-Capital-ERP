@@ -396,13 +396,14 @@ export default function Expenses() {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="md:col-span-2 space-y-3">
                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">{cur.form.desc}</label>
-                       <input type="text" required value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                       <input type="text" name="description" required value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
                     </div>
 
                     <div className="md:col-span-2 space-y-3">
                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">{cur.form.comp}</label>
                        <select 
                           required 
+                          name="company_entity"
                           value={form.company_entity} 
                           onChange={e => setForm({...form, company_entity: e.target.value})} 
                           className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all appearance-none cursor-pointer"
@@ -444,7 +445,7 @@ export default function Expenses() {
 
                     <div className="space-y-3">
                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">{cur.form.amt}</label>
-                       <input type="number" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full px-6 py-5 bg-slate-50 border-none rounded-2xl font-black font-mono text-2xl text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                       <input type="number" name="amount" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full px-6 py-5 bg-slate-50 border-none rounded-2xl font-black font-mono text-2xl text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
                     </div>
 
                     <div className="space-y-3">
@@ -478,7 +479,7 @@ export default function Expenses() {
 
                     <div className="space-y-3">
                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">{cur.form.cat}</label>
-                       <select required value={form.category_id} onChange={e => setForm({...form, category_id: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all appearance-none cursor-pointer">
+                       <select required name="category" value={form.category_id} onChange={e => setForm({...form, category_id: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all appearance-none cursor-pointer">
                           <option value="">-- Select Category --</option>
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                        </select>

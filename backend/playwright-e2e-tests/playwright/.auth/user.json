@@ -6,7 +6,7 @@
       "localStorage": [
         {
           "name": "token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJTdXBlciBBZG1pbiIsInBlcm1pc3Npb25zIjp7InRhYmxlcyI6eyJBTEwiOlsicmVhZCIsImNyZWF0ZSIsInVwZGF0ZSIsImRlbGV0ZSIsImFwcHJvdmUiLCJleHBvcnQiLCJpbXBvcnQiLCJwcmludCIsImF1ZGl0Il19LCJzY3JlZW5zIjpbIkFMTCJdfSwiaXMyRkFFbmFibGVkIjpmYWxzZSwiaXNQYXJ0aWFsMkZBIjpmYWxzZSwiaWF0IjoxNzc4OTQ2MDE2LCJleHAiOjE3Nzg5ODkyMTZ9.WL9CuPMbiFswHS7ive9Ye4oPs0lmMw_6s3fJztmBq9M"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJTdXBlciBBZG1pbiIsInBlcm1pc3Npb25zIjp7InRhYmxlcyI6eyJBTEwiOlsicmVhZCIsImNyZWF0ZSIsInVwZGF0ZSIsImRlbGV0ZSIsImFwcHJvdmUiLCJleHBvcnQiLCJpbXBvcnQiLCJwcmludCIsImF1ZGl0Il19LCJzY3JlZW5zIjpbIkFMTCJdfSwiaXMyRkFFbmFibGVkIjpmYWxzZSwiaXNQYXJ0aWFsMkZBIjpmYWxzZSwiaWF0IjoxNzc5MDExMDQ1LCJleHAiOjE3NzkwNTQyNDV9.vF9Hnm8eqUhpCrualTkwo1Xfmtgs1In9f92wt_AT3qg"
         },
         {
           "name": "ted-theme",
@@ -14,7 +14,7 @@
         },
         {
           "name": "ted-lang",
-          "value": "en"
+          "value": "ar"
         },
         {
           "name": "user",
@@ -22,7 +22,7 @@
         },
         {
           "name": "refresh_token",
-          "value": "f773cf50fa5db816029a38703a717397c346cb94ecfa27961b12c8af3600608f8d094127a77e0261"
+          "value": "d4565c3b8176decab998512d0b7d06431d4e8966a8322259b77f74ae1300437204cd8ceb228404b4"
         }
       ]
     }

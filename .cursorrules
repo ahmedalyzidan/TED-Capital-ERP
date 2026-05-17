@@ -6,10 +6,9 @@
 
 ## 1. Application Auto-Healing & Master Orchestration (CRITICAL)
 - **Zero Tolerance for Errors:** You MUST check the browser console and server logs after every single code change. If any error (red text) or warning (yellow text) appears, you MUST prioritize fixing it before proceeding with any other task.
-- **Orchestrator-First Validation:** After EVERY edit, you MUST autonomously execute `python orchestrator.py` to trigger the automated test suite (Finance + UI).
-- **Autonomous Healing:** If the Orchestrator reports a [CRITICAL] or [ERROR] status, you MUST autonomously analyze the output, apply the code fixes directly, and re-run the Orchestrator until a [SUCCESS] or [OK] status is achieved.
+- **Manual Orchestrator Validation:** Do NOT run `python orchestrator.py` autonomously in the background to prevent Windows file-locking. The user will manually execute it when testing is required.
+- **Autonomous Healing:** When the user manually runs tests or the Orchestrator, and it reports a [CRITICAL] or [ERROR] status, you MUST autonomously analyze the output, apply the code fixes directly, and prepare for the next manual test run.
 - **Rules Evolution:** Whenever you apply a systemic fix, you MUST autonomously update this `.cursorrules` file with a new defensive rule.
-- **Validation Report:** Explicitly state in your summaries: *"Master Orchestrator Validation: [SUCCESS/FAIL]"*.
 
 ## 2. GitHub Workflow (STRICTLY MANUAL)
 - DO NOT execute any `git add`, `git commit`, or `git push` commands automatically.
@@ -36,7 +35,7 @@
   - [2026-05-11] Analytical Cockpit: Stabilized SQL intelligence engine (valuation/trends) and implemented elite drill-down UI with viewport-fixed positioning and background scroll-lock.
   - [2026-05-14] Production Deployment: Successfully deployed the modernized ERP system to the production cloud server (46.224.144.166). Verified financial and ledger integrity.
 
-## 7. Gated Cloud Deployment Protocol (STRICTLY ENFORCED)
+## 6. Gated Cloud Deployment Protocol (STRICTLY ENFORCED)
 - **Zero Autonomous Cloud Action:** You MUST NOT push to GitHub or execute remote scripts without explicit, step-by-step confirmation.
 - **Mandatory Gated Workflow:**
   1. **Phase 1: Local Implementation:** Complete all coding and verification on the local server. ALL changes must be saved locally.
@@ -47,12 +46,11 @@
 - **Storage Rule:** All modifications must remain in the local workspace until the Staging Gate (Phase 2) is cleared.
 - **Status Announcement:** Explicitly output: *"Workflow Status: [LOCAL/STAGING/PRODUCTION] - Awaiting User Gate Approval."*
 
-## 7. Master Orchestrator & Continuity Protocol (CRITICAL)
-- **Background Orchestration Mandatory:** At the start of every session, you MUST autonomously check if `orchestrator.py` is running. If not, execute `python orchestrator.py` in a background terminal.
-- **Context Synchronization:** Ensure `project_context.txt` is being updated by the orchestrator. This file is the primary source of truth for the AI's understanding of the full-stack architecture.
-- **Continuous Validation & Reporting:** You MUST explicitly report the status of the Orchestrator tests in your turn summaries. Do not commit or push any financial logic changes unless the Orchestrator has confirmed that the `pytest -m finance` tests have passed successfully.
-- **Auto-Startup:** If the local development environment is required, prioritize using the `start_erp_dev.bat` script to ensure all dependencies (Vite + Orchestrator) are initialized correctly.
-- **Integrity Lock:** After any code change, wait for the Orchestrator to finish its cycle and verify that the logs show "[SUCCESS] Context updated" and "[OK] Finance Logic OK" before declaring the task complete.
+## 7. Context Synchronization & Testing Protocol (CRITICAL)
+- **No Background Loops:** You are strictly forbidden from running `orchestrator.py` in a continuous background loop. 
+- **Context Synchronization:** Rely on `project_context.txt` for architectural context, but expect the user to update it manually via scripts rather than continuous polling.
+- **Continuous Validation & Reporting:** Do not commit or push any financial logic changes unless explicit confirmation is provided that the `pytest -m finance` tests have passed successfully (run manually by the user).
+- **Auto-Startup Execution:** Prioritize using the `start_erp_dev.bat` script to initialize the local environment, ensuring backend and frontend services start cleanly without background interference.
 
 ## 8. Production Server Infrastructure (CONFIRMED)
 - **Primary IP:** `46.224.144.166`

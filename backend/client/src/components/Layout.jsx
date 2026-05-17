@@ -220,13 +220,13 @@ export default function Layout() {
   return (
     <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'dark' : ''} bg-white relative`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
-      <aside 
+      <aside
         style={{ zoom: '0.8' }}
         className={`
         flex flex-col transition-all duration-500 ease-in-out
@@ -251,14 +251,14 @@ export default function Layout() {
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             className={`
               w-10 h-10 rounded-xl border transition-all shadow-lg cursor-pointer hidden lg:flex items-center justify-center z-50
-              ${theme === 'dark' 
-                ? 'bg-white/5 border-white/10 text-white/40 hover:bg-emerald-500 hover:text-white' 
+              ${theme === 'dark'
+                ? 'bg-white/5 border-white/10 text-white/40 hover:bg-emerald-500 hover:text-white'
                 : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white'}
               ${isSidebarCollapsed ? 'mx-auto' : ''}
             `}
           >
-            <svg 
-              className={`w-5 h-5 transition-transform duration-500 ${isSidebarCollapsed ? (language === 'ar' ? 'rotate-180' : 'rotate-0') : (language === 'ar' ? 'rotate-0' : 'rotate-180')}`} 
+            <svg
+              className={`w-5 h-5 transition-transform duration-500 ${isSidebarCollapsed ? (language === 'ar' ? 'rotate-180' : 'rotate-0') : (language === 'ar' ? 'rotate-0' : 'rotate-180')}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -274,45 +274,45 @@ export default function Layout() {
                   {isSidebarCollapsed ? '••' : group.title}
                 </h3>
                 <div className="space-y-1.5">
-                    {group.items.filter(i => !i.perm || hasPermission(i.perm)).map((item, iIdx) => (
-                      <NavLink
-                        key={iIdx}
-                        to={item.path}
-                        className={({ isActive }) => `
+                  {group.items.filter(i => !i.perm || hasPermission(i.perm)).map((item, iIdx) => (
+                    <NavLink
+                      key={iIdx}
+                      to={item.path}
+                      className={({ isActive }) => `
                           flex items-center gap-6 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden
-                          ${isActive 
-                            ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20') 
-                            : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
+                          ${isActive
+                          ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20')
+                          : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
                           ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                         `}
-                      >
-                        {({ isActive }) => (
-                          <>
-                            {isActive && (
-                              <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
-                            )}
-                            <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
-                              {item.icon}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
+                          )}
+                          <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
+                            {item.icon}
+                          </span>
+                          {!isSidebarCollapsed && (
+                            <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
+                              {item.label}
                             </span>
-                            {!isSidebarCollapsed && (
-                              <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
-                                {item.label}
-                              </span>
-                            )}
-                            {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
-                              <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
-                                {sidebarStats[item.badgeKey]}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </NavLink>
-                    ))}
-                  </div>
+                          )}
+                          {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
+                            <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
+                              {sidebarStats[item.badgeKey]}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </nav>
+              </div>
+            ))}
+          </div>
+        </nav>
 
         <div className={`p-6 mt-auto transition-all duration-300 ${isSidebarCollapsed ? 'items-center' : ''}`}>
           <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -355,7 +355,7 @@ export default function Layout() {
       <main className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden relative transition-colors duration-300">
         <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 z-50 print:hidden">
           <div className="flex items-center gap-4 lg:gap-8 flex-1">
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-100 text-slate-600 shadow-sm"
             >
@@ -379,45 +379,6 @@ export default function Layout() {
                     outline-none transition-all placeholder:text-slate-400 placeholder:font-medium
                    `}
               />
-              
-              {isSearchOpen && (searchQuery.length >= 2) && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.results}</span>
-                    {isSearching && <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>}
-                  </div>
-                  
-                  <div className="max-h-[400px] overflow-y-auto p-2 space-y-1">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((res, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            navigate(res.path);
-                            setIsSearchOpen(false);
-                            setSearchQuery('');
-                          }}
-                          className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-all group text-right"
-                        >
-                          <span className="text-xl opacity-70 group-hover:scale-110 transition-transform">{res.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-slate-900 truncate">{res.title}</p>
-                            {res.subtitle && <p className="text-[11px] text-slate-500 truncate">{res.subtitle}</p>}
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{res.category}</p>
-                          </div>
-                          <span className="text-slate-300 group-hover:translate-x-1 transition-transform opacity-0 group-hover:opacity-100">
-                            {language === 'ar' ? '←' : '→'}
-                          </span>
-                        </button>
-                      ))
-                    ) : !isSearching && (
-                      <div className="p-8 text-center">
-                        <p className="text-slate-400 text-sm font-medium">{t.noResults}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-8">

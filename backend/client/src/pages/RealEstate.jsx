@@ -1075,6 +1075,7 @@ export default function RealEstate() {
                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.totalPrice} *</label>
                     <input 
                       type="number" 
+                      name="total_price"
                       value={contractForm.total_price} 
                       onChange={(e) => setContractForm({...contractForm, total_price: e.target.value})} 
                       required 
@@ -1086,6 +1087,7 @@ export default function RealEstate() {
                       <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.downPayment}</label>
                       <input 
                         type="number" 
+                        name="down_payment"
                         value={contractForm.down_payment} 
                         onChange={(e) => setContractForm({...contractForm, down_payment: e.target.value})} 
                         className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all font-mono shadow-inner" 
