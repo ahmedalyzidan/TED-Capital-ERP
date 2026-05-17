@@ -39,10 +39,23 @@ const applySchemaFixes = async () => {
         username VARCHAR(100),
         action VARCHAR(100),
         table_name VARCHAR(100),
-        record_id VARCHAR(100),
+        record_id TEXT,
         details TEXT,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    // Fix: ensure record_id is TEXT (not INTEGER) to support MPO/string references like 'MPO-421597'
+    await runQuery("Audit Logs record_id to TEXT", `
+        DO $$ 
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name = 'audit_logs' AND column_name = 'record_id' AND data_type = 'integer'
+            ) THEN
+                ALTER TABLE audit_logs ALTER COLUMN record_id TYPE TEXT USING record_id::TEXT;
+            END IF;
+        END $$
+    `);
 
     await runQuery("Refresh Tokens Table", `CREATE TABLE IF NOT EXISTS refresh_tokens (
         id SERIAL PRIMARY KEY,
