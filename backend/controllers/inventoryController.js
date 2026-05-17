@@ -371,12 +371,367 @@ const handleSupplierDeposit = async (req, res) => {
     }
 };
 
+const deleteSupplierDeposit = async (req, res) => {
+    const { id } = req.params;
+    const username = req.user ? req.user.username : 'System';
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // 1. Fetch the deposit entry with high-precision raw timestamp
+        const entryRes = await client.query("SELECT *, created_at::text as created_at_raw FROM ledger WHERE id = $1", [id]);
+        if (entryRes.rows.length === 0) {
+            throw new Error("Deposit entry not found.");
+        }
+        const entry = entryRes.rows[0];
+        
+        if (!entry.description || !entry.description.includes('Supplier Deposit:')) {
+            throw new Error("This entry is not a valid supplier deposit.");
+        }
+
+        // Extract master_po_no from description
+        let master_po_no = null;
+        if (entry.description.includes('MPO:')) {
+            const mpoPart = entry.description.split('MPO:')[1].trim();
+            master_po_no = mpoPart.split('|')[0].trim().split(' ')[0].trim();
+            if (master_po_no === 'N/A') master_po_no = null;
+        }
+
+        // 2. Delete all ledger entries in the exact same transaction (matching high-precision timestamp and creator)
+        // Bypass the PL/pgSQL ledger deletion block for this administrative correction
+        await client.query("ALTER TABLE ledger DISABLE TRIGGER ALL");
+        await client.query(
+            "DELETE FROM ledger WHERE created_at = $1::timestamptz AND created_by = $2", 
+            [entry.created_at_raw, entry.created_by]
+        );
+        await client.query("ALTER TABLE ledger ENABLE TRIGGER ALL");
+
+        // 3. Recalculate and update the MPO Weighted Average Rate
+        if (master_po_no) {
+            const mpoLedgerRes = await client.query(`
+                SELECT description FROM ledger 
+                WHERE description LIKE $1 
+                AND description LIKE '%Supplier Deposit:%'
+                AND debit > 0
+            `, [`%| MPO: ${master_po_no}%`]);
+
+            let mpoTotalLcy = 0;
+            let mpoTotalFcy = 0;
+
+            mpoLedgerRes.rows.forEach(row => {
+                const desc = row.description;
+                if (!desc) return;
+
+                const parts = desc.split('|');
+                if (parts.length >= 2) {
+                    const amountPart = parts[1].trim().split(' ');
+                    const fcy = parseFloat(amountPart[0]);
+                    
+                    let rate = 1;
+                    if (desc.includes('Rate:')) {
+                        const rateMatch = desc.match(/Rate:\s*([\d.]+)/);
+                        if (rateMatch) rate = parseFloat(rateMatch[1]);
+                    }
+                    
+                    if (!isNaN(fcy) && !isNaN(rate)) {
+                        mpoTotalFcy += fcy;
+                        mpoTotalLcy += (fcy * rate);
+                    }
+                }
+            });
+
+            if (mpoTotalFcy > 0) {
+                const mpoAvgRate = mpoTotalLcy / mpoTotalFcy;
+                await client.query(`
+                    UPDATE purchase_orders 
+                    SET fx_rate = $1,
+                        lcy_total = (qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0),
+                        unit_cost_after_ddp = ((qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0)) / NULLIF(qty, 0)
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, master_po_no]);
+
+                await client.query(`
+                    UPDATE inventory_items
+                    SET buy_price = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        avg_cost = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        lcy_fx_rate = $1
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, master_po_no]);
+                
+                await logAudit(username, 'UPDATE_MPO_AVERAGE_RATE', 'purchase_orders', master_po_no, `Updated MPO ${master_po_no} weighted average rate to ${mpoAvgRate.toFixed(4)} after deposit deletion`);
+            } else {
+                // Reset to default
+                await client.query(`
+                    UPDATE purchase_orders 
+                    SET fx_rate = 1,
+                        lcy_total = (qty * estimated_cost * 1) + COALESCE(ddp_lcy_added_amount, 0),
+                        unit_cost_after_ddp = ((qty * estimated_cost * 1) + COALESCE(ddp_lcy_added_amount, 0)) / NULLIF(qty, 0)
+                    WHERE master_po_no = $1
+                `, [master_po_no]);
+
+                await client.query(`
+                    UPDATE inventory_items
+                    SET buy_price = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        avg_cost = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        lcy_fx_rate = 1
+                    WHERE master_po_no = $1
+                `, [master_po_no]);
+                
+                await logAudit(username, 'UPDATE_MPO_AVERAGE_RATE', 'purchase_orders', master_po_no, `Reset MPO ${master_po_no} rate to 1.0000 after all deposits deleted`);
+            }
+        }
+
+        await logAudit(username, 'DELETE_SUPPLIER_DEPOSIT', 'ledger', id, `Deleted supplier deposit ledger entries for transaction at ${entry.created_at}`);
+        await client.query('COMMIT');
+        res.json({ success: true, message: "Supplier deposit deleted successfully." });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("🔥 Error deleting supplier deposit:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+};
+
+const editSupplierDeposit = async (req, res) => {
+    const { id } = req.params;
+    const { supplier_name, amount, currency, fx_rate, project_name, payment_method, reference_no, date, master_po_no } = req.body;
+    const username = req.user ? req.user.username : 'System';
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Fetch the existing entry with high-precision raw timestamp
+        const entryRes = await client.query("SELECT *, created_at::text as created_at_raw FROM ledger WHERE id = $1", [id]);
+        if (entryRes.rows.length === 0) {
+            throw new Error("Deposit entry not found.");
+        }
+        const entry = entryRes.rows[0];
+
+        if (!entry.description || !entry.description.includes('Supplier Deposit:')) {
+            throw new Error("This entry is not a valid supplier deposit.");
+        }
+
+        // Get old master PO no to reset if changed
+        let old_master_po_no = null;
+        if (entry.description.includes('MPO:')) {
+            const mpoPart = entry.description.split('MPO:')[1].trim();
+            old_master_po_no = mpoPart.split('|')[0].trim().split(' ')[0].trim();
+            if (old_master_po_no === 'N/A') old_master_po_no = null;
+        }
+
+        // 2. Delete all ledger entries in the exact same transaction (matching high-precision timestamp and creator)
+        // Bypass the PL/pgSQL ledger deletion block for this administrative correction
+        await client.query("ALTER TABLE ledger DISABLE TRIGGER ALL");
+        await client.query(
+            "DELETE FROM ledger WHERE created_at = $1::timestamptz AND created_by = $2", 
+            [entry.created_at_raw, entry.created_by]
+        );
+        await client.query("ALTER TABLE ledger ENABLE TRIGGER ALL");
+
+        // 3. Validate new MPO limit
+        if (master_po_no && master_po_no !== 'N/A') {
+            const mpoValueRes = await client.query(`
+                SELECT SUM(qty * estimated_cost) as total_fcy
+                FROM purchase_orders
+                WHERE master_po_no = $1
+            `, [master_po_no]);
+            
+            const totalMpoFcy = parseFloat(mpoValueRes.rows[0].total_fcy || 0);
+
+            if (totalMpoFcy > 0) {
+                const existingDepositsRes = await client.query(`
+                    SELECT description FROM ledger 
+                    WHERE description LIKE $1 
+                    AND description LIKE '%Supplier Deposit:%'
+                    AND debit > 0
+                `, [`%| MPO: ${master_po_no}%`]);
+
+                let existingFcy = 0;
+                existingDepositsRes.rows.forEach(row => {
+                    const parts = (row.description || '').split('|');
+                    if (parts.length >= 2) {
+                        const amtPart = parts[1].trim().split(' ')[0];
+                        if (!isNaN(parseFloat(amtPart))) existingFcy += parseFloat(amtPart);
+                    }
+                });
+
+                const currentDepositFcy = parseFloat(amount);
+                if ((existingFcy + currentDepositFcy) > (totalMpoFcy + 0.01)) {
+                    throw new Error(`Financial Integrity Alert: Total deposits (${(existingFcy + currentDepositFcy).toFixed(2)}) would exceed the Total MPO Value (${totalMpoFcy.toFixed(2)}). Operation aborted.`);
+                }
+            }
+        }
+
+        // 4. Log the new double entry
+        const AccountingService = require('../services/accountingService');
+        const debitAcc = '2110';
+        const creditAcc = req.body.credit_account || (payment_method.toLowerCase().includes('bank') ? '1111' : '1101');
+        const whtAcc = '2160';
+
+        const amountNum = parseFloat(amount);
+        const rateNum = parseFloat(fx_rate) || 1;
+        const whtPercent = parseFloat(req.body.wht_percent || 0);
+        
+        const grossLcy = amountNum * rateNum;
+        const whtLcy = (grossLcy * whtPercent) / 100;
+        const netLcy = grossLcy - whtLcy;
+
+        if (isNaN(grossLcy) || grossLcy <= 0) {
+            throw new Error(`Invalid deposit amount or rate. Amount: ${amount}, Rate: ${fx_rate}`);
+        }
+
+        const debitId = await AccountingService.logEntry(client, debitAcc, project_name, grossLcy, 0, `Supplier Deposit: ${supplier_name} | ${amountNum} ${currency} (Rate: ${rateNum}) | MPO: ${master_po_no || 'N/A'}`, username, reference_no, null, 'Inventory');
+        const creditId = await AccountingService.logEntry(client, creditAcc, project_name, 0, netLcy, `Supplier Deposit (Net Payment): ${supplier_name} | MPO: ${master_po_no || 'N/A'}`, username, reference_no, null, 'Inventory');
+
+        if (whtLcy > 0) {
+            await AccountingService.logEntry(client, whtAcc, project_name, 0, whtLcy, `WHT ${whtPercent}% on Deposit: ${supplier_name} | MPO: ${master_po_no || 'N/A'}`, username, reference_no, null, 'Inventory');
+        }
+
+        // 5. Recalculate Weighted Average Rate for new MPO
+        if (master_po_no) {
+            const mpoLedgerRes = await client.query(`
+                SELECT description FROM ledger 
+                WHERE description LIKE $1 
+                AND description LIKE '%Supplier Deposit:%'
+                AND debit > 0
+            `, [`%| MPO: ${master_po_no}%`]);
+
+            let mpoTotalLcy = 0;
+            let mpoTotalFcy = 0;
+
+            mpoLedgerRes.rows.forEach(row => {
+                const desc = row.description;
+                if (!desc) return;
+
+                const parts = desc.split('|');
+                if (parts.length >= 2) {
+                    const amountPart = parts[1].trim().split(' ');
+                    const fcy = parseFloat(amountPart[0]);
+                    
+                    let rate = 1;
+                    if (desc.includes('Rate:')) {
+                        const rateMatch = desc.match(/Rate:\s*([\d.]+)/);
+                        if (rateMatch) rate = parseFloat(rateMatch[1]);
+                    }
+                    
+                    if (!isNaN(fcy) && !isNaN(rate)) {
+                        mpoTotalFcy += fcy;
+                        mpoTotalLcy += (fcy * rate);
+                    }
+                }
+            });
+
+            if (mpoTotalFcy > 0) {
+                const mpoAvgRate = mpoTotalLcy / mpoTotalFcy;
+                await client.query(`
+                    UPDATE purchase_orders 
+                    SET fx_rate = $1,
+                        lcy_total = (qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0),
+                        unit_cost_after_ddp = ((qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0)) / NULLIF(qty, 0)
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, master_po_no]);
+
+                await client.query(`
+                    UPDATE inventory_items
+                    SET buy_price = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        avg_cost = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        lcy_fx_rate = $1
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, master_po_no]);
+            }
+        }
+
+        // 6. Recalculate Weighted Average Rate for OLD MPO if it is different
+        if (old_master_po_no && old_master_po_no !== master_po_no) {
+            const mpoLedgerRes = await client.query(`
+                SELECT description FROM ledger 
+                WHERE description LIKE $1 
+                AND description LIKE '%Supplier Deposit:%'
+                AND debit > 0
+            `, [`%| MPO: ${old_master_po_no}%`]);
+
+            let mpoTotalLcy = 0;
+            let mpoTotalFcy = 0;
+
+            mpoLedgerRes.rows.forEach(row => {
+                const desc = row.description;
+                if (!desc) return;
+
+                const parts = desc.split('|');
+                if (parts.length >= 2) {
+                    const amountPart = parts[1].trim().split(' ');
+                    const fcy = parseFloat(amountPart[0]);
+                    
+                    let rate = 1;
+                    if (desc.includes('Rate:')) {
+                        const rateMatch = desc.match(/Rate:\s*([\d.]+)/);
+                        if (rateMatch) rate = parseFloat(rateMatch[1]);
+                    }
+                    
+                    if (!isNaN(fcy) && !isNaN(rate)) {
+                        mpoTotalFcy += fcy;
+                        mpoTotalLcy += (fcy * rate);
+                    }
+                }
+            });
+
+            if (mpoTotalFcy > 0) {
+                const mpoAvgRate = mpoTotalLcy / mpoTotalFcy;
+                await client.query(`
+                    UPDATE purchase_orders 
+                    SET fx_rate = $1,
+                        lcy_total = (qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0),
+                        unit_cost_after_ddp = ((qty * estimated_cost * $1) + COALESCE(ddp_lcy_added_amount, 0)) / NULLIF(qty, 0)
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, old_master_po_no]);
+
+                await client.query(`
+                    UPDATE inventory_items
+                    SET buy_price = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        avg_cost = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        lcy_fx_rate = $1
+                    WHERE master_po_no = $2
+                `, [mpoAvgRate, old_master_po_no]);
+            } else {
+                await client.query(`
+                    UPDATE purchase_orders 
+                    SET fx_rate = 1,
+                        lcy_total = (qty * estimated_cost * 1) + COALESCE(ddp_lcy_added_amount, 0),
+                        unit_cost_after_ddp = ((qty * estimated_cost * 1) + COALESCE(ddp_lcy_added_amount, 0)) / NULLIF(qty, 0)
+                    WHERE master_po_no = $1
+                `, [old_master_po_no]);
+
+                await client.query(`
+                    UPDATE inventory_items
+                    SET buy_price = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        avg_cost = (SELECT unit_cost_after_ddp FROM purchase_orders WHERE id = inventory_items.po_id),
+                        lcy_fx_rate = 1
+                    WHERE master_po_no = $1
+                `, [old_master_po_no]);
+            }
+        }
+
+        await logAudit(username, 'EDIT_SUPPLIER_DEPOSIT', 'ledger', id, `Updated supplier deposit of ${amount} ${currency} for ${supplier_name}`);
+        await client.query('COMMIT');
+        res.json({ success: true, message: "Supplier deposit updated successfully." });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("🔥 Error editing supplier deposit:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = { 
     transferStock, 
     handleTransfer: transferStock,
     reconcileAudit, 
     getInventoryIntelligence,
     handleSupplierDeposit,
+    deleteSupplierDeposit,
+    editSupplierDeposit,
     getFinancialAccounts: async (req, res) => {
         try {
             const query = `

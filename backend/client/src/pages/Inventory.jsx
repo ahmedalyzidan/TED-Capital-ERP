@@ -537,6 +537,7 @@ export default function Inventory() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isSupplierDepositModalOpen, setIsSupplierDepositModalOpen] = useState(false);
+  const [editingDepositId, setEditingDepositId] = useState(null);
   const [financialAccounts, setFinancialAccounts] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -663,6 +664,7 @@ export default function Inventory() {
   };
 
   const openSupplierDepositModal = async (mpo = '', supplier = '', project = 'General') => {
+    setEditingDepositId(null);
     try {
       // 1. Fetch live financial accounts (Cash/Bank) from the audit-ready COA
       const res = await api.get('/inventory/financial-accounts');
@@ -683,6 +685,59 @@ export default function Inventory() {
       console.error("Failed to load financial accounts for deposit:", err);
       // Fallback: Open with empty accounts if API fails to prevent blocking
       setIsSupplierDepositModalOpen(true);
+    }
+  };
+
+  const openEditSupplierDepositModal = async (dep, parsedData) => {
+    try {
+      const res = await api.get('/inventory/financial-accounts');
+      const accounts = res.data.data || [];
+      setFinancialAccounts(accounts);
+
+      const { supplier, amount, currency, rate, ref } = parsedData;
+      
+      let mpo = '';
+      if (dep.description?.includes('MPO:')) {
+        const mpoPart = dep.description.split('MPO:')[1]?.trim();
+        mpo = mpoPart.split('|')[0]?.trim().split(' ')[0]?.trim();
+        if (mpo === 'N/A') mpo = '';
+      }
+
+      setEditingDepositId(dep.id);
+      setSupplierDepositForm({
+        supplier_name: supplier,
+        master_po_no: mpo,
+        amount: amount.toString(),
+        currency: currency,
+        fx_rate: rate.toString(),
+        project_name: dep.cost_center || 'General',
+        payment_method: dep.description?.includes('Net Payment') ? 'Bank Transfer' : 'Cash',
+        credit_account: accounts.length > 0 ? accounts[0].account_name : '',
+        wht_percent: 0,
+        reference_no: ref === '-' ? '' : ref,
+        date: new Date(dep.created_at || dep.date).toISOString().split('T')[0]
+      });
+
+      setIsSupplierDepositModalOpen(true);
+    } catch (err) {
+      console.error("Failed to load financial accounts for editing deposit:", err);
+      setIsSupplierDepositModalOpen(true);
+    }
+  };
+
+  const handleDeleteSupplierDeposit = async (id) => {
+    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذه الدفعة المقدمة؟ سيتم تحديث متوسط سعر الصرف للمشروع تلقائياً.' : 'Are you sure you want to delete this supplier deposit? This will automatically recalculate the weighted average FX rate.')) {
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await api.delete(`/inventory/supplier-deposit/${id}`);
+      alert(language === 'ar' ? 'تم حذف الدفعة بنجاح وتحديث أسعار الصرف.' : 'Supplier deposit deleted successfully and exchange rates updated.');
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || t.common.error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -982,10 +1037,15 @@ export default function Inventory() {
   const submitSupplierDeposit = async (e) => {
     e.preventDefault(); setIsSubmitting(true);
     try {
-      // Added master_po_no to help with weighted average calculation on backend
-      await api.post('/inventory/supplier-deposit', supplierDepositForm);
-      alert(t.modals.supplierDeposit.success);
+      if (editingDepositId) {
+        await api.put(`/inventory/supplier-deposit/${editingDepositId}`, supplierDepositForm);
+        alert(language === 'ar' ? 'تم تعديل الدفعة المقدمة بنجاح.' : 'Supplier deposit updated successfully.');
+      } else {
+        await api.post('/inventory/supplier-deposit', supplierDepositForm);
+        alert(t.modals.supplierDeposit.success);
+      }
       setIsSupplierDepositModalOpen(false);
+      setEditingDepositId(null);
       fetchData();
       setSupplierDepositForm({
         supplier_name: '', master_po_no: '', amount: '', currency: 'SAR', fx_rate: 1, project_name: 'General',
@@ -2278,6 +2338,7 @@ export default function Inventory() {
                       <th className="px-6 py-5">{t.deposits?.table?.lcy || 'Total (LCY)'}</th>
                       <th className="px-6 py-5">{t.deposits?.table?.method || 'Method'}</th>
                       <th className="px-6 py-5">{t.deposits?.table?.ref || 'Reference'}</th>
+                      <th className="px-6 py-5 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -2318,6 +2379,22 @@ export default function Inventory() {
                             <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-50 px-2 py-1 rounded">{dep.account_name}</span>
                           </td>
                           <td className="px-6 py-4 text-xs text-slate-400 font-mono font-bold">{ref}</td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => openEditSupplierDepositModal(dep, { supplier, amount, currency, rate, ref })}
+                                className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[10px] font-black transition-all hover:scale-105 active:scale-95 border border-violet-100"
+                              >
+                                {language === 'ar' ? 'تعديل' : 'Edit'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSupplierDeposit(dep.id)}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-black transition-all hover:scale-105 active:scale-95 border border-rose-100"
+                              >
+                                {language === 'ar' ? 'حذف' : 'Delete'}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -3238,7 +3315,11 @@ export default function Inventory() {
             <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl border border-slate-200 my-10 transform animate-in slide-in-from-top-10 duration-500 flex flex-col max-h-[90vh] overflow-hidden">
               <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0 z-10">
                 <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">{t.modals.supplierDeposit.title}</h3>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {editingDepositId 
+                      ? (language === 'ar' ? 'تعديل الدفعة المقدمة' : 'Edit Supplier Deposit') 
+                      : t.modals.supplierDeposit.title}
+                  </h3>
                   <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">Financial Integrity Module</p>
                 </div>
                 <button onClick={() => setIsSupplierDepositModalOpen(false)} className="w-12 h-12 bg-white text-slate-400 hover:text-rose-500 rounded-2xl flex items-center justify-center text-2xl transition-all border border-slate-200 hover:border-rose-100 shadow-sm">✕</button>
@@ -3370,8 +3451,9 @@ export default function Inventory() {
 
                           // Strict MPO filter for previous deposits
                           const mpoTxns = (supplierDeposits || []).filter(d =>
-                            (d.description?.includes(`| MPO: ${mpo}`)) ||
-                            (mpo && d.description?.includes(`| Ref: ${mpo}`))
+                            ((d.description?.includes(`| MPO: ${mpo}`)) ||
+                            (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
+                            d.id !== editingDepositId
                           );
 
                           let paid = 0;
@@ -3533,7 +3615,10 @@ export default function Inventory() {
                     if (!mpo) return false;
                     const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
                     const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
-                    const mpoTxns = (supplierDeposits || []).filter(d => (d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`)));
+                    const mpoTxns = (supplierDeposits || []).filter(d => 
+                      ((d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
+                      d.id !== editingDepositId
+                    );
                     let paid = 0;
                     mpoTxns.forEach(d => {
                       const parts = (d.description || '').split('|');
@@ -3551,7 +3636,10 @@ export default function Inventory() {
                     if (!mpo) return false;
                     const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
                     const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
-                    const mpoTxns = (supplierDeposits || []).filter(d => (d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`)));
+                    const mpoTxns = (supplierDeposits || []).filter(d => 
+                      ((d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
+                      d.id !== editingDepositId
+                    );
                     let paid = 0;
                     mpoTxns.forEach(d => {
                       const parts = (d.description || '').split('|');
@@ -3571,7 +3659,11 @@ export default function Inventory() {
                   {isSubmitting ? (
                     <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
                   ) : (
-                    <>💰 {t.modals.supplierDeposit.submit}</>
+                    <>
+                      💰 {editingDepositId 
+                        ? (language === 'ar' ? 'تعديل الدفعة المقدمة' : 'Update Supplier Deposit') 
+                        : t.modals.supplierDeposit.submit}
+                    </>
                   )}
                 </button>
               </form>

@@ -46,6 +46,8 @@ router.get('/financial-accounts', inventoryController.getFinancialAccounts || (a
     } catch (err) { res.status(500).json({ error: err.message }); }
 }));
 router.post('/supplier-deposit', inventoryController.handleSupplierDeposit);
+router.put('/supplier-deposit/:id', inventoryController.editSupplierDeposit);
+router.delete('/supplier-deposit/:id', inventoryController.deleteSupplierDeposit);
 router.post('/transfer', inventoryController.handleTransfer);
 
 module.exports = router;
