@@ -599,7 +599,9 @@ export default function Finance() {
                                        <span className="font-black text-slate-900 text-sm font-sans tracking-tight uppercase">{l.account_name}</span>
                                     </td>
                                     <td className={`px-10 py-6 font-black text-lg ${language === 'ar' ? 'text-left' : 'text-right'} ${l.debit > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                       {l.debit > 0 ? `+${l.debit.toLocaleString()}` : `-${l.credit.toLocaleString()}`}
+                                       {l.debit > 0 
+                                          ? `+${Number(l.debit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}` 
+                                          : `-${Number(l.credit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`}
                                     </td>
                                  </tr>
                               ))}
@@ -713,10 +715,10 @@ export default function Finance() {
                                  </td>
                                  <td className="px-10 py-6 text-slate-500 font-sans font-bold text-xs max-w-xs truncate">{l.description}</td>
                                  <td className={`px-10 py-6 font-black text-lg text-center ${l.debit > 0 ? 'text-emerald-600' : 'text-slate-200'}`}>
-                                    {l.debit > 0 ? l.debit.toLocaleString() : '-'}
+                                    {l.debit > 0 ? Number(l.debit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 }) : '-'}
                                  </td>
                                  <td className={`px-10 py-6 font-black text-lg text-center ${l.credit > 0 ? 'text-rose-500' : 'text-slate-200'}`}>
-                                    {l.credit > 0 ? l.credit.toLocaleString() : '-'}
+                                    {l.credit > 0 ? Number(l.credit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 }) : '-'}
                                  </td>
                                  <td className="px-10 py-6 font-black text-[10px] text-slate-400 text-center bg-slate-50/30 uppercase tracking-widest">
                                     {l.reference_no || `JV-${l.id}`}

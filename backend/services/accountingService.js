@@ -128,6 +128,9 @@ class AccountingService {
         }
 
 
+        const roundedDebit = Math.round((parseFloat(debit) || 0) * 1000) / 1000;
+        const roundedCredit = Math.round((parseFloat(credit) || 0) * 1000) / 1000;
+
         // إدراج القيد في دفتر الأستاذ العام (General Ledger)
         const query = `
           INSERT INTO ledger (account_name, cost_center, debit, credit, description, created_by, client_id, source_module, org_unit_id, is_contra, original_entry_id, company, company_id, created_at) 
@@ -138,8 +141,8 @@ class AccountingService {
         const res = await client.query(query, [
             accName, 
             costCenter || 'General', 
-            parseFloat(debit) || 0, 
-            parseFloat(credit) || 0, 
+            roundedDebit, 
+            roundedCredit, 
             description + (referenceNo ? ` | مرجع: ${referenceNo}` : ''), 
             username || 'System',
             clientId,
@@ -161,15 +164,15 @@ class AccountingService {
                 'ledger',
                 entryId,
                 'LEDGER_POST',
-                `Posted ledger entry #${entryId} for account '${accName}' | Project: '${costCenter || 'General'}' | Company: '${resolvedCompany}' | Debit: ${debit} | Credit: ${credit}`,
+                `Posted ledger entry #${entryId} for account '${accName}' | Project: '${costCenter || 'General'}' | Company: '${resolvedCompany}' | Debit: ${roundedDebit} | Credit: ${roundedCredit}`,
                 null,
                 {
                     account_name: accName,
                     original_account_input: accountIdentifier,
                     cost_center: costCenter || 'General',
                     resolved_company: resolvedCompany,
-                    debit: parseFloat(debit) || 0,
-                    credit: parseFloat(credit) || 0,
+                    debit: roundedDebit,
+                    credit: roundedCredit,
                     description,
                     reference_no: referenceNo,
                     source_module: sourceModule

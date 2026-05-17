@@ -60,3 +60,19 @@
 - **Deployment Script:** `git fetch origin && git reset --hard origin/main && bash deploy.sh` (Hard Reset Mandated).
 - **Gated Protocol Status:** Phase 5 (Production Deployment) Completed Successfully on 2026-05-14.
 - **SSH Key Authorization:** Key `ahmedalyzidan2013@gmail.com` is present in the account settings but requires manual authorization in `/root/.ssh/authorized_keys` if Password Authentication is ever disabled.
+
+## 9. Production Schema Integrity & Synchronization (STRICTLY READ-ONLY)
+- **Zero Data Modification Mandate:** When instructed to compare local and live databases, you MUST NOT execute any `INSERT`, `UPDATE`, `DELETE`, `DROP`, or data migration commands on the production database.
+- **Structural Comparison Only:** To verify schema synchronization, you must exclusively use read-only queries against `information_schema.tables` and `information_schema.columns` to compare table names, column names, data types, and constraints between the local and production environments.
+- **No Autonomous Live Alterations:** If a schema discrepancy is found (e.g., a missing column or new table in the local environment that is not in production), DO NOT autonomously apply the change to the live server. 
+- **Migration Script Generation:** Instead, you must generate a safe `ALTER TABLE` or `CREATE TABLE` SQL migration script locally, save it as a new file in a `migrations/` folder, and explicitly ask the user for permission before applying it to the production database.
+- **Reporting Format:** Output the results clearly as a "Schema Diff Report" showing [MISSING IN LIVE], [DATATYPE MISMATCH], or [SYNCED].
+
+## 10. FUNCTIONAL & UI IMPACT WARNING (EXPLICIT GATE)
+- **Exception to Autonomous Execution:** While Section 0 mandates autonomous execution for general tasks, any modification that alters the existing core behavior of a backend function/method, or changes the established layout/functionality of a UI screen, is EXEMPT from automatic execution.
+- **Impact Warning Mandatory:** Before generating or applying code for such changes, you MUST halt execution and output a highly visible `[IMPACT WARNING]`.
+- **Warning Content:** The warning must clearly explain: 
+  1. Which specific function or UI component is being targeted.
+  2. The current behavior of this component.
+  3. The intended new behavior and its potential impact on the system.
+- **Explicit Confirmation Required:** After displaying the warning, you MUST explicitly ask the user: *"Do you approve modifying this core logic/UI?"* and wait for the user to confirm (e.g., "Yes", "Proceed") BEFORE applying the code changes.
