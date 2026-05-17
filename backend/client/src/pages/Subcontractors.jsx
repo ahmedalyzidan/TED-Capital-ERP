@@ -797,7 +797,24 @@ export default function Subcontractors() {
                    >
                       <option value="">-- {language === 'ar' ? 'اختر الصنف المخزني' : 'Select Inventory Item'} --</option>
                       {inventoryItems
-                        .filter(item => !reqForm.warehouse_id || item.warehouse_id === parseInt(reqForm.warehouse_id))
+                        .filter(item => {
+                          if (!reqForm.warehouse_id) return true;
+                          const selectedWh = warehouses.find(w => w.id === parseInt(reqForm.warehouse_id));
+                          if (!selectedWh) return true;
+                          
+                          // Robust multi-criteria matching
+                          if (item.warehouse_id === selectedWh.id) return true;
+                          if (item.warehouse && item.warehouse.trim().toLowerCase() === selectedWh.name.trim().toLowerCase()) return true;
+                          
+                          // Semantic keyword fallback (e.g. Main Store vs المخزن الرئيسي)
+                          const isMainWhMatch = (
+                            (selectedWh.name.toLowerCase().includes('main') || selectedWh.name.includes('رئيسي')) &&
+                            (item.warehouse?.toLowerCase().includes('main') || item.warehouse?.includes('رئيسي'))
+                          );
+                          if (isMainWhMatch) return true;
+                          
+                          return false;
+                        })
                         .map(item => (
                           <option key={item.id} value={item.id}>
                             {item.item_name || item.name} (المتاح: {item.remaining_qty} {item.uom})
