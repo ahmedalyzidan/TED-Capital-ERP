@@ -42,6 +42,8 @@ const generateAccessToken = (user, isPartial = false) => {
             username: user.username, 
             role: user.role, 
             permissions: user.permissions || {},
+            linkedCompany: user.linked_company || '',
+            linkedProject: user.linked_project || '',
             is2FAEnabled: user.is_2fa_enabled,
             isPartial2FA: isPartial // 🌟 علامة توضح أن المستخدم تجاوز الباسوورد وينتظر كود الهاتف
         }, 

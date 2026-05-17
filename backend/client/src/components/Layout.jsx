@@ -370,6 +370,7 @@ export default function Layout() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchOpen(true)}
+                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
                 placeholder={t.searchPlaceholder}
                 className={`
                     w-full bg-slate-50 border border-slate-100 
@@ -379,6 +380,52 @@ export default function Layout() {
                     outline-none transition-all placeholder:text-slate-400 placeholder:font-medium
                    `}
               />
+              {isSearchOpen && (searchQuery.length >= 2) && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {isSearching ? (
+                    <div className="p-8 text-center flex flex-col items-center justify-center gap-2">
+                      <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-xs font-bold text-slate-500">{language === 'ar' ? 'جاري البحث...' : 'Searching...'}</span>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="max-h-[70vh] overflow-y-auto p-2 custom-scrollbar">
+                      <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-50 mb-1">
+                        {language === 'ar' ? 'نتائج البحث' : 'Search Results'}
+                      </div>
+                      {searchResults.map((item, idx) => (
+                        <div
+                          key={`${item.category}-${item.id}-${idx}`}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setIsSearchOpen(false);
+                            setSearchQuery('');
+                            if (item.path) navigate(item.path);
+                          }}
+                          className="flex items-center gap-3.5 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-all group/item border-b border-slate-50/50 last:border-0"
+                        >
+                          <span className="text-2xl p-2 bg-slate-50 group-hover/item:bg-white rounded-xl shadow-sm border border-slate-100/80 transition-all">{item.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-xs font-black text-slate-900 truncate group-hover/item:text-blue-600 transition-colors">{item.title}</span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md border border-slate-200/60">{item.category}</span>
+                            </div>
+                            {item.subtitle && (
+                              <div className="text-[11px] font-semibold text-slate-500 truncate">{item.subtitle}</div>
+                            )}
+                          </div>
+                          <svg className={`w-4 h-4 text-slate-300 group-hover/item:text-slate-600 transition-colors ${language === 'ar' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
+                      <svg className="w-8 h-8 mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-xs font-bold text-slate-600">{language === 'ar' ? 'لا توجد نتائج مطابقة' : 'No matching results found'}</span>
+                      <span className="text-[10px] font-medium text-slate-400">{language === 'ar' ? 'جرب البحث بكلمات مفتاحية أخرى' : 'Try searching with different keywords'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 lg:gap-8">

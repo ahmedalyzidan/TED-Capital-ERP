@@ -21,6 +21,7 @@ export default function Users() {
       tabs: {
         users: "المستخدمين",
         roles: "الأدوار",
+        user_matrix: "مصفوفة وصول المستخدمين",
         audit: "سجل الأمان"
       },
       usersTab: {
@@ -93,6 +94,7 @@ export default function Users() {
       tabs: {
         users: "Users",
         roles: "Roles",
+        user_matrix: "User Access Matrix",
         audit: "Security Audit"
       },
       usersTab: {
@@ -167,6 +169,98 @@ export default function Users() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const [selectedUserMatrix, setSelectedUserMatrix] = useState(null);
+  const [userMatrixState, setUserMatrixState] = useState({
+    companies: [],
+    projects: [],
+    modules: [],
+    tables: {}
+  });
+
+  const handleSelectUserForMatrix = (user) => {
+    setSelectedUserMatrix(user);
+    const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
+    setUserMatrixState({
+      companies: Array.isArray(perms.companies) ? perms.companies : (user.linked_company ? [user.linked_company] : []),
+      projects: Array.isArray(perms.projects) ? perms.projects : (user.linked_project ? [user.linked_project] : []),
+      modules: Array.isArray(perms.modules) ? perms.modules : ['Finance', 'Inventory', 'Projects', 'HCM', 'CRM', 'Settings'],
+      tables: typeof perms.tables === 'object' && perms.tables !== null ? perms.tables : {}
+    });
+  };
+
+  const handleSaveUserMatrix = async () => {
+    if (!selectedUserMatrix) return;
+    try {
+      const updatedPerms = {
+        ...(typeof selectedUserMatrix.permissions === 'string' ? JSON.parse(selectedUserMatrix.permissions || '{}') : (selectedUserMatrix.permissions || {})),
+        companies: userMatrixState.companies,
+        projects: userMatrixState.projects,
+        modules: userMatrixState.modules,
+        tables: userMatrixState.tables
+      };
+      const payload = {
+        ...selectedUserMatrix,
+        permissions: updatedPerms,
+        linked_company: userMatrixState.companies.includes('ALL') ? '' : (userMatrixState.companies[0] || ''),
+        linked_project: userMatrixState.projects.includes('ALL') ? '' : (userMatrixState.projects[0] || '')
+      };
+      await api.put(`/iam/users/${selectedUserMatrix.id}`, payload);
+      alert(cur.alerts.updateSuccess);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || "Error saving matrix");
+    }
+  };
+
+  const toggleUserMatrixCompany = (comp) => {
+    let curr = [...userMatrixState.companies];
+    if (comp === 'ALL') curr = curr.includes('ALL') ? [] : ['ALL'];
+    else {
+      curr = curr.filter(c => c !== 'ALL');
+      curr = curr.includes(comp) ? curr.filter(c => c !== comp) : [...curr, comp];
+    }
+    setUserMatrixState({ ...userMatrixState, companies: curr });
+  };
+
+  const toggleUserMatrixProject = (proj) => {
+    let curr = [...userMatrixState.projects];
+    if (proj === 'ALL') curr = curr.includes('ALL') ? [] : ['ALL'];
+    else {
+      curr = curr.filter(p => p !== 'ALL');
+      curr = curr.includes(proj) ? curr.filter(p => p !== proj) : [...curr, proj];
+    }
+    setUserMatrixState({ ...userMatrixState, projects: curr });
+  };
+
+  const toggleUserMatrixModule = (mod) => {
+    let curr = [...userMatrixState.modules];
+    curr = curr.includes(mod) ? curr.filter(m => m !== mod) : [...curr, mod];
+    setUserMatrixState({ ...userMatrixState, modules: curr });
+  };
+
+  const toggleUserMatrixTableAction = (table, action) => {
+    const currTables = { ...userMatrixState.tables };
+    const currActions = currTables[table] || [];
+    const newActions = currActions.includes(action) ? currActions.filter(a => a !== action) : [...currActions, action];
+    currTables[table] = newActions;
+    setUserMatrixState({ ...userMatrixState, tables: currTables });
+  };
+
+  const toggleAllTableActions = (table, allSelected) => {
+    const currTables = { ...userMatrixState.tables };
+    currTables[table] = allSelected ? [] : ['read', 'create', 'update', 'delete'];
+    setUserMatrixState({ ...userMatrixState, tables: currTables });
+  };
+
+  const matrixModules = [
+    { id: 'Finance', name: language === 'ar' ? 'المالية والحسابات' : 'Finance & Accounting', icon: '💵', tables: ['ledger', 'chart_of_accounts', 'ar_invoices', 'payment_receipts', 'installments', 'contracts', 'partners', 'partner_deposits', 'partner_withdrawals', 'expenses', 'gl_mappings'] },
+    { id: 'Inventory', name: language === 'ar' ? 'المخازن والمشتريات' : 'Inventory & Procurement', icon: '📦', tables: ['inventory', 'inventory_items', 'inventory_transfers', 'material_usage', 'returns', 'purchase_orders', 'po_expenses', 'rfq', 'ddp_charges'] },
+    { id: 'Projects', name: language === 'ar' ? 'المشاريع والهندسة' : 'Projects & Engineering', icon: '🏗️', tables: ['projects', 'boq', 'subcontractors', 'subcontractor_items', 'subcontractor_invoices', 'tasks', 'daily_reports'] },
+    { id: 'HCM', name: language === 'ar' ? 'الموارد البشرية' : 'Human Resources', icon: '👥', tables: ['staff', 'attendance', 'leaves', 'payroll', 'employees'] },
+    { id: 'CRM', name: language === 'ar' ? 'العملاء والعقارات' : 'CRM & Real Estate', icon: '🤝', tables: ['customers', 'property_units', 'real_estate_installments', 'client_consumptions', 'client_refunds'] },
+    { id: 'Settings', name: language === 'ar' ? 'إعدادات النظام' : 'System Settings', icon: '⚙️', tables: ['system_parameters', 'audit_logs', 'roles', 'users'] }
+  ];
 
   const [newUser, setNewUser] = useState({ 
     username: '', full_name: '', email: '', password: '', role: 'Custom', 
@@ -459,6 +553,190 @@ export default function Users() {
                   <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-6 opacity-60">
                     <div className="text-8xl">🎭</div>
                     <p className="font-black text-sm uppercase tracking-[0.3em]">{cur.rolesTab.placeholder}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'user_matrix' && (
+            <div className={`grid grid-cols-1 lg:grid-cols-4 animate-fade-in divide-slate-100 h-full ${language === 'ar' ? 'divide-x-reverse divide-x' : 'divide-x'}`}>
+              <div className="lg:col-span-1 bg-slate-50/50 p-8 space-y-6 max-h-[800px] overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{language === 'ar' ? 'المستخدمين (تخصيص الوصول)' : 'Users (Access Matrix)'}</h3>
+                <div className="space-y-3">
+                  {users.map(u => (
+                    <button 
+                      key={u.id}
+                      onClick={() => handleSelectUserForMatrix(u)}
+                      className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} p-5 rounded-[2rem] border transition-all group ${selectedUserMatrix?.id === u.id ? 'bg-slate-900 text-white border-slate-900 shadow-xl' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${selectedUserMatrix?.id === u.id ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>
+                          {u.username?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-black text-sm leading-tight transition-transform group-hover:scale-105">@{u.username}</p>
+                          <p className="text-[9px] font-bold opacity-60 line-clamp-1">{u.full_name || u.role}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-3 p-10 space-y-10 max-h-[800px] overflow-y-auto custom-scrollbar">
+                {selectedUserMatrix ? (
+                  <div className="space-y-10 animate-fade-in">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-8 border-b border-slate-100 sticky top-0 bg-white z-20 py-4 shadow-sm px-6 rounded-3xl">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{language === 'ar' ? 'مصفوفة الصلاحيات المتقدمة للمستخدم:' : 'Advanced Access Matrix for:'} @{selectedUserMatrix.username}</h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{selectedUserMatrix.full_name || selectedUserMatrix.role}</p>
+                      </div>
+                      <button onClick={handleSaveUserMatrix} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs shadow-xl hover:bg-slate-800 active:scale-95 transition-all flex items-center gap-2">
+                        <span>💾</span> {language === 'ar' ? 'حفظ مصفوفة وصول المستخدم' : 'Save User Access Matrix'}
+                      </button>
+                    </div>
+
+                    {/* --- COMPANIES SELECTION --- */}
+                    <div className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
+                      <h4 className="font-black text-slate-900 text-sm flex items-center gap-3">
+                        <span className="text-xl">🏢</span> {language === 'ar' ? 'الشركات المسموح التعامل عليها' : 'Allowed Companies'}
+                      </h4>
+                      <div className="flex flex-wrap gap-3">
+                        <button 
+                          onClick={() => toggleUserMatrixCompany('ALL')}
+                          className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.companies.includes('ALL') ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                        >
+                          {userMatrixState.companies.includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كافة الشركات (وصول شامل)' : 'All Companies (Global Access)'}
+                        </button>
+                        {projectCompaniesList.map(comp => (
+                          <button 
+                            key={comp}
+                            disabled={userMatrixState.companies.includes('ALL')}
+                            onClick={() => toggleUserMatrixCompany(comp)}
+                            className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.companies.includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : userMatrixState.companies.includes(comp) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                          >
+                            {userMatrixState.companies.includes(comp) ? '✓' : '+'} {comp}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* --- PROJECTS SELECTION --- */}
+                    <div className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
+                      <h4 className="font-black text-slate-900 text-sm flex items-center gap-3">
+                        <span className="text-xl">🏗️</span> {language === 'ar' ? 'المشاريع المسموح التعامل عليها' : 'Allowed Projects'}
+                      </h4>
+                      <div className="flex flex-wrap gap-3">
+                        <button 
+                          onClick={() => toggleUserMatrixProject('ALL')}
+                          className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.projects.includes('ALL') ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                        >
+                          {userMatrixState.projects.includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كافة المشاريع (وصول شامل)' : 'All Projects (Global Access)'}
+                        </button>
+                        {projectsList.map(proj => (
+                          <button 
+                            key={proj}
+                            disabled={userMatrixState.projects.includes('ALL')}
+                            onClick={() => toggleUserMatrixProject(proj)}
+                            className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.projects.includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : userMatrixState.projects.includes(proj) ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                          >
+                            {userMatrixState.projects.includes(proj) ? '✓' : '+'} {proj}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* --- MODULES SELECTION --- */}
+                    <div className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
+                      <h4 className="font-black text-slate-900 text-sm flex items-center gap-3">
+                        <span className="text-xl">📦</span> {language === 'ar' ? 'الموديولات (الأنظمة الفرعية) المسموحة' : 'Allowed Modules (Subsystems)'}
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {matrixModules.map(mod => (
+                          <button 
+                            key={mod.id}
+                            onClick={() => toggleUserMatrixModule(mod.id)}
+                            className={`p-6 rounded-[2rem] border transition-all flex flex-col items-start gap-3 text-left ${userMatrixState.modules.includes(mod.id) ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                          >
+                            <span className="text-3xl">{mod.icon}</span>
+                            <div>
+                              <p className="font-black text-xs leading-tight">{mod.name}</p>
+                              <p className={`text-[9px] font-bold mt-1 text-slate-400`}>{mod.tables.length} {language === 'ar' ? 'شاشة / جدول' : 'Screens / Tables'}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* --- SCREENS & TABLES GRANULAR ACTIONS --- */}
+                    <div className="space-y-8">
+                      <h4 className="font-black text-slate-900 text-lg flex items-center gap-3 px-2">
+                        <span className="text-2xl">🖥️</span> {language === 'ar' ? 'صلاحيات الشاشات والجداول الفرعية' : 'Screens & Sub-tables Permissions'}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 gap-8">
+                        {matrixModules.filter(m => userMatrixState.modules.includes(m.id)).map(mod => (
+                          <div key={mod.id} className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
+                            <h5 className="font-black text-slate-900 text-sm flex items-center gap-3 border-b border-slate-200/60 pb-4">
+                              <span className="text-xl">{mod.icon}</span> {mod.name}
+                            </h5>
+                            
+                            <div className="space-y-4">
+                              {mod.tables.map(table => {
+                                const currActions = userMatrixState.tables[table] || [];
+                                const allActionsSelected = ['read', 'create', 'update', 'delete'].every(a => currActions.includes(a));
+                                return (
+                                  <div key={table} className="bg-white p-6 rounded-[2rem] border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-slate-300 transition-all">
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center font-mono font-bold text-xs border border-slate-200">
+                                        📄
+                                      </div>
+                                      <div>
+                                        <p className="font-black text-slate-900 text-xs font-mono">{table}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{language === 'ar' ? 'جدول بيانات النظام' : 'System Data Table'}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                                      {[
+                                        { id: 'read', label: language === 'ar' ? '👁️ عرض' : '👁️ View', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+                                        { id: 'create', label: language === 'ar' ? '➕ إضافة' : '➕ Create', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+                                        { id: 'update', label: language === 'ar' ? '✏️ تعديل' : '✏️ Update', color: 'text-amber-600 bg-amber-50 border-amber-200' },
+                                        { id: 'delete', label: language === 'ar' ? '🗑️ حذف' : '🗑️ Delete', color: 'text-rose-600 bg-rose-50 border-rose-200' }
+                                      ].map(act => {
+                                        const isChecked = currActions.includes(act.id);
+                                        return (
+                                          <button
+                                            key={act.id}
+                                            onClick={() => toggleUserMatrixTableAction(table, act.id)}
+                                            className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${isChecked ? `${act.color} shadow-sm` : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-white'}`}
+                                          >
+                                            <span>{isChecked ? '✓' : '+'}</span> {act.label}
+                                          </button>
+                                        );
+                                      })}
+
+                                      <button 
+                                        onClick={() => toggleAllTableActions(table, allActionsSelected)}
+                                        className="px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest ml-2 hover:bg-slate-800 transition-all shadow-sm"
+                                      >
+                                        {allActionsSelected ? (language === 'ar' ? 'إلغاء الكل' : 'Deselect All') : (language === 'ar' ? 'تحديد الكل' : 'Select All')}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-6 opacity-60 min-h-[400px]">
+                    <div className="text-8xl">🔐</div>
+                    <p className="font-black text-sm uppercase tracking-[0.3em]">{language === 'ar' ? 'اختر مستخدماً لعرض وتعديل مصفوفة صلاحياته المتقدمة' : 'Select a user to view and edit their advanced access matrix'}</p>
                   </div>
                 )}
               </div>

@@ -80,9 +80,9 @@ const authGuard = async (req, res, next) => {
             if (isAdminRole || req.user.isSuperAdmin) {
                 req.user.isSuperAdmin = true;
                 req.user.role = 'Admin';
-                req.user.linkedCompany = null;
-                req.user.linkedProject = null;
-                console.log(`👑 [SUPER_AUTH] Hardcoded Super Access granted to role: ${normalizedRole}`);
+                req.user.linkedCompany = req.user.linkedCompany || null;
+                req.user.linkedProject = req.user.linkedProject || null;
+                console.log(`👑 [SUPER_AUTH] Hardcoded Super Access granted to role: ${normalizedRole}. LinkedCompany: ${req.user.linkedCompany}`);
             }
         } catch (dbErr) {
             console.warn("⚠️ [AUTH_METADATA_FAIL] Could not fetch granular permissions:", dbErr.message);

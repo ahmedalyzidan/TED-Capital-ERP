@@ -49,6 +49,20 @@ function hasAccess(user, table, action = 'read') {
     if (username === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
         return true;
     }
+
+    // 🌟 Granular User-Level Matrix Check (Takes Precedence if Defined) 🌟
+    if (user.permissions && user.permissions.tables && Object.keys(user.permissions.tables).length > 0) {
+        if (user.permissions.tables['ALL']) return true;
+        if (user.permissions.tables[table] && user.permissions.tables[table].includes(action)) {
+            return true;
+        }
+        return false; // Explicitly restricted by user matrix!
+    }
+
+    // 🌟 Company/Project Scoped & Management User Access (Fallback if no granular matrix defined) 🌟
+    if (user.linkedCompany || user.linkedProject || ['financial manager', 'general manager', 'manager', 'project manager', 'mpo_auditor'].includes(role)) {
+        return true;
+    }
     
     if (user.permissions && user.permissions.tables) {
         if (user.permissions.tables['ALL']) return true; 

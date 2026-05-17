@@ -194,16 +194,16 @@ const assignUserToRole = async (req, res) => {
 
 const createUser = async (req, res) => {
     console.log("👤 IAM: Attempting to create user:", req.body.username);
-        const { username, email, password, role, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor } = req.body;
+        const { username, email, password, role, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, permissions } = req.body;
         try {
             const passwordError = validatePasswordStrength(password);
             if (passwordError) return res.status(400).json({ error: passwordError });
 
             const hash = await bcrypt.hash(password || '123456', 10);
             const userRes = await pool.query(
-                `INSERT INTO users (username, email, password_hash, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, must_change_password) 
-                 VALUES ($1, $2, $3, $4, 'Active', $5, $6, $7, $8, $9, $10, $11, $12, TRUE) RETURNING id`,
-                [username, email, hash, role, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor]
+                `INSERT INTO users (username, email, password_hash, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, permissions, must_change_password) 
+                 VALUES ($1, $2, $3, $4, 'Active', $5, $6, $7, $8, $9, $10, $11, $12, $13, TRUE) RETURNING id`,
+                [username, email, hash, role, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, JSON.stringify(permissions || {})]
             );
         const userId = userRes.rows[0].id;
         
@@ -225,7 +225,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, email, password, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor } = req.body;
+        const { username, email, password, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, permissions } = req.body;
 
         // Protection for hardcoded 'admin' user
         const checkRes = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
@@ -240,14 +240,14 @@ const updateUser = async (req, res) => {
             const hash = await bcrypt.hash(password, 10);
             await pool.query(
                 `UPDATE users SET username = $1, email = $2, password_hash = $3, role = $4, status = $5, full_name = $6, phone = $7, 
-                 department = $8, employee_id = $9, linked_employee_id = $10, linked_company = $11, linked_project = $12, two_factor = $13, must_change_password = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $14`,
-                [username, email, hash, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, id]
+                 department = $8, employee_id = $9, linked_employee_id = $10, linked_company = $11, linked_project = $12, two_factor = $13, permissions = $14, must_change_password = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $15`,
+                [username, email, hash, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), id]
             );
         } else {
             await pool.query(
                 `UPDATE users SET username = $1, email = $2, role = $3, status = $4, full_name = $5, phone = $6, 
-                 department = $7, employee_id = $8, linked_employee_id = $9, linked_company = $10, linked_project = $11, two_factor = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13`,
-                [username, email, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, id]
+                 department = $7, employee_id = $8, linked_employee_id = $9, linked_company = $10, linked_project = $11, two_factor = $12, permissions = $13, updated_at = CURRENT_TIMESTAMP WHERE id = $14`,
+                [username, email, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), id]
             );
         }
 

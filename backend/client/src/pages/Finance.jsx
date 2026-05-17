@@ -307,8 +307,19 @@ export default function Finance() {
    const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
    const [isSubmitting, setIsSubmitting] = useState(false);
 
+   const getInitialCompanyId = () => {
+      try {
+         const u = JSON.parse(localStorage.getItem('user') || '{}');
+         const comp = u?.linkedCompany || u?.linked_company || null;
+         if (comp === 'TED Capital' || comp === 'TED CAPITAL') return '1';
+         if (comp === 'Design Concept' || comp === 'DESIGN CONCEPT' || comp === 'ديزاين كونسيبت') return '2';
+         if (comp === 'Master Builder' || comp === 'MASTER BUILDER' || comp === 'ماستر بيلدر') return '3';
+      } catch (e) {}
+      return 'all';
+   };
+
    // Filter States
-   const [selectedCompanyId, setSelectedCompanyId] = useState('all');
+   const [selectedCompanyId, setSelectedCompanyId] = useState(getInitialCompanyId());
 
    // Forms
    const [entryForm, setEntryForm] = useState({
@@ -1276,20 +1287,38 @@ function ActionBtn({ icon, label, onClick, color }) {
 }
 
 function EntityFilter({ selectedCompanyId, setSelectedCompanyId, language }) {
-   const entities = [
+   let entities = [
       { id: 'all', labelAr: 'كافة الشركات (المجموعة)', labelEn: 'All Entities (Consolidated)', icon: '🏢' },
       { id: '1', labelAr: 'تيد كابيتال (TED Capital)', labelEn: 'TED Capital', icon: '🏛️' },
       { id: '2', labelAr: 'ديزاين كونسبت (Design Concept)', labelEn: 'Design Concept', icon: '🎨' },
       { id: '3', labelAr: 'ماستر بيلدر (Master Builder)', labelEn: 'Master Builder', icon: '🏗️' }
    ];
 
+   try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const comp = u?.linkedCompany || u?.linked_company || null;
+      if (comp) {
+         const matchName = comp.toLowerCase().trim();
+         const filtered = entities.filter(ent => {
+            const ar = ent.labelAr.toLowerCase();
+            const en = ent.labelEn.toLowerCase();
+            return ar.includes(matchName) || en.includes(matchName);
+         });
+         if (filtered.length > 0) {
+            entities = filtered;
+         } else {
+            entities = [{ id: 'custom', labelAr: comp, labelEn: comp, icon: '🏢' }];
+         }
+      }
+   } catch (e) {}
+
    return (
-      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-[2rem] p-1.5 shadow-inner">
+      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-[2rem] p-1.5 shadow-inner overflow-x-auto max-w-full">
          {entities.map(ent => (
             <button
                key={ent.id}
                onClick={() => setSelectedCompanyId(ent.id)}
-               className={`px-5 py-3 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2.5 ${
+               className={`px-5 py-3 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2.5 whitespace-nowrap ${
                   selectedCompanyId === ent.id
                      ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50 border border-slate-100'
                      : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100/50'

@@ -7,7 +7,7 @@ const pool = require('../config/db');
  */
 const isolateData = (req, res, next) => {
     // 1. Skip isolation for Super Admins
-    if (req.user.isSuperAdmin || !req.user.linkedCompany) {
+    if (!req.user.linkedCompany) {
         req.companyFilter = '';
         req.projectFilter = '';
         req.queryValues = [];

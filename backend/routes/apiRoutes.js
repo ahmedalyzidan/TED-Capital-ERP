@@ -69,9 +69,6 @@ router.get('/dropdowns', async (req, res) => {
         const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
 
         const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != ''");
-        const staffComps = await pool.query("SELECT DISTINCT company FROM staff WHERE company IS NOT NULL AND company != ''");
-        const rfqComps = await pool.query("SELECT DISTINCT company FROM rfq WHERE company IS NOT NULL AND company != ''");
-        const poComps = await pool.query("SELECT DISTINCT supplier AS company FROM purchase_orders WHERE supplier IS NOT NULL AND supplier != ''");
         const jobTitlesQuery = await pool.query("SELECT title FROM job_titles");
         const existingStaffTitles = await pool.query("SELECT DISTINCT job_title FROM staff WHERE job_title IS NOT NULL AND job_title != ''");
         const allJobTitles = [...new Set([
@@ -81,12 +78,11 @@ router.get('/dropdowns', async (req, res) => {
         const roles = await pool.query("SELECT id, name FROM roles ORDER BY name ASC");
         const staffList = await pool.query("SELECT id, name, job_title FROM staff ORDER BY name ASC");
 
-        const allCompanies = [...new Set([
-            ...projectComps.rows.map(r => r.company),
-            ...staffComps.rows.map(r => r.company),
-            ...rfqComps.rows.map(r => r.company),
-            ...poComps.rows.map(r => r.company)
-        ])];
+        const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
+        let allCompanies = legalComps.rows.map(r => r.name);
+        if (allCompanies.length === 0) {
+            allCompanies = ['TED Capital', 'Design Concept', 'Master Builder'];
+        }
 
         const allProjects = [...new Set([...projects.rows.map(r => r.name), ...paramProjects.rows.map(r => r.value)])];
         const allProjectsData = projects.rows;
@@ -496,7 +492,7 @@ router.get('/table/:type', async (req, res) => {
         // [Data Isolation] Inject filters based on req.user.linkedCompany / linkedProject
         // =========================================================================
         let isolationFilters = [];
-        const isRestricted = !req.user.isSuperAdmin && (req.user.linkedCompany || req.user.linkedProject);
+        const isRestricted = Boolean(req.user.linkedCompany || req.user.linkedProject);
 
         if (isRestricted) {
             if (req.user.linkedCompany) {
@@ -515,10 +511,13 @@ router.get('/table/:type', async (req, res) => {
             }
         }
 
+        let hasMainWhere = false;
+
         const applyIsolation = (base) => {
             if (isolationFilters.length === 0) return base;
             const clause = isolationFilters.join(" AND ");
-            return base.toLowerCase().includes("where") ? base + ` AND (${clause})` : base + ` WHERE ${clause}`;
+            hasMainWhere = true;
+            return base + ` WHERE ${clause}`;
         };
 
         if (type === 'projects') {
@@ -536,6 +535,7 @@ router.get('/table/:type', async (req, res) => {
             if (isRestricted && req.user.linkedCompany) {
                 queryStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
                 countStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
+                hasMainWhere = true;
             }
         } else if (type === 'subcontractors') {
             prefix = "s.";
@@ -548,6 +548,7 @@ router.get('/table/:type', async (req, res) => {
             if (isRestricted && req.user.linkedProject) {
                 queryStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
                 countStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+                hasMainWhere = true;
             }
         } else if (type === 'boq') {
             prefix = "b.";
@@ -556,6 +557,7 @@ router.get('/table/:type', async (req, res) => {
             if (isRestricted && req.user.linkedProject) {
                 queryStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
                 countStr += ` WHERE b.project_name = '${req.user.linkedProject}'`;
+                hasMainWhere = true;
             }
         } else if (type === 'contracts') {
             prefix = "c.";
@@ -731,18 +733,17 @@ router.get('/table/:type', async (req, res) => {
             params.push(`%${search}%`);
         }
 
-        // --- 🌟 RLS (Resource Level Security) Injection 🌟 ---
+        // --- 🌟 RLS & Data Isolation Integration 🌟 ---
         const userRole = (req.user.role || '').toLowerCase();
         const isAdmin = userRole === 'admin' || userRole === 'super admin' || userRole === 'superadmin' || req.user.isSuperAdmin;
 
-        if (!isAdmin) {
+        if (!isAdmin && !isRestricted) {
             const perms = Array.isArray(req.user.permissions) ? req.user.permissions : [];
             if (type === 'projects') {
                 if (!perms.includes('PROJ_VIEW_ALL') && perms.includes('PROJ_VIEW_BRANCH')) {
                     conditions.push(`org_unit_id = $${params.length + 1}`);
                     params.push(req.user.primaryOrgUnitId);
                 } else if (!perms.includes('PROJ_VIEW_ALL')) {
-                    // If no global or branch permission, only see projects where they are managers
                     conditions.push(`project_manager = $${params.length + 1}`);
                     params.push(req.user.username);
                 }
@@ -756,9 +757,15 @@ router.get('/table/:type', async (req, res) => {
         // --------------------------------------------------
 
         if (conditions.length > 0) {
-            const whereClause = " WHERE " + conditions.join(" AND ");
-            queryStr += whereClause;
-            countStr += whereClause;
+            const clause = conditions.join(" AND ");
+            if (hasMainWhere) {
+                queryStr += ` AND (${clause})`;
+                countStr += ` AND (${clause})`;
+            } else {
+                queryStr += ` WHERE ${clause}`;
+                countStr += ` WHERE ${clause}`;
+                hasMainWhere = true;
+            }
         }
 
         if (type === 'client_consumptions') {
@@ -2708,11 +2715,11 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
         const term = `%${q}%`;
 
         const queries = [
-            { table: 'customers', label: 'العملاء', path: '/clients', title_col: 'name', subtitle_cols: ['company_name', 'phone'], icon: '👥' },
-            { table: 'projects', label: 'المشاريع', path: '/projects', title_col: 'name', subtitle_cols: ['project_manager', 'project_serial'], icon: '🏗️' },
-            { table: 'purchase_orders', label: 'أوامر الشراء', path: '/inventory', title_col: 'master_po_no', subtitle_cols: ['item_description', 'supplier'], icon: '🛒' },
-            { table: 'inventory_items', label: 'المخزون', path: '/inventory', title_col: 'item_name', subtitle_cols: ['master_po_no'], icon: '📦' },
-            { table: 'chart_of_accounts', label: 'دليل الحسابات', path: '/finance', title_col: 'account_name', subtitle_cols: ['account_code'], icon: '💰' }
+            { table: 'customers', label: 'العملاء', path: '/clients', title_col: 'name', subtitle_cols: ['company_name', 'phone'], icon: '👥', comp_col: 'company_name' },
+            { table: 'projects', label: 'المشاريع', path: '/projects', title_col: 'name', subtitle_cols: ['project_manager', 'project_serial'], icon: '🏗️', comp_col: 'company' },
+            { table: 'purchase_orders', label: 'أوامر الشراء', path: '/inventory', title_col: 'master_po_no', subtitle_cols: ['item_description', 'supplier'], icon: '🛒', proj_col: 'project_name' },
+            { table: 'inventory_items', label: 'المخزون', path: '/inventory', title_col: 'item_name', subtitle_cols: ['master_po_no'], icon: '📦', proj_col: 'project_name' },
+            { table: 'chart_of_accounts', label: 'دليل الحسابات', path: '/finance', title_col: 'account_name', subtitle_cols: ['account_code'], icon: '💰', comp_col: 'company_entity' }
         ];
 
         let results = [];
@@ -2742,8 +2749,24 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
                 
                 let params = [term];
                 if (req.isolation && req.isolation.company) {
-                    sql += ` AND (company = $2 OR company IS NULL OR company = '')`;
-                    params.push(req.isolation.company);
+                    if (qry.comp_col) {
+                        if (qry.table === 'chart_of_accounts') {
+                            let entityName = "";
+                            if (req.isolation.company === '1') entityName = 'TED Capital';
+                            if (req.isolation.company === '2') entityName = 'Design Concept';
+                            if (req.isolation.company === '3') entityName = 'Master Builder';
+                            if (entityName) {
+                                sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} = 'All')`;
+                                params.push(entityName);
+                            }
+                        } else {
+                            sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} IS NULL OR ${qry.comp_col} = '')`;
+                            params.push(req.isolation.company);
+                        }
+                    } else if (qry.proj_col) {
+                        sql += ` AND (${qry.proj_col} IN (SELECT name FROM projects WHERE company = $2))`;
+                        params.push(req.isolation.company);
+                    }
                 }
                 sql += ` LIMIT 5`;
 

@@ -99,13 +99,44 @@ class DynamicController {
                 params.push(`%${search}%`);
             }
 
-            // --- 🌟 RLS (Resource Level Security) Injection 🌟 ---
+            // --- 🌟 RLS & Data Isolation Injection 🌟 ---
             const userRole = (req.user.role || '').toLowerCase();
             const normalizedUsername = (req.user.username || '').toLowerCase().trim();
-            // Hardcoded Admin Bypass for TOTAL visibility across all companies and projects
             const isAdmin = req.user.isSuperAdmin || userRole.includes('admin') || normalizedUsername === 'admin';
 
-            if (!isAdmin) {
+            const isRestricted = Boolean(req.user.linkedCompany || req.user.linkedProject);
+
+            if (isRestricted) {
+                if (req.user.linkedCompany) {
+                    const c = req.user.linkedCompany;
+                    if (type === 'projects' || type === 'staff' || type === 'rfq' || type === 'employees') {
+                        conditions.push(`${prefix}company = $${params.length + 1}`);
+                        params.push(c);
+                    } else if (type === 'customers') {
+                        conditions.push(`company_name = $${params.length + 1}`);
+                        params.push(c);
+                    } else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'material_usage' || type === 'ar_invoices' || type === 'inventory_sales' || type === 'tasks') {
+                        conditions.push(`${prefix}project_name IN (SELECT name FROM projects WHERE company = $${params.length + 1})`);
+                        params.push(c);
+                    } else if (type === 'ledger') {
+                        conditions.push(`(cost_center IN (SELECT name FROM projects WHERE company = $${params.length + 1}) OR cost_center = $${params.length + 1})`);
+                        params.push(c);
+                    }
+                }
+                if (req.user.linkedProject) {
+                    const p = req.user.linkedProject;
+                    if (type === 'projects') {
+                        conditions.push(`${prefix}name = $${params.length + 1}`);
+                        params.push(p);
+                    } else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'material_usage' || type === 'ar_invoices' || type === 'inventory_sales' || type === 'tasks') {
+                        conditions.push(`${prefix}project_name = $${params.length + 1}`);
+                        params.push(p);
+                    } else if (type === 'ledger') {
+                        conditions.push(`cost_center = $${params.length + 1}`);
+                        params.push(p);
+                    }
+                }
+            } else if (!isAdmin) {
                 // Determine permissions array (supporting both legacy array and new object format)
                 let perms = [];
                 if (Array.isArray(req.user.permissions)) {
