@@ -342,6 +342,21 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // Ensure all target BOQ columns exist on any pre-existing boq relation (legacy schema compatibility):
+    await runQuery("BOQ Add project_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
+    await runQuery("BOQ Add item_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS item_name VARCHAR(255)");
+    await runQuery("BOQ Add uom", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS uom VARCHAR(50)");
+    await runQuery("BOQ Add est_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_qty NUMERIC(20,6) DEFAULT 0");
+    await runQuery("BOQ Add est_unit_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_unit_price NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ Add est_total_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_total_price NUMERIC(15,2) DEFAULT 0");
+
+    // Copy old legacy column data if applicable to preserve existing data safely
+    await runQuery("BOQ Migrate item_desc to item_name", "UPDATE boq SET item_name = item_desc WHERE item_name IS NULL AND item_desc IS NOT NULL");
+    await runQuery("BOQ Migrate unit to uom", "UPDATE boq SET uom = unit WHERE uom IS NULL AND unit IS NOT NULL");
+    await runQuery("BOQ Migrate unit_price to est_unit_price", "UPDATE boq SET est_unit_price = unit_price WHERE est_unit_price = 0 AND unit_price IS NOT NULL");
+    await runQuery("BOQ Migrate est_total_price calc", "UPDATE boq SET est_total_price = est_qty * est_unit_price WHERE est_total_price = 0 AND est_qty > 0 AND est_unit_price > 0");
+
+
     // --- 🌟 BOQ Contracting Upgrades 🌟 ---
     await runQuery("BOQ est_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_qty NUMERIC(20,6) DEFAULT 0");
     await runQuery("BOQ est_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_cost NUMERIC(15,2) DEFAULT 0");
@@ -354,7 +369,6 @@ const applySchemaFixes = async () => {
     await runQuery("BOQ status", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Not Started'");
     await runQuery("BOQ material_category", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS material_category VARCHAR(100)");
 
-    // --- 🌟 material_usage Table 🌟 ---
     await runQuery("Material Usage Table", `CREATE TABLE IF NOT EXISTS material_usage (
         id SERIAL PRIMARY KEY,
         project_name VARCHAR(255) NOT NULL,
@@ -374,8 +388,18 @@ const applySchemaFixes = async () => {
         deleted_at TIMESTAMP
     )`);
 
+    // Ensure all target material_usage columns exist for legacy database compatibility:
+    await runQuery("Material Usage Add boq_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE RESTRICT");
+    await runQuery("Material Usage Add inventory_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE RESTRICT");
+    await runQuery("Material Usage Add unit_cost", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0");
+    await runQuery("Material Usage Add status", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Approved'");
+    await runQuery("Material Usage Add issued_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS issued_by VARCHAR(100)");
+    await runQuery("Material Usage Add approved_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)");
+    await runQuery("Material Usage Add notes", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS notes TEXT");
+
     await runQuery("Index Material Usage BOQ", "CREATE INDEX IF NOT EXISTS idx_mat_usage_boq ON material_usage(boq_id)");
     await runQuery("Index Material Usage Project", "CREATE INDEX IF NOT EXISTS idx_mat_usage_project ON material_usage(project_name)");
+
 
 
     await runQuery("Subcontractor Items Table", `CREATE TABLE IF NOT EXISTS subcontractor_items (
