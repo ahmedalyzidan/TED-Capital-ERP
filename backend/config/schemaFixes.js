@@ -226,7 +226,39 @@ const applySchemaFixes = async () => {
 
     await runQuery("Inventory Items LCY FX Rate", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lcy_fx_rate NUMERIC(15,4) DEFAULT 1`);
     await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
-    await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
+
+    // --- Stock Returns Module ---
+    await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
+        id               SERIAL PRIMARY KEY,
+        return_no        VARCHAR(50) UNIQUE,
+        return_type      VARCHAR(20) NOT NULL CHECK (return_type IN ('customer', 'supplier')),
+        source_sale_id   INTEGER REFERENCES inventory_sales(id) ON DELETE SET NULL,
+        source_po_id     INTEGER REFERENCES purchase_orders(id) ON DELETE SET NULL,
+        inventory_id     INTEGER REFERENCES inventory_items(id) NOT NULL,
+        return_qty       NUMERIC(20,6) NOT NULL,
+        return_price     NUMERIC(20,6) DEFAULT 0,
+        cost_price       NUMERIC(20,6) DEFAULT 0,
+        reason           VARCHAR(255),
+        reason_code      VARCHAR(50) DEFAULT 'OTHER',
+        status           VARCHAR(50) DEFAULT 'Approved',
+        customer_name    VARCHAR(255),
+        supplier_name    VARCHAR(255),
+        project_name     VARCHAR(255),
+        refund_method    VARCHAR(50) DEFAULT 'Credit',
+        credit_account   VARCHAR(50),
+        notes            TEXT,
+        created_by       VARCHAR(100),
+        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted       BOOLEAN DEFAULT FALSE,
+        deleted_by       VARCHAR(100),
+        deleted_at       TIMESTAMP,
+        metadata         JSONB DEFAULT '{}'::jsonb
+    )`);
+    await runQuery("Stock Returns Index Type",   `CREATE INDEX IF NOT EXISTS idx_stock_returns_type    ON stock_returns(return_type)`);
+    await runQuery("Stock Returns Index Status", `CREATE INDEX IF NOT EXISTS idx_stock_returns_status  ON stock_returns(status)`);
+    await runQuery("Stock Returns Index Inv",    `CREATE INDEX IF NOT EXISTS idx_stock_returns_inv     ON stock_returns(inventory_id)`);
+    await runQuery("Stock Returns Index Sale",   `CREATE INDEX IF NOT EXISTS idx_stock_returns_sale    ON stock_returns(source_sale_id)`);
+
     
     await runQuery("Job Titles Table", `CREATE TABLE IF NOT EXISTS job_titles (
         id SERIAL PRIMARY KEY,
@@ -398,6 +430,21 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
     await runQuery("COA Unique Constraint", `ALTER TABLE chart_of_accounts ADD CONSTRAINT chart_of_accounts_account_code_key UNIQUE (account_code)`);
+
+    // --- 4.5 Attachments Table Verification ---
+    await runQuery("Attachments Table", `CREATE TABLE IF NOT EXISTS attachments (
+        id SERIAL PRIMARY KEY,
+        table_name VARCHAR(100),
+        record_id VARCHAR(100),
+        file_name VARCHAR(255),
+        file_path TEXT,
+        original_name VARCHAR(255),
+        uploaded_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("Attachments Original Name Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS original_name VARCHAR(255)`);
+    await runQuery("Attachments Upload Date Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await runQuery("Attachments Created At Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
     // --- 5. Global Columns (Soft-Delete & Metadata) ---
     const allTablesRes = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");

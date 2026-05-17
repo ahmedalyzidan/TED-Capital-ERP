@@ -389,4 +389,216 @@ const transferBookingToBalance = async (req, res) => {
     } finally { client.release(); }
 };
 
-module.exports = { addSale, addBooking, completeBooking, refundBooking, transferBookingToBalance };
+// =====================================================================
+// --- STOCK RETURNS MODULE ---
+// =====================================================================
+
+const getStockReturns = async (req, res) => {
+    try {
+        const { type, inventory_id } = req.query;
+        let sql = `
+            SELECT sr.*, 
+                   ii.item_name, ii.warehouse,
+                   s.customer_name AS sale_customer,
+                   s.date AS sale_date
+            FROM stock_returns sr
+            LEFT JOIN inventory_items ii ON sr.inventory_id = ii.id
+            LEFT JOIN inventory_sales  s  ON sr.source_sale_id = s.id
+            WHERE sr.is_deleted = FALSE
+        `;
+        const params = [];
+        if (type) { params.push(type); sql += ` AND sr.return_type = $${params.length}`; }
+        if (inventory_id) { params.push(inventory_id); sql += ` AND sr.inventory_id = $${params.length}`; }
+        sql += ' ORDER BY sr.created_at DESC';
+        const result = await pool.query(sql, params);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Get Stock Returns Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+/**
+ * مرتجع عميل — العميل يُعيد بضاعة للمخزن
+ * القيود:
+ *   مدين  4100 إيراد مبيعات    ← قيمة البيع
+ *   دائن  1120 عملاء (AR)      ← إشعار دائن / أو تُضاف لمحفظة العميل
+ *   مدين  1130 مخزون           ← إعادة بالتكلفة
+ *   دائن  5100 تكلفة مبيعات    ← عكس COGS
+ */
+const addCustomerReturn = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const username = req.user ? req.user.username : 'System';
+        const {
+            inventory_id, source_sale_id, return_qty,
+            reason, reason_code, notes,
+            customer_name, client_id, project_name,
+            refund_method, credit_account
+        } = req.body;
+
+        const qty = parseFloat(return_qty || 0);
+        if (!inventory_id || qty <= 0) throw new Error('البيانات المطلوبة: الصنف والكمية.');
+
+        // 1. Fetch inventory item
+        const invRes = await client.query('SELECT * FROM inventory_items WHERE id = $1', [inventory_id]);
+        if (invRes.rows.length === 0) throw new Error('الصنف غير موجود.');
+        const inv = invRes.rows[0];
+
+        // 2. Fetch original sale for prices (optional link)
+        let returnPrice = parseFloat(req.body.return_price || 0);
+        let costPrice   = parseFloat(inv.avg_cost || inv.buy_price || 0);
+
+        if (source_sale_id) {
+            const saleRes = await client.query('SELECT * FROM inventory_sales WHERE id = $1', [source_sale_id]);
+            if (saleRes.rows.length > 0) {
+                const sale = saleRes.rows[0];
+                if (returnPrice === 0) returnPrice = parseFloat(sale.sell_price || 0);
+                if (costPrice   === 0) costPrice   = parseFloat(sale.buy_price  || inv.avg_cost || 0);
+                // Validate: return qty must not exceed original sale qty
+                if (qty > parseFloat(sale.qty || 0)) {
+                    throw new Error(`كمية المرتجع (${qty}) تتجاوز كمية الفاتورة الأصلية (${sale.qty}).`);
+                }
+            }
+        }
+
+        const totalReturnValue = qty * returnPrice;
+        const totalCostValue   = qty * costPrice;
+        const projectCost      = project_name || inv.project_name || 'General';
+
+        // Generate return number
+        const returnNo = `SR-C-${Date.now()}`;
+
+        // 3. Return item to inventory
+        await client.query(
+            'UPDATE inventory_items SET remaining_qty = remaining_qty + $1 WHERE id = $2',
+            [qty, inventory_id]
+        );
+
+        // 4. Record in stock_returns
+        const returnRes = await client.query(
+            `INSERT INTO stock_returns 
+             (return_no, return_type, source_sale_id, inventory_id, return_qty, return_price, cost_price, 
+              reason, reason_code, status, customer_name, project_name, refund_method, credit_account, notes, created_by)
+             VALUES ($1,'customer',$2,$3,$4,$5,$6,$7,$8,'Approved',$9,$10,$11,$12,$13,$14) RETURNING id`,
+            [returnNo, source_sale_id || null, inventory_id, qty, returnPrice, costPrice,
+             reason || 'غير محدد', reason_code || 'OTHER',
+             customer_name || 'Unknown', projectCost,
+             refund_method || 'Credit', credit_account || '1120', notes || '', username]
+        );
+        const returnId = returnRes.rows[0].id;
+
+        // 5. Double-entry: Reverse Revenue
+        if (totalReturnValue > 0) {
+            await AccountingService.recordDoubleEntry(client, {
+                debitAccount: '4100', creditAccount: '1120',
+                amount: totalReturnValue, costCenter: projectCost,
+                description: `مرتجع عميل #${returnNo} — عكس إيراد مبيعات | الصنف: ${inv.item_name} | كمية: ${qty}`,
+                username
+            });
+        }
+
+        // 6. Double-entry: Reverse COGS (return to inventory)
+        if (totalCostValue > 0) {
+            await AccountingService.recordDoubleEntry(client, {
+                debitAccount: '1130', creditAccount: '5100',
+                amount: totalCostValue, costCenter: projectCost,
+                description: `مرتجع عميل #${returnNo} — إعادة بضاعة للمخزن | التكلفة: ${costPrice} × ${qty}`,
+                username
+            });
+        }
+
+        // 7. If refund goes to customer wallet — add credit_balance
+        if (refund_method === 'Credit' && client_id) {
+            await client.query(
+                'UPDATE customers SET credit_balance = COALESCE(credit_balance, 0) + $1 WHERE id = $2',
+                [totalReturnValue, client_id]
+            );
+        }
+
+        await logAudit(username, 'CUSTOMER_RETURN', 'stock_returns', returnId,
+            `مرتجع عميل ${returnNo}: ${qty} وحدة من "${inv.item_name}" — قيمة: ${totalReturnValue}`);
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'تم تسجيل مرتجع العميل بنجاح وتحديث المخزن.', return_no: returnNo, id: returnId });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Customer Return Error:', err);
+        res.status(400).json({ error: err.message });
+    } finally { client.release(); }
+};
+
+/**
+ * مرتجع مورد — المخزن يُعيد بضاعة للمورد
+ * القيود:
+ *   مدين  2110 موردون (AP)   ← إشعار مدين للمورد
+ *   دائن  1130 مخزون         ← خروج البضاعة بالتكلفة
+ */
+const addSupplierReturn = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const username = req.user ? req.user.username : 'System';
+        const {
+            inventory_id, source_po_id, return_qty,
+            reason, reason_code, notes,
+            supplier_name, project_name
+        } = req.body;
+
+        const qty = parseFloat(return_qty || 0);
+        if (!inventory_id || qty <= 0) throw new Error('البيانات المطلوبة: الصنف والكمية.');
+
+        // 1. Fetch inventory item
+        const invRes = await client.query('SELECT * FROM inventory_items WHERE id = $1', [inventory_id]);
+        if (invRes.rows.length === 0) throw new Error('الصنف غير موجود.');
+        const inv = invRes.rows[0];
+
+        if (parseFloat(inv.remaining_qty) < qty) {
+            throw new Error(`الكمية المتاحة غير كافية للإرجاع. المتاح: ${inv.remaining_qty}`);
+        }
+
+        const costPrice       = parseFloat(inv.avg_cost || inv.buy_price || 0);
+        const totalCostValue  = qty * costPrice;
+        const projectCost     = project_name || inv.project_name || 'General';
+        const returnNo        = `SR-S-${Date.now()}`;
+
+        // 2. Deduct from inventory
+        await client.query(
+            'UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2',
+            [qty, inventory_id]
+        );
+
+        // 3. Record in stock_returns
+        const returnRes = await client.query(
+            `INSERT INTO stock_returns 
+             (return_no, return_type, source_po_id, inventory_id, return_qty, cost_price,
+              reason, reason_code, status, supplier_name, project_name, notes, created_by)
+             VALUES ($1,'supplier',$2,$3,$4,$5,$6,$7,'Approved',$8,$9,$10,$11) RETURNING id`,
+            [returnNo, source_po_id || null, inventory_id, qty, costPrice,
+             reason || 'غير محدد', reason_code || 'OTHER',
+             supplier_name || 'Unknown', projectCost, notes || '', username]
+        );
+        const returnId = returnRes.rows[0].id;
+
+        // 4. Double-entry: Debit AP, Credit Inventory
+        if (totalCostValue > 0) {
+            await AccountingService.recordDoubleEntry(client, {
+                debitAccount: '2110', creditAccount: '1130',
+                amount: totalCostValue, costCenter: projectCost,
+                description: `مرتجع مورد #${returnNo} — إعادة للمورد ${supplier_name} | الصنف: ${inv.item_name} | كمية: ${qty}`,
+                username
+            });
+        }
+
+        await logAudit(username, 'SUPPLIER_RETURN', 'stock_returns', returnId,
+            `مرتجع مورد ${returnNo}: ${qty} وحدة من "${inv.item_name}" — تكلفة: ${totalCostValue}`);
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'تم تسجيل المرتجع للمورد بنجاح وتحديث المخزن.', return_no: returnNo, id: returnId });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Supplier Return Error:', err);
+        res.status(400).json({ error: err.message });
+    } finally { client.release(); }
+};
+
+module.exports = { addSale, addBooking, completeBooking, refundBooking, transferBookingToBalance, getStockReturns, addCustomerReturn, addSupplierReturn };

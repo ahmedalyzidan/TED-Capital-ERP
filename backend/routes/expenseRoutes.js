@@ -132,6 +132,50 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+// 1b. Update Expense (Edit)
+router.put('/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const { 
+        description, amount, currency, category_id, project_id, 
+        expense_date, payment_method, supplier_name, receipt_url, 
+        is_billable, tax_amount, company_entity, metadata
+    } = req.body;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Check if expense exists
+        const check = await client.query("SELECT * FROM expenses WHERE id = $1 AND is_deleted = FALSE", [id]);
+        if (check.rows.length === 0) throw new Error("المصروف غير موجود.");
+
+        const result = await client.query(`
+            UPDATE expenses SET
+                description = $1, amount = $2, currency = $3, category_id = $4, project_id = $5,
+                expense_date = $6, payment_method = $7, supplier_name = $8, receipt_url = $9,
+                is_billable = $10, tax_amount = $11, company_entity = $12, metadata = $13,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $14
+            RETURNING *
+        `, [
+            description, amount, currency || 'EGP', category_id, project_id || null,
+            expense_date || new Date(), payment_method || 'Cash', supplier_name,
+            receipt_url, is_billable || false, tax_amount || 0, company_entity,
+            { ...check.rows[0].metadata, ...metadata, exchange_rate: req.body.exchange_rate || 1 },
+            id
+        ]);
+
+        await client.query('COMMIT');
+        res.json(result.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("🔥 Expense Update Error:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 // 2. Get Expenses with Filters & Summary
 router.get('/', authenticateToken, async (req, res) => {
     const { category_id, project_id, start_date, end_date, status, search } = req.query;
