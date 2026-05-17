@@ -946,9 +946,26 @@ router.post('/add/:type', async (req, res) => {
         }
 
         if (type === 'material_usage') {
-            const invCheck = await client.query("SELECT buy_price FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [data.material]);
-            data.est_cost = (parseFloat(data.qty) * (invCheck.rows.length > 0 ? parseFloat(invCheck.rows[0]?.buy_price || 0) : 0)).toFixed(2);
+            let buyPrice = 0;
+            let itemName = data.material;
+            if (data.inventory_id) {
+                const invCheck = await client.query("SELECT buy_price, item_name, name FROM inventory_items WHERE id = $1 LIMIT 1", [data.inventory_id]);
+                if (invCheck.rows.length > 0) {
+                    buyPrice = parseFloat(invCheck.rows[0].buy_price || 0);
+                    itemName = invCheck.rows[0].item_name || invCheck.rows[0].name;
+                }
+            } else if (data.material) {
+                const invCheck = await client.query("SELECT buy_price, id FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [data.material]);
+                if (invCheck.rows.length > 0) {
+                    buyPrice = parseFloat(invCheck.rows[0].buy_price || 0);
+                    data.inventory_id = invCheck.rows[0].id;
+                }
+            }
+            data.material = itemName;
+            data.unit_cost = buyPrice;
+            data.est_cost = (parseFloat(data.qty || 0) * buyPrice).toFixed(2);
         }
+
 
         if (type === 'inventory_sales') {
             const invCheck = await client.query(`
@@ -1100,10 +1117,45 @@ router.post('/add/:type', async (req, res) => {
         }
 
         if (type === 'material_usage' && !skipInsert) {
-            await client.query("UPDATE inventory_items SET remaining_qty = COALESCE(remaining_qty, quantity) - $1 WHERE item_name = $2 OR name = $2", [data.qty, data.material]);
-            const invIdRes = await client.query("SELECT id FROM inventory_items WHERE item_name = $1 OR name = $1", [data.material]);
-            if (invIdRes.rows.length > 0) await checkAndSendLowStockEmail(invIdRes.rows[0].id);
+            // 1. Deduct stock safely
+            if (data.inventory_id) {
+                await client.query("UPDATE inventory_items SET remaining_qty = COALESCE(remaining_qty, quantity) - $1 WHERE id = $2", [data.qty, data.inventory_id]);
+                await checkAndSendLowStockEmail(data.inventory_id);
+            } else {
+                await client.query("UPDATE inventory_items SET remaining_qty = COALESCE(remaining_qty, quantity) - $1 WHERE item_name = $2 OR name = $2", [data.qty, data.material]);
+                const invIdRes = await client.query("SELECT id FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [data.material]);
+                if (invIdRes.rows.length > 0) await checkAndSendLowStockEmail(invIdRes.rows[0].id);
+            }
+
+            // 2. If BOQ item is linked, update actual material quantities and costs in the BOQ
+            if (data.boq_id) {
+                const totalCost = parseFloat(data.est_cost || 0);
+                await client.query(`
+                    UPDATE boq 
+                    SET actual_material_qty = COALESCE(actual_material_qty, 0) + $1, 
+                        actual_material_cost = COALESCE(actual_material_cost, 0) + $2,
+                        status = 'In Progress'
+                    WHERE id = $3
+                `, [data.qty, totalCost, data.boq_id]);
+            }
+
+            // 3. Post automated IFRS ledger double entries
+            try {
+                const totalCost = parseFloat(data.est_cost || 0);
+                if (totalCost > 0) {
+                    const projName = data.project_name || 'General';
+                    const detailDesc = `صرف خامات ومواد للمشروع - صنف: ${data.material} | كمية: ${data.qty}`;
+                    
+                    // Debit: تكاليف المشروعات المباشرة (حساب 5100)
+                    await autoLedgerEntry(client, 'تكاليف المشروعات المباشرة', projName, totalCost, 0, detailDesc, req.user ? req.user.username : 'System');
+                    // Credit: مخزون خامات ومواد (حساب 1130)
+                    await autoLedgerEntry(client, 'مخزون خامات ومواد', projName, 0, totalCost, detailDesc, req.user ? req.user.username : 'System');
+                }
+            } catch (ledgerErr) {
+                console.error("🔥 Failed to post automated material usage ledger entries:", ledgerErr.message);
+            }
         }
+
 
         if (type === 'inventory_sales' && !skipInsert) {
             // 🌟 التعديل 3: استخدام ::text لمنع الانهيار وتوحيد الأنواع
@@ -1487,9 +1539,44 @@ router.delete('/delete/:type/:id', async (req, res) => {
         } catch (e) { console.error("Audit Read Old Data Error on Delete:", e.message); }
 
         if (type === 'material_usage') {
-            const old = await client.query("SELECT material, qty FROM material_usage WHERE id = $1", [id]);
-            if (old.rows.length > 0) await client.query("UPDATE inventory SET remaining_qty = COALESCE(remaining_qty, qty) + $1 WHERE name = $2", [old.rows[0].qty, old.rows[0].material]);
+            const old = await client.query("SELECT inventory_id, material, qty, est_cost, boq_id, project_name FROM material_usage WHERE id = $1", [id]);
+            if (old.rows.length > 0) {
+                const oldUsage = old.rows[0];
+                // 1. Revert inventory remaining qty safely
+                if (oldUsage.inventory_id) {
+                    await client.query("UPDATE inventory_items SET remaining_qty = COALESCE(remaining_qty, quantity) + $1 WHERE id = $2", [oldUsage.qty, oldUsage.inventory_id]);
+                } else {
+                    await client.query("UPDATE inventory_items SET remaining_qty = COALESCE(remaining_qty, quantity) + $1 WHERE item_name = $2 OR name = $2", [oldUsage.qty, oldUsage.material]);
+                }
+
+                // 2. Revert BOQ costs
+                if (oldUsage.boq_id) {
+                    await client.query(`
+                        UPDATE boq 
+                        SET actual_material_qty = GREATEST(0, COALESCE(actual_material_qty, 0) - $1), 
+                            actual_material_cost = GREATEST(0, COALESCE(actual_material_cost, 0) - $2)
+                        WHERE id = $3
+                    `, [oldUsage.qty, parseFloat(oldUsage.est_cost || 0), oldUsage.boq_id]);
+                }
+
+                // 3. Post Reverse (Contra) Ledger entries to maintain double-entry integrity
+                try {
+                    const totalCost = parseFloat(oldUsage.est_cost || 0);
+                    if (totalCost > 0) {
+                        const projName = oldUsage.project_name || 'General';
+                        const contraDesc = `[إلغاء] عكس قيد صرف خامات ومواد للمشروع - صنف: ${oldUsage.material}`;
+                        
+                        // Debit: مخزون خامات ومواد (حساب 1130)
+                        await autoLedgerEntry(client, 'مخزون خامات ومواد', projName, totalCost, 0, contraDesc, req.user ? req.user.username : 'System');
+                        // Credit: تكاليف المشروعات المباشرة (حساب 5100)
+                        await autoLedgerEntry(client, 'تكاليف المشروعات المباشرة', projName, 0, totalCost, contraDesc, req.user ? req.user.username : 'System');
+                    }
+                } catch (ledgerErr) {
+                    console.error("🔥 Failed to reverse automated material usage ledger entries on delete:", ledgerErr.message);
+                }
+            }
         }
+
 
         if (type === 'inventory_sales') {
             const old = await client.query("SELECT * FROM inventory_sales WHERE id = $1", [id]);

@@ -342,6 +342,42 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // --- 🌟 BOQ Contracting Upgrades 🌟 ---
+    await runQuery("BOQ est_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_qty NUMERIC(20,6) DEFAULT 0");
+    await runQuery("BOQ est_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ est_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_labor_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ est_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ actual_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_qty NUMERIC(20,6) DEFAULT 0");
+    await runQuery("BOQ actual_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ actual_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_labor_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ actual_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
+    await runQuery("BOQ status", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Not Started'");
+    await runQuery("BOQ material_category", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS material_category VARCHAR(100)");
+
+    // --- 🌟 material_usage Table 🌟 ---
+    await runQuery("Material Usage Table", `CREATE TABLE IF NOT EXISTS material_usage (
+        id SERIAL PRIMARY KEY,
+        project_name VARCHAR(255) NOT NULL,
+        boq_id INTEGER REFERENCES boq(id) ON DELETE RESTRICT,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE RESTRICT,
+        material VARCHAR(255),
+        qty NUMERIC(20,6) NOT NULL DEFAULT 0,
+        unit_cost NUMERIC(20,6) DEFAULT 0,
+        est_cost NUMERIC(20,6) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Approved',
+        issued_by VARCHAR(100),
+        approved_by VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP
+    )`);
+
+    await runQuery("Index Material Usage BOQ", "CREATE INDEX IF NOT EXISTS idx_mat_usage_boq ON material_usage(boq_id)");
+    await runQuery("Index Material Usage Project", "CREATE INDEX IF NOT EXISTS idx_mat_usage_project ON material_usage(project_name)");
+
+
     await runQuery("Subcontractor Items Table", `CREATE TABLE IF NOT EXISTS subcontractor_items (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id),
