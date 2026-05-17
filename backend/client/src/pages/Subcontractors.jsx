@@ -13,6 +13,32 @@ export default function Subcontractors() {
   const [invoices, setInvoices] = useState([]);
   const [projects, setProjects] = useState([]);
   
+  // Requisition & BOQ States
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedBoq, setSelectedBoq] = useState(null);
+  const [isReqModalOpen, setIsReqModalOpen] = useState(false);
+  const [reqForm, setReqForm] = useState({
+    warehouse_id: '',
+    inventory_id: '',
+    qty: '',
+    notes: ''
+  });
+
+  const [isBoqModalOpen, setIsBoqModalOpen] = useState(false);
+  const [boqForm, setBoqForm] = useState({
+    item_name: '',
+    project_name: '',
+    uom: '',
+    est_qty: '',
+    est_unit_price: '',
+    est_material_qty: '',
+    est_material_cost: '',
+    est_labor_cost: '',
+    est_subcontractor_cost: '',
+    material_category: ''
+  });
+
   // Modals & Analytics States
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [selectedSubId, setSelectedSubId] = useState(null);
@@ -40,7 +66,7 @@ export default function Subcontractors() {
         analytics: "الذكاء المالي"
       },
       boqTab: {
-        title: "تتبع بنود المقايسة والكميات المنفذة",
+        title: "تتبع بنود المقايسة والكميات المنفذة والمواد",
         item: "بند الأعمال",
         project: "المشروع",
         est: "المقدرة (Est)",
@@ -94,7 +120,7 @@ export default function Subcontractors() {
         analytics: "Financial Intelligence"
       },
       boqTab: {
-        title: "Track BOQ Items and Executed Quantities",
+        title: "Track BOQ Items, Quantities, and Warehouse Materials",
         item: "Work Item",
         project: "Project",
         est: "Estimated (Est)",
@@ -157,8 +183,14 @@ export default function Subcontractors() {
     fetchGlobalStats();
     try {
       if (activeTab === 'boq') {
-        const res = await api.get('/table/boq?limit=100');
-        setBoqList(res.data.data || []);
+        const [boqRes, invRes, whRes] = await Promise.all([
+          api.get('/dynamic/table/boq?limit=500'),
+          api.get('/dynamic/table/inventory_items?limit=1000'),
+          api.get('/dynamic/table/warehouses?limit=100')
+        ]);
+        setBoqList(boqRes.data.data || []);
+        setInventoryItems(invRes.data.data || []);
+        setWarehouses(whRes.data.data || []);
       } else if (activeTab === 'subs') {
         const res = await api.get('/table/subcontractors?limit=100');
         setSubcontractors(res.data.data || []);
@@ -211,6 +243,78 @@ export default function Subcontractors() {
       alert(`${cur.alerts.updateSuccess} ${res.data.newStatus}`);
       fetchData();
     } catch (error) { alert(error.response?.data?.error || "Error"); }
+  };
+
+  // BOQ Item creation inside global tab
+  const handleBoqSubmit = async (e) => {
+    e.preventDefault();
+    if (!boqForm.project_name) {
+      alert(language === 'ar' ? 'يرجى اختيار المشروع.' : 'Please select a project.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const estQty = Number(boqForm.est_qty) || 0;
+      const estPrice = Number(boqForm.est_unit_price) || 0;
+      await api.post('/dynamic/add/boq', {
+        ...boqForm,
+        est_qty: estQty,
+        est_unit_price: estPrice,
+        est_total_price: estQty * estPrice,
+        est_material_qty: Number(boqForm.est_material_qty) || 0,
+        est_material_cost: Number(boqForm.est_material_cost) || 0,
+        est_labor_cost: Number(boqForm.est_labor_cost) || 0,
+        est_subcontractor_cost: Number(boqForm.est_subcontractor_cost) || 0
+      });
+      alert(language === 'ar' ? "تم إضافة بند الأعمال بنجاح!" : "BOQ item added successfully!");
+      setIsBoqModalOpen(false);
+      setBoqForm({
+        item_name: '', project_name: '', uom: '', est_qty: '', est_unit_price: '',
+        est_material_qty: '', est_material_cost: '', est_labor_cost: '',
+        est_subcontractor_cost: '', material_category: ''
+      });
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || "Error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Requisition submission inside global tab
+  const handleReqSubmit = async (e) => {
+    e.preventDefault();
+    if (!reqForm.inventory_id || !reqForm.qty || Number(reqForm.qty) <= 0) {
+      alert("يرجى اختيار الصنف وإدخل كمية صالحة.");
+      return;
+    }
+    const selectedItem = inventoryItems.find(i => i.id === parseInt(reqForm.inventory_id));
+    if (!selectedItem) return;
+
+    if (Number(reqForm.qty) > Number(selectedItem.remaining_qty || 0)) {
+      alert(`الكمية المطلوبة تتجاوز المتاح في المخزن (${selectedItem.remaining_qty || 0})`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.post('/dynamic/add/material_usage', {
+        project_name: selectedBoq.project_name,
+        boq_id: selectedBoq.id,
+        inventory_id: selectedItem.id,
+        material: selectedItem.item_name || selectedItem.name,
+        qty: Number(reqForm.qty),
+        notes: reqForm.notes || ''
+      });
+      alert(language === 'ar' ? "تم صرف المواد للمشروع وربطها بالبند وتوليد الحسابات بنجاح!" : "Materials issued and double-entry ledger triggered successfully!");
+      setIsReqModalOpen(false);
+      setReqForm({ warehouse_id: '', inventory_id: '', qty: '', notes: '' });
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || "Error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -304,6 +408,12 @@ export default function Subcontractors() {
                   <span className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">📋</span>
                   {cur.boqTab.title}
                 </h3>
+                <button 
+                  onClick={() => setIsBoqModalOpen(true)}
+                  className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-slate-900/20 flex items-center gap-2 transform active:scale-95"
+                >
+                  <span>+</span> {language === 'ar' ? 'إضافة بند مقايسة جديد (BOQ)' : 'Add New BOQ Item'}
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} whitespace-nowrap`}>
@@ -312,23 +422,30 @@ export default function Subcontractors() {
                       <th className="px-8 py-5">{cur.boqTab.item}</th>
                       <th className="px-8 py-5">{cur.boqTab.project}</th>
                       <th className="px-8 py-5 text-center">{cur.boqTab.est}</th>
-                      <th className="px-8 py-5 text-center">{cur.boqTab.assigned}</th>
-                      <th className="px-8 py-5 text-center bg-slate-100/30 text-slate-900">{cur.boqTab.actual}</th>
-                      <th className="px-8 py-5 text-center">{cur.boqTab.remaining}</th>
+                      <th className="px-8 py-5 text-center bg-slate-100/30">{language === 'ar' ? 'المنصرف الفعلي' : 'Actual Issued'}</th>
+                      <th className="px-8 py-5 text-center">{language === 'ar' ? 'تكلفة المواد المقدرة' : 'Est. Material Cost'}</th>
+                      <th className="px-8 py-5 text-center bg-slate-100/30 text-slate-900">{language === 'ar' ? 'تكلفة المواد الفعلية' : 'Act. Material Cost'}</th>
+                      <th className="px-8 py-5 text-center">{language === 'ar' ? 'الاستهلاك' : 'Consumption'}</th>
+                      <th className="px-8 py-5 text-center">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                      <th className="px-8 py-5 text-left">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {loading ? (
-                      <tr><td colSpan="6" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.boqTab.loading}</td></tr>
+                      <tr><td colSpan="9" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.boqTab.loading}</td></tr>
+                    ) : boqList.length === 0 ? (
+                      <tr><td colSpan="9" className="p-20 text-center text-slate-400 font-bold">{language === 'ar' ? 'لا توجد بنود أعمال بالمقايسة حالياً.' : 'No BOQ items in list.'}</td></tr>
                     ) : boqList.map(item => {
-                      const unassigned = Number(item.est_qty) - Number(item.assigned_qty);
-                      const isWarning = unassigned > (Number(item.est_qty) * 0.2);
+                      const estCost = Number(item.est_material_cost || 0);
+                      const actCost = Number(item.actual_material_cost || 0);
+                      const costUsagePercent = estCost > 0 ? (actCost / estCost) * 100 : 0;
+                      
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/50 transition-all group">
                           <td className="px-8 py-6">
                             <div className="flex flex-col">
                               <span className="font-black text-slate-900 text-sm group-hover:text-blue-600 transition-colors leading-tight">{item.item_name}</span>
-                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{item.category}</span>
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{item.material_category || item.category || 'عام'}</span>
                             </div>
                           </td>
                           <td className="px-8 py-6">
@@ -337,16 +454,41 @@ export default function Subcontractors() {
                           <td className="px-8 py-6 text-center font-black text-slate-900 font-mono text-sm">
                             {Number(item.est_qty).toLocaleString()} <span className="text-[8px] opacity-60 font-sans">{item.uom}</span>
                           </td>
-                          <td className="px-8 py-6 text-center font-black text-amber-600 font-mono text-sm">
-                            {Number(item.assigned_qty).toLocaleString()} <span className="text-[8px] opacity-60 font-sans">{item.uom}</span>
+                          <td className="px-8 py-6 text-center font-black text-blue-600 font-mono text-sm bg-blue-50/10">
+                            {Number(item.actual_material_qty || 0).toLocaleString()} <span className="text-[8px] opacity-60 font-sans">{item.uom}</span>
                           </td>
-                          <td className="px-8 py-6 text-center font-black text-emerald-600 font-mono text-lg bg-emerald-50/10">
-                            {Number(item.dynamic_act_qty || 0).toLocaleString()} <span className="text-[8px] opacity-60 font-sans">{item.uom}</span>
+                          <td className="px-8 py-6 text-center font-black text-slate-700 font-mono text-sm">
+                            {estCost.toLocaleString()}
                           </td>
-                          <td className={`px-8 py-6 text-center`}>
-                            <span className={`px-4 py-1.5 rounded-xl font-black font-mono text-sm border shadow-sm ${isWarning ? 'bg-rose-50 text-rose-600 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                              {unassigned.toLocaleString()}
+                          <td className="px-8 py-6 text-center font-black text-emerald-600 font-mono text-sm bg-emerald-50/10">
+                            {actCost.toLocaleString()}
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <div className="w-20 mx-auto flex flex-col items-center gap-1">
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border p-0.5">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${costUsagePercent > 100 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(costUsagePercent, 100)}%` }}></div>
+                              </div>
+                              <span className={`text-[8px] font-black ${costUsagePercent > 100 ? 'text-rose-500' : 'text-slate-400'}`}>{costUsagePercent.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <span className={`px-3 py-1 rounded-xl text-[9px] font-black ${
+                              item.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                              item.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {item.status || 'Not Started'}
                             </span>
+                          </td>
+                          <td className="px-8 py-6 text-left">
+                            <button
+                              onClick={() => {
+                                setSelectedBoq(item);
+                                setIsReqModalOpen(true);
+                              }}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black text-[9px] px-3.5 py-2 rounded-xl transition-all"
+                            >
+                              🏗️ صرف مواد
+                            </button>
                           </td>
                         </tr>
                       );
@@ -380,7 +522,7 @@ export default function Subcontractors() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {loading ? (
-                      <tr><td colSpan="4" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.subsTab.loading}</td></tr>
+                       <tr><td colSpan="4" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.subsTab.loading}</td></tr>
                     ) : subcontractors.map(sub => (
                       <tr 
                         key={sub.id} 
@@ -476,6 +618,7 @@ export default function Subcontractors() {
         </div>
       </div>
 
+      {/* Register Subcontractor Modal */}
       {isSubModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsSubModalOpen(false)}></div>
@@ -527,6 +670,170 @@ export default function Subcontractors() {
              </div>
              <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
                 {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{cur.modalSub.save}</>}
+             </button>
+          </form>
+        </div>
+      )}
+
+      {/* Global Add BOQ Modal */}
+      {isBoqModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsBoqModalOpen(false)}></div>
+          <form onSubmit={handleBoqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
+             <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? 'إضافة بند أعمال جديد (BOQ)' : 'Add New BOQ Item'}</h2>
+                <button type="button" onClick={() => setIsBoqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+             </div>
+             
+             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المشروع المستهدف *' : 'Target Project *'}</label>
+                   <select 
+                      value={boqForm.project_name} 
+                      onChange={(e) => setBoqForm({...boqForm, project_name: e.target.value})} 
+                      required 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                   >
+                      <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
+                      {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'اسم البند *' : 'Item Name *'}</label>
+                     <input type="text" value={boqForm.item_name} onChange={(e) => setBoqForm({...boqForm, item_name: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'فئة المواد (التصنيف)' : 'Material Category'}</label>
+                     <input type="text" value={boqForm.material_category} onChange={(e) => setBoqForm({...boqForm, material_category: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'وحدة القياس *' : 'UOM *'}</label>
+                     <input type="text" value={boqForm.uom} onChange={(e) => setBoqForm({...boqForm, uom: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" placeholder="M3, LM" />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المقدرة *' : 'Est. Qty *'}</label>
+                     <input type="number" value={boqForm.est_qty} onChange={(e) => setBoqForm({...boqForm, est_qty: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'سعر الوحدة المقدر *' : 'Est. Price *'}</label>
+                     <input type="number" value={boqForm.est_unit_price} onChange={(e) => setBoqForm({...boqForm, est_unit_price: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl space-y-3">
+                  <p className="text-[10px] font-black text-slate-500">{language === 'ar' ? '💰 تفصيل ميزانية التكاليف المقدرة:' : '💰 Estimated Cost Breakdown:'}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'الكمية التشغيلية للمواد' : 'Est. Material Qty'}</label>
+                      <input type="number" value={boqForm.est_material_qty} onChange={(e) => setBoqForm({...boqForm, est_material_qty: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المواد التقديرية' : 'Est. Material Cost'}</label>
+                      <input type="number" value={boqForm.est_material_cost} onChange={(e) => setBoqForm({...boqForm, est_material_cost: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة العمالة المقدرة' : 'Est. Labor Cost'}</label>
+                      <input type="number" value={boqForm.est_labor_cost} onChange={(e) => setBoqForm({...boqForm, est_labor_cost: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المقاولين التقديرية' : 'Est. Subcontractor Cost'}</label>
+                      <input type="number" value={boqForm.est_subcontractor_cost} onChange={(e) => setBoqForm({...boqForm, est_subcontractor_cost: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                  </div>
+                </div>
+             </div>
+
+             <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'حفظ البند بالمقايسة' : 'Save BOQ Item'}</>}
+             </button>
+          </form>
+        </div>
+      )}
+
+      {/* Global Requisition Modal */}
+      {isReqModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsReqModalOpen(false)}></div>
+          <form onSubmit={handleReqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
+             <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? '🏗️ صرف مواد للبند المعتمد' : '🏗️ Issue Materials to BOQ'}</h2>
+                <button type="button" onClick={() => setIsReqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+             </div>
+             
+             <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-xs font-bold text-blue-700">
+                  {language === 'ar' ? `البند المستهدف: ${selectedBoq?.item_name} (${selectedBoq?.project_name})` : `Target BOQ: ${selectedBoq?.item_name} (${selectedBoq?.project_name})`}
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المستودع (Warehouse) *' : 'Warehouse *'}</label>
+                   <select 
+                      value={reqForm.warehouse_id} 
+                      onChange={(e) => setReqForm({...reqForm, warehouse_id: e.target.value, inventory_id: ''})} 
+                      required 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                   >
+                      <option value="">-- {language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'} --</option>
+                      {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.location})</option>)}
+                   </select>
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الصنف المطلوب صرفه *' : 'Inventory Item *'}</label>
+                   <select 
+                      value={reqForm.inventory_id} 
+                      onChange={(e) => setReqForm({...reqForm, inventory_id: e.target.value})} 
+                      required 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                   >
+                      <option value="">-- {language === 'ar' ? 'اختر الصنف المخزني' : 'Select Inventory Item'} --</option>
+                      {inventoryItems
+                        .filter(item => !reqForm.warehouse_id || item.warehouse_id === parseInt(reqForm.warehouse_id))
+                        .map(item => (
+                          <option key={item.id} value={item.id}>
+                            {item.item_name || item.name} (المتاح: {item.remaining_qty} {item.uom})
+                          </option>
+                        ))
+                      }
+                   </select>
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المطلوب صرفها *' : 'Qty to Issue *'}</label>
+                   <input 
+                      type="number" 
+                      step="any"
+                      value={reqForm.qty} 
+                      onChange={(e) => setReqForm({...reqForm, qty: e.target.value})} 
+                      required 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-lg outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" 
+                      placeholder="0.00"
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'ملاحظات / مستلم المواد' : 'Notes / Receiver Name'}</label>
+                   <input 
+                      type="text" 
+                      value={reqForm.notes} 
+                      onChange={(e) => setReqForm({...reqForm, notes: e.target.value})} 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" 
+                      placeholder={language === 'ar' ? 'اسم المهندس أو رقم التوزيع' : 'Engineer name / distribution ID'}
+                   />
+                </div>
+             </div>
+
+             <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'اعتماد وصرف المواد للمشروع' : 'Authorize & Issue Materials'}</>}
              </button>
           </form>
         </div>
