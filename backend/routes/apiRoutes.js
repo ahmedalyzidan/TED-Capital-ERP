@@ -58,7 +58,7 @@ router.get('/dropdowns', async (req, res) => {
 
         // =========================================================================
 
-        const projects = await pool.query("SELECT id, name FROM projects");
+        const projects = await pool.query("SELECT id, name, company FROM projects");
         const staff = await pool.query("SELECT name, salary FROM staff");
         const subs = await pool.query("SELECT id, name FROM subcontractors");
         const accs = await pool.query("SELECT account_name FROM chart_of_accounts");
@@ -79,10 +79,14 @@ router.get('/dropdowns', async (req, res) => {
         const staffList = await pool.query("SELECT id, name, job_title FROM staff ORDER BY name ASC");
 
         const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
-        let allCompanies = legalComps.rows.map(r => r.name);
-        if (allCompanies.length === 0) {
-            allCompanies = ['TED Capital', 'Design Concept', 'Master Builder'];
+        let baseCompanies = legalComps.rows.map(r => r.name);
+        if (baseCompanies.length === 0) {
+            baseCompanies = ['TED Capital', 'Design Concept', 'Master Builder'];
         }
+        const govCompanies = orgUnits.rows.filter(u => u.type === 'Company' || u.type === 'Holding').map(u => u.name);
+        const projCompanies = projectComps.rows.map(r => r.company);
+
+        const allCompanies = [...new Set([...baseCompanies, ...govCompanies, ...projCompanies])];
 
         const allProjects = [...new Set([...projects.rows.map(r => r.name), ...paramProjects.rows.map(r => r.value)])];
         const allProjectsData = projects.rows;
@@ -102,10 +106,33 @@ router.get('/dropdowns', async (req, res) => {
             return { ...i, dynamic_status: dynStatus };
         });
 
+        let resProjectsData = allProjectsData;
+        let resProjects = allProjects;
+        let resParamProjects = paramProjects.rows;
+        let resCompanies = allCompanies;
+
+        if (req.user?.isMtayem) {
+            const mtayemComps = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
+            resCompanies = allCompanies.filter(c => mtayemComps.some(m => c.toLowerCase() === m.toLowerCase()));
+            if (resCompanies.length === 0) resCompanies = ['TED Capital', 'PRIMEMED PHARMA'];
+
+            resProjectsData = allProjectsData.filter(p => mtayemComps.some(m => (p.company || '').toLowerCase() === m.toLowerCase() || (p.name || '').toLowerCase().includes('ted') || (p.name || '').toLowerCase().includes('primemed')));
+            resProjects = resProjectsData.map(p => p.name);
+            resParamProjects = paramProjects.rows.filter(p => (p.value || '').toLowerCase().includes('ted') || (p.value || '').toLowerCase().includes('primemed'));
+        } else if (req.user?.isMsobhi) {
+            const msobhiComps = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
+            resCompanies = allCompanies.filter(c => msobhiComps.some(m => c.toLowerCase() === m.toLowerCase()));
+            if (resCompanies.length === 0) resCompanies = ['Design Concept'];
+
+            resProjectsData = allProjectsData.filter(p => msobhiComps.some(m => (p.company || '').toLowerCase() === m.toLowerCase() || (p.name || '').toLowerCase().includes('design') || (p.name || '').toLowerCase().includes('ديزاين')));
+            resProjects = resProjectsData.map(p => p.name);
+            resParamProjects = paramProjects.rows.filter(p => (p.value || '').toLowerCase().includes('design') || (p.value || '').toLowerCase().includes('ديزاين'));
+        }
+
         res.json({
-            projects_dd: allProjectsData,
-            projects: allProjects,
-            param_projects: paramProjects.rows,
+            projects_dd: resProjectsData,
+            projects: resProjects,
+            param_projects: resParamProjects,
             staff_dd: staff.rows,
             staff_full_dd: staffList.rows,
             roles_dd: roles.rows,
@@ -113,8 +140,8 @@ router.get('/dropdowns', async (req, res) => {
             accounts_dd: accs.rows.map(r => r.account_name),
             customers_dd: custs.rows,
             system_units: units.rows.map(r => r.value),
-            companies_dd: allCompanies,
-            project_companies_dd: projectComps.rows.map(r => r.company),
+            companies_dd: resCompanies,
+            project_companies_dd: resCompanies,
             job_titles_dd: allJobTitles,
             installments_dd: instsWithStatus
         });
@@ -492,9 +519,37 @@ router.get('/table/:type', async (req, res) => {
         // [Data Isolation] Inject filters based on req.user.linkedCompany / linkedProject
         // =========================================================================
         let isolationFilters = [];
-        const isRestricted = Boolean(req.user.linkedCompany || req.user.linkedProject);
+        const isMtayem = req.user && req.user.isMtayem;
+        const isMsobhi = req.user && req.user.isMsobhi;
+        const isRestricted = Boolean(isMtayem || isMsobhi || req.user.linkedCompany || req.user.linkedProject);
 
-        if (isRestricted) {
+        if (isMtayem) {
+            const comps = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
+            if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company IN ${comps}`);
+            else if (type === 'customers') isolationFilters.push(`company_name IN ${comps}`);
+            else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'inventory' || type === 'inventory_sales' || type === 'material_usage' || type === 'ar_invoices') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+            }
+            else if (type === 'ledger') {
+                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${comps}) OR cost_center IN ${comps})`);
+            }
+            else if (type === 'partners') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+            }
+        } else if (isMsobhi) {
+            const comps = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
+            if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company IN ${comps}`);
+            else if (type === 'customers') isolationFilters.push(`company_name IN ${comps}`);
+            else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'inventory' || type === 'inventory_sales' || type === 'material_usage' || type === 'ar_invoices') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+            }
+            else if (type === 'ledger') {
+                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${comps}) OR cost_center IN ${comps})`);
+            }
+            else if (type === 'partners') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+            }
+        } else if (isRestricted) {
             if (req.user.linkedCompany) {
                 const c = req.user.linkedCompany;
                 if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company = '${c}'`);
@@ -532,9 +587,13 @@ router.get('/table/:type', async (req, res) => {
             prefix = "p.";
             queryStr = `SELECT p.*, pr.company AS project_company, pr.budget AS proj_budget, (pr.budget * pr.expected_profit_percent / 100) AS proj_exp_amt, (pr.budget * pr.actual_profit_percent / 100) AS proj_act_amt, COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS deposits, COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS withdrawals FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name`;
             countStr = `SELECT COUNT(*) FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name`;
-            if (isRestricted && req.user.linkedCompany) {
-                queryStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
-                countStr += ` WHERE pr.company = '${req.user.linkedCompany}'`;
+            if (isRestricted && (isMtayem || isMsobhi || req.user.linkedCompany)) {
+                let compFilter = '';
+                if (isMtayem) compFilter = `pr.company IN ('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
+                else if (isMsobhi) compFilter = `pr.company IN ('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
+                else compFilter = `pr.company = '${req.user.linkedCompany}'`;
+                queryStr += ` WHERE ${compFilter}`;
+                countStr += ` WHERE ${compFilter}`;
                 hasMainWhere = true;
             }
         } else if (type === 'subcontractors') {

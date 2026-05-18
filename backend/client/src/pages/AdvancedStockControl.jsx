@@ -502,6 +502,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'الصنف (Item Name)' : 'Pharmaceutical / Chemical Item'}</th>
                 <th className="p-5 font-black">{language === 'ar' ? 'التصنيف (Category)' : 'Group Category'}</th>
                 <th className="p-5 font-black">{language === 'ar' ? 'المستودع (Warehouse)' : 'Assigned Warehouse'}</th>
+                <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الأساسي' : 'Orig Qty'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الفعلي' : 'Stock Quantity'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'وحدة القياس' : 'UOM'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'متوسط التكلفة' : 'Average Cost'}</th>
@@ -514,14 +515,14 @@ function AdvancedStockControl({ isSubcomponent }) {
               {isLoading ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan="9" className="p-6">
+                    <td colSpan="10" className="p-6">
                       <div className="h-4 bg-slate-100 rounded-full w-full"></div>
                     </td>
                   </tr>
                 ))
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-16 text-center text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أصناف تطابق معايير البحث والفلترة' : 'No matching items located.'}</td>
+                  <td colSpan="10" className="py-16 text-center text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أصناف تطابق معايير البحث والفلترة' : 'No matching items located.'}</td>
                 </tr>
               ) : (
                 filteredItems.map(item => {
@@ -537,8 +538,15 @@ function AdvancedStockControl({ isSubcomponent }) {
                       </td>
                       <td className="p-5 text-xs text-slate-600 font-bold">{item.category_display}</td>
                       <td className="p-5 text-xs font-black text-indigo-950">{item.warehouse_display}</td>
+                      <td className="p-5 text-center font-mono font-black text-base">
+                        <span className="text-slate-400 font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-xs border border-slate-200" title="الرصيد الأساسي (Original Qty)">
+                          {Number(item.quantity || item.current_qty_display).toLocaleString()}
+                        </span>
+                      </td>
                       <td className="p-5 text-center font-mono font-black text-base text-slate-900">
-                        {Number(item.current_qty_display).toLocaleString()}
+                        <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg text-xs border border-emerald-200 font-black" title="الرصيد الفعلي المتاح">
+                          {Number(item.current_qty_display).toLocaleString()}
+                        </span>
                       </td>
                       <td className="p-5 text-center text-xs text-slate-500">{item.uom || item.unit || (language === 'ar' ? 'قطعة' : 'Unit')}</td>
                       <td className="p-5 text-center font-mono text-slate-700 font-bold">{Number(item.unit_cost_display).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>

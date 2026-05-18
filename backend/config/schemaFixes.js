@@ -233,6 +233,12 @@ const applySchemaFixes = async () => {
     await runQuery("Inventory Items Serial No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS serial_no VARCHAR(100)`);
     await runQuery("Inventory Items Batch No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_no VARCHAR(100)`);
     await runQuery("Inventory Items Expiry Date", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS expiry_date DATE`);
+    await runQuery("Inventory Items Supplier", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS supplier VARCHAR(255)`);
+    await runQuery("Inventory Items Unit Cost", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0`);
+    await runQuery("Inventory Items Batch Number", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100)`);
+    await runQuery("Inventory Items Item Code", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS item_code VARCHAR(100)`);
+    await runQuery("Inventory Items Metadata", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb`);
+    await runQuery("Inventory Items Company ID", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS company_id INTEGER`);
 
     await runQuery("Inventory Movements Table", `CREATE TABLE IF NOT EXISTS inventory_movements (
         id SERIAL PRIMARY KEY,
@@ -261,6 +267,30 @@ const applySchemaFixes = async () => {
     )`);
 
     // --- Stock Returns Module ---
+    await runQuery("Inventory Sales Table", `CREATE TABLE IF NOT EXISTS inventory_sales (
+        id SERIAL PRIMARY KEY,
+        sale_no VARCHAR(100) UNIQUE,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
+        item_name VARCHAR(255),
+        batch_no VARCHAR(100),
+        qty NUMERIC(20,6) DEFAULT 0,
+        unit_price NUMERIC(20,6) DEFAULT 0,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        client_name VARCHAR(255),
+        client_id INTEGER,
+        recipient_clinic VARCHAR(255),
+        doctor_name VARCHAR(255),
+        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        payment_method VARCHAR(50) DEFAULT 'Cash',
+        status VARCHAR(50) DEFAULT 'Completed',
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
     await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
         id               SERIAL PRIMARY KEY,
         return_no        VARCHAR(50) UNIQUE,
@@ -988,6 +1018,90 @@ const applySchemaFixes = async () => {
         deleted_at TIMESTAMP,
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
+
+    // --- 🌟 Package 5 Schema Expansion (Pharma Supply Chain & Landed Cost Engine) 🌟 ---
+    await runQuery("Pharma Shipments Table", `CREATE TABLE IF NOT EXISTS pharma_shipments (
+        id SERIAL PRIMARY KEY,
+        shipment_no VARCHAR(50) UNIQUE,
+        origin VARCHAR(100),
+        destination VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'Pending_Departure',
+        currency VARCHAR(10) DEFAULT 'USD',
+        initial_value NUMERIC(15,2) DEFAULT 0,
+        exchange_rate_initial NUMERIC(10,4) DEFAULT 1,
+        exchange_rate_arrival NUMERIC(10,4) DEFAULT 1,
+        total_expenses_ils NUMERIC(15,2) DEFAULT 0,
+        landed_cost_ils NUMERIC(15,2) DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        company VARCHAR(100) DEFAULT 'PRIMEMED PHARMA',
+        company_id INTEGER DEFAULT 4,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Shipment Expenses Table", `CREATE TABLE IF NOT EXISTS shipment_expenses (
+        id SERIAL PRIMARY KEY,
+        shipment_id INTEGER REFERENCES pharma_shipments(id) ON DELETE CASCADE,
+        expense_type VARCHAR(100),
+        amount NUMERIC(15,2) DEFAULT 0,
+        currency VARCHAR(10) DEFAULT 'EGP',
+        exchange_rate_to_ils NUMERIC(10,4) DEFAULT 1,
+        amount_ils NUMERIC(15,2) DEFAULT 0,
+        paid_to VARCHAR(100),
+        reference_no VARCHAR(50),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Shipment Items Table (CBM Proration)", `CREATE TABLE IF NOT EXISTS shipment_items (
+        id SERIAL PRIMARY KEY,
+        shipment_id INTEGER REFERENCES pharma_shipments(id) ON DELETE CASCADE,
+        item_name VARCHAR(255),
+        quantity NUMERIC(20,6) DEFAULT 0,
+        buy_price NUMERIC(20,6) DEFAULT 0,
+        cbm_per_unit NUMERIC(10,6) DEFAULT 0.005,
+        total_cbm NUMERIC(15,6) DEFAULT 0,
+        total_buy_value NUMERIC(15,2) DEFAULT 0,
+        allocated_shipping_ils NUMERIC(15,2) DEFAULT 0,
+        landed_unit_cost_ils NUMERIC(15,2) DEFAULT 0,
+        batch_no VARCHAR(100),
+        expiry_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Currency Rates Table", `CREATE TABLE IF NOT EXISTS currency_rates (
+        id SERIAL PRIMARY KEY,
+        currency_code VARCHAR(10) UNIQUE,
+        currency_name VARCHAR(50),
+        rate_to_ils NUMERIC(10,4) DEFAULT 1,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Seed default currency rates to ILS
+    const defaultCurrencies = [
+        ['USD', 'US Dollar', 3.7500],
+        ['EGP', 'Egyptian Pound', 0.0750],
+        ['JOD', 'Jordanian Dinar', 5.2800],
+        ['ILS', 'Israeli Shekel', 1.0000]
+    ];
+    for (const curr of defaultCurrencies) {
+        await runQuery("Insert Default Currency Rate", `
+            INSERT INTO currency_rates (currency_code, currency_name, rate_to_ils)
+            VALUES ($1, $2, $3) ON CONFLICT (currency_code) DO UPDATE SET
+                currency_name = EXCLUDED.currency_name
+        `, curr);
+    }
 
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };

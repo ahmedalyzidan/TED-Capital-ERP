@@ -20,6 +20,7 @@ import BatchExpiryMatrix from './pages/BatchExpiryMatrix';
 import SmartReorder from './pages/SmartReorder';
 import PharmaInventory from './pages/PharmaInventory';
 import AdvancedStockControl from './pages/AdvancedStockControl';
+import PharmaSupplyChain from './pages/PharmaSupplyChain';
 import Invoices from './pages/Invoices';
 import InterCompany from './pages/InterCompany';
 import Expenses from './pages/Expenses';
@@ -74,6 +75,7 @@ function App() {
               <Route path="/inventory/reorder" element={<Navigate to="/inventory/pharma?tab=reorder" replace />} />
               <Route path="/inventory/pharma" element={<PharmaInventory />} />
               <Route path="/inventory/master-stock" element={<AdvancedStockControl />} />
+              <Route path="/inventory/supply-chain" element={<PharmaSupplyChain />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/finance" element={<RBACProtectedRoute resource="FINANCE" action="READ"><Finance /></RBACProtectedRoute>} />
               <Route path="/finance/ar-due" element={<ARDueList />} />

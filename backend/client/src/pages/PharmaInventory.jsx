@@ -101,8 +101,24 @@ function PharmaInventory() {
   const [committeeMembers, setCommitteeMembers] = useState('د. خالد عبد الرحمن (رئيس اللجنة)، ص. منى سعيد (عضو)');
   const [envCertNo, setEnvCertNo] = useState('ENV-2026-99182');
 
+  // --- Package 6: Sales & Dispensing History State ---
+  const [salesLogs, setSalesLogs] = useState([]);
+  const [salesSearch, setSalesSearch] = useState('');
+
   const [logs, setLogs] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleDeleteSale = async (id) => {
+    if (!window.confirm("⚠️ تأكيد أمني: هل أنت متأكد من حذف حركة البيع / الصرف؟ سيتم توثيق عملية الحذف في سجلات الرقابة.")) return;
+    try {
+      await api.delete(`/dynamic/delete/inventory_sales/${id}`);
+      setSalesLogs(prev => prev.filter(item => item.id !== id));
+      alert("✅ تم حذف حركة الصرف بنجاح وتوثيق الإجراء في سجل الرقابة.");
+    } catch (err) {
+      console.error("Error deleting sale", err);
+      alert("حدث خطأ أثناء حذف الحركة.");
+    }
+  };
 
   const getMockItemRemainingQty = (itemId, defaultQty) => {
     const stored = localStorage.getItem(`mock_item_qty_${itemId}`);
@@ -227,10 +243,26 @@ function PharmaInventory() {
       const rawItems = res.data?.data || [];
 
       // Filter or hydrate Pharma items
-      let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.warehouse === 'مخزن الصيدليات والأدوية' || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
+      let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
 
-      // If no pharma items exist yet, provide a stunning set of initial pharmaceutical mock data
-      if (pharmaItems.length === 0) {
+      // Map database items first and extract metadata attributes
+      let mappedPharma = pharmaItems.map(item => {
+        const meta = item.metadata || {};
+        return {
+          ...item,
+          active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
+          dosage_form: meta.dosage_form || item.unit || 'أقراص / عبوة',
+          pharma_category: meta.pharma_category || (item.item_name?.includes('مورفين') ? 'CONTROLLED' : item.item_name?.includes('أنسولين') ? 'COLD_CHAIN' : 'OTC'),
+          storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)'),
+          remaining_qty: Number(item.remaining_qty || item.quantity || 0),
+          unit_cost: Number(item.unit_cost || item.buy_price || 50),
+          batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
+          expiry_date: item.expiry_date || '2027-12-31'
+        };
+      });
+
+      // If database has very few pharma items (e.g. only the Amoxicillin test items), append the stunning set of initial pharmaceutical mock data
+      if (mappedPharma.length < 10) {
         const mockPharma = [
           {
             id: 9001,
@@ -318,23 +350,11 @@ function PharmaInventory() {
             warehouse: 'مخزن الصيدليات والأدوية'
           }
         ];
-        pharmaItems = mockPharma;
+        const existingIds = new Set(mappedPharma.map(i => i.id));
+        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+        pharmaItems = [...mappedPharma, ...newMocks];
       } else {
-        // Map database items and extract metadata attributes
-        pharmaItems = pharmaItems.map(item => {
-          const meta = item.metadata || {};
-          return {
-            ...item,
-            active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
-            dosage_form: meta.dosage_form || item.unit || 'أقراص / عبوة',
-            pharma_category: meta.pharma_category || (item.item_name?.includes('مورفين') ? 'CONTROLLED' : item.item_name?.includes('أنسولين') ? 'COLD_CHAIN' : 'OTC'),
-            storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)'),
-            remaining_qty: Number(item.remaining_qty || item.quantity || 0),
-            unit_cost: Number(item.unit_cost || item.buy_price || 50),
-            batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
-            expiry_date: item.expiry_date || '2027-12-31'
-          };
-        });
+        pharmaItems = mappedPharma;
       }
 
       setItems(pharmaItems);
@@ -353,6 +373,11 @@ function PharmaInventory() {
       try {
         const dispRes = await api.get('/dynamic/table/stock_disposal_protocols');
         if (dispRes.data?.data) setDisposalProtocols(dispRes.data.data);
+      } catch (e) { /* silent fallback */ }
+
+      try {
+        const salesRes = await api.get('/dynamic/table/inventory_sales');
+        if (salesRes.data?.data) setSalesLogs(salesRes.data.data);
       } catch (e) { /* silent fallback */ }
 
     } catch (err) {
@@ -546,7 +571,8 @@ function PharmaInventory() {
     setStorageTemp('20-25°C (غرفة)');
     setQty('');
     setUnitPrice('');
-    setBatchNo(`PH-2026-${Math.floor(Math.random() * 1000)}`);
+    const nextSerial = items.length + 101;
+    setBatchNo(`BATCH-2026-${nextSerial}`);
     setExpiryDate('');
     setSupplier('');
     setMinLevel('20');
@@ -678,25 +704,54 @@ function PharmaInventory() {
             transaction_type: 'Debit',
             amount: tpaClaimVal,
             reference_id: `TPA-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
-            description: `مطالبة تأمين طبي للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name}, كود الموافقة: ${tpaApprovalCode})`
+            description: `مطالبة تأمين طبي للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name}, كود الموافقة: ${tpaApprovalCode})`,
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
         }
         if (patientCopayVal > 0) {
           await api.post('/dynamic/add/general_ledger', {
-            account_name: 'صندوق النقدية بالعيادات (متحصلات المرضى)',
+            account_name: 'صندوق نقدية - بريميميد فارما',
             transaction_type: 'Debit',
             amount: patientCopayVal,
             reference_id: `CASH-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
-            description: `تحصيل نسبة تحمل المريض (Co-Pay) بالعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`
+            description: `تحصيل نسبة تحمل المريض (Co-Pay) بالعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
         }
 
+        // Credit Sales Revenue
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'مخزون خامات ومواد (مستودع الأدوية)',
+          account_name: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
+          transaction_type: 'Credit',
+          amount: totalCost,
+          reference_id: `REV-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
+          description: `إيرادات مبيعات أدوية وصرف للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
+        });
+
+        // Debit Cost of Goods Sold (COGS)
+        await api.post('/dynamic/add/general_ledger', {
+          account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
+          transaction_type: 'Debit',
+          amount: totalCost,
+          reference_id: `COGS-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
+          description: `تكلفة الأدوية المنصرفة للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
+        });
+
+        // Credit Inventory Asset
+        await api.post('/dynamic/add/general_ledger', {
+          account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
           transaction_type: 'Credit',
           amount: totalCost,
           reference_id: `DISP-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
-          description: `تخفيض مخزون الأدوية بموجب إذن صرف للعيادة: ${recipientClinic}`
+          description: `تخفيض مخزون الأدوية بموجب إذن صرف للعيادة: ${recipientClinic}`,
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
         });
       } catch (glErr) {
         console.error("GL Dispense Entry Error", glErr);
@@ -720,6 +775,27 @@ function PharmaInventory() {
         } catch (narcErr) {
           console.error("Narcotics Custody Entry Error", narcErr);
         }
+      }
+
+      // 4. Package 6: Inventory Sales / Dispense History Posting
+      try {
+        await api.post('/dynamic/add/inventory_sales', {
+          sale_no: `SALE-PH-${Date.now().toString().slice(-6)}`,
+          inventory_id: dispenseDrug.id,
+          item_name: dispenseDrug.item_name,
+          batch_no: dispenseDrug.batch_no || 'PH-BATCH-001',
+          qty: dQty,
+          unit_price: Number(dispenseDrug.unit_cost || 50),
+          total_amount: totalCost,
+          client_name: patientName || 'مريض عيادة الطوارئ',
+          recipient_clinic: recipientClinic,
+          doctor_name: doctorName || 'طبيب الموقع المعتمد',
+          payment_method: tpaCoveragePercent > 0 ? `تأمين طبي (${tpaProvider.split(' (')[0]})` : 'نقدي (Cash)',
+          status: 'مكتمل (Completed)',
+          created_by: 'صيدلي الصرف المعتمد'
+        });
+      } catch (saleErr) {
+        console.error("Inventory Sales Entry Error", saleErr);
       }
 
       alert(`✅ تم صرف عدد (${dQty}) من "${dispenseDrug.item_name}" إلى "${recipientClinic}" تحت إشراف د. ${doctorName || 'طبيب الموقع'}.\n💸 تم ترحيل القيود المحاسبية التلقائية بقيمة (${totalCost.toLocaleString()} EGP) بنجاح!`);
@@ -832,6 +908,20 @@ function PharmaInventory() {
                 <span className="text-sm">🚨</span>
                 <span>{language === 'ar' ? '5. إعادة الطلب الذكي' : '5. Smart Reorder'}</span>
                 {activeTab === 'reorder' && <span className="text-[8px] bg-white/20 text-white px-1.5 py-0.5 rounded font-bold">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+              </button>
+
+              {/* Tab 6: Sales & Dispensing History */}
+              <button 
+                onClick={() => setSearchParams({ tab: 'sales' })}
+                className={`flex items-center gap-3 px-5 py-4 rounded-xl text-xs font-black transition-all ${
+                  activeTab === 'sales' 
+                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20' 
+                    : 'bg-white border border-slate-150 text-slate-500 hover:text-amber-600 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-sm">🛒</span>
+                <span>{language === 'ar' ? '6. سجل المبيعات والصرف' : '6. Sales & Dispense History'}</span>
+                {activeTab === 'sales' && <span className="text-[8px] bg-slate-950 text-white px-1.5 py-0.5 rounded font-bold">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
             </nav>
           </div>
@@ -1494,7 +1584,7 @@ function PharmaInventory() {
         <div className="relative w-full lg:w-96">
           <input
             type="text"
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-teal-500 transition-all"
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-teal-50 transition-all"
             placeholder={language === 'ar' ? 'بحث باسم الدواء، المادة الفعالة، أو الباتش...' : 'Search by drug name, active ingredient, or batch...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1525,6 +1615,7 @@ function PharmaInventory() {
                 <th className="p-5 font-black">{language === 'ar' ? 'الشكل الدوائي' : 'Dosage Form'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'التصنيف الدوائي' : 'Category'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'ظروف التخزين' : 'Storage Temp'}</th>
+                <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الأساسي' : 'Orig Qty'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Stock Qty'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'سعر الوحدة' : 'Unit Cost'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'الباتش والصلاحية' : 'Batch & Expiry'}</th>
@@ -1535,14 +1626,14 @@ function PharmaInventory() {
               {isLoading ? (
                 [...Array(3)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan="9" className="p-6">
+                    <td colSpan="10" className="p-6">
                       <div className="h-4 bg-slate-100 rounded-full w-full"></div>
                     </td>
                   </tr>
                 ))
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-16 text-center text-slate-400 font-bold">
+                  <td colSpan="10" className="py-16 text-center text-slate-400 font-bold">
                     {language === 'ar' ? 'لا توجد أدوية مسجلة تطابق معايير البحث والفلترة' : 'No registered pharmaceuticals matched the search filters.'}
                   </td>
                 </tr>
@@ -1581,7 +1672,12 @@ function PharmaInventory() {
                         </span>
                       </td>
                       <td className="p-5 text-center font-mono font-black text-base">
-                        <span className={isLowStock ? 'text-rose-600 font-black animate-pulse' : 'text-slate-900'}>
+                        <span className="text-slate-400 font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-xs border border-slate-200" title="الرصيد الأساسي (Original Qty)">
+                          {Number(drug.quantity || drug.remaining_qty).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="p-5 text-center font-mono font-black text-base">
+                        <span className={`px-2.5 py-1 rounded-lg text-xs border ${isLowStock ? 'bg-rose-100 text-rose-700 border-rose-200 animate-pulse' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`} title="الرصيد المتاح (Remaining Qty)">
                           {Number(drug.remaining_qty).toLocaleString()}
                         </span>
                       </td>
@@ -1750,12 +1846,23 @@ function PharmaInventory() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-700">رقم الباتش (Batch Number) <span className="text-rose-500">*</span></label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black text-slate-700">رقم الباتش (Batch Number) <span className="text-rose-500">*</span></label>
+                    <button
+                      type="button"
+                      onClick={() => setBatchNo(`BATCH-2026-${items.length + Math.floor(Math.random() * 900 + 100)}`)}
+                      className="text-[10px] bg-slate-200 hover:bg-teal-600 hover:text-white text-slate-700 px-2.5 py-1 rounded-lg font-black transition-all flex items-center gap-1 shadow-sm"
+                      title="توليد رقم باتش تسلسلي تلقائي"
+                    >
+                      <span>🔄 توليد تلقائي (Auto Serial)</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-teal-500 transition-all font-mono"
                     value={batchNo}
+                    placeholder="توليد تلقائي (Auto Serial)..."
                     onChange={(e) => setBatchNo(e.target.value)}
                   />
                 </div>
@@ -2538,6 +2645,158 @@ function PharmaInventory() {
           {activeTab === 'expiry' && <BatchExpiryMatrix isSubcomponent={true} />}
           {activeTab === 'reconciliation' && <StockReconciliation isSubcomponent={true} />}
           {activeTab === 'reorder' && <SmartReorder isSubcomponent={true} />}
+
+          {activeTab === 'sales' && (
+            <div className="space-y-8 animate-fade-in">
+              {/* HEADER & SUMMARY CARDS */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-black uppercase tracking-widest mb-3">
+                    <span>🛒</span> سجل الحركات والمبيعات الدوائية (Pharma Sales & Dispense Ledger)
+                  </div>
+                  <h2 className="text-3xl font-black tracking-tight text-white">حصر ومراقبة المبيعات وحركات الصرف</h2>
+                  <p className="text-xs text-slate-300 font-bold mt-2 max-w-2xl">
+                    سجل فوري ومفصل يعرض كافة الحركات الصادرة من الصيدلية والمستودع الطبي، مشمولاً بإجمالي القيم المالية، طرق السداد، وحالة التوثيق الرقابي.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-4 relative z-10 w-full lg:w-auto">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[160px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">إجمالي قيمة الصرف والمبيعات</span>
+                    <span className="text-2xl font-black text-amber-400 font-mono mt-1 block">
+                      {salesLogs.reduce((sum, item) => sum + Number(item.total_amount || 0), 0).toLocaleString()} EGP
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[160px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">عدد العبوات المنصرفة</span>
+                    <span className="text-2xl font-black text-white font-mono mt-1 block">
+                      {salesLogs.reduce((sum, item) => sum + Number(item.qty || 0), 0).toLocaleString()} عبوة
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[140px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">إجمالي عدد العمليات</span>
+                    <span className="text-2xl font-black text-cyan-400 font-mono mt-1 block">
+                      {salesLogs.length} عملية
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEARCH & FILTERS */}
+              <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="w-full md:w-96 relative">
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-11 pl-4 py-3 text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-amber-500 transition-all"
+                    placeholder="بحث باسم الصنف، المريض، الطبيب، أو رقم الحركة..."
+                    value={salesSearch}
+                    onChange={(e) => setSalesSearch(e.target.value)}
+                  />
+                </div>
+                <div className="text-xs text-slate-500 font-bold flex items-center gap-2">
+                  <span>💡 تلميح:</span>
+                  <span>كافة حركات الصرف مرتبطة آلياً بالقيود المحاسبية وسجل عهدة الأدوية المراقبة.</span>
+                </div>
+              </div>
+
+              {/* TABLE */}
+              <div className="bg-white rounded-[2rem] border border-slate-150 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                    <span>📋</span> تفاصيل حركات المبيعات والصرف
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500">
+                    عدد النتائج: {salesLogs.filter(item => 
+                      !salesSearch || 
+                      item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                      item.client_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                      item.doctor_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                      item.sale_no?.toLowerCase().includes(salesSearch.toLowerCase())
+                    ).length} حركة
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right border-collapse" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <thead>
+                      <tr className="bg-slate-100/80 text-slate-600 text-[10px] font-black uppercase tracking-widest border-b border-slate-200">
+                        <th className="p-4">رقم الحركة</th>
+                        <th className="p-4">الصنف الدوائي والباتش</th>
+                        <th className="p-4 text-center">الكمية</th>
+                        <th className="p-4 text-center">سعر الوحدة</th>
+                        <th className="p-4 text-center">إجمالي القيمة</th>
+                        <th className="p-4">الجهة / المريض</th>
+                        <th className="p-4">الطبيب المسئول</th>
+                        <th className="p-4 text-center">طريقة السداد</th>
+                        <th className="p-4 text-center">التاريخ</th>
+                        <th className="p-4 text-center">إجراءات أمنية</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                      {salesLogs.filter(item => 
+                        !salesSearch || 
+                        item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                        item.client_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                        item.doctor_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                        item.sale_no?.toLowerCase().includes(salesSearch.toLowerCase())
+                      ).length === 0 ? (
+                        <tr>
+                          <td colSpan="10" className="text-center py-16 text-slate-400 font-bold text-sm">
+                            لا توجد حركات مبيعات أو صرف مطابقة للبحث.
+                          </td>
+                        </tr>
+                      ) : (
+                        salesLogs.filter(item => 
+                          !salesSearch || 
+                          item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                          item.client_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                          item.doctor_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                          item.sale_no?.toLowerCase().includes(salesSearch.toLowerCase())
+                        ).map(item => (
+                          <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="p-4 font-mono font-black text-amber-700">{item.sale_no || `SALE-${item.id}`}</td>
+                            <td className="p-4">
+                              <span className="block font-black text-slate-900">{item.item_name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">Batch: {item.batch_no || 'N/A'}</span>
+                            </td>
+                            <td className="p-4 text-center font-mono font-black text-sm text-slate-900">{item.qty}</td>
+                            <td className="p-4 text-center font-mono text-slate-600">{Number(item.unit_price || 0).toLocaleString()} EGP</td>
+                            <td className="p-4 text-center font-mono font-black text-sm text-emerald-600 bg-emerald-50/40">{Number(item.total_amount || 0).toLocaleString()} EGP</td>
+                            <td className="p-4">
+                              <span className="block font-bold text-slate-900">{item.client_name || 'حالة طوارئ'}</span>
+                              <span className="text-[10px] text-slate-400">{item.recipient_clinic || 'عيادة الموقع'}</span>
+                            </td>
+                            <td className="p-4 text-slate-800 font-bold">{item.doctor_name || 'طبيب معتمد'}</td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${
+                                item.payment_method?.includes('تأمين') 
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                {item.payment_method || 'نقدي (Cash)'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center font-mono text-[11px] text-slate-500">{new Date(item.created_at || item.sale_date).toLocaleDateString('ar-EG')}</td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleDeleteSale(item.id)}
+                                className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all hover:scale-105 active:scale-95"
+                                title="حذف أمني وتوثيق الرقابة"
+                              >
+                                <span className="text-sm">🗑️</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

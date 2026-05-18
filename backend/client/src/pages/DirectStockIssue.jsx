@@ -167,15 +167,36 @@ export default function DirectStockIssue() {
       // Filter only medical and pharmacy stock
       let pharmaItems = rawItems.filter(i => 
         i.category === 'PHARMA' || 
-        i.warehouse === 'مخزن الصيدليات والأدوية' || 
+        i.category?.includes('أدوية') || 
+        i.category?.includes('مواد عامة') || 
+        i.category?.includes('مواد طبية') || 
+        i.warehouse?.includes('مخزن الصيدليات') || 
+        i.warehouse?.includes('المستودع الرئيسي') || 
+        i.warehouse?.includes('المخزن الرئيسي') || 
         i.item_name?.includes('دواء') || 
         i.item_name?.includes('حقن') || 
         i.item_name?.includes('أقراص') || 
         i.item_name?.includes('فيال')
       );
 
-      // Seed stunning initial mock data if no pharma items exist yet
-      if (pharmaItems.length === 0) {
+      let mappedPharma = pharmaItems.map(item => {
+        const meta = item.metadata || {};
+        return {
+          ...item,
+          active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
+          dosage_form: meta.dosage_form || item.unit || 'أقراص / عبوة',
+          pharma_category: meta.pharma_category || (item.item_name?.includes('مورفين') ? 'CONTROLLED' : item.item_name?.includes('أنسولين') ? 'COLD_CHAIN' : 'OTC'),
+          storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)'),
+          remaining_qty: Number(item.remaining_qty || item.quantity || 0),
+          unit_cost: Number(item.unit_cost || item.buy_price || 50),
+          buy_price: Number(item.unit_cost || item.buy_price || 50),
+          batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
+          expiry_date: item.expiry_date || '2027-12-31',
+          uom: item.uom || item.unit || 'علبة'
+        };
+      });
+
+      if (mappedPharma.length < 10) {
         const mockPharma = [
           {
             id: 9001,
@@ -268,24 +289,11 @@ export default function DirectStockIssue() {
             warehouse: 'مخزن الصيدليات والأدوية'
           }
         ];
-        pharmaItems = mockPharma;
+        const existingIds = new Set(mappedPharma.map(i => i.id));
+        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+        pharmaItems = [...mappedPharma, ...newMocks];
       } else {
-        pharmaItems = pharmaItems.map(item => {
-          const meta = item.metadata || {};
-          return {
-            ...item,
-            active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
-            dosage_form: meta.dosage_form || item.unit || 'أقراص / عبوة',
-            pharma_category: meta.pharma_category || (item.item_name?.includes('مورفين') ? 'CONTROLLED' : item.item_name?.includes('أنسولين') ? 'COLD_CHAIN' : 'OTC'),
-            storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)'),
-            remaining_qty: Number(item.remaining_qty || item.quantity || 0),
-            unit_cost: Number(item.unit_cost || item.buy_price || 50),
-            buy_price: Number(item.unit_cost || item.buy_price || 50),
-            batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
-            expiry_date: item.expiry_date || '2027-12-31',
-            uom: item.uom || item.unit || 'علبة'
-          };
-        });
+        pharmaItems = mappedPharma;
       }
 
       setInventoryItems(pharmaItems);
@@ -450,9 +458,9 @@ export default function DirectStockIssue() {
       const targetAccount = isBooking
         ? 'عملاء حجز - أرصدة معلقة'
         : paymentMethod === 'Cash' 
-          ? 'صندوق نقدية - تيد كابيتال' 
+          ? 'صندوق نقدية - بريميميد فارما' 
           : paymentMethod === 'Bank' 
-            ? 'بنك CIB - تيد كابيتال' 
+            ? 'بنك فلسطين - بريميميد فارما' 
             : 'عملاء (حسابات مدينة - AR)';
 
       if (activeTab === 'issue') {
@@ -467,7 +475,9 @@ export default function DirectStockIssue() {
             debit: Number(totals.grandTotal),
             credit: 0,
             description: `حجز بضاعة مؤقت معلق رقم ${documentNo} - للعميل: ${customerName}`,
-            cost_center: 'حجز بضاعة معلق'
+            cost_center: 'حجز بضاعة معلق',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
           // 2. Credit Deferred Booking Revenue
@@ -477,7 +487,9 @@ export default function DirectStockIssue() {
             debit: 0,
             credit: Number(totals.subtotal),
             description: `إيراد حجز مؤجل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-            cost_center: 'حجز بضاعة معلق'
+            cost_center: 'حجز بضاعة معلق',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
           // 3. VAT (if any)
@@ -488,7 +500,9 @@ export default function DirectStockIssue() {
               debit: 0,
               credit: Number(totals.taxAmount),
               description: `ضريبة مخرجات مؤجلة للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-              cost_center: 'حجز بضاعة معلق'
+              cost_center: 'حجز بضاعة معلق',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
           }
 
@@ -499,17 +513,21 @@ export default function DirectStockIssue() {
             debit: Number(totals.totalCOGS),
             credit: 0,
             description: `بضاعة محجوزة لدى المستودع للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-            cost_center: 'حجز بضاعة معلق'
+            cost_center: 'حجز بضاعة معلق',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
           // 5. Credit main inventory
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'مخزون خامات ومواد',
+            account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
             debit: 0,
             credit: Number(totals.totalCOGS),
             description: `تخفيض المخزون للصنف المحجوز رقم ${documentNo} - للعميل: ${customerName}`,
-            cost_center: 'حجز بضاعة معلق'
+            cost_center: 'حجز بضاعة معلق',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
         } else {
@@ -524,7 +542,9 @@ export default function DirectStockIssue() {
               debit: walletPayAmount,
               credit: 0,
               description: `سداد من محفظة العميل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-              cost_center: 'صرف مخزني مباشر'
+              cost_center: 'صرف مخزني مباشر',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
             
             // Debit remainder to cash/bank/AR
@@ -536,7 +556,9 @@ export default function DirectStockIssue() {
                 debit: remainder,
                 credit: 0,
                 description: `سداد باقي الفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-                cost_center: 'صرف مخزني مباشر'
+                cost_center: 'صرف مخزني مباشر',
+                company: 'PRIMEMED PHARMA',
+                company_id: 4
               });
             }
             // Update wallet balance in localStorage
@@ -550,7 +572,9 @@ export default function DirectStockIssue() {
               debit: Number(totals.grandTotal) + walletDepositAmount,
               credit: 0,
               description: `استلام نقدية شاملة إيداع المحفظة للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-              cost_center: 'صرف مخزني مباشر'
+              cost_center: 'صرف مخزني مباشر',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
 
             // Credit Customer Wallet for the deposited amount
@@ -560,7 +584,9 @@ export default function DirectStockIssue() {
               debit: 0,
               credit: walletDepositAmount,
               description: `إيداع مالي في محفظة العميل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
-              cost_center: 'صرف مخزني مباشر'
+              cost_center: 'صرف مخزني مباشر',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
             // Update wallet balance in localStorage
             updateCustomerWalletBalance(selectedCustomer, walletDepositAmount);
@@ -573,18 +599,22 @@ export default function DirectStockIssue() {
               debit: Number(totals.grandTotal),
               credit: 0,
               description: `فاتورة صرف مخزني مباشر رقم ${documentNo} - للعميل: ${customerName}`,
-              cost_center: 'صرف مخزني مباشر'
+              cost_center: 'صرف مخزني مباشر',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
           }
 
           // 2. Credit Sales Revenue (Subtotal)
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'إيرادات مبيعات',
+            account_name: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
             debit: 0,
             credit: Number(totals.subtotal),
             description: `إيراد فاتورة صرف مباشر - للعميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
           // 3. Credit VAT Payable (14%)
@@ -595,28 +625,34 @@ export default function DirectStockIssue() {
               debit: 0,
               credit: Number(totals.taxAmount),
               description: `ضريبة مخرجات قيمة مضافة فاتورة صرف مباشر - للعميل: ${customerName}`,
-              cost_center: 'صرف مخزني مباشر'
+              cost_center: 'صرف مخزني مباشر',
+              company: 'PRIMEMED PHARMA',
+              company_id: 4
             });
           }
 
           // 4. Debit Cost of Goods Sold (COGS)
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'تكلفة خامات ومواد (منصرف)',
+            account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
             debit: Number(totals.totalCOGS),
             credit: 0,
             description: `تكلفة البضاعة المنصرفة فاتورة صرف مباشر - للعميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
 
           // 5. Credit Inventory Asset
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'مخزون خامات ومواد',
+            account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
             debit: 0,
             credit: Number(totals.totalCOGS),
             description: `تخفيض قيمة المخزون المنصرف فاتورة صرف مباشر - للعميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
         }
 
@@ -633,7 +669,9 @@ export default function DirectStockIssue() {
             debit: 0,
             credit: walletRefund,
             description: `رد قيمة المرتجع لمحفظة العميل رقم ${documentNo} - من العميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
           updateCustomerWalletBalance(selectedCustomer, walletRefund);
         } else {
@@ -644,18 +682,22 @@ export default function DirectStockIssue() {
             debit: 0,
             credit: Number(totals.grandTotal),
             description: `إرجاع قيمة فاتورة صرف مباشر رقم ${documentNo} - للعميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
         }
 
         // 1. Debit Sales Returns (Subtotal returned)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'مرتجع مبيعات خامات ومواد',
+          account_name: 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما',
           debit: Number(totals.subtotal),
           credit: 0,
           description: `مرتجع مبيعات وصرف مباشر رقم ${documentNo} - من العميل: ${customerName}`,
-          cost_center: 'صرف مخزني مباشر'
+          cost_center: 'صرف مخزني مباشر',
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
         });
 
         // 2. Debit VAT Payable (Tax Amount reverse)
@@ -666,28 +708,34 @@ export default function DirectStockIssue() {
             debit: Number(totals.taxAmount),
             credit: 0,
             description: `تسوية ضريبة مبيعات مرتجعة فاتورة صرف مباشر - للعميل: ${customerName}`,
-            cost_center: 'صرف مخزني مباشر'
+            cost_center: 'صرف مخزني مباشر',
+            company: 'PRIMEMED PHARMA',
+            company_id: 4
           });
         }
 
         // 4. Debit Inventory Asset (Re-entry of stock at cost)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'مخزون خامات ومواد',
+          account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
           debit: Number(totals.totalCOGS),
           credit: 0,
           description: `إعادة إدخال خامات مرتجعة للمخزن فاتورة مباشر - للعميل: ${customerName}`,
-          cost_center: 'صرف مخزني مباشر'
+          cost_center: 'صرف مخزني مباشر',
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
         });
 
         // 5. Credit Cost of Goods Sold (COGS reverse)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'تكلفة خامات ومواد (منصرف)',
+          account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
           debit: 0,
           credit: Number(totals.totalCOGS),
           description: `تخفيض تكلفة المبيعات بالمرتجع فاتورة صرف مباشر - للعميل: ${customerName}`,
-          cost_center: 'صرف مخزني مباشر'
+          cost_center: 'صرف مخزني مباشر',
+          company: 'PRIMEMED PHARMA',
+          company_id: 4
         });
       }
 
@@ -1464,9 +1512,9 @@ export default function DirectStockIssue() {
                         <span className="text-[10px] font-black text-emerald-400 block mb-0.5">{language === 'ar' ? 'مدين (Dr.)' : 'Debit (Dr.)'}</span>
                         <span className="text-slate-200 font-bold">
                           {paymentMethod === 'Cash' 
-                            ? (language === 'ar' ? 'صندوق نقدية - تيد كابيتال' : 'Cash Box - TED Capital') 
+                            ? (language === 'ar' ? 'صندوق نقدية - بريميميد فارما' : 'Cash Box - PRIMEMED PHARMA') 
                             : paymentMethod === 'Bank' 
-                              ? (language === 'ar' ? 'بنك CIB - تيد كابيتال' : 'CIB Bank - TED Capital') 
+                              ? (language === 'ar' ? 'بنك فلسطين - بريميميد فارما' : 'Bank Palestine - PRIMEMED PHARMA') 
                               : (language === 'ar' ? 'عملاء (حسابات مدينة - AR)' : 'Accounts Receivable (AR)')}
                         </span>
                       </div>
@@ -1478,9 +1526,9 @@ export default function DirectStockIssue() {
                         <span className="text-[10px] font-black text-rose-400 block mb-0.5">{language === 'ar' ? 'دائن (Cr.)' : 'Credit (Cr.)'}</span>
                         <span className="text-slate-200 font-bold">
                           {paymentMethod === 'Cash' 
-                            ? (language === 'ar' ? 'صندوق نقدية - تيد كابيتال' : 'Cash Box - TED Capital') 
+                            ? (language === 'ar' ? 'صندوق نقدية - بريميميد فارما' : 'Cash Box - PRIMEMED PHARMA') 
                             : paymentMethod === 'Bank' 
-                              ? (language === 'ar' ? 'بنك CIB - تيد كابيتال' : 'CIB Bank - TED Capital') 
+                              ? (language === 'ar' ? 'بنك فلسطين - بريميميد فارما' : 'Bank Palestine - PRIMEMED PHARMA') 
                               : (language === 'ar' ? 'عملاء (حسابات مدينة - AR)' : 'Accounts Receivable (AR)')}
                         </span>
                       </div>
@@ -1494,7 +1542,7 @@ export default function DirectStockIssue() {
                     <>
                       <div>
                         <span className="text-[10px] font-black text-indigo-400 block mb-0.5">{language === 'ar' ? 'دائن (Cr.)' : 'Credit (Cr.)'}</span>
-                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'إيرادات مبيعات' : 'Sales Revenue'}</span>
+                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما' : 'Pharmacy Sales Revenue - PRIMEMED'}</span>
                       </div>
                       <span className="text-indigo-400 font-black text-sm">-{Number(totals.subtotal).toLocaleString()}</span>
                     </>
@@ -1502,7 +1550,7 @@ export default function DirectStockIssue() {
                     <>
                       <div>
                         <span className="text-[10px] font-black text-emerald-400 block mb-0.5">{language === 'ar' ? 'مدين (Dr.)' : 'Debit (Dr.)'}</span>
-                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'مرتجع مبيعات خامات ومواد' : 'Sales Return Material/Goods'}</span>
+                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما' : 'Pharmacy Sales Return - PRIMEMED'}</span>
                       </div>
                       <span className="text-emerald-400 font-black text-sm">+{Number(totals.subtotal).toLocaleString()}</span>
                     </>
@@ -1530,7 +1578,7 @@ export default function DirectStockIssue() {
                       <span className="text-[10px] font-black block mb-0.5 text-slate-400">
                         {activeTab === 'issue' ? (language === 'ar' ? 'مدين (Dr. COGS)' : 'Debit (Dr. COGS)') : (language === 'ar' ? 'دائن (Cr. COGS)' : 'Credit (Cr. COGS)')}
                       </span>
-                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'تكلفة خامات ومواد (منصرف)' : 'Cost of Goods Sold (COGS)'}</span>
+                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما' : 'COGS Pharmacy & Supplies - PRIMEMED'}</span>
                     </div>
                     <span className={`font-black text-sm ${activeTab === 'issue' ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {activeTab === 'issue' ? `+${Number(totals.totalCOGS).toLocaleString()}` : `-${Number(totals.totalCOGS).toLocaleString()}`}
@@ -1542,7 +1590,7 @@ export default function DirectStockIssue() {
                       <span className="text-[10px] font-black block mb-0.5 text-slate-400">
                         {activeTab === 'issue' ? (language === 'ar' ? 'دائن (Cr. Asset)' : 'Credit (Cr. Asset)') : (language === 'ar' ? 'مدين (Dr. Asset)' : 'Debit (Dr. Asset)')}
                       </span>
-                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'مخزون خامات ومواد' : 'Inventory Stock Assets'}</span>
+                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'مخزون الأدوية والمستلزمات - بريميميد فارما' : 'Inventory Pharmacy Stock - PRIMEMED'}</span>
                     </div>
                     <span className={`font-black text-sm ${activeTab === 'issue' ? 'text-rose-400' : 'text-emerald-400'}`}>
                       {activeTab === 'issue' ? `-${Number(totals.totalCOGS).toLocaleString()}` : `+${Number(totals.totalCOGS).toLocaleString()}`}

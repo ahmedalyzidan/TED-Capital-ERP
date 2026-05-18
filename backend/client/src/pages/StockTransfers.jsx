@@ -39,10 +39,16 @@ function StockTransfers({ isSubcomponent }) {
 
       let rawInv = inventoryRes.data.data || [];
       // Filter for Pharma items (exactly like PharmaInventory.jsx)
-      let pharmaItems = rawInv.filter(i => i.category === 'PHARMA' || i.warehouse === 'مخزن الصيدليات والأدوية' || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
+      let pharmaItems = rawInv.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
       
-      if (pharmaItems.length === 0) {
-        pharmaItems = [
+      let mappedPharma = pharmaItems.map(item => ({
+        ...item,
+        quantity: Number(item.remaining_qty || item.quantity || 0),
+        qty: Number(item.remaining_qty || item.quantity || 0)
+      }));
+
+      if (mappedPharma.length < 10) {
+        const mockPharma = [
           {
             id: 9001,
             item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
@@ -50,8 +56,9 @@ function StockTransfers({ isSubcomponent }) {
             dosage_form: 'أقراص (Tablets)',
             pharma_category: 'OTC',
             storage_temp: '20-25°C (غرفة)',
-            quantity: 1500,
+            quantity: 1420,
             remaining_qty: 1420,
+            qty: 1420,
             unit_cost: 45,
             batch_no: 'PH-2026-A10',
             expiry_date: '2028-05-20',
@@ -67,8 +74,9 @@ function StockTransfers({ isSubcomponent }) {
             dosage_form: 'أقراص (Tablets)',
             pharma_category: 'OTC',
             storage_temp: '20-25°C (غرفة)',
-            quantity: 600,
+            quantity: 510,
             remaining_qty: 510,
+            qty: 510,
             unit_cost: 130,
             batch_no: 'PH-2026-B88',
             expiry_date: '2027-11-15',
@@ -84,8 +92,9 @@ function StockTransfers({ isSubcomponent }) {
             dosage_form: 'حقن فيال (Vials)',
             pharma_category: 'CONTROLLED',
             storage_temp: '20-25°C (قفل أمني)',
-            quantity: 50,
+            quantity: 45,
             remaining_qty: 45,
+            qty: 45,
             unit_cost: 350,
             batch_no: 'NAR-2026-X01',
             expiry_date: '2027-02-01',
@@ -101,8 +110,9 @@ function StockTransfers({ isSubcomponent }) {
             dosage_form: 'حقن فيال (Vials)',
             pharma_category: 'COLD_CHAIN',
             storage_temp: '2-8°C (ثلاجة)',
-            quantity: 200,
+            quantity: 185,
             remaining_qty: 185,
+            qty: 185,
             unit_cost: 280,
             batch_no: 'COLD-2026-99',
             expiry_date: '2026-12-10',
@@ -118,8 +128,9 @@ function StockTransfers({ isSubcomponent }) {
             dosage_form: 'محلول وريدي (IV Infusion)',
             pharma_category: 'CONSUMABLE',
             storage_temp: '20-25°C (غرفة)',
-            quantity: 3000,
+            quantity: 2650,
             remaining_qty: 2650,
+            qty: 2650,
             unit_cost: 25,
             batch_no: 'NS-2026-777',
             expiry_date: '2029-01-01',
@@ -129,12 +140,11 @@ function StockTransfers({ isSubcomponent }) {
             warehouse: 'مخزن الصيدليات والأدوية'
           }
         ];
+        const existingIds = new Set(mappedPharma.map(i => i.id));
+        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+        pharmaItems = [...mappedPharma, ...newMocks];
       } else {
-        pharmaItems = pharmaItems.map(item => ({
-          ...item,
-          quantity: Number(item.remaining_qty || item.quantity || 0),
-          qty: Number(item.remaining_qty || item.quantity || 0)
-        }));
+        pharmaItems = mappedPharma;
       }
 
       setInventory(pharmaItems.filter(i => i.qty > 0));

@@ -34,6 +34,8 @@ const authenticateToken = (req, res, next) => {
             }
         }
         user.permissions = parsedPermissions;
+        user.isMtayem = (user.username || '').toUpperCase() === 'MTAYEM';
+        user.isMsobhi = (user.username || '').toUpperCase() === 'MSOBHI';
         
         req.user = user;
         next();

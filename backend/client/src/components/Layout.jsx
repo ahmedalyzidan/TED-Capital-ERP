@@ -65,6 +65,7 @@ export default function Layout() {
         reorder: "إعادة الطلب 🚨",
         pharma: "صيدليات وأدوية 💊",
         masterStock: "إدارة الاستوك 📦",
+        supplyChain: "سلاسل الإمداد 🚛",
         invoices: "المستخلصات",
         subcontractors: "المقاولين",
         hr: "الموارد البشرية",
@@ -116,6 +117,7 @@ export default function Layout() {
         reorder: "Smart Reorder 🚨",
         pharma: "Pharma Stores 💊",
         masterStock: "Master Stock 📦",
+        supplyChain: "Supply Chain 🚛",
         invoices: "Certificates",
         subcontractors: "Subcontractors",
         hr: "HR",
@@ -174,6 +176,7 @@ export default function Layout() {
         { path: '/inventory', icon: '📦', label: t.menu.inventory, perm: 'INV_MANAGE_STOCK', badgeKey: 'inventory' },
         { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
         { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain, perm: 'INV_MANAGE_STOCK' },
         { path: '/fixed-assets', icon: '🏗️', label: t.menu.assets, perm: 'FIN_VIEW_LEDGER' },
         { path: '/subcontractors', icon: '👷', label: t.menu.subcontractors, perm: 'INV_MANAGE_STOCK' },
         { path: '/real-estate', icon: '🏢', label: t.menu.realEstate, perm: 'INV_MANAGE_STOCK' },
@@ -206,6 +209,30 @@ export default function Layout() {
       ]
     }
   ];
+
+  const isMtayem = (user?.username || '').toUpperCase() === 'MTAYEM';
+
+  const mtayemMenuGroups = [
+    {
+      title: t.menuGroups.ops || "العمليات والمخازن",
+      items: [
+        { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain },
+        { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma },
+        { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue },
+      ]
+    },
+    {
+      title: t.menuGroups.admin || "المالية والعلاقات",
+      items: [
+        { path: '/finance', icon: '💰', label: t.menu.finance, badgeKey: 'finance' },
+        { path: '/clients', icon: '🤝', label: t.menu.crm },
+        { path: '/partners', icon: '🤝', label: t.menu.partners },
+        { path: '/hr', icon: '👥', label: t.menu.hr },
+      ]
+    }
+  ];
+
+  const activeMenuGroups = isMtayem ? mtayemMenuGroups : menuGroups;
 
   const [sidebarStats, setSidebarStats] = useState({ approvals: 0, inventory: 0, command: 0, finance: 0 });
 
@@ -288,16 +315,10 @@ export default function Layout() {
 
         <nav className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth px-4">
           <div className="py-8 space-y-12">
-            {menuGroups
+            {activeMenuGroups
               .map(group => {
                 const visibleItems = group.items
-                  .filter(i => !i.perm || hasPermission(i.perm))
-                  .filter(i => {
-                    if (user?.username?.toUpperCase() === 'MTAYEM') {
-                      return i.path === '/inventory/direct-issue' || i.path === '/inventory/pharma';
-                    }
-                    return true;
-                  });
+                  .filter(i => isMtayem || (!i.perm || hasPermission(i.perm)));
                 return { ...group, items: visibleItems };
               })
               .filter(group => group.items.length > 0)

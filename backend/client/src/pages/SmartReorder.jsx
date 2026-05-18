@@ -23,10 +23,10 @@ function SmartReorder({ isSubcomponent }) {
       const rawItems = res.data.data || [];
 
       // Filter Pharma items (exactly like PharmaInventory.jsx)
-      let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.warehouse === 'مخزن الصيدليات والأدوية' || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
+      let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
 
-      if (pharmaItems.length === 0) {
-        pharmaItems = [
+      if (pharmaItems.length < 10) {
+        const mockPharma = [
           {
             id: 9001,
             item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
@@ -113,6 +113,9 @@ function SmartReorder({ isSubcomponent }) {
             warehouse: 'مخزن الصيدليات والأدوية'
           }
         ];
+        const existingIds = new Set(pharmaItems.map(i => i.id));
+        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+        pharmaItems = [...pharmaItems, ...newMocks];
       }
 
       // Hydrate with smart fallbacks for reorder levels to ensure rich demonstration

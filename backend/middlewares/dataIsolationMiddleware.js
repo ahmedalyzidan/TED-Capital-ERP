@@ -6,6 +6,33 @@ const pool = require('../config/db');
  * Admins/SuperAdmins bypass this restriction.
  */
 const isolateData = (req, res, next) => {
+    const isMtayem = req.user && req.user.username && req.user.username.toUpperCase() === 'MTAYEM';
+    const isMsobhi = req.user && req.user.username && req.user.username.toUpperCase() === 'MSOBHI';
+    if (isMtayem) {
+        req.companyFilter = 'TED Capital';
+        req.projectFilter = '';
+        req.queryValues = [];
+        req.isolation = {
+            company: 'TED Capital',
+            project: '',
+            sql: ` AND (company IN ('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP') OR company IS NULL)`,
+            params: []
+        };
+        return next();
+    }
+    if (isMsobhi) {
+        req.companyFilter = 'Design Concept';
+        req.projectFilter = '';
+        req.queryValues = [];
+        req.isolation = {
+            company: 'Design Concept',
+            project: '',
+            sql: ` AND (company IN ('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت') OR company IS NULL)`,
+            params: []
+        };
+        return next();
+    }
+
     // 1. Skip isolation for Super Admins
     if (!req.user.linkedCompany) {
         req.companyFilter = '';

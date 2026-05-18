@@ -92,6 +92,12 @@ class FinanceController {
 
             summary.netProfit = summary.totalRevenue - summary.totalExpense;
 
+            // Inject Net Profit into Equity for perfect Balance Sheet equilibrium (IFRS Retained Earnings)
+            summary.totalEquity += summary.netProfit;
+            if (statements.balanceSheet.equity && statements.balanceSheet.equity.length > 0) {
+                statements.balanceSheet.equity[0].balance = (parseFloat(statements.balanceSheet.equity[0].balance) + summary.netProfit).toString();
+            }
+
             res.json({
                 success: true,
                 statements,

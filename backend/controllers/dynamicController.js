@@ -7,6 +7,46 @@ const AccountingService = require('../services/accountingService');
 const projectController = require('./projectController');
 const { processApprovalWorkflow } = require('../services/workflowEngine');
 
+async function recalculateCBMProration(client, shipmentId, username = 'System') {
+    if (!shipmentId) return;
+    try {
+        const sumRes = await client.query("SELECT SUM(amount_ils) as total FROM shipment_expenses WHERE shipment_id = $1 AND is_deleted = false", [shipmentId]);
+        const totalExp = parseFloat(sumRes.rows[0]?.total || 0);
+
+        const shipRes = await client.query("SELECT initial_value, exchange_rate_initial, shipment_no FROM pharma_shipments WHERE id = $1", [shipmentId]);
+        if (shipRes.rows.length === 0) return;
+        const ship = shipRes.rows[0];
+        const landedCost = (parseFloat(ship.initial_value || 0) * parseFloat(ship.exchange_rate_initial || 1)) + totalExp;
+
+        await client.query("UPDATE pharma_shipments SET total_expenses_ils = $1, landed_cost_ils = $2 WHERE id = $3", [totalExp, landedCost, shipmentId]);
+
+        const itemsRes = await client.query("SELECT * FROM shipment_items WHERE shipment_id = $1 AND is_deleted = false", [shipmentId]);
+        const items = itemsRes.rows;
+        if (items.length === 0) return;
+
+        const totalCbm = items.reduce((acc, curr) => acc + parseFloat(curr.total_cbm || 0), 0);
+
+        for (const item of items) {
+            const itemCbm = parseFloat(item.total_cbm || 0);
+            const volumeRatio = totalCbm > 0 ? (itemCbm / totalCbm) : (1 / items.length);
+            const allocatedShipping = totalExp * volumeRatio;
+            
+            const qty = parseFloat(item.quantity || 1);
+            const buyPriceIls = parseFloat(item.buy_price || 0) * parseFloat(ship.exchange_rate_initial || 1);
+            const landedUnitCost = buyPriceIls + (qty > 0 ? (allocatedShipping / qty) : 0);
+
+            await client.query("UPDATE shipment_items SET allocated_shipping_ils = $1, landed_unit_cost_ils = $2 WHERE id = $3", [allocatedShipping, landedUnitCost, item.id]);
+
+            // Log Audit for external auditors
+            await logAudit(username, 'CBM_PRORATION', 'shipment_items', item.id, `Prorated CBM landed cost for item ${item.item_name || item.id}. Allocated Shipping: ${allocatedShipping.toFixed(2)} ILS, Landed Unit Cost: ${landedUnitCost.toFixed(2)} ILS`);
+        }
+
+        await logAudit(username, 'SHIPMENT_PRORATION', 'pharma_shipments', shipmentId, `Recalculated total shipment expenses (${totalExp.toFixed(2)} ILS) and landed cost (${landedCost.toFixed(2)} ILS) for shipment #${ship.shipment_no || shipmentId}`);
+    } catch (err) {
+        console.error("🔥 Error recalculating CBM Proration:", err);
+    }
+}
+
 class DynamicController {
     async getTable(req, res) {
         try {
@@ -105,9 +145,33 @@ class DynamicController {
             const normalizedUsername = (req.user.username || '').toLowerCase().trim();
             const isAdmin = req.user.isSuperAdmin || userRole.includes('admin') || normalizedUsername === 'admin';
 
-            const isRestricted = Boolean(req.user.linkedCompany || req.user.linkedProject);
+            const isMtayem = req.user && req.user.isMtayem;
+            const isMsobhi = req.user && req.user.isMsobhi;
+            const isRestricted = Boolean(isMtayem || isMsobhi || req.user.linkedCompany || req.user.linkedProject);
 
-            if (isRestricted) {
+            if (isMtayem) {
+                const compsStr = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
+                if (type === 'projects' || type === 'staff' || type === 'rfq' || type === 'employees') {
+                    conditions.push(`${prefix}company IN ${compsStr}`);
+                } else if (type === 'customers') {
+                    conditions.push(`company_name IN ${compsStr}`);
+                } else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'material_usage' || type === 'ar_invoices' || type === 'inventory_sales' || type === 'tasks') {
+                    conditions.push(`${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${compsStr})`);
+                } else if (type === 'ledger') {
+                    conditions.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${compsStr}) OR cost_center IN ${compsStr})`);
+                }
+            } else if (isMsobhi) {
+                const compsStr = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
+                if (type === 'projects' || type === 'staff' || type === 'rfq' || type === 'employees') {
+                    conditions.push(`${prefix}company IN ${compsStr}`);
+                } else if (type === 'customers') {
+                    conditions.push(`company_name IN ${compsStr}`);
+                } else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'material_usage' || type === 'ar_invoices' || type === 'inventory_sales' || type === 'tasks') {
+                    conditions.push(`${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${compsStr})`);
+                } else if (type === 'ledger') {
+                    conditions.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${compsStr}) OR cost_center IN ${compsStr})`);
+                }
+            } else if (isRestricted) {
                 if (req.user.linkedCompany) {
                     const c = req.user.linkedCompany;
                     if (type === 'projects' || type === 'staff' || type === 'rfq' || type === 'employees') {
@@ -184,7 +248,7 @@ class DynamicController {
             await client.query('BEGIN');
             const { type } = req.params;
             let data = req.body;
-            let skipInsert = (type === 'ledger' || type === 'email_notifications');
+            let skipInsert = (type === 'ledger' || type === 'general_ledger' || type === 'email_notifications');
             let newId = null;
 
             if (!hasAccess(req.user, type, 'create')) throw new Error("Access Denied.");
@@ -249,7 +313,7 @@ class DynamicController {
                 });
 
                 // Clean data (remove calculated/virtual fields that are not in DB)
-                const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'admins_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty'];
+                const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'admins_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty', 'adjust_reason', 'adjust_qty', 'recipient', 'subject', 'body', 'attachment_content', 'attachment_filename', 'invoice_data'];
                 calcFields.forEach(f => delete data[f]);
 
                 const keys = Object.keys(data);
@@ -316,6 +380,85 @@ class DynamicController {
                         });
                     }
                 }
+
+                // --- 🌟 Package 5 Supply Chain & Landed Cost Engine Interceptors (CBM Volume Proration) 🌟 ---
+                if (type === 'shipment_expenses') {
+                    const targetId = recordId;
+                    const expRes = await client.query("SELECT * FROM shipment_expenses WHERE id = $1", [targetId]);
+                    if (expRes.rows.length > 0) {
+                        const exp = expRes.rows[0];
+                        const amtIls = parseFloat(exp.amount || 0) * parseFloat(exp.exchange_rate_to_ils || 1);
+                        await client.query("UPDATE shipment_expenses SET amount_ils = $1 WHERE id = $2", [amtIls, targetId]);
+
+                        if (exp.shipment_id) {
+                            await recalculateCBMProration(client, exp.shipment_id, req.user?.username);
+                        }
+                    }
+                } else if (type === 'shipment_items') {
+                    const targetId = recordId;
+                    const itemRes = await client.query("SELECT * FROM shipment_items WHERE id = $1", [targetId]);
+                    if (itemRes.rows.length > 0) {
+                        const item = itemRes.rows[0];
+                        const qty = parseFloat(item.quantity || 0);
+                        const cbm = parseFloat(item.cbm_per_unit || 0.005);
+                        const buyPrice = parseFloat(item.buy_price || 0);
+                        const totalCbm = qty * cbm;
+                        const totalBuy = qty * buyPrice;
+
+                        await client.query("UPDATE shipment_items SET total_cbm = $1, total_buy_value = $2 WHERE id = $3", [totalCbm, totalBuy, targetId]);
+
+                        if (item.shipment_id) {
+                            await recalculateCBMProration(client, item.shipment_id, req.user?.username);
+                        }
+                    }
+                } else if (type === 'pharma_shipments') {
+                    const targetId = recordId;
+                    const shipRes = await client.query("SELECT * FROM pharma_shipments WHERE id = $1", [targetId]);
+                    if (shipRes.rows.length > 0) {
+                        const ship = shipRes.rows[0];
+                        const meta = ship.metadata || {};
+                        if (ship.status === 'Arrived_Gaza_Warehouse' && !meta.gl_posted) {
+                            const landedCostIls = parseFloat(ship.landed_cost_ils || 0);
+                            if (landedCostIls > 0) {
+                                await AccountingService.logEntry(client, 'مخزون الأدوية والمستلزمات - بريميميد فارما', 'غزة - المستودع الرئيسي', landedCostIls, 0, `رسملة وإثبات وصول بضاعة بالطريق لمخازن غزة | شحنة رقم: ${ship.shipment_no || ship.id}`, req.user?.username || 'System', `SHP-${ship.id}`, null, 'PharmaSupplyChain', null, false, null, 4, 'PRIMEMED PHARMA');
+                                await AccountingService.logEntry(client, 'بضاعة بالطريق - شحنات مصر', 'غزة - المستودع الرئيسي', 0, landedCostIls, `إقفال حساب بضاعة بالطريق وإثبات وصول الشحنة لمخازن غزة | شحنة رقم: ${ship.shipment_no || ship.id}`, req.user?.username || 'System', `SHP-${ship.id}`, null, 'PharmaSupplyChain', null, false, null, 4, 'PRIMEMED PHARMA');
+                                
+                                // Loop through all shipment_items and insert into inventory_items & inventory_movements
+                                const itemsRes = await client.query("SELECT * FROM shipment_items WHERE shipment_id = $1 AND is_deleted = false", [ship.id]);
+                                for (const item of itemsRes.rows) {
+                                    const qty = parseFloat(item.quantity || 0);
+                                    const unitCost = parseFloat(item.landed_unit_cost_ils || 0);
+                                    if (qty > 0) {
+                                        const invRes = await client.query("SELECT id, quantity, remaining_qty, avg_cost FROM inventory_items WHERE item_name = $1 AND company_id = 4 AND warehouse = 'غزة - المستودع الرئيسي'", [item.item_name]);
+                                        let invId;
+                                        if (invRes.rows.length > 0) {
+                                            const existing = invRes.rows[0];
+                                            const oldQty = parseFloat(existing.quantity || 0);
+                                            const oldAvg = parseFloat(existing.avg_cost || 0);
+                                            const newTotalQty = oldQty + qty;
+                                            const newAvgCost = newTotalQty > 0 ? (((oldQty * oldAvg) + (qty * unitCost)) / newTotalQty) : unitCost;
+                                            
+                                            await client.query("UPDATE inventory_items SET quantity = quantity + $1, remaining_qty = remaining_qty + $1, avg_cost = $2, unit_cost = $3 WHERE id = $4", [qty, newAvgCost, unitCost, existing.id]);
+                                            invId = existing.id;
+                                        } else {
+                                            const newInv = await client.query(`INSERT INTO inventory_items (item_name, quantity, remaining_qty, buy_price, avg_cost, unit_cost, warehouse, batch_no, expiry_date, company_id, metadata)
+                                                VALUES ($1, $2, $2, $3, $3, $3, 'غزة - المستودع الرئيسي', $4, $5, 4, '{"source":"PharmaSupplyChain"}') RETURNING id`,
+                                                [item.item_name, qty, unitCost, item.batch_no, item.expiry_date]);
+                                            invId = newInv.rows[0].id;
+                                        }
+
+                                        await client.query(`INSERT INTO inventory_movements (inventory_id, movement_type, from_warehouse, to_warehouse, qty, notes)
+                                            VALUES ($1, 'Shipment_Receipt', 'مستودعات مصر - بضاعة بالطريق', 'غزة - المستودع الرئيسي', $2, $3)`,
+                                            [invId, qty, `استلام شحنة دولية رقم ${ship.shipment_no || ship.id} وتقييمها بالتكلفة الحدية (CBM Proration)`]);
+                                    }
+                                }
+
+                                meta.gl_posted = true;
+                                await client.query("UPDATE pharma_shipments SET metadata = $1 WHERE id = $2", [JSON.stringify(meta), targetId]);
+                            }
+                        }
+                    }
+                }
             }
 
             // 3. Post-Processing & Side Effects
@@ -326,8 +469,35 @@ class DynamicController {
                 await AccountingService.logEntry(client, 'العملاء', projName, 0, receiptAmt, `إيصال استلام من عميل - قسط ${data.installment_no || ''}`, req.user.username);
             }
 
-            if (type === 'ledger') {
-                await AccountingService.logEntry(client, data.account_name, data.cost_center, cleanNumeric(data.debit), cleanNumeric(data.credit), data.description, req.user.username);
+            if (type === 'ledger' || type === 'general_ledger') {
+                let debitAmt = cleanNumeric(data.debit);
+                let creditAmt = cleanNumeric(data.credit);
+                if (data.transaction_type === 'Debit') {
+                    debitAmt = cleanNumeric(data.amount);
+                    creditAmt = 0;
+                } else if (data.transaction_type === 'Credit') {
+                    debitAmt = 0;
+                    creditAmt = cleanNumeric(data.amount);
+                }
+
+                let comp = data.company;
+                let compId = data.company_id;
+                if (!comp && (data.account_name?.includes('تأمين') || data.account_name?.includes('عيادات') || data.account_name?.includes('أدوية') || data.description?.includes('صيدلية') || data.description?.includes('عيادة') || data.description?.includes('أدوية') || data.description?.includes('صرف') || data.cost_center?.includes('صرف') || data.cost_center?.includes('صيدلية'))) {
+                    comp = 'PRIMEMED PHARMA';
+                    compId = 4;
+                }
+
+                let finalAccountName = data.account_name;
+                if (compId === 4 || comp === 'PRIMEMED PHARMA') {
+                    if (finalAccountName?.includes('صندوق') || finalAccountName?.includes('نقدية')) finalAccountName = 'صندوق نقدية - بريميميد فارما';
+                    else if (finalAccountName?.includes('بنك')) finalAccountName = 'بنك فلسطين - بريميميد فارما';
+                    else if (finalAccountName?.includes('إيرادات')) finalAccountName = 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما';
+                    else if (finalAccountName?.includes('تكلفة')) finalAccountName = 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما';
+                    else if (finalAccountName?.includes('مخزون') || finalAccountName?.includes('بضاعة')) finalAccountName = 'مخزون الأدوية والمستلزمات - بريميميد فارما';
+                    else if (finalAccountName?.includes('عملاء')) finalAccountName = 'عملاء (حسابات مدينة - AR)';
+                }
+
+                await AccountingService.logEntry(client, finalAccountName, data.cost_center || data.project_name || 'General', debitAmt, creditAmt, data.description || 'حركة مالية', req.user.username, data.reference_id || data.reference_no, null, 'PharmaInventory', null, false, null, compId, comp);
             }
 
             if (type === 'email_notifications') {
@@ -406,7 +576,8 @@ class DynamicController {
                 if (data[key] === '') data[key] = null;
             });
 
-            const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'admins_count', 'remaining_budget', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty'];
+            const adjustReasonStr = data.adjust_reason ? ` | سبب التسوية: ${data.adjust_reason}` : '';
+            const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'admins_count', 'remaining_budget', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty', 'adjust_reason', 'adjust_qty', 'recipient', 'subject', 'body', 'attachment_content', 'attachment_filename', 'invoice_data'];
             calcFields.forEach(f => delete data[f]);
 
             const keys = Object.keys(data);
@@ -416,7 +587,86 @@ class DynamicController {
             console.log(`📝 [DynamicController] Executing Update: ${query}`, values, id);
             await client.query(query, [...values, id]);
 
-            await logAdvancedAudit(client, req.user.username, type, id, 'UPDATE', `Updated record in ${type}`, oldData, data);
+            // --- 🌟 Package 5 Supply Chain & Landed Cost Engine Interceptors (CBM Volume Proration) 🌟 ---
+            if (type === 'shipment_expenses') {
+                const targetId = id;
+                const expRes = await client.query("SELECT * FROM shipment_expenses WHERE id = $1", [targetId]);
+                if (expRes.rows.length > 0) {
+                    const exp = expRes.rows[0];
+                    const amtIls = parseFloat(exp.amount || 0) * parseFloat(exp.exchange_rate_to_ils || 1);
+                    await client.query("UPDATE shipment_expenses SET amount_ils = $1 WHERE id = $2", [amtIls, targetId]);
+
+                    if (exp.shipment_id) {
+                        await recalculateCBMProration(client, exp.shipment_id, req.user?.username);
+                    }
+                }
+            } else if (type === 'shipment_items') {
+                const targetId = id;
+                const itemRes = await client.query("SELECT * FROM shipment_items WHERE id = $1", [targetId]);
+                if (itemRes.rows.length > 0) {
+                    const item = itemRes.rows[0];
+                    const qty = parseFloat(item.quantity || 0);
+                    const cbm = parseFloat(item.cbm_per_unit || 0.005);
+                    const buyPrice = parseFloat(item.buy_price || 0);
+                    const totalCbm = qty * cbm;
+                    const totalBuy = qty * buyPrice;
+
+                    await client.query("UPDATE shipment_items SET total_cbm = $1, total_buy_value = $2 WHERE id = $3", [totalCbm, totalBuy, targetId]);
+
+                    if (item.shipment_id) {
+                        await recalculateCBMProration(client, item.shipment_id, req.user?.username);
+                    }
+                }
+            } else if (type === 'pharma_shipments') {
+                const targetId = (typeof id !== 'undefined' ? id : recordId);
+                const shipRes = await client.query("SELECT * FROM pharma_shipments WHERE id = $1", [targetId]);
+                if (shipRes.rows.length > 0) {
+                    const ship = shipRes.rows[0];
+                    const meta = ship.metadata || {};
+                    if (ship.status === 'Arrived_Gaza_Warehouse' && !meta.gl_posted) {
+                        const landedCostIls = parseFloat(ship.landed_cost_ils || 0);
+                        if (landedCostIls > 0) {
+                            await AccountingService.logEntry(client, 'مخزون الأدوية والمستلزمات - بريميميد فارما', 'غزة - المستودع الرئيسي', landedCostIls, 0, `رسملة وإثبات وصول بضاعة بالطريق لمخازن غزة | شحنة رقم: ${ship.shipment_no || ship.id}`, req.user?.username || 'System', `SHP-${ship.id}`, null, 'PharmaSupplyChain', null, false, null, 4, 'PRIMEMED PHARMA');
+                            await AccountingService.logEntry(client, 'بضاعة بالطريق - شحنات مصر', 'غزة - المستودع الرئيسي', 0, landedCostIls, `إقفال حساب بضاعة بالطريق وإثبات وصول الشحنة لمخازن غزة | شحنة رقم: ${ship.shipment_no || ship.id}`, req.user?.username || 'System', `SHP-${ship.id}`, null, 'PharmaSupplyChain', null, false, null, 4, 'PRIMEMED PHARMA');
+                            
+                            // Loop through all shipment_items and insert into inventory_items & inventory_movements
+                            const itemsRes = await client.query("SELECT * FROM shipment_items WHERE shipment_id = $1 AND is_deleted = false", [ship.id]);
+                            for (const item of itemsRes.rows) {
+                                const qty = parseFloat(item.quantity || 0);
+                                const unitCost = parseFloat(item.landed_unit_cost_ils || 0);
+                                if (qty > 0) {
+                                    const invRes = await client.query("SELECT id, quantity, remaining_qty, avg_cost FROM inventory_items WHERE item_name = $1 AND company_id = 4 AND warehouse = 'غزة - المستودع الرئيسي'", [item.item_name]);
+                                    let invId;
+                                    if (invRes.rows.length > 0) {
+                                        const existing = invRes.rows[0];
+                                        const oldQty = parseFloat(existing.quantity || 0);
+                                        const oldAvg = parseFloat(existing.avg_cost || 0);
+                                        const newTotalQty = oldQty + qty;
+                                        const newAvgCost = newTotalQty > 0 ? (((oldQty * oldAvg) + (qty * unitCost)) / newTotalQty) : unitCost;
+                                        
+                                        await client.query("UPDATE inventory_items SET quantity = quantity + $1, remaining_qty = remaining_qty + $1, avg_cost = $2, unit_cost = $3 WHERE id = $4", [qty, newAvgCost, unitCost, existing.id]);
+                                        invId = existing.id;
+                                    } else {
+                                        const newInv = await client.query(`INSERT INTO inventory_items (item_name, quantity, remaining_qty, buy_price, avg_cost, unit_cost, warehouse, batch_no, expiry_date, company_id, metadata)
+                                            VALUES ($1, $2, $2, $3, $3, $3, 'غزة - المستودع الرئيسي', $4, $5, 4, '{"source":"PharmaSupplyChain"}') RETURNING id`,
+                                            [item.item_name, qty, unitCost, item.batch_no, item.expiry_date]);
+                                        invId = newInv.rows[0].id;
+                                    }
+
+                                    await client.query(`INSERT INTO inventory_movements (inventory_id, movement_type, from_warehouse, to_warehouse, qty, notes)
+                                        VALUES ($1, 'Shipment_Receipt', 'مستودعات مصر - بضاعة بالطريق', 'غزة - المستودع الرئيسي', $2, $3)`,
+                                        [invId, qty, `استلام شحنة دولية رقم ${ship.shipment_no || ship.id} وتقييمها بالتكلفة الحدية (CBM Proration)`]);
+                                }
+                            }
+
+                            meta.gl_posted = true;
+                            await client.query("UPDATE pharma_shipments SET metadata = $1 WHERE id = $2", [JSON.stringify(meta), targetId]);
+                        }
+                    }
+                }
+            }
+
+            await logAdvancedAudit(client, req.user.username, type, id, 'UPDATE', `Updated record in ${type}${adjustReasonStr}`, oldData, data);
             await client.query('COMMIT');
             res.json({ success: true });
         } catch (err) {
@@ -441,6 +691,12 @@ class DynamicController {
             // Soft Deletion instead of Hard Deletion
             await client.query(`UPDATE ${type} SET is_deleted = TRUE, deleted_by = $1, deleted_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user.username, id]);
             await logAdvancedAudit(client, req.user.username, type, id, 'SOFT_DELETE', 'Record marked as deleted', oldData, null);
+
+            if (type === 'shipment_expenses' || type === 'shipment_items') {
+                if (oldData.shipment_id) {
+                    await recalculateCBMProration(client, oldData.shipment_id, req.user?.username);
+                }
+            }
 
             await client.query('COMMIT');
             res.json({ success: true });

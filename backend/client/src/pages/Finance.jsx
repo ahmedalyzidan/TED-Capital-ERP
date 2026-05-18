@@ -310,6 +310,8 @@ export default function Finance() {
    const getInitialCompanyId = () => {
       try {
          const u = JSON.parse(localStorage.getItem('user') || '{}');
+         if (u?.username?.toUpperCase() === 'MTAYEM') return '1';
+         if (u?.username?.toUpperCase() === 'MSOBHI') return '2';
          const comp = u?.linkedCompany || u?.linked_company || null;
          if (comp === 'TED Capital' || comp === 'TED CAPITAL') return '1';
          if (comp === 'Design Concept' || comp === 'DESIGN CONCEPT' || comp === 'ديزاين كونسيبت') return '2';
@@ -443,51 +445,55 @@ export default function Finance() {
    return (
       <div className="min-h-screen bg-[#f8fafc]/50 pb-20 animate-fade-in" dir={language === 'ar' ? 'rtl' : 'ltr'}>
          {/* Header & Tabs */}
-         <div className="bg-white border-b border-slate-200">
+         <div className="bg-white border-b border-slate-200 shadow-sm">
             <div className="max-w-[1600px] mx-auto px-10 py-10">
-               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
-                  <div className="flex items-center gap-8">
-                     <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-4xl shadow-2xl shadow-slate-900/20 text-white transform hover:rotate-6 transition-all duration-500">
-                        📊
+               <div className="flex flex-col gap-8">
+                  {/* Top Row: Title & Entity Filter */}
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 w-full">
+                     <div className="flex items-center gap-8">
+                        <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-4xl shadow-2xl shadow-slate-900/20 text-white transform hover:rotate-6 transition-all duration-500">
+                           📊
+                        </div>
+                        <div>
+                           <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                              {t.title}
+                           </h1>
+                           <p className="text-slate-400 font-bold text-base mt-2 uppercase tracking-[0.05em]">
+                              {t.subtitle}
+                           </p>
+                        </div>
                      </div>
-                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-                           {t.title}
-                        </h1>
-                        <p className="text-slate-400 font-bold text-base mt-2 uppercase tracking-[0.05em]">
-                           {t.subtitle}
-                        </p>
+
+                     {/* Entity Filter (Dedicated Tier 1 Container) */}
+                     <div className="w-full lg:w-auto flex justify-start lg:justify-end overflow-x-auto py-2">
+                        <EntityFilter selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} language={language} />
                      </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
-                     {/* Entity Filter */}
-                     <EntityFilter selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} language={language} />
-
-                     <div className="flex bg-white p-2 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 flex-wrap">
-                        {[
-                           { id: 'dashboard', label: t.tabs.dashboard, icon: '🏠' },
-                           { id: 'coa', label: t.tabs.coa, icon: '🌳' },
-                           { id: 'ledger', label: t.tabs.ledger, icon: '📓' },
-                           { id: 'balance_sheet', label: t.tabs.balance_sheet, icon: '⚖️' },
-                           { id: 'pl', label: t.tabs.pl, icon: '📈' },
-                           { id: 'budgets', label: t.tabs.budgets, icon: '🎯' },
-                           { id: 'control', label: t.tabs.control, icon: '🔒' },
-                           { id: 'mappings', label: t.tabs.mappings, icon: '🔀' }
-                        ].map(tab => (
-                           <button 
-                              key={tab.id}
-                              onClick={() => setActiveTab(tab.id)}
-                              className={`px-6 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-[0.1em] transition-all flex items-center gap-3 ${
-                                 activeTab === tab.id 
-                                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' 
-                                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                              }`}
-                           >
-                              <span className="text-base">{tab.icon}</span> {tab.label}
-                           </button>
-                        ))}
-                     </div>
+                  {/* Bottom Row: Navigation Tabs (Dedicated Tier 2 Container) */}
+                  <div className="flex bg-slate-50/70 p-2.5 rounded-[2.5rem] border border-slate-200/80 shadow-lg shadow-slate-200/40 flex-wrap gap-2 w-full justify-start items-center overflow-x-auto">
+                     {[
+                        { id: 'dashboard', label: t.tabs.dashboard, icon: '🏠' },
+                        { id: 'coa', label: t.tabs.coa, icon: '🌳' },
+                        { id: 'ledger', label: t.tabs.ledger, icon: '📓' },
+                        { id: 'balance_sheet', label: t.tabs.balance_sheet, icon: '⚖️' },
+                        { id: 'pl', label: t.tabs.pl, icon: '📈' },
+                        { id: 'budgets', label: t.tabs.budgets, icon: '🎯' },
+                        { id: 'control', label: t.tabs.control, icon: '🔒' },
+                        { id: 'mappings', label: t.tabs.mappings, icon: '🔀' }
+                     ].map(tab => (
+                        <button 
+                           key={tab.id}
+                           onClick={() => setActiveTab(tab.id)}
+                           className={`px-7 py-3.5 rounded-[2rem] text-xs uppercase font-black tracking-[0.1em] transition-all flex items-center gap-3 whitespace-nowrap flex-shrink-0 ${
+                              activeTab === tab.id 
+                                 ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105' 
+                                 : 'text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm'
+                           }`}
+                        >
+                           <span className="text-lg">{tab.icon}</span> {tab.label}
+                        </button>
+                     ))}
                   </div>
                </div>
             </div>
@@ -1298,36 +1304,47 @@ function EntityFilter({ selectedCompanyId, setSelectedCompanyId, language }) {
 
    try {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
-      const comp = u?.linkedCompany || u?.linked_company || null;
-      if (comp) {
-         const matchName = comp.toLowerCase().trim();
-         const filtered = entities.filter(ent => {
-            const ar = ent.labelAr.toLowerCase();
-            const en = ent.labelEn.toLowerCase();
-            return ar.includes(matchName) || en.includes(matchName);
-         });
-         if (filtered.length > 0) {
-            entities = filtered;
-         } else {
-            entities = [{ id: 'custom', labelAr: comp, labelEn: comp, icon: '🏢' }];
+      if (u?.username?.toUpperCase() === 'MTAYEM') {
+         entities = [
+            { id: '1', labelAr: 'تيد كابيتال (TED Capital)', labelEn: 'TED Capital', icon: '🏛️' },
+            { id: '4', labelAr: 'بريميميد فارما (PRIMEMED PHARMA)', labelEn: 'PRIMEMED PHARMA', icon: '💊' }
+         ];
+      } else if (u?.username?.toUpperCase() === 'MSOBHI') {
+         entities = [
+            { id: '2', labelAr: 'ديزاين كونسبت (Design Concept)', labelEn: 'Design Concept', icon: '🎨' }
+         ];
+      } else {
+         const comp = u?.linkedCompany || u?.linked_company || null;
+         if (comp) {
+            const matchName = comp.toLowerCase().trim();
+            const filtered = entities.filter(ent => {
+               const ar = ent.labelAr.toLowerCase();
+               const en = ent.labelEn.toLowerCase();
+               return ar.includes(matchName) || en.includes(matchName);
+            });
+            if (filtered.length > 0) {
+               entities = filtered;
+            } else {
+               entities = [{ id: 'custom', labelAr: comp, labelEn: comp, icon: '🏢' }];
+            }
          }
       }
    } catch (e) {}
 
    return (
-      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-[2rem] p-1.5 shadow-inner overflow-x-auto max-w-full">
+      <div className="flex items-center bg-slate-100/80 border border-slate-200/80 rounded-[2.5rem] p-2 shadow-inner overflow-x-auto max-w-full gap-2">
          {entities.map(ent => (
             <button
                key={ent.id}
                onClick={() => setSelectedCompanyId(ent.id)}
-               className={`px-5 py-3 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2.5 whitespace-nowrap ${
+               className={`px-8 py-3.5 rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 whitespace-nowrap flex-shrink-0 ${
                   selectedCompanyId === ent.id
-                     ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50 border border-slate-100'
-                     : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100/50'
+                     ? 'bg-white text-slate-900 shadow-xl shadow-slate-200 border border-slate-100 scale-105 py-4'
+                     : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
                }`}
             >
-               <span className="text-lg">{ent.icon}</span>
-               <span>{language === 'ar' ? ent.labelAr : ent.labelEn}</span>
+               <span className="text-xl">{ent.icon}</span>
+               <span className="px-1">{language === 'ar' ? ent.labelAr : ent.labelEn}</span>
             </button>
          ))}
       </div>

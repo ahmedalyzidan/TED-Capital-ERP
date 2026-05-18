@@ -116,7 +116,7 @@ export default function Corporate() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const endpoint = showModal.includes('edit') ? `/update/${showModal.split('-')[1]}/${formData.id}` : `/add/${showModal.split('-')[1]}`;
+      const endpoint = showModal.includes('edit') ? `/dynamic/update/${showModal.split('-')[1]}/${formData.id}` : `/dynamic/add/${showModal.split('-')[1]}`;
       const method = showModal.includes('edit') ? 'put' : 'post';
       await api[method](endpoint, formData);
       setShowModal(null);
@@ -124,6 +124,17 @@ export default function Corporate() {
       fetchData();
     } catch (err) {
       alert(err.response?.data?.error || "Error saving data");
+    }
+  };
+
+  const handleDelete = async (type, id) => {
+    if (window.confirm(language === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا السجل نهائياً؟' : 'Are you sure you want to permanently delete this record?')) {
+      try {
+        await api.delete(`/dynamic/delete/${type}/${id}`);
+        fetchData();
+      } catch (err) {
+        alert(err.response?.data?.error || "Error deleting record");
+      }
     }
   };
 
@@ -205,13 +216,16 @@ export default function Corporate() {
                            <span className="text-xs font-bold text-slate-500">{data.orgUnits.find(u => u.id === unit.parent_id)?.name || '---'}</span>
                         </td>
                         <td className="px-8 py-6 text-center">
-                          <button onClick={() => { setFormData(unit); setShowModal('edit-org_units'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm mx-auto">✏️</button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => { setFormData(unit); setShowModal('edit-org_units'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="تعديل">✏️</button>
+                            <button onClick={() => handleDelete('org_units', unit.id)} className="w-8 h-8 flex items-center justify-center bg-white text-rose-400 rounded-lg border border-slate-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="حذف">🗑️</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
+               )}
 
               {activeTab === 'committees' && (
                 <table className="w-full text-right whitespace-nowrap">
@@ -239,13 +253,16 @@ export default function Corporate() {
                           </span>
                         </td>
                         <td className="px-8 py-6 text-center">
-                          <button onClick={() => { setFormData(com); setShowModal('edit-committees'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm mx-auto">✏️</button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => { setFormData(com); setShowModal('edit-committees'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="تعديل">✏️</button>
+                            <button onClick={() => handleDelete('committees', com.id)} className="w-8 h-8 flex items-center justify-center bg-white text-rose-400 rounded-lg border border-slate-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="حذف">🗑️</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
+               )}
 
               {activeTab === 'tasks' && (
                 <table className="w-full text-right whitespace-nowrap">
@@ -256,6 +273,7 @@ export default function Corporate() {
                       <th className="px-8 py-5 text-center">{t.tasks.priority}</th>
                       <th className="px-8 py-5 text-center">{t.tasks.status}</th>
                       <th className="px-8 py-5 text-center">{t.tasks.progress}</th>
+                      <th className="px-8 py-5 text-center">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -286,11 +304,17 @@ export default function Corporate() {
                               </div>
                            </div>
                         </td>
+                        <td className="px-8 py-6 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => { setFormData(task); setShowModal('edit-tasks'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="تعديل">✏️</button>
+                            <button onClick={() => handleDelete('tasks', task.id)} className="w-8 h-8 flex items-center justify-center bg-white text-rose-400 rounded-lg border border-slate-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="حذف">🗑️</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
+               )}
             </div>
           )}
         </div>
