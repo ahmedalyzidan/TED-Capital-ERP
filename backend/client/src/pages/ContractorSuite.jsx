@@ -588,11 +588,11 @@ export default function ContractorSuite() {
           {/* Navigation Tabs */}
           <div className="bg-slate-950/60 p-1.5 rounded-2xl border border-white/5 flex gap-1 relative z-10 w-full md:w-auto overflow-x-auto scrollbar-none">
             {[
-              { id: 'dashboard', label: '📊 لوحة القيادة', icon: '📊' },
-              { id: 'boq', label: '📝 المقايسة والبنود', icon: '📝' },
-              { id: 'expenses', label: '💸 المصروفات الفعلية', icon: '💸' },
-              { id: 'client', label: '💳 دفعات العميل', icon: '💳' },
-              { id: 'files', label: '📁 ملفات ومستندات', icon: '📁' }
+              { id: 'dashboard', label: 'لوحة القيادة', icon: '📊' },
+              { id: 'boq', label: 'المقايسة والبنود', icon: '📝' },
+              { id: 'expenses', label: 'المصروفات الفعلية', icon: '💸' },
+              { id: 'client', label: 'دفعات العميل', icon: '💳' },
+              { id: 'files', label: 'ملفات ومستندات', icon: '📁' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -603,8 +603,8 @@ export default function ContractorSuite() {
                     : 'text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <span>{tab.icon}</span>
-                {tab.label}
+                <span className="text-sm">{tab.icon}</span>
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
