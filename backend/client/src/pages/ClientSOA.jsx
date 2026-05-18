@@ -140,7 +140,7 @@ export default function ClientSOA() {
             </div>
 
             <div className="mt-12 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] no-print">
-               TED CAPITAL ERP - INTERNAL AUDIT DOCUMENT
+               PRIMEMED PHARMA ERP - INTERNAL AUDIT DOCUMENT
             </div>
          </div>
       </div>

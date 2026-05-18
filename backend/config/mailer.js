@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // تم إضافة isEmailDirect لتدعم الإرسال المباشر للإيميل دون البحث برقم المستخدم
-async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirect = false) {
+async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirect = false, attachments = null) {
     let userEmail = isEmailDirect ? userIdOrEmail : '';
     try {
         if (!isEmailDirect) {
@@ -21,14 +21,18 @@ async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirec
         }
 
         if (userEmail) {
-            await transporter.sendMail({
+            const mailOptions = {
                 from: process.env.EMAIL_USER || 'tedcapital.org@GMAIL.COM',
                 to: userEmail,
                 subject: `TED ERP System Alert: ${title}`,
                 text: message
-            });
+            };
+            if (attachments && Array.isArray(attachments)) {
+                mailOptions.attachments = attachments;
+            }
+            await transporter.sendMail(mailOptions);
             await pool.query("INSERT INTO email_logs (recipient, subject, body, sent_by, status) VALUES ($1, $2, $3, $4, $5)", [userEmail, `TED ERP System Alert: ${title}`, message, 'System Auto', 'Sent']);
-            console.log(`📧 Email sent to ${userEmail} regarding: ${title}`);
+            console.log(`📧 Email sent to ${userEmail} regarding: ${title} (Attachments: ${attachments ? attachments.length : 0})`);
         }
     } catch(e) {
         console.error("🔥 Email send failed:", e.message);

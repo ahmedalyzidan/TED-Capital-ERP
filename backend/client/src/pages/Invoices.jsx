@@ -66,7 +66,7 @@ export default function Invoices() {
         tableTotal: "الإجمالي الصافي",
         summaryTotal: "المجموع الفرعي (Subtotal)",
         grandTotal: "الإجمالي الكلي",
-        footer1: "Thank you for choosing TED CAPITAL ENTERPRISE SYSTEM",
+        footer1: "Thank you for choosing PRIMEMED PHARMA ENTERPRISE SYSTEM",
         footer2: "تم إنشاء هذه الفاتورة إلكترونياً ولا تحتاج لختم أو توقيع."
       },
       alerts: {
@@ -119,7 +119,7 @@ export default function Invoices() {
         tableTotal: "Net Total",
         summaryTotal: "Subtotal",
         grandTotal: "Grand Total",
-        footer1: "Thank you for choosing TED CAPITAL ENTERPRISE SYSTEM",
+        footer1: "Thank you for choosing PRIMEMED PHARMA ENTERPRISE SYSTEM",
         footer2: "This invoice was generated electronically and does not require a stamp or signature."
       },
       alerts: {
@@ -387,7 +387,7 @@ function PrintView({ invoice, clients, projects, t, language }) {
     <div className="bg-white p-20 min-h-screen font-sans print:p-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className={`flex justify-between items-start border-b-8 border-slate-900 pb-10 mb-10 ${language === 'en' ? 'flex-row-reverse' : ''}`}>
          <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-            <h1 className="text-5xl font-black text-slate-900 mb-2 tracking-tighter uppercase">TED CAPITAL ERP</h1>
+            <h1 className="text-5xl font-black text-slate-900 mb-2 tracking-tighter uppercase">PRIMEMED PHARMA ERP</h1>
             <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">{cur.taxInvoice}</p>
          </div>
          <div className={language === 'ar' ? 'text-left' : 'text-right'}>

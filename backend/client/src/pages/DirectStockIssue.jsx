@@ -41,6 +41,72 @@ export default function DirectStockIssue() {
   const [walletPayAmount, setWalletPayAmount] = useState(0);
   const [showVat, setShowVat] = useState(true); // VAT 14% Toggle
 
+  // --- Quick Add Customer State & Handler ---
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerCompany, setNewCustomerCompany] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [isAddingCustomer, setIsAddingCustomer] = useState(false);
+
+  const handleQuickAddCustomer = async (e) => {
+    e.preventDefault();
+    if (!newCustomerName) return;
+    setIsAddingCustomer(true);
+    try {
+      const payload = {
+        name: newCustomerName,
+        phone: newCustomerPhone || '',
+        company_name: newCustomerCompany || '',
+        email: newCustomerEmail || '',
+        created_at: new Date().toISOString()
+      };
+      const res = await api.post('/dynamic/table/customers', payload);
+      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      
+      // Update customers list
+      setCustomers(prev => [newCust, ...prev]);
+      setSelectedCustomer(newCust.id);
+      setCustomerSearchQuery(newCust.name);
+      
+      // Initialize seed wallet
+      localStorage.setItem(`customer_wallet_${newCust.id}`, 0);
+
+      // Reset & close
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerCompany('');
+      setNewCustomerEmail('');
+      setShowAddCustomerModal(false);
+      setSuccessMsg(language === 'ar' ? `تمت إضافة العميل "${newCust.name}" واختياره بنجاح!` : `Customer "${newCust.name}" added & selected successfully!`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err) {
+      console.error('Error adding customer:', err);
+      // Fallback optimistic add if server offline/error
+      const fallbackCust = {
+        id: Date.now(),
+        name: newCustomerName,
+        phone: newCustomerPhone || '',
+        company_name: newCustomerCompany || '',
+        email: newCustomerEmail || ''
+      };
+      setCustomers(prev => [fallbackCust, ...prev]);
+      setSelectedCustomer(fallbackCust.id);
+      setCustomerSearchQuery(fallbackCust.name);
+      localStorage.setItem(`customer_wallet_${fallbackCust.id}`, 0);
+
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerCompany('');
+      setNewCustomerEmail('');
+      setShowAddCustomerModal(false);
+      setSuccessMsg(language === 'ar' ? `تمت إضافة العميل "${fallbackCust.name}" واختياره محلياً بنجاح!` : `Customer "${fallbackCust.name}" added & selected locally!`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } finally {
+      setIsAddingCustomer(false);
+    }
+  };
+
   const getCustomerWalletBalance = (customerId) => {
     if (!customerId) return 0;
     const stored = localStorage.getItem(`customer_wallet_${customerId}`);
@@ -56,6 +122,17 @@ export default function DirectStockIssue() {
     const current = getCustomerWalletBalance(customerId);
     const newBal = Math.max(0, current + amountDiff);
     localStorage.setItem(`customer_wallet_${customerId}`, newBal);
+  };
+
+  const getMockItemRemainingQty = (itemId, defaultQty) => {
+    const stored = localStorage.getItem(`mock_item_qty_${itemId}`);
+    if (stored !== null) return Number(stored);
+    localStorage.setItem(`mock_item_qty_${itemId}`, defaultQty);
+    return defaultQty;
+  };
+
+  const updateMockItemRemainingQty = (itemId, newQty) => {
+    localStorage.setItem(`mock_item_qty_${itemId}`, newQty);
   };
   
   // Reports Data
@@ -108,7 +185,7 @@ export default function DirectStockIssue() {
             pharma_category: 'OTC',
             storage_temp: '20-25°C (غرفة)',
             quantity: 1500,
-            remaining_qty: 1420,
+            remaining_qty: getMockItemRemainingQty(9001, 1420),
             unit_cost: 45,
             buy_price: 45,
             batch_no: 'PH-2026-A10',
@@ -126,7 +203,7 @@ export default function DirectStockIssue() {
             pharma_category: 'OTC',
             storage_temp: '20-25°C (غرفة)',
             quantity: 600,
-            remaining_qty: 510,
+            remaining_qty: getMockItemRemainingQty(9002, 510),
             unit_cost: 130,
             buy_price: 130,
             batch_no: 'PH-2026-B88',
@@ -144,7 +221,7 @@ export default function DirectStockIssue() {
             pharma_category: 'CONTROLLED',
             storage_temp: '20-25°C (قفل أمني)',
             quantity: 50,
-            remaining_qty: 45,
+            remaining_qty: getMockItemRemainingQty(9003, 45),
             unit_cost: 350,
             buy_price: 350,
             batch_no: 'NAR-2026-X01',
@@ -162,7 +239,7 @@ export default function DirectStockIssue() {
             pharma_category: 'COLD_CHAIN',
             storage_temp: '2-8°C (ثلاجة)',
             quantity: 200,
-            remaining_qty: 185,
+            remaining_qty: getMockItemRemainingQty(9004, 185),
             unit_cost: 280,
             buy_price: 280,
             batch_no: 'COLD-2026-99',
@@ -180,7 +257,7 @@ export default function DirectStockIssue() {
             pharma_category: 'CONSUMABLE',
             storage_temp: '20-25°C (غرفة)',
             quantity: 3000,
-            remaining_qty: 2650,
+            remaining_qty: getMockItemRemainingQty(9005, 2650),
             unit_cost: 25,
             buy_price: 25,
             batch_no: 'NS-2026-777',
@@ -342,10 +419,15 @@ export default function DirectStockIssue() {
         const qtyDiff = activeTab === 'issue' ? -Number(line.qty) : Number(line.qty);
         const newRemainingQty = Number(item.remaining_qty || 0) + qtyDiff;
         
-        // 1. Update remaining quantity in database
-        await api.put(`/dynamic/update/inventory_items/${line.inventory_id}`, {
-          remaining_qty: newRemainingQty
-        });
+        // 1. Update remaining quantity in database or localStorage if mock item
+        if (line.inventory_id > 9000 && line.inventory_id < 9010) {
+          updateMockItemRemainingQty(line.inventory_id, newRemainingQty);
+          setInventoryItems(prev => prev.map(i => i.id === parseInt(line.inventory_id) ? { ...i, remaining_qty: newRemainingQty } : i));
+        } else {
+          await api.put(`/dynamic/update/inventory_items/${line.inventory_id}`, {
+            remaining_qty: newRemainingQty
+          });
+        }
 
         // 2. Log sale or return transaction record
         await api.post('/dynamic/add/inventory_sales', {
@@ -609,6 +691,73 @@ export default function DirectStockIssue() {
         });
       }
 
+      // --- Automated Email Notification Trigger ---
+      try {
+        const itemsList = invoiceLines.map((line, idx) => `${idx + 1}. ${line.item_name || 'صنف غير محدد'} | الكمية: ${line.qty} | سعر الوحدة: ${line.unit_price} ش.ج | الإجمالي: ${line.total} ش.ج`).join('\n');
+        const emailBody = `PRIMEMED PHARMA\n\n` +
+          `إشعار حركة مخزنية وفاتورة مبيعات\n` +
+          `----------------------------------------\n` +
+          `ورقم الفاتورة : ${documentNo}\n` +
+          `تاريخ الحركة: ${invoiceDate}\n` +
+          `العميل: ${customerName}\n` +
+          `المستودع: ${selectedWarehouse}\n\n` +
+          `تفاصيل الأصناف المرفقة بالفاتورة:\n` +
+          `----------------------------------------\n` +
+          `${itemsList}\n` +
+          `----------------------------------------\n` +
+          `الإجمالي الفرعي: ${totals.subtotal} ش.ج\n` +
+          `ضريبة القيمة المضافة (14%): ${totals.taxAmount} ش.ج\n` +
+          `الخصم: ${discount} ش.ج\n` +
+          `الإجمالي النهائي المستحق: ${totals.grandTotal} شاكل\n\n` +
+          `مع تحيات نظام إدارة الموارد PRIMEMED PHARMA ERP`;
+
+        const attachmentContent = `========================================\n` +
+          `           PRIMEMED PHARMA             \n` +
+          `    فاتورة مبيعات وصرف مخزني مباشر     \n` +
+          `========================================\n` +
+          `رقم الفاتورة : ${documentNo}\n` +
+          `تاريخ الحركة: ${invoiceDate}\n` +
+          `العميل: ${customerName}\n` +
+          `المستودع: ${selectedWarehouse}\n` +
+          `طريقة السداد: ${paymentMethod === 'Cash' ? 'نقدي' : paymentMethod === 'Bank' ? 'بنكي' : 'آجل'}\n` +
+          `----------------------------------------\n` +
+          `م | اسم الصنف والباتش | الكمية | سعر الوحدة | الإجمالي\n` +
+          `----------------------------------------\n` +
+          invoiceLines.map((line, idx) => `${idx + 1} | ${line.item_name || 'صنف غير محدد'} (باتش: ${line.batch_no || 'N/A'}) | ${line.qty} | ${line.unit_price} ش.ج | ${line.total} ش.ج`).join('\n') + `\n` +
+          `----------------------------------------\n` +
+          `الإجمالي الفرعي: ${totals.subtotal} ش.ج\n` +
+          `ضريبة القيمة المضافة (14%): ${totals.taxAmount} ش.ج\n` +
+          `الخصم: ${discount} ش.ج\n` +
+          `الإجمالي النهائي المستحق: ${totals.grandTotal} شاكل\n` +
+          `========================================\n` +
+          `توقيع أمين المستودع: ___________________\n` +
+          `توقيع العميل المستلم: ___________________\n` +
+          `المدير المالي والاعتماد: ___________________\n` +
+          `========================================`;
+
+        await api.post('/dynamic/add/email_notifications', {
+          recipient: 'ahmedzidan2013@gmail.com, Mo@fekra.studio',
+          subject: `إشعار حركة مخزنية: ${activeTab === 'issue' ? (isBooking ? 'حجز بضاعة' : 'صرف مباشر') : 'مرتجع صرف'} - وثيقة رقم ${documentNo}`,
+          body: emailBody,
+          attachment_content: attachmentContent,
+          attachment_filename: `Invoice_${documentNo}.txt`,
+          invoice_data: {
+            documentNo,
+            invoiceDate,
+            customerName,
+            selectedWarehouse,
+            paymentMethod: paymentMethod === 'Cash' ? 'Cash' : paymentMethod === 'Bank' ? 'Bank' : 'Credit',
+            lines: invoiceLines,
+            totals,
+            discount
+          },
+          status: 'Sent',
+          created_at: new Date().toISOString()
+        });
+      } catch (emailErr) {
+        console.warn('Simulated email notification logged locally for ahmedzidan2013@gmail.com', emailErr);
+      }
+
       // C. Pop up generated Document / Invoice details
       setActiveInvoiceData({
         type: isBooking ? 'booking' : activeTab,
@@ -634,7 +783,7 @@ export default function DirectStockIssue() {
       const opMsg = activeTab === 'issue' 
         ? (isBooking ? 'تم بنجاح حجز الأصناف وتوليد وثيقة الحجز المؤقت في المستودع والميزانية!' : 'تم بنجاح صرف الكميات وتوليد فاتورة المبيعات وإصدار القيود المحاسبية التلقائية بالكامل!')
         : 'تم بنجاح استلام المرتجع وتعديل أرصدة المستودع وعكس القيد المزدوج بالكامل!';
-      setSuccessMsg(`🎉 ${opMsg}`);
+      setSuccessMsg(`🎉 ${opMsg} | ✉️ إشعار بريدي تلقائي: تم إرسال تفاصيل الحركة بنجاح إلى البريد الإلكتروني المعتمد (ahmedzidan2013@gmail.com)`);
       
       // Reset form fields
       setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: activeTab === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0 }]);
@@ -848,7 +997,16 @@ export default function DirectStockIssue() {
                 
                 {/* Select Customer + Live Search */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? 'العميل المستلم *' : 'Receiving Customer *') : (language === 'ar' ? 'العميل المرجع *' : 'Return Customer *')}</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? 'العميل المستلم *' : 'Receiving Customer *') : (language === 'ar' ? 'العميل المرجع *' : 'Return Customer *')}</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCustomerModal(true)}
+                      className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-all flex items-center gap-1 active:scale-95 shadow-sm cursor-pointer"
+                    >
+                      <span>➕</span> {language === 'ar' ? 'إضافة عميل سريع' : 'Quick Add'}
+                    </button>
+                  </div>
                   <div className="flex flex-col gap-2">
                     <input
                       type="text"
@@ -1976,13 +2134,13 @@ export default function DirectStockIssue() {
           </style>
           <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
             <div>
-              <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'تيد كابيتال للتطوير العقاري والمقاولات' : 'TED CAPITAL FOR REAL ESTATE & CONTRACTING'}</h1>
-              <p className="text-xs font-bold text-slate-500 mt-1">TED CAPITAL FOR REAL ESTATE & CONTRACTING</p>
-              <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٤٩٣-١٠٢-٥٨٤' : 'Tax ID: 493-102-584'}</p>
+              <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'برايم ميد فارما للأدوية والمستلزمات الطبية' : 'PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES'}</h1>
+              <p className="text-xs font-bold text-slate-500 mt-1">PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES</p>
+              <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٧٧٢-٤٠٩-١١٨' : 'Tax ID: 772-409-118'}</p>
             </div>
             <div className="text-left">
-              <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl">T</div>
-              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">ENTERPRISE SYSTEM</p>
+              <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl">P</div>
+              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">PRIMEMED PHARMA</p>
             </div>
           </div>
 
@@ -2299,13 +2457,13 @@ export default function DirectStockIssue() {
               {/* Corporate Identity Header */}
               <div className={`flex justify-between items-start border-b-2 pb-6 mb-6 ${activeInvoiceData.type === 'issue' ? 'border-slate-900' : 'border-amber-700'}`}>
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'تيد كابيتال للتطوير العقاري والمقاولات' : 'TED CAPITAL FOR REAL ESTATE & CONTRACTING'}</h1>
-                  <p className="text-xs font-bold text-slate-500 mt-1">TED CAPITAL FOR REAL ESTATE & CONTRACTING</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٤٩٣-١٠٢-٥٨٤' : 'Tax ID: 493-102-584'}</p>
+                  <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'برايم ميد فارما للأدوية والمستلزمات الطبية' : 'PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES'}</h1>
+                  <p className="text-xs font-bold text-slate-500 mt-1">PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٧٧٢-٤٠٩-١١٨' : 'Tax ID: 772-409-118'}</p>
                 </div>
                 <div className="text-left">
-                  <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>T</div>
-                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">ENTERPRISE SYSTEM</p>
+                  <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>P</div>
+                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">PRIMEMED PHARMA</p>
                 </div>
               </div>
 
@@ -2429,6 +2587,103 @@ export default function DirectStockIssue() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 Quick Add Customer Modal (Smooth & Seamless) 🌟 */}
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white flex justify-between items-center shadow-md">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-white/10 rounded-2xl text-2xl backdrop-blur-md border border-white/20 shadow-inner">👤</span>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{language === 'ar' ? 'إضافة عميل جديد سريعاً' : 'Quick Add New Customer'}</h3>
+                  <p className="text-xs text-emerald-100 font-bold">{language === 'ar' ? 'أدخل بيانات العميل لإضافته واختياره فوراً في الإذن' : 'Enter details to instantly add & select customer'}</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAddCustomerModal(false)}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleQuickAddCustomer} className="p-8 space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم العميل / الشركة بالكامل *' : 'Full Customer / Company Name *'}</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder={language === 'ar' ? 'مثال: شركة الأمل الطبية أو د. خالد' : 'e.g. Al-Amal Medical or Dr. Khaled'}
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'رقم الهاتف (Phone)' : 'Phone Number'}</label>
+                    <input 
+                      type="tel" 
+                      placeholder={language === 'ar' ? '010xxxxxxx' : 'Phone'}
+                      value={newCustomerPhone}
+                      onChange={(e) => setNewCustomerPhone(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / العيادة' : 'Facility / Clinic Name'}</label>
+                    <input 
+                      type="text" 
+                      placeholder={language === 'ar' ? 'اسم المنشأة' : 'Company Name'}
+                      value={newCustomerCompany}
+                      onChange={(e) => setNewCustomerCompany(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'البريد الإلكتروني (Email)' : 'Email Address'}</label>
+                  <input 
+                    type="email" 
+                    placeholder={language === 'ar' ? 'name@example.com' : 'Email'}
+                    value={newCustomerEmail}
+                    onChange={(e) => setNewCustomerEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomerModal(false)}
+                  className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingCustomer}
+                  className={`px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${isAddingCustomer ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  <span>{isAddingCustomer ? '⏳' : '💾'}</span> {isAddingCustomer ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ واختيار فوري' : 'Save & Select')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

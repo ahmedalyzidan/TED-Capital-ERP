@@ -910,6 +910,85 @@ const applySchemaFixes = async () => {
         `, [w]);
     }
 
+    // --- 🌟 Package 2 & Package 4 Schema Expansion (Pharma & Direct Issue) 🌟 ---
+    await runQuery("Narcotics Custody Ledger Table", `CREATE TABLE IF NOT EXISTS narcotics_custody_ledger (
+        id SERIAL PRIMARY KEY,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
+        patient_id VARCHAR(100),
+        patient_name VARCHAR(255),
+        doctor_name VARCHAR(255),
+        doctor_license VARCHAR(100),
+        diagnosis_code VARCHAR(255),
+        dispensed_qty NUMERIC(20,6) DEFAULT 0,
+        pharmacist_username VARCHAR(100),
+        doctor_pin_verified BOOLEAN DEFAULT TRUE,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Cold Chain Logs Table", `CREATE TABLE IF NOT EXISTS cold_chain_logs (
+        id SERIAL PRIMARY KEY,
+        warehouse VARCHAR(255),
+        logged_date DATE DEFAULT CURRENT_DATE,
+        min_temp NUMERIC(5,2),
+        max_temp NUMERIC(5,2),
+        current_temp NUMERIC(5,2),
+        excursion_incident BOOLEAN DEFAULT FALSE,
+        excursion_action TEXT,
+        logged_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Stock Disposal Protocols Table", `CREATE TABLE IF NOT EXISTS stock_disposal_protocols (
+        id SERIAL PRIMARY KEY,
+        protocol_no VARCHAR(100) UNIQUE,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
+        item_name VARCHAR(255),
+        batch_no VARCHAR(100),
+        disposal_qty NUMERIC(20,6) DEFAULT 0,
+        unit_cost NUMERIC(20,6) DEFAULT 0,
+        total_loss NUMERIC(20,6) DEFAULT 0,
+        disposal_reason TEXT,
+        committee_members TEXT,
+        environmental_cert VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'Pending Approval',
+        created_by VARCHAR(100),
+        approved_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
+    await runQuery("Insurance Claims Table", `CREATE TABLE IF NOT EXISTS insurance_claims (
+        id SERIAL PRIMARY KEY,
+        claim_no VARCHAR(100) UNIQUE,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        patient_name VARCHAR(255),
+        insurance_company VARCHAR(255),
+        policy_no VARCHAR(100),
+        total_bill NUMERIC(15,2) DEFAULT 0,
+        patient_copay NUMERIC(15,2) DEFAULT 0,
+        claim_amount NUMERIC(15,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Draft',
+        submission_date DATE DEFAULT CURRENT_DATE,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        deleted_by VARCHAR(100),
+        deleted_at TIMESTAMP,
+        metadata JSONB DEFAULT '{}'::jsonb
+    )`);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

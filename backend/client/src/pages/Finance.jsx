@@ -718,7 +718,7 @@ export default function Finance() {
                                  <td className="px-10 py-6">
                                     <div className="flex flex-col gap-1.5 py-1 font-sans">
                                        <span className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest w-fit shadow-sm flex items-center gap-1.5">
-                                          <span>🏢</span> {l.company || 'TED Capital'}
+                                          <span>🏢</span> {l.company || 'PRIMEMED PHARMA'}
                                        </span>
                                        <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[10px] font-black uppercase tracking-widest w-fit shadow-sm flex items-center gap-1.5">
                                           <span>🏗️</span> {l.cost_center && l.cost_center !== 'General' ? l.cost_center : (language === 'ar' ? 'عام (General)' : 'General')}

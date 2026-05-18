@@ -93,7 +93,7 @@ export default function ActionHub({ actions, language = 'ar' }) {
 
           <div className="mt-1 pt-1 border-t border-slate-50 px-4">
             <p className="text-[8px] text-slate-300 font-bold text-center">
-              TED CAPITAL ERP v2.0
+              PRIMEMED PHARMA ERP v2.0
             </p>
           </div>
         </div>

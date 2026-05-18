@@ -1490,8 +1490,8 @@ export default function Subcontractors() {
                 {/* Certificate Header */}
                 <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
                   <div className="text-right">
-                    <h1 className="text-3xl font-black text-slate-950 tracking-tighter">مجموعة شركات تيد كابيتال القابضة</h1>
-                    <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">TED CAPITAL HOLDINGS GROUP | ERP SYSTEM</p>
+                    <h1 className="text-3xl font-black text-slate-950 tracking-tighter">برايم ميد فارما للأدوية والمستلزمات الطبية</h1>
+                    <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">PRIMEMED PHARMA | ERP SYSTEM</p>
                     <div className="text-xs text-slate-600 space-y-0.5 mt-4 font-bold">
                       <div>المكتب الرئيسي: القاهرة الجديدة، التجمع الخامس</div>
                       <div>الهاتف: +20 2 2489 1234</div>
@@ -1499,7 +1499,7 @@ export default function Subcontractors() {
                     </div>
                   </div>
                   <div className="text-left">
-                    <div className="w-16 h-16 bg-slate-950 text-white rounded-2xl flex items-center justify-center text-3xl font-bold font-sans">TED</div>
+                    <div className="w-16 h-16 bg-slate-950 text-white rounded-2xl flex items-center justify-center text-3xl font-bold font-sans">PMP</div>
                     <div className="mt-4 text-xs font-black text-slate-900 space-y-1 text-right">
                       <div className="bg-slate-900 text-white px-3 py-1 rounded text-center text-[10px] font-black uppercase tracking-wider">مستخلص أعمال مقاولة باطن جاري</div>
                       <div>رقم المستخلص: <span className="font-mono text-sm">#INV-{selectedPrintInvoice.id}</span></div>

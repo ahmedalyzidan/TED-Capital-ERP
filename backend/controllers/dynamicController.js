@@ -1,7 +1,8 @@
 const pool = require('../config/db');
 const { logAudit, logAdvancedAudit, calculateMovingAverage, cleanNumeric, syncProjectFinancials } = require('../utils/helpers');
 const { hasAccess } = require('../middlewares/auth');
-const { checkAndSendLowStockEmail } = require('../config/mailer');
+const { checkAndSendLowStockEmail, sendEmailNotification } = require('../config/mailer');
+const { generateInvoicePDF } = require('../utils/pdfGenerator');
 const AccountingService = require('../services/accountingService');
 const projectController = require('./projectController');
 const { processApprovalWorkflow } = require('../services/workflowEngine');
@@ -183,7 +184,7 @@ class DynamicController {
             await client.query('BEGIN');
             const { type } = req.params;
             let data = req.body;
-            let skipInsert = (type === 'ledger');
+            let skipInsert = (type === 'ledger' || type === 'email_notifications');
             let newId = null;
 
             if (!hasAccess(req.user, type, 'create')) throw new Error("Access Denied.");
@@ -327,6 +328,31 @@ class DynamicController {
 
             if (type === 'ledger') {
                 await AccountingService.logEntry(client, data.account_name, data.cost_center, cleanNumeric(data.debit), cleanNumeric(data.credit), data.description, req.user.username);
+            }
+
+            if (type === 'email_notifications') {
+                let attachments = null;
+                if (data.invoice_data) {
+                    try {
+                        const pdfBuffer = await generateInvoicePDF(data.invoice_data);
+                        attachments = [{
+                            filename: `Invoice_${data.invoice_data.documentNo || 'Document'}.pdf`,
+                            content: pdfBuffer,
+                            contentType: 'application/pdf'
+                        }];
+                    } catch (pdfErr) {
+                        console.error("🔥 [PDF Generation Error]:", pdfErr);
+                        if (data.attachment_content) {
+                            attachments = [{ filename: data.attachment_filename || 'Invoice_Document.txt', content: data.attachment_content }];
+                        }
+                    }
+                } else if (data.attachment_content) {
+                    attachments = [{
+                        filename: data.attachment_filename || 'Invoice_Document.txt',
+                        content: data.attachment_content
+                    }];
+                }
+                await sendEmailNotification(data.recipient || 'ahmedzidan2013@gmail.com, Mo@fekra.studio', data.subject || 'إشعار نظام Ted ERP', data.body || 'حركة جديدة', true, attachments);
             }
 
             await logAudit(req.user.username, 'CREATE', type, newId || 'N/A', `Added record to ${type}`);
