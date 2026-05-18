@@ -257,9 +257,13 @@ export default function Layout() {
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/10 to-transparent opacity-30"></div>
           )}
           <div className={`flex items-center gap-4 transition-all duration-500 relative z-10 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>T</div>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>
+              {user?.username?.toUpperCase() === 'MTAYEM' ? 'P' : 'T'}
+            </div>
             <div className="whitespace-nowrap">
-              <h1 className={`text-2xl font-black tracking-tighter leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>TED ERP</h1>
+              <h1 className={`text-2xl font-black tracking-tighter leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {user?.username?.toUpperCase() === 'MTAYEM' ? 'PRIMEMED PHARMA' : 'TED ERP'}
+              </h1>
               <p className={`text-[11px] font-black uppercase tracking-[0.3em] mt-2 opacity-80 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{t.enterprise}</p>
             </div>
           </div>
