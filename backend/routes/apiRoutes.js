@@ -2964,24 +2964,57 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
                 `;
 
                 let params = [term];
-                if (req.isolation && req.isolation.company) {
+                const isMtayem = req.user && req.user.isMtayem;
+                const isMsobhi = req.user && req.user.isMsobhi;
+
+                if (isMtayem) {
+                    const compsStr = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
                     if (qry.comp_col) {
                         if (qry.table === 'chart_of_accounts') {
-                            let entityName = "";
-                            if (req.isolation.company === '1') entityName = 'TED Capital';
-                            if (req.isolation.company === '2') entityName = 'Design Concept';
-                            if (req.isolation.company === '3') entityName = 'Master Builder';
-                            if (entityName) {
-                                sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} = 'All')`;
-                                params.push(entityName);
-                            }
+                            sql += ` AND (${qry.comp_col} IN ('TED Capital', 'PRIMEMED PHARMA', 'All') OR ${qry.comp_col} IS NULL)`;
                         } else {
-                            sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} IS NULL OR ${qry.comp_col} = '')`;
-                            params.push(req.isolation.company);
+                            sql += ` AND (${qry.comp_col} IN ${compsStr} OR ${qry.comp_col} IS NULL OR ${qry.comp_col} = '')`;
                         }
                     } else if (qry.proj_col) {
-                        sql += ` AND (${qry.proj_col} IN (SELECT name FROM projects WHERE company = $2))`;
-                        params.push(req.isolation.company);
+                        sql += ` AND (${qry.proj_col} IN (SELECT name FROM projects WHERE company IN ${compsStr}))`;
+                    }
+                } else if (isMsobhi) {
+                    const compsStr = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
+                    if (qry.comp_col) {
+                        if (qry.table === 'chart_of_accounts') {
+                            sql += ` AND (${qry.comp_col} IN ('Design Concept', 'All') OR ${qry.comp_col} IS NULL)`;
+                        } else {
+                            sql += ` AND (${qry.comp_col} IN ${compsStr} OR ${qry.comp_col} IS NULL OR ${qry.comp_col} = '')`;
+                        }
+                    } else if (qry.proj_col) {
+                        sql += ` AND (${qry.proj_col} IN (SELECT name FROM projects WHERE company IN ${compsStr}))`;
+                    }
+                } else if (req.user && (req.user.linkedCompany || req.user.linkedProject)) {
+                    if (req.user.linkedCompany) {
+                        const c = req.user.linkedCompany;
+                        if (qry.comp_col) {
+                            if (qry.table === 'chart_of_accounts') {
+                                sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} = 'All' OR ${qry.comp_col} IS NULL)`;
+                                params.push(c);
+                            } else {
+                                sql += ` AND (${qry.comp_col} = $2 OR ${qry.comp_col} IS NULL OR ${qry.comp_col} = '')`;
+                                params.push(c);
+                            }
+                        } else if (qry.proj_col) {
+                            sql += ` AND (${qry.proj_col} IN (SELECT name FROM projects WHERE company = $2))`;
+                            params.push(c);
+                        }
+                    }
+                    if (req.user.linkedProject) {
+                        const p = req.user.linkedProject;
+                        const paramIndex = params.length + 1;
+                        if (qry.proj_col) {
+                            sql += ` AND (${qry.proj_col} = $${paramIndex})`;
+                            params.push(p);
+                        } else if (qry.table === 'projects') {
+                            sql += ` AND (name = $${paramIndex})`;
+                            params.push(p);
+                        }
                     }
                 }
                 sql += ` LIMIT 5`;
