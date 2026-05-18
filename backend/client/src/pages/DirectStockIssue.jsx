@@ -61,7 +61,7 @@ export default function DirectStockIssue() {
         email: newCustomerEmail || '',
         created_at: new Date().toISOString()
       };
-      const res = await api.post('/dynamic/table/customers', payload);
+      const res = await api.post('/dynamic/add/customers', payload);
       const newCust = res.data?.data || { id: Date.now(), ...payload };
       
       // Update customers list
