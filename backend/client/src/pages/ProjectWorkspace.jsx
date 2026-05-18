@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import SmartValuations from '../components/SmartValuations';
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   const [project, setProject] = useState(null);
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [coa, setCoa] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // BOQ & Material Requisition States
   const [boqList, setBoqList] = useState([]);
   const [materialUsage, setMaterialUsage] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  
+
   // Modals for manual entry
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [entryForm, setEntryForm] = useState({
     account_name: '', debit: '', credit: '', description: ''
   });
-  
+
   // Requisition Modal
   const [isReqModalOpen, setIsReqModalOpen] = useState(false);
   const [selectedBoq, setSelectedBoq] = useState(null);
@@ -50,6 +51,25 @@ export default function ProjectWorkspace() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Missing States for Project Phases, Cost Centers, Budget Lines, simple Valuations, and Materials
+  const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
+  const [phaseForm, setPhaseForm] = useState({ name: '', phase_code: '', description: '', weight_percent: '', planned_start: '', planned_end: '' });
+  const [phases, setPhases] = useState([]);
+
+  const [isCCModalOpen, setIsCCModalOpen] = useState(false);
+  const [ccForm, setCcForm] = useState({ name: '', code: '', phase_id: '', cost_type: 'Direct', budget_amount: '' });
+  const [costCenters, setCostCenters] = useState([]);
+
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({ line_description: '', category: 'Material', cost_center_id: '', budgeted_qty: '', budgeted_unit_cost: '', notes: '' });
+
+  const [isValModalOpen, setIsValModalOpen] = useState(false);
+  const [valForm, setValForm] = useState({ valuation_no: '', valuation_date: '', period_from: '', period_to: '', gross_amount: '', retention_deduction: '', advance_deduction: '', tax_deduction: '', notes: '' });
+
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [issueForm, setIssueForm] = useState({ inventory_id: '', boq_id: '', qty: '', issued_to: 'project', subcontractor_id: '', notes: '' });
+  const [subcontractors, setSubcontractors] = useState([]);
+
   useEffect(() => {
     fetchWorkspaceData();
   }, [id]);
@@ -59,25 +79,31 @@ export default function ProjectWorkspace() {
     try {
       // 1. Get Project Details
       const projRes = await api.get(`/dynamic/table/projects?limit=100`);
-      const foundProject = projRes.data.data.find(p => p.id === parseInt(id));
+      const foundProject = projRes.data?.data?.find(p => p.id === parseInt(id));
       setProject(foundProject);
 
       if (foundProject) {
-        // 2. Get Ledger, COA, BOQ, Material Usage, Inventory, and Warehouses in parallel
-        const [ledgerRes, coaRes, boqRes, matRes, invRes, whRes] = await Promise.all([
-          api.get(`/dynamic/table/ledger?limit=2000&filter=${encodeURIComponent(foundProject.name)}`),
-          api.get(`/dynamic/table/chart_of_accounts?limit=500`),
-          api.get(`/dynamic/table/boq?limit=500&filter=${encodeURIComponent(foundProject.name)}`),
-          api.get(`/dynamic/table/material_usage?limit=500&filter=${encodeURIComponent(foundProject.name)}`),
-          api.get(`/dynamic/table/inventory_items?limit=1000`),
-          api.get(`/dynamic/table/warehouses?limit=100`)
+        // 2. Get Ledger, COA, BOQ, Material Usage, Inventory, Warehouses, Phases, Cost Centers, and Subcontractors in parallel
+        const [ledgerRes, coaRes, boqRes, matRes, invRes, whRes, phaseRes, ccRes, subRes] = await Promise.all([
+          api.get(`/dynamic/table/ledger?limit=2000&filter=${encodeURIComponent(foundProject.name)}`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/chart_of_accounts?limit=500`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/boq?limit=500&filter=${encodeURIComponent(foundProject.name)}`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/material_usage?limit=500&filter=${encodeURIComponent(foundProject.name)}`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/inventory_items?limit=1000`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/warehouses?limit=100`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/project_phases?limit=500`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/cost_centers?limit=500`).catch(() => ({ data: { data: [] } })),
+          api.get(`/dynamic/table/subcontractors?limit=500`).catch(() => ({ data: { data: [] } }))
         ]);
-        setLedgerEntries(ledgerRes.data.data || []);
-        setCoa(coaRes.data.data || []);
-        setBoqList(boqRes.data.data || []);
-        setMaterialUsage(matRes.data.data || []);
-        setInventoryItems(invRes.data.data || []);
-        setWarehouses(whRes.data.data || []);
+        setLedgerEntries(ledgerRes.data?.data || []);
+        setCoa(coaRes.data?.data || []);
+        setBoqList(boqRes.data?.data || []);
+        setMaterialUsage(matRes.data?.data || []);
+        setInventoryItems(invRes.data?.data || []);
+        setWarehouses(whRes.data?.data || []);
+        setPhases(phaseRes.data?.data || []);
+        setCostCenters(ccRes.data?.data || []);
+        setSubcontractors(subRes.data?.data || []);
       }
     } catch (err) {
       console.error("Error fetching workspace data", err);
@@ -219,22 +245,22 @@ export default function ProjectWorkspace() {
   const budget = Number(project.budget || 0);
   const totalRevenue = ledgerEntries
     .filter(e => {
-        const acc = coa.find(a => a.account_name === e.account_name);
-        return acc?.account_type === 'Revenue';
+      const acc = coa.find(a => a.account_name === e.account_name);
+      return acc?.account_type === 'Revenue';
     })
     .reduce((sum, e) => sum + (Number(e.credit) - Number(e.debit)), 0);
 
   const totalExpenses = ledgerEntries
     .filter(e => {
-        const acc = coa.find(a => a.account_name === e.account_name);
-        return acc?.account_type === 'Expense';
+      const acc = coa.find(a => a.account_name === e.account_name);
+      return acc?.account_type === 'Expense';
     })
     .reduce((sum, e) => sum + (Number(e.debit) - Number(e.credit)), 0);
 
   const totalFunding = ledgerEntries
     .filter(e => {
-        const acc = coa.find(a => a.account_name === e.account_name);
-        return acc?.account_type === 'Equity';
+      const acc = coa.find(a => a.account_name === e.account_name);
+      return acc?.account_type === 'Equity';
     })
     .reduce((sum, e) => sum + (Number(e.credit) - Number(e.debit)), 0);
 
@@ -253,7 +279,7 @@ export default function ProjectWorkspace() {
     const date = new Date(entry.created_at);
     const mLabel = date.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
     if (!acc[mLabel]) acc[mLabel] = { month: mLabel, rev: 0, exp: 0 };
-    
+
     const entryAcc = coa.find(a => a.account_name === entry.account_name);
     if (entryAcc?.account_type === 'Revenue') {
       acc[mLabel].rev += (Number(entry.credit) - Number(entry.debit));
@@ -267,7 +293,7 @@ export default function ProjectWorkspace() {
   const maxMonthlyRev = Math.max(...dynamicMonths.map(m => m.rev), 1000);
 
   // --- Filtering ---
-  const filteredLedger = ledgerEntries.filter(e => 
+  const filteredLedger = ledgerEntries.filter(e =>
     e.account_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (e.created_by && e.created_by.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -277,6 +303,7 @@ export default function ProjectWorkspace() {
   const tabs = [
     { id: 'overview', name: 'نظرة عامة', icon: '📊' },
     { id: 'boq', name: 'المقايسة والتموين (BOQ)', icon: '🏗️' },
+    { id: 'valuations', name: 'المستخلصات والضمان', icon: '📋' },
     { id: 'expenses', name: 'المصروفات والقيود', icon: '💸' },
     { id: 'ledger', name: 'دفتر الأستاذ (GL)', icon: '📘' },
     { id: 'pnl', name: 'الأرباح والخسائر (P&L)', icon: '📈' },
@@ -287,82 +314,82 @@ export default function ProjectWorkspace() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-6">
-            <Link to="/projects" className="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-400 group">
-                <span className="group-hover:translate-x-1 transition-transform">▶</span>
-            </Link>
-            <div>
-                <div className="flex items-center gap-3">
-                    <h2 className="text-4xl font-black text-slate-800 tracking-tight">{project.name}</h2>
-                    <span className="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100">
-                        {project.project_serial || project.code}
-                    </span>
-                </div>
-                <div className="flex items-center gap-4 mt-2 text-slate-400 font-bold text-sm">
-                    <span className="flex items-center gap-1.5"><span className="text-lg">👔</span> {project.project_manager || 'بدون مدير'}</span>
-                    <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
-                    <span className="flex items-center gap-1.5"><span className="text-lg">🏢</span> {project.company || 'تيد كابيتال'}</span>
-                </div>
+          <Link to="/projects" className="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-400 group">
+            <span className="group-hover:translate-x-1 transition-transform">▶</span>
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-4xl font-black text-slate-800 tracking-tight">{project.name}</h2>
+              <span className="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100">
+                {project.project_serial || project.code}
+              </span>
             </div>
+            <div className="flex items-center gap-4 mt-2 text-slate-400 font-bold text-sm">
+              <span className="flex items-center gap-1.5"><span className="text-lg">👔</span> {project.project_manager || 'بدون مدير'}</span>
+              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+              <span className="flex items-center gap-1.5"><span className="text-lg">🏢</span> {project.company || 'تيد كابيتال'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
-            <button 
-              onClick={handleSync} 
-              disabled={isSubmitting}
-              className="bg-amber-50 text-amber-700 hover:bg-amber-100 px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 border border-amber-200 text-sm shadow-sm"
-              title="إعادة حساب الأرباح والمصروفات من دفتر اليومية"
-            >
-              <span>🔄</span> {isSubmitting ? 'جاري المزامنة...' : 'مزامنة وتحديث'}
-            </button>
-            <button className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-slate-200 hover:bg-black transition-all flex items-center gap-2 text-sm">
-                <span>🖨️</span> طباعة التقرير
-            </button>
+          <button
+            onClick={handleSync}
+            disabled={isSubmitting}
+            className="bg-amber-50 text-amber-700 hover:bg-amber-100 px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 border border-amber-200 text-sm shadow-sm"
+            title="إعادة حساب الأرباح والمصروفات من دفتر اليومية"
+          >
+            <span>🔄</span> {isSubmitting ? 'جاري المزامنة...' : 'مزامنة وتحديث'}
+          </button>
+          <button className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-slate-200 hover:bg-black transition-all flex items-center gap-2 text-sm">
+            <span>🖨️</span> طباعة التقرير
+          </button>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
         <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
-            <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">💰</div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">الميزانية المرصودة</p>
-            <h4 className="text-2xl font-black text-slate-800 font-mono tracking-tight">{budget.toLocaleString()}</h4>
-            <div className="mt-3 h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '100%' }}></div>
-            </div>
+          <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">💰</div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">الميزانية المرصودة</p>
+          <h4 className="text-2xl font-black text-slate-800 font-mono tracking-tight">{budget.toLocaleString()}</h4>
+          <div className="mt-3 h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500" style={{ width: '100%' }}></div>
+          </div>
         </div>
 
         <div className={`bg-white p-5 rounded-[2rem] shadow-sm border relative overflow-hidden group ${consumptionPercent > 100 ? 'border-rose-200 ring-2 ring-rose-50' : 'border-slate-100'}`}>
-            <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">📉</div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي المصروفات</p>
-            <h4 className={`text-2xl font-black font-mono tracking-tight ${consumptionPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>{totalExpenses.toLocaleString()}</h4>
-            <div className="mt-3 h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${consumptionPercent > 100 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(consumptionPercent, 100)}%` }}></div>
-            </div>
-            {consumptionPercent > 100 && <p className="text-[9px] font-black text-rose-500 mt-2 flex items-center gap-1">⚠️ تجاوز الميزانية ({consumptionPercent.toFixed(0)}%)</p>}
+          <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">📉</div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي المصروفات</p>
+          <h4 className={`text-2xl font-black font-mono tracking-tight ${consumptionPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>{totalExpenses.toLocaleString()}</h4>
+          <div className="mt-3 h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div className={`h-full transition-all duration-1000 ${consumptionPercent > 100 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(consumptionPercent, 100)}%` }}></div>
+          </div>
+          {consumptionPercent > 100 && <p className="text-[9px] font-black text-rose-500 mt-2 flex items-center gap-1">⚠️ تجاوز الميزانية ({consumptionPercent.toFixed(0)}%)</p>}
         </div>
 
         <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group border-r-4 border-r-emerald-500">
-            <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">📈</div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">صافي الربح (المحقق)</p>
-            <h4 className={`text-2xl font-black font-mono tracking-tight ${netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{netProfit.toLocaleString()}</h4>
-            <p className={`text-[9px] font-black mt-2 ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>Margin: {margin}%</p>
+          <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">📈</div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">صافي الربح (المحقق)</p>
+          <h4 className={`text-2xl font-black font-mono tracking-tight ${netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{netProfit.toLocaleString()}</h4>
+          <p className={`text-[9px] font-black mt-2 ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>Margin: {margin}%</p>
         </div>
 
         <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group border-r-4 border-r-amber-500">
-            <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">🏛️</div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي التمويل (Funding)</p>
-            <h4 className="text-2xl font-black text-amber-600 font-mono tracking-tight">{totalFunding.toLocaleString()}</h4>
-            <p className="text-[9px] font-black text-amber-500 mt-2">إيداعات الشركاء والتمويل الذاتي</p>
+          <div className="absolute -right-2 -top-2 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform">🏛️</div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي التمويل (Funding)</p>
+          <h4 className="text-2xl font-black text-amber-600 font-mono tracking-tight">{totalFunding.toLocaleString()}</h4>
+          <p className="text-[9px] font-black text-amber-500 mt-2">إيداعات الشركاء والتمويل الذاتي</p>
         </div>
 
         <div className={`p-5 rounded-[2rem] shadow-sm relative overflow-hidden group transition-all duration-500 ${projectLiquidity >= 0 ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white'}`}>
-            <div className="absolute -right-2 -top-2 text-6xl opacity-10 group-hover:scale-110 transition-transform text-white">⚖️</div>
-            <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">الموقف النقدي (Liquidity)</p>
-            <h4 className="text-2xl font-black font-mono tracking-tight">{ projectLiquidity.toLocaleString() }</h4>
-            <div className="mt-3 flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${projectLiquidity >= 0 ? 'bg-white' : 'bg-rose-500'}`}></span>
-                <span className="text-[9px] font-bold text-white/70">{projectLiquidity >= 0 ? 'تدفق نقدي إيجابي' : 'عجز في السيولة'}</span>
-            </div>
+          <div className="absolute -right-2 -top-2 text-6xl opacity-10 group-hover:scale-110 transition-transform text-white">⚖️</div>
+          <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">الموقف النقدي (Liquidity)</p>
+          <h4 className="text-2xl font-black font-mono tracking-tight">{projectLiquidity.toLocaleString()}</h4>
+          <div className="mt-3 flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${projectLiquidity >= 0 ? 'bg-white' : 'bg-rose-500'}`}></span>
+            <span className="text-[9px] font-bold text-white/70">{projectLiquidity >= 0 ? 'تدفق نقدي إيجابي' : 'عجز في السيولة'}</span>
+          </div>
         </div>
       </div>
 
@@ -372,11 +399,10 @@ export default function ProjectWorkspace() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-xs ${
-              activeTab === tab.id 
-                ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
-                : 'text-slate-500 hover:bg-white hover:text-slate-800'
-            }`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-xs ${activeTab === tab.id
+              ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+              : 'text-slate-500 hover:bg-white hover:text-slate-800'
+              }`}
           >
             <span className="text-lg">{tab.icon}</span> {tab.name}
           </button>
@@ -388,56 +414,56 @@ export default function ProjectWorkspace() {
         {activeTab === 'overview' && (
           <div className="p-10 animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-10">
             <div>
-                <h3 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
-                    <span className="p-2 bg-blue-50 text-blue-600 rounded-xl text-sm">📊</span> تفاصيل أداء المشروع
-                </h3>
-                <div className="space-y-6">
-                    <div className={`p-6 rounded-[2rem] border transition-all ${consumptionPercent > 100 ? 'bg-rose-50 border-rose-200 animate-pulse' : 'bg-slate-50 border-slate-100'}`}>
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="font-black text-slate-500 text-sm">استهلاك الميزانية</span>
-                            <span className={`font-black ${consumptionPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>{consumptionPercent.toFixed(1)}%</span>
-                        </div>
-                        <div className="h-4 bg-white rounded-full overflow-hidden border p-0.5">
-                            <div className={`h-full rounded-full transition-all duration-1000 ${consumptionPercent > 100 ? 'bg-rose-500' : 'bg-gradient-to-r from-blue-500 to-emerald-500'}`} style={{ width: `${Math.min(consumptionPercent, 100)}%` }}></div>
-                        </div>
-                        {consumptionPercent > 100 && <p className="text-[10px] font-black text-rose-600 mt-3 text-center uppercase tracking-widest">⚠️ Danger: Budget Overrun detected</p>}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100">
-                            <p className="text-[10px] font-black text-emerald-600 mb-1">إجمالي الإيرادات</p>
-                            <h5 className="text-2xl font-black text-emerald-700 font-mono">{totalRevenue.toLocaleString()}</h5>
-                        </div>
-                        <div className="p-6 bg-rose-50/50 rounded-[2rem] border border-rose-100">
-                            <p className="text-[10px] font-black text-rose-600 mb-1">إجمالي التكاليف</p>
-                            <h5 className="text-2xl font-black text-rose-700 font-mono">{totalExpenses.toLocaleString()}</h5>
-                        </div>
-                    </div>
+              <h3 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                <span className="p-2 bg-blue-50 text-blue-600 rounded-xl text-sm">📊</span> تفاصيل أداء المشروع
+              </h3>
+              <div className="space-y-6">
+                <div className={`p-6 rounded-[2rem] border transition-all ${consumptionPercent > 100 ? 'bg-rose-50 border-rose-200 animate-pulse' : 'bg-slate-50 border-slate-100'}`}>
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-black text-slate-500 text-sm">استهلاك الميزانية</span>
+                    <span className={`font-black ${consumptionPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>{consumptionPercent.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-4 bg-white rounded-full overflow-hidden border p-0.5">
+                    <div className={`h-full rounded-full transition-all duration-1000 ${consumptionPercent > 100 ? 'bg-rose-500' : 'bg-gradient-to-r from-blue-500 to-emerald-500'}`} style={{ width: `${Math.min(consumptionPercent, 100)}%` }}></div>
+                  </div>
+                  {consumptionPercent > 100 && <p className="text-[10px] font-black text-rose-600 mt-3 text-center uppercase tracking-widest">⚠️ Danger: Budget Overrun detected</p>}
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100">
+                    <p className="text-[10px] font-black text-emerald-600 mb-1">إجمالي الإيرادات</p>
+                    <h5 className="text-2xl font-black text-emerald-700 font-mono">{totalRevenue.toLocaleString()}</h5>
+                  </div>
+                  <div className="p-6 bg-rose-50/50 rounded-[2rem] border border-rose-100">
+                    <p className="text-[10px] font-black text-rose-600 mb-1">إجمالي التكاليف</p>
+                    <h5 className="text-2xl font-black text-rose-700 font-mono">{totalExpenses.toLocaleString()}</h5>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-32 translate-x-32 blur-3xl"></div>
-                <h3 className="text-xl font-black mb-8 flex items-center gap-3">📈 تحليل الربحية الشهري</h3>
-                <div className="space-y-4">
-                    {dynamicMonths.length === 0 ? (
-                       <p className="text-slate-500 text-sm italic py-10 text-center">لا توجد بيانات كافية للتحليل الشهري حالياً.</p>
-                    ) : (
-                      dynamicMonths.map((m, i) => (
-                        <div key={i} className="flex items-center gap-4 group/row">
-                           <span className="w-24 text-xs font-bold text-slate-400 whitespace-nowrap">{m.month}</span>
-                           <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden flex">
-                              <div className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000" style={{ width: `${(m.rev/maxMonthlyRev)*100}%` }}></div>
-                           </div>
-                           <span className="font-mono text-[10px] font-black text-emerald-400">+{m.rev.toLocaleString()}</span>
-                        </div>
-                      ))
-                    )}
-                </div>
-                <div className="mt-8 pt-6 border-t border-white/10">
-                   <p className="text-[10px] text-slate-500 font-black mb-2 italic">* تعتمد هذه الأرقام على ترحيلات دفتر اليومية المعتمدة.</p>
-                   <button className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black transition-all">تحميل التقرير التفصيلي (PDF)</button>
-                </div>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-32 translate-x-32 blur-3xl"></div>
+              <h3 className="text-xl font-black mb-8 flex items-center gap-3">📈 تحليل الربحية الشهري</h3>
+              <div className="space-y-4">
+                {dynamicMonths.length === 0 ? (
+                  <p className="text-slate-500 text-sm italic py-10 text-center">لا توجد بيانات كافية للتحليل الشهري حالياً.</p>
+                ) : (
+                  dynamicMonths.map((m, i) => (
+                    <div key={i} className="flex items-center gap-4 group/row">
+                      <span className="w-24 text-xs font-bold text-slate-400 whitespace-nowrap">{m.month}</span>
+                      <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000" style={{ width: `${(m.rev / maxMonthlyRev) * 100}%` }}></div>
+                      </div>
+                      <span className="font-mono text-[10px] font-black text-emerald-400">+{m.rev.toLocaleString()}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <p className="text-[10px] text-slate-500 font-black mb-2 italic">* تعتمد هذه الأرقام على ترحيلات دفتر اليومية المعتمدة.</p>
+                <button className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black transition-all">تحميل التقرير التفصيلي (PDF)</button>
+              </div>
             </div>
           </div>
         )}
@@ -472,7 +498,7 @@ export default function ProjectWorkspace() {
                 <h3 className="text-xl font-black text-slate-800">📋 مقايسة الأعمال وبنود المشروع</h3>
                 <p className="text-slate-400 text-xs font-bold mt-1">إجمالي البنود المعرفة: {boqList.length} بنود أعمال</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsBoqModalOpen(true)}
                 className="bg-slate-900 hover:bg-black text-white px-6 py-3.5 rounded-2xl font-black text-xs shadow-lg transition-all"
               >
@@ -504,7 +530,7 @@ export default function ProjectWorkspace() {
                       const estCost = Number(item.est_material_cost || 0);
                       const actCost = Number(item.actual_material_cost || 0);
                       const costUsagePercent = estCost > 0 ? (actCost / estCost) * 100 : 0;
-                      
+
                       return (
                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                           <td className="p-6">
@@ -527,10 +553,9 @@ export default function ProjectWorkspace() {
                             </div>
                           </td>
                           <td className="p-6 text-center">
-                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${
-                              item.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
+                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${item.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
                               item.status === 'In Progress' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
-                            }`}>
+                              }`}>
                               {item.status || 'Not Started'}
                             </span>
                           </td>
@@ -605,61 +630,65 @@ export default function ProjectWorkspace() {
           </div>
         )}
 
+        {activeTab === 'valuations' && (
+          <SmartValuations projectId={id} projectName={project?.name} fetchWorkspaceData={fetchWorkspaceData} />
+        )}
+
         {activeTab === 'expenses' && (
           <div className="p-10 animate-fade-in">
             <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-slate-800">💸 سجل المصروفات والقيود</h3>
-                <div className="flex gap-3">
-                    <button 
-                      onClick={() => setIsEntryModalOpen(true)}
-                      className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all text-sm"
-                    >
-                      + إضافة قيد مصروفات
-                    </button>
-                    <input 
-                      type="text" 
-                      placeholder="بحث في القيود (اسم الحساب، البيان...)" 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="p-3 bg-slate-50 border rounded-xl text-sm font-bold outline-none focus:border-blue-500 w-80 shadow-sm" 
-                    />
-                </div>
+              <h3 className="text-2xl font-black text-slate-800">💸 سجل المصروفات والقيود</h3>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsEntryModalOpen(true)}
+                  className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all text-sm"
+                >
+                  + إضافة قيد مصروفات
+                </button>
+                <input
+                  type="text"
+                  placeholder="بحث في القيود (اسم الحساب، البيان...)"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="p-3 bg-slate-50 border rounded-xl text-sm font-bold outline-none focus:border-blue-500 w-80 shadow-sm"
+                />
+              </div>
             </div>
-            
+
             <div className="overflow-x-auto rounded-[2rem] border border-slate-100 shadow-sm">
-                <table className="w-full text-right whitespace-nowrap">
-                    <thead className="bg-slate-50 text-slate-400">
-                        <tr>
-                            <th className="p-6 font-black text-xs">التاريخ</th>
-                            <th className="p-6 font-black text-xs">الحساب</th>
-                            <th className="p-6 font-black text-xs">البيان / الوصف</th>
-                            <th className="p-6 font-black text-xs text-center">مدين (DR)</th>
-                            <th className="p-6 font-black text-xs text-center">دائن (CR)</th>
-                            <th className="p-6 font-black text-xs text-left">بواسطة</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {filteredLedger.length === 0 ? (
-                            <tr><td colSpan="6" className="p-20 text-center text-slate-400 font-bold">لا توجد قيود تطابق بحثك.</td></tr>
-                        ) : (
-                            filteredLedger.map(e => (
-                                <tr key={e.id} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="p-6 font-bold text-slate-400 text-xs">{new Date(e.created_at).toLocaleDateString('ar-EG')}</td>
-                                    <td className="p-6">
-                                        <div className="flex flex-col">
-                                            <span className="font-black text-slate-800">{e.account_name}</span>
-                                            <span className="text-[10px] text-blue-500 font-bold uppercase">{coa.find(a => a.account_name === e.account_name)?.account_code}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-6 font-bold text-slate-500 text-sm max-w-xs truncate">{e.description}</td>
-                                    <td className="p-6 text-center font-mono font-black text-blue-600">{Number(e.debit) > 0 ? Number(e.debit).toLocaleString() : '-'}</td>
-                                    <td className="p-6 text-center font-mono font-black text-rose-600">{Number(e.credit) > 0 ? Number(e.credit).toLocaleString() : '-'}</td>
-                                    <td className="p-6 text-left font-black text-slate-400 text-xs">{e.created_by}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+              <table className="w-full text-right whitespace-nowrap">
+                <thead className="bg-slate-50 text-slate-400">
+                  <tr>
+                    <th className="p-6 font-black text-xs">التاريخ</th>
+                    <th className="p-6 font-black text-xs">الحساب</th>
+                    <th className="p-6 font-black text-xs">البيان / الوصف</th>
+                    <th className="p-6 font-black text-xs text-center">مدين (DR)</th>
+                    <th className="p-6 font-black text-xs text-center">دائن (CR)</th>
+                    <th className="p-6 font-black text-xs text-left">بواسطة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredLedger.length === 0 ? (
+                    <tr><td colSpan="6" className="p-20 text-center text-slate-400 font-bold">لا توجد قيود تطابق بحثك.</td></tr>
+                  ) : (
+                    filteredLedger.map(e => (
+                      <tr key={e.id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="p-6 font-bold text-slate-400 text-xs">{new Date(e.created_at).toLocaleDateString('ar-EG')}</td>
+                        <td className="p-6">
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-800">{e.account_name}</span>
+                            <span className="text-[10px] text-blue-500 font-bold uppercase">{coa.find(a => a.account_name === e.account_name)?.account_code}</span>
+                          </div>
+                        </td>
+                        <td className="p-6 font-bold text-slate-500 text-sm max-w-xs truncate">{e.description}</td>
+                        <td className="p-6 text-center font-mono font-black text-blue-600">{Number(e.debit) > 0 ? Number(e.debit).toLocaleString() : '-'}</td>
+                        <td className="p-6 text-center font-mono font-black text-rose-600">{Number(e.credit) > 0 ? Number(e.credit).toLocaleString() : '-'}</td>
+                        <td className="p-6 text-left font-black text-slate-400 text-xs">{e.created_by}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -668,35 +697,35 @@ export default function ProjectWorkspace() {
           <div className="p-10 animate-fade-in">
             <h3 className="text-2xl font-black text-slate-800 mb-8">📘 دفتر الأستاذ (GL) للمشروع</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {coa.filter(a => ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
-                    const accEntries = ledgerEntries.filter(e => e.account_name === acc.account_name);
-                    const bal = accEntries.reduce((sum, e) => sum + (acc.account_type === 'Asset' || acc.account_type === 'Expense' ? (Number(e.debit) - Number(e.credit)) : (Number(e.credit) - Number(e.debit))), 0);
-                    return (
-                        <div key={acc.id} className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 group hover:border-blue-500/30 transition-all shadow-sm">
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <h4 className="font-black text-slate-800 text-lg">{acc.account_name}</h4>
-                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">{acc.account_code} | {acc.account_type}</p>
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">الرصيد النهائي</p>
-                                    <p className={`text-2xl font-black font-mono ${bal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{bal.toLocaleString()}</p>
-                                </div>
-                            </div>
-                            <div className="space-y-3 opacity-60 group-hover:opacity-100 transition-opacity">
-                                {accEntries.slice(0, 3).map(e => (
-                                    <div key={e.id} className="flex justify-between text-xs font-bold border-b border-slate-200/50 pb-2">
-                                        <span className="text-slate-500">{e.description}</span>
-                                        <span className={Number(e.debit) > 0 ? 'text-blue-600' : 'text-rose-600'}>
-                                            {Number(e.debit) > 0 ? `+${Number(e.debit).toLocaleString()}` : `-${Number(e.credit).toLocaleString()}`}
-                                        </span>
-                                    </div>
-                                ))}
-                                {accEntries.length > 3 && <p className="text-[10px] text-center text-slate-400 pt-2 font-black italic">...+ {accEntries.length - 3} حركات إضافية</p>}
-                            </div>
+              {coa.filter(a => ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
+                const accEntries = ledgerEntries.filter(e => e.account_name === acc.account_name);
+                const bal = accEntries.reduce((sum, e) => sum + (acc.account_type === 'Asset' || acc.account_type === 'Expense' ? (Number(e.debit) - Number(e.credit)) : (Number(e.credit) - Number(e.debit))), 0);
+                return (
+                  <div key={acc.id} className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 group hover:border-blue-500/30 transition-all shadow-sm">
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        <h4 className="font-black text-slate-800 text-lg">{acc.account_name}</h4>
+                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">{acc.account_code} | {acc.account_type}</p>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">الرصيد النهائي</p>
+                        <p className={`text-2xl font-black font-mono ${bal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{bal.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                      {accEntries.slice(0, 3).map(e => (
+                        <div key={e.id} className="flex justify-between text-xs font-bold border-b border-slate-200/50 pb-2">
+                          <span className="text-slate-500">{e.description}</span>
+                          <span className={Number(e.debit) > 0 ? 'text-blue-600' : 'text-rose-600'}>
+                            {Number(e.debit) > 0 ? `+${Number(e.debit).toLocaleString()}` : `-${Number(e.credit).toLocaleString()}`}
+                          </span>
                         </div>
-                    );
-                })}
+                      ))}
+                      {accEntries.length > 3 && <p className="text-[10px] text-center text-slate-400 pt-2 font-black italic">...+ {accEntries.length - 3} حركات إضافية</p>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -704,66 +733,66 @@ export default function ProjectWorkspace() {
         {activeTab === 'pnl' && (
           <div className="p-10 animate-fade-in max-w-4xl mx-auto">
             <div className="text-center mb-12">
-                <h3 className="text-4xl font-black text-slate-800 mb-3">📈 تقرير الأرباح والخسائر للمشروع</h3>
-                <p className="text-slate-400 font-bold">بناءً على قيود دفتر اليومية المسجلة لهذا المشروع</p>
+              <h3 className="text-4xl font-black text-slate-800 mb-3">📈 تقرير الأرباح والخسائر للمشروع</h3>
+              <p className="text-slate-400 font-bold">بناءً على قيود دفتر اليومية المسجلة لهذا المشروع</p>
             </div>
 
             <div className="space-y-10">
-                {/* REVENUE SECTION */}
-                <section>
-                    <div className="flex justify-between items-center border-b-4 border-slate-900 pb-4 mb-6">
-                        <h4 className="text-2xl font-black text-slate-900 flex items-center gap-3"><span>💰</span> إجمالي الإيرادات</h4>
-                        <span className="text-2xl font-black font-mono">{totalRevenue.toLocaleString()}</span>
-                    </div>
-                    <div className="space-y-4 px-6">
-                        {coa.filter(a => a.account_type === 'Revenue' && ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
-                            const bal = ledgerEntries.filter(e => e.account_name === acc.account_name).reduce((sum, e) => sum + (Number(e.credit) - Number(e.debit)), 0);
-                            return (
-                                <div key={acc.id} className="flex justify-between items-center text-lg hover:bg-slate-50 p-2 rounded-xl transition-colors">
-                                    <span className="font-bold text-slate-600">{acc.account_name}</span>
-                                    <span className="font-black text-slate-800 font-mono">{bal.toLocaleString()}</span>
-                                </div>
-                            );
-                        })}
-                        {totalRevenue === 0 && <p className="text-center text-slate-400 italic">لا توجد إيرادات مسجلة.</p>}
-                    </div>
-                </section>
+              {/* REVENUE SECTION */}
+              <section>
+                <div className="flex justify-between items-center border-b-4 border-slate-900 pb-4 mb-6">
+                  <h4 className="text-2xl font-black text-slate-900 flex items-center gap-3"><span>💰</span> إجمالي الإيرادات</h4>
+                  <span className="text-2xl font-black font-mono">{totalRevenue.toLocaleString()}</span>
+                </div>
+                <div className="space-y-4 px-6">
+                  {coa.filter(a => a.account_type === 'Revenue' && ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
+                    const bal = ledgerEntries.filter(e => e.account_name === acc.account_name).reduce((sum, e) => sum + (Number(e.credit) - Number(e.debit)), 0);
+                    return (
+                      <div key={acc.id} className="flex justify-between items-center text-lg hover:bg-slate-50 p-2 rounded-xl transition-colors">
+                        <span className="font-bold text-slate-600">{acc.account_name}</span>
+                        <span className="font-black text-slate-800 font-mono">{bal.toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
+                  {totalRevenue === 0 && <p className="text-center text-slate-400 italic">لا توجد إيرادات مسجلة.</p>}
+                </div>
+              </section>
 
-                {/* EXPENSES SECTION */}
-                <section>
-                    <div className="flex justify-between items-center border-b-4 border-rose-600 pb-4 mb-6">
-                        <h4 className="text-2xl font-black text-rose-600 flex items-center gap-3"><span>💸</span> إجمالي المصروفات</h4>
-                        <span className="text-2xl font-black font-mono text-rose-600">({totalExpenses.toLocaleString()})</span>
-                    </div>
-                    <div className="space-y-4 px-6">
-                        {coa.filter(a => a.account_type === 'Expense' && ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
-                            const bal = ledgerEntries.filter(e => e.account_name === acc.account_name).reduce((sum, e) => sum + (Number(e.debit) - Number(e.credit)), 0);
-                            return (
-                                <div key={acc.id} className="flex justify-between items-center text-lg hover:bg-rose-50/30 p-2 rounded-xl transition-colors">
-                                    <span className="font-bold text-slate-600">{acc.account_name}</span>
-                                    <span className="font-black text-rose-500 font-mono">{bal.toLocaleString()}</span>
-                                </div>
-                            );
-                        })}
-                        {totalExpenses === 0 && <p className="text-center text-slate-400 italic">لا توجد مصروفات مسجلة.</p>}
-                    </div>
-                </section>
+              {/* EXPENSES SECTION */}
+              <section>
+                <div className="flex justify-between items-center border-b-4 border-rose-600 pb-4 mb-6">
+                  <h4 className="text-2xl font-black text-rose-600 flex items-center gap-3"><span>💸</span> إجمالي المصروفات</h4>
+                  <span className="text-2xl font-black font-mono text-rose-600">({totalExpenses.toLocaleString()})</span>
+                </div>
+                <div className="space-y-4 px-6">
+                  {coa.filter(a => a.account_type === 'Expense' && ledgerEntries.some(e => e.account_name === a.account_name)).map(acc => {
+                    const bal = ledgerEntries.filter(e => e.account_name === acc.account_name).reduce((sum, e) => sum + (Number(e.debit) - Number(e.credit)), 0);
+                    return (
+                      <div key={acc.id} className="flex justify-between items-center text-lg hover:bg-rose-50/30 p-2 rounded-xl transition-colors">
+                        <span className="font-bold text-slate-600">{acc.account_name}</span>
+                        <span className="font-black text-rose-500 font-mono">{bal.toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
+                  {totalExpenses === 0 && <p className="text-center text-slate-400 italic">لا توجد مصروفات مسجلة.</p>}
+                </div>
+              </section>
 
-                {/* FINAL NET PROFIT */}
-                <section className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent"></div>
-                    <div className="relative z-10 flex justify-between items-center">
-                        <div>
-                            <h4 className="text-3xl font-black mb-2">صافي ربح المشروع</h4>
-                            <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">PROJECT NET PROFIT</p>
-                        </div>
-                        <div className="text-left">
-                            <h5 className={`text-5xl font-black font-mono ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                {netProfit.toLocaleString()}
-                            </h5>
-                        </div>
-                    </div>
-                </section>
+              {/* FINAL NET PROFIT */}
+              <section className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent"></div>
+                <div className="relative z-10 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-3xl font-black mb-2">صافي ربح المشروع</h4>
+                    <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">PROJECT NET PROFIT</p>
+                  </div>
+                  <div className="text-left">
+                    <h5 className={`text-5xl font-black font-mono ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {netProfit.toLocaleString()}
+                    </h5>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         )}
@@ -785,10 +814,10 @@ export default function ProjectWorkspace() {
 
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">المستودع (Warehouse) *</label>
-                <select 
-                  value={reqForm.warehouse_id} 
-                  onChange={(e) => setReqForm({...reqForm, warehouse_id: e.target.value, inventory_id: ''})} 
-                  required 
+                <select
+                  value={reqForm.warehouse_id}
+                  onChange={(e) => setReqForm({ ...reqForm, warehouse_id: e.target.value, inventory_id: '' })}
+                  required
                   className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-black text-slate-700 text-sm"
                 >
                   <option value="">-- اختر المستودع --</option>
@@ -798,10 +827,10 @@ export default function ProjectWorkspace() {
 
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">الصنف المطلوب صرفه *</label>
-                <select 
-                  value={reqForm.inventory_id} 
-                  onChange={(e) => setReqForm({...reqForm, inventory_id: e.target.value})} 
-                  required 
+                <select
+                  value={reqForm.inventory_id}
+                  onChange={(e) => setReqForm({ ...reqForm, inventory_id: e.target.value })}
+                  required
                   className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-black text-slate-700 text-sm"
                 >
                   <option value="">-- اختر الصنف المخزني --</option>
@@ -810,18 +839,18 @@ export default function ProjectWorkspace() {
                       if (!reqForm.warehouse_id) return true;
                       const selectedWh = warehouses.find(w => w.id === parseInt(reqForm.warehouse_id));
                       if (!selectedWh) return true;
-                      
+
                       // Robust multi-criteria matching
                       if (item.warehouse_id === selectedWh.id) return true;
                       if (item.warehouse && item.warehouse.trim().toLowerCase() === selectedWh.name.trim().toLowerCase()) return true;
-                      
+
                       // Semantic keyword fallback (e.g. Main Store vs المخزن الرئيسي)
                       const isMainWhMatch = (
                         (selectedWh.name.toLowerCase().includes('main') || selectedWh.name.includes('رئيسي')) &&
                         (item.warehouse?.toLowerCase().includes('main') || item.warehouse?.includes('رئيسي'))
                       );
                       if (isMainWhMatch) return true;
-                      
+
                       return false;
                     })
                     .map(item => (
@@ -835,24 +864,24 @@ export default function ProjectWorkspace() {
 
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">الكمية المطلوبة صرفها *</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="any"
-                  value={reqForm.qty} 
-                  onChange={(e) => setReqForm({...reqForm, qty: e.target.value})} 
-                  required 
-                  className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-mono font-black text-center text-lg" 
-                  placeholder="0.00" 
+                  value={reqForm.qty}
+                  onChange={(e) => setReqForm({ ...reqForm, qty: e.target.value })}
+                  required
+                  className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-mono font-black text-center text-lg"
+                  placeholder="0.00"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">ملاحظات / مستلم المواد</label>
-                <input 
-                  type="text" 
-                  value={reqForm.notes} 
-                  onChange={(e) => setReqForm({...reqForm, notes: e.target.value})} 
-                  className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-bold" 
+                <input
+                  type="text"
+                  value={reqForm.notes}
+                  onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
+                  className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-bold"
                   placeholder="اسم المهندس أو رقم التوزيع"
                 />
               </div>
@@ -879,51 +908,51 @@ export default function ProjectWorkspace() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-slate-500 mb-2 mr-2">اسم البند *</label>
-                  <input type="text" value={boqForm.item_name} onChange={(e) => setBoqForm({...boqForm, item_name: e.target.value})} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="مثال: خرسانة مسلحة للأساسات" />
+                  <input type="text" value={boqForm.item_name} onChange={(e) => setBoqForm({ ...boqForm, item_name: e.target.value })} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="مثال: خرسانة مسلحة للأساسات" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-500 mb-2 mr-2">فئة المواد (التصنيف)</label>
-                  <input type="text" value={boqForm.material_category} onChange={(e) => setBoqForm({...boqForm, material_category: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="مثال: أسمنت، حديد" />
+                  <input type="text" value={boqForm.material_category} onChange={(e) => setBoqForm({ ...boqForm, material_category: e.target.value })} className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="مثال: أسمنت، حديد" />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-black text-slate-500 mb-2 mr-2">وحدة القياس *</label>
-                  <input type="text" value={boqForm.uom} onChange={(e) => setBoqForm({...boqForm, uom: e.target.value})} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="M3, LM, Ton" />
+                  <input type="text" value={boqForm.uom} onChange={(e) => setBoqForm({ ...boqForm, uom: e.target.value })} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="M3, LM, Ton" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-500 mb-2 mr-2">الكمية المقدرة *</label>
-                  <input type="number" value={boqForm.est_qty} onChange={(e) => setBoqForm({...boqForm, est_qty: e.target.value})} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="0" />
+                  <input type="number" value={boqForm.est_qty} onChange={(e) => setBoqForm({ ...boqForm, est_qty: e.target.value })} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-500 mb-2 mr-2">سعر الفئة المقدر *</label>
-                  <input type="number" value={boqForm.est_unit_price} onChange={(e) => setBoqForm({...boqForm, est_unit_price: e.target.value})} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="0.00" />
+                  <input type="number" value={boqForm.est_unit_price} onChange={(e) => setBoqForm({ ...boqForm, est_unit_price: e.target.value })} required className="w-full p-4 rounded-2xl bg-slate-50 border border-transparent focus:border-blue-500 outline-none font-bold text-center text-sm" placeholder="0.00" />
                 </div>
               </div>
 
               <div className="p-4 bg-slate-50 rounded-2xl space-y-3">
                 <p className="text-xs font-black text-slate-600 mb-2">💰 تفصيل الميزانية الهندسية (المواد، العمالة، المقاولين):</p>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 mb-1 mr-2">كمية المواد المطلوبة للتشغيل</label>
-                    <input type="number" value={boqForm.est_material_qty} onChange={(e) => setBoqForm({...boqForm, est_material_qty: e.target.value})} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
+                    <input type="number" value={boqForm.est_material_qty} onChange={(e) => setBoqForm({ ...boqForm, est_material_qty: e.target.value })} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 mb-1 mr-2">تكلفة الخامات التقديرية (Est. Material Cost)</label>
-                    <input type="number" value={boqForm.est_material_cost} onChange={(e) => setBoqForm({...boqForm, est_material_cost: e.target.value})} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
+                    <input type="number" value={boqForm.est_material_cost} onChange={(e) => setBoqForm({ ...boqForm, est_material_cost: e.target.value })} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 mb-1 mr-2">تكلفة المصنعية والعمالة (Labor)</label>
-                    <input type="number" value={boqForm.est_labor_cost} onChange={(e) => setBoqForm({...boqForm, est_labor_cost: e.target.value})} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
+                    <input type="number" value={boqForm.est_labor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_labor_cost: e.target.value })} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 mb-1 mr-2">مقاولي الباطن (Subcontractor Cost)</label>
-                    <input type="number" value={boqForm.est_subcontractor_cost} onChange={(e) => setBoqForm({...boqForm, est_subcontractor_cost: e.target.value})} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
+                    <input type="number" value={boqForm.est_subcontractor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_subcontractor_cost: e.target.value })} className="w-full p-3 rounded-xl bg-white border outline-none text-center text-xs font-bold" placeholder="0.00" />
                   </div>
                 </div>
               </div>
@@ -949,10 +978,10 @@ export default function ProjectWorkspace() {
             <form onSubmit={handleEntrySubmit} className="p-8 space-y-5">
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">الحساب المحاسبي *</label>
-                <select 
-                  value={entryForm.account_name} 
-                  onChange={(e) => setEntryForm({...entryForm, account_name: e.target.value})} 
-                  required 
+                <select
+                  value={entryForm.account_name}
+                  onChange={(e) => setEntryForm({ ...entryForm, account_name: e.target.value })}
+                  required
                   className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-black text-slate-700 text-sm"
                 >
                   <option value="">-- اختر الحساب --</option>
@@ -962,16 +991,16 @@ export default function ProjectWorkspace() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-emerald-600 mb-2 mr-2">مدين (Debit)</label>
-                  <input type="number" value={entryForm.debit} onChange={(e) => setEntryForm({...entryForm, debit: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 outline-none font-mono font-black text-center" placeholder="0" />
+                  <input type="number" value={entryForm.debit} onChange={(e) => setEntryForm({ ...entryForm, debit: e.target.value })} className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 outline-none font-mono font-black text-center" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-rose-600 mb-2 mr-2">دائن (Credit)</label>
-                  <input type="number" value={entryForm.credit} onChange={(e) => setEntryForm({...entryForm, credit: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-rose-500 outline-none font-mono font-black text-center" placeholder="0" />
+                  <input type="number" value={entryForm.credit} onChange={(e) => setEntryForm({ ...entryForm, credit: e.target.value })} className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-rose-500 outline-none font-mono font-black text-center" placeholder="0" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-2 mr-2">الوصف / البيان *</label>
-                <input type="text" value={entryForm.description} onChange={(e) => setEntryForm({...entryForm, description: e.target.value})} required className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-bold" />
+                <input type="text" value={entryForm.description} onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })} required className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-500 outline-none font-bold" />
               </div>
               <div className="pt-4">
                 <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-2xl font-black shadow-xl transition-all active:scale-95 disabled:opacity-50 text-sm">
@@ -982,6 +1011,146 @@ export default function ProjectWorkspace() {
           </div>
         </div>
       )}
+      {isPhaseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsPhaseModalOpen(false)}>
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()} dir="rtl">
+            <h3 className="text-xl font-black text-slate-800 mb-6">📐 إضافة مرحلة جديدة</h3>
+            <form onSubmit={async (e) => { e.preventDefault(); try { await api.post(`/dynamic/projects/${id}/phases`, phaseForm); setIsPhaseModalOpen(false); setPhaseForm({ name: '', phase_code: '', description: '', weight_percent: '', planned_start: '', planned_end: '' }); fetchWorkspaceData(); } catch (err) { alert(err.response?.data?.error || err.message); } }} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input placeholder="كود المرحلة (PH-01)" value={phaseForm.phase_code} onChange={e => setPhaseForm({ ...phaseForm, phase_code: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+                <input placeholder="اسم المرحلة *" required value={phaseForm.name} onChange={e => setPhaseForm({ ...phaseForm, name: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+              </div>
+              <textarea placeholder="وصف المرحلة" value={phaseForm.description} onChange={e => setPhaseForm({ ...phaseForm, description: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm" rows="2" />
+              <div className="grid grid-cols-3 gap-4">
+                <input type="number" placeholder="الوزن %" value={phaseForm.weight_percent} onChange={e => setPhaseForm({ ...phaseForm, weight_percent: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+                <input type="date" value={phaseForm.planned_start} onChange={e => setPhaseForm({ ...phaseForm, planned_start: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+                <input type="date" value={phaseForm.planned_end} onChange={e => setPhaseForm({ ...phaseForm, planned_end: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+              </div>
+              <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-indigo-600 transition-all">حفظ المرحلة</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+{/* ======= COST CENTER MODAL ======= */ }
+{
+  isCCModalOpen && (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsCCModalOpen(false)}>
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()} dir="rtl">
+        <h3 className="text-xl font-black text-slate-800 mb-6">🏛️ إضافة مركز تكلفة</h3>
+        <form onSubmit={async (e) => { e.preventDefault(); try { await api.post(`/dynamic/projects/${id}/cost-centers`, ccForm); setIsCCModalOpen(false); setCcForm({ name: '', code: '', phase_id: '', cost_type: 'Direct', budget_amount: '' }); fetchWorkspaceData(); } catch (err) { alert(err.response?.data?.error || err.message); } }} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <input placeholder="كود المركز (CC-01)" value={ccForm.code} onChange={e => setCcForm({ ...ccForm, code: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input placeholder="اسم المركز *" required value={ccForm.name} onChange={e => setCcForm({ ...ccForm, name: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <select value={ccForm.phase_id} onChange={e => setCcForm({ ...ccForm, phase_id: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm">
+              <option value="">-- المرحلة --</option>
+              {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={ccForm.cost_type} onChange={e => setCcForm({ ...ccForm, cost_type: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm">
+              {['Direct', 'Material', 'Labor', 'Subcontractor', 'Equipment', 'Indirect', 'Overhead'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <input type="number" placeholder="الميزانية المخصصة" value={ccForm.budget_amount} onChange={e => setCcForm({ ...ccForm, budget_amount: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm" />
+          <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all">حفظ مركز التكلفة</button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+{/* ======= BUDGET LINE MODAL ======= */ }
+{
+  isBudgetModalOpen && (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsBudgetModalOpen(false)}>
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()} dir="rtl">
+        <h3 className="text-xl font-black text-slate-800 mb-6">💰 إضافة بند ميزانية</h3>
+        <form onSubmit={async (e) => { e.preventDefault(); try { await api.post(`/dynamic/projects/${id}/budget-lines`, budgetForm); setIsBudgetModalOpen(false); setBudgetForm({ line_description: '', category: 'Material', cost_center_id: '', budgeted_qty: '', budgeted_unit_cost: '', notes: '' }); fetchWorkspaceData(); } catch (err) { alert(err.response?.data?.error || err.message); } }} className="space-y-4">
+          <input placeholder="وصف البند *" required value={budgetForm.line_description} onChange={e => setBudgetForm({ ...budgetForm, line_description: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm" />
+          <div className="grid grid-cols-2 gap-4">
+            <select value={budgetForm.category} onChange={e => setBudgetForm({ ...budgetForm, category: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm">
+              {['Material', 'Labor', 'Subcontractor', 'Equipment', 'Indirect', 'Overhead'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={budgetForm.cost_center_id} onChange={e => setBudgetForm({ ...budgetForm, cost_center_id: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm">
+              <option value="">-- مركز التكلفة --</option>
+              {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <input type="number" placeholder="الكمية" value={budgetForm.budgeted_qty} onChange={e => setBudgetForm({ ...budgetForm, budgeted_qty: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input type="number" placeholder="سعر الوحدة" value={budgetForm.budgeted_unit_cost} onChange={e => setBudgetForm({ ...budgetForm, budgeted_unit_cost: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+          </div>
+          <div className="p-3 bg-slate-50 rounded-xl text-center font-mono font-black text-lg text-slate-900">الإجمالي: {((Number(budgetForm.budgeted_qty) || 0) * (Number(budgetForm.budgeted_unit_cost) || 0)).toLocaleString()}</div>
+          <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-emerald-600 transition-all">حفظ بند الميزانية</button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+{/* ======= VALUATION MODAL ======= */ }
+{
+  isValModalOpen && (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsValModalOpen(false)}>
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl p-8" onClick={e => e.stopPropagation()} dir="rtl">
+        <h3 className="text-xl font-black text-slate-800 mb-6">📋 إنشاء مستخلص عميل</h3>
+        <form onSubmit={async (e) => { e.preventDefault(); try { await api.post(`/dynamic/projects/${id}/client-valuations`, valForm); setIsValModalOpen(false); setValForm({ valuation_no: '', valuation_date: '', period_from: '', period_to: '', gross_amount: '', retention_deduction: '', advance_deduction: '', tax_deduction: '', notes: '' }); fetchWorkspaceData(); } catch (err) { alert(err.response?.data?.error || err.message); } }} className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <input placeholder="رقم المستخلص *" required value={valForm.valuation_no} onChange={e => setValForm({ ...valForm, valuation_no: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input type="date" value={valForm.valuation_date} onChange={e => setValForm({ ...valForm, valuation_date: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input type="number" placeholder="إجمالي المستخلص *" required value={valForm.gross_amount} onChange={e => setValForm({ ...valForm, gross_amount: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <input type="number" placeholder="استقطاع ضمان" value={valForm.retention_deduction} onChange={e => setValForm({ ...valForm, retention_deduction: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input type="number" placeholder="خصم دفعة مقدمة" value={valForm.advance_deduction} onChange={e => setValForm({ ...valForm, advance_deduction: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <input type="number" placeholder="ضرائب" value={valForm.tax_deduction} onChange={e => setValForm({ ...valForm, tax_deduction: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+          </div>
+          <div className="p-3 bg-emerald-50 rounded-xl text-center font-mono font-black text-lg text-emerald-700">الصافي: {((Number(valForm.gross_amount) || 0) - (Number(valForm.retention_deduction) || 0) - (Number(valForm.advance_deduction) || 0) - (Number(valForm.tax_deduction) || 0)).toLocaleString()}</div>
+          <textarea placeholder="ملاحظات" value={valForm.notes} onChange={e => setValForm({ ...valForm, notes: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm" rows="2" />
+          <button type="submit" className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all">حفظ المستخلص</button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+{/* ======= MATERIAL ISSUE MODAL ======= */ }
+{
+  isIssueModalOpen && (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsIssueModalOpen(false)}>
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()} dir="rtl">
+        <h3 className="text-xl font-black text-slate-800 mb-6">🏪 إذن صرف مواد</h3>
+        <form onSubmit={async (e) => { e.preventDefault(); try { await api.post(`/dynamic/projects/${id}/material-issues`, issueForm); setIsIssueModalOpen(false); setIssueForm({ inventory_id: '', boq_id: '', qty: '', issued_to: 'project', subcontractor_id: '', notes: '' }); fetchWorkspaceData(); } catch (err) { alert(err.response?.data?.error || err.message); } }} className="space-y-4">
+          <select required value={issueForm.inventory_id} onChange={e => setIssueForm({ ...issueForm, inventory_id: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm">
+            <option value="">-- اختر المادة من المخزن *--</option>
+            {inventoryItems.filter(i => Number(i.remaining_qty) > 0).map(i => <option key={i.id} value={i.id}>{i.item_name || i.name} ({i.warehouse}) - متاح: {i.remaining_qty}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-4">
+            <input type="number" placeholder="الكمية المطلوبة *" required value={issueForm.qty} onChange={e => setIssueForm({ ...issueForm, qty: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm" />
+            <select value={issueForm.issued_to} onChange={e => setIssueForm({ ...issueForm, issued_to: e.target.value })} className="p-3 border border-slate-200 rounded-xl text-sm">
+              <option value="project">🏗️ المشروع مباشرة</option>
+              <option value="subcontractor">🔧 مقاول باطن</option>
+            </select>
+          </div>
+          {issueForm.issued_to === 'subcontractor' && (
+            <select value={issueForm.subcontractor_id} onChange={e => setIssueForm({ ...issueForm, subcontractor_id: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm">
+              <option value="">-- اختر المقاول --</option>
+              {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
+          <select value={issueForm.boq_id} onChange={e => setIssueForm({ ...issueForm, boq_id: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm">
+            <option value="">-- ربط ببند مقايسة (اختياري) --</option>
+            {boqList.map(b => <option key={b.id} value={b.id}>{b.item_name}</option>)}
+          </select>
+          <textarea placeholder="ملاحظات" value={issueForm.notes} onChange={e => setIssueForm({ ...issueForm, notes: e.target.value })} className="w-full p-3 border border-slate-200 rounded-xl text-sm" rows="2" />
+          <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-amber-600 transition-all">تنفيذ الصرف</button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
     </div>
   );
 }

@@ -58,6 +58,13 @@ export default function Layout() {
         partners: "الشركاء",
         crm: "العملاء",
         inventory: "المخازن",
+        directIssue: "الصرف المباشر 🚚",
+        transfers: "التحويلات 🔄",
+        reconciliation: "الجرد والتسويات ⚖️",
+        batchMatrix: "تتبع الباتشات 📦",
+        reorder: "إعادة الطلب 🚨",
+        pharma: "صيدليات وأدوية 💊",
+        masterStock: "إدارة الاستوك 📦",
         invoices: "المستخلصات",
         subcontractors: "المقاولين",
         hr: "الموارد البشرية",
@@ -102,6 +109,13 @@ export default function Layout() {
         partners: "Partners",
         crm: "CRM",
         inventory: "Inventory",
+        directIssue: "Direct Stock Issue 🚚",
+        transfers: "Transfers 🔄",
+        reconciliation: "Stock Count ⚖️",
+        batchMatrix: "Batch Matrix 📦",
+        reorder: "Smart Reorder 🚨",
+        pharma: "Pharma Stores 💊",
+        masterStock: "Master Stock 📦",
         invoices: "Certificates",
         subcontractors: "Subcontractors",
         hr: "HR",
@@ -158,6 +172,8 @@ export default function Layout() {
       items: [
         { path: '/projects', icon: '🏗️', label: t.menu.projects, perm: 'INV_MANAGE_STOCK' },
         { path: '/inventory', icon: '📦', label: t.menu.inventory, perm: 'INV_MANAGE_STOCK', badgeKey: 'inventory' },
+        { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma, perm: 'INV_MANAGE_STOCK' },
         { path: '/fixed-assets', icon: '🏗️', label: t.menu.assets, perm: 'FIN_VIEW_LEDGER' },
         { path: '/subcontractors', icon: '👷', label: t.menu.subcontractors, perm: 'INV_MANAGE_STOCK' },
         { path: '/real-estate', icon: '🏢', label: t.menu.realEstate, perm: 'INV_MANAGE_STOCK' },
@@ -268,49 +284,62 @@ export default function Layout() {
 
         <nav className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth px-4">
           <div className="py-8 space-y-12">
-            {menuGroups.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-4">
-                <h3 className={`px-5 text-[12px] font-black uppercase tracking-[0.25em] ${theme === 'dark' ? 'text-white/20' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
-                  {isSidebarCollapsed ? '••' : group.title}
-                </h3>
-                <div className="space-y-1.5">
-                  {group.items.filter(i => !i.perm || hasPermission(i.perm)).map((item, iIdx) => (
-                    <NavLink
-                      key={iIdx}
-                      to={item.path}
-                      className={({ isActive }) => `
-                          flex items-center gap-6 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden
-                          ${isActive
-                          ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20')
-                          : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
-                          ${isSidebarCollapsed ? 'justify-center px-0' : ''}
-                        `}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          {isActive && (
-                            <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
-                          )}
-                          <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
-                            {item.icon}
-                          </span>
-                          {!isSidebarCollapsed && (
-                            <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
-                              {item.label}
+            {menuGroups
+              .map(group => {
+                const visibleItems = group.items
+                  .filter(i => !i.perm || hasPermission(i.perm))
+                  .filter(i => {
+                    if (user?.username?.toUpperCase() === 'MTAYEM') {
+                      return i.path === '/inventory/direct-issue' || i.path === '/inventory/pharma';
+                    }
+                    return true;
+                  });
+                return { ...group, items: visibleItems };
+              })
+              .filter(group => group.items.length > 0)
+              .map((group, gIdx) => (
+                <div key={gIdx} className="space-y-4">
+                  <h3 className={`px-5 text-[12px] font-black uppercase tracking-[0.25em] ${theme === 'dark' ? 'text-white/20' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
+                    {isSidebarCollapsed ? '••' : group.title}
+                  </h3>
+                  <div className="space-y-1.5">
+                    {group.items.map((item, iIdx) => (
+                      <NavLink
+                        key={iIdx}
+                        to={item.path}
+                        className={({ isActive }) => `
+                            flex items-center gap-6 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden
+                            ${isActive
+                            ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20')
+                            : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
+                            ${isSidebarCollapsed ? 'justify-center px-0' : ''}
+                          `}
+                      >
+                        {({ isActive }) => (
+                          <>
+                            {isActive && (
+                              <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
+                            )}
+                            <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
+                              {item.icon}
                             </span>
-                          )}
-                          {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
-                            <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
-                              {sidebarStats[item.badgeKey]}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  ))}
+                            {!isSidebarCollapsed && (
+                              <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
+                                {item.label}
+                              </span>
+                            )}
+                            {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
+                              <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
+                                {sidebarStats[item.badgeKey]}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </nav>
 

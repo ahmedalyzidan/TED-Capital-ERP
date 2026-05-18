@@ -80,11 +80,11 @@ class DynamicController {
                 countStr = `SELECT COUNT(*) FROM chart_of_accounts c`;
             }
 
-            let conditions = [`${prefix || ''}is_deleted = FALSE` ]; let params = [];
+            let conditions = [`${prefix || ''}is_deleted = FALSE`]; let params = [];
             if (filter) {
-                if (['contracts', 'installments', 'payment_receipts'].includes(type)) { conditions.push(`pu.project_name = $${params.length + 1}`); params.push(filter); } 
-                else if (['projects', 'partners', 'boq', 'tasks', 'rfq', 'purchase_orders', 'subcontractors', 'inventory', 'inventory_items', 'material_usage', 'ar_invoices', 'inventory_sales'].includes(type)) { conditions.push(`${prefix}project_name = $${params.length + 1}`); params.push(filter); } 
-                else if (type === 'ledger') { 
+                if (['contracts', 'installments', 'payment_receipts'].includes(type)) { conditions.push(`pu.project_name = $${params.length + 1}`); params.push(filter); }
+                else if (['projects', 'partners', 'boq', 'tasks', 'rfq', 'purchase_orders', 'subcontractors', 'inventory', 'inventory_items', 'material_usage', 'ar_invoices', 'inventory_sales'].includes(type)) { conditions.push(`${prefix}project_name = $${params.length + 1}`); params.push(filter); }
+                else if (type === 'ledger') {
                     if (filter === 'Inventory') {
                         conditions.push(`source_module = $${params.length + 1}`);
                     } else {
@@ -162,9 +162,9 @@ class DynamicController {
             }
             // --------------------------------------------------
 
-            if (conditions.length > 0) { 
-                const whereClause = " WHERE " + conditions.join(" AND "); 
-                queryStr += whereClause; countStr += whereClause; 
+            if (conditions.length > 0) {
+                const whereClause = " WHERE " + conditions.join(" AND ");
+                queryStr += whereClause; countStr += whereClause;
             }
             const orderCol = type === 'employees' ? 'emp_id' : `${prefix}id`;
             queryStr += ` ORDER BY ${orderCol} DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -172,9 +172,9 @@ class DynamicController {
             const result = await pool.query(queryStr, [...params, limit, offset]);
             const countResult = await pool.query(countStr, params);
             res.json({ data: result.rows, total: parseInt(countResult.rows[0].count) });
-        } catch (err) { 
+        } catch (err) {
             console.error(`❌ [DynamicController] getTable Error (${req.params.type}):`, err);
-            res.status(500).json({ error: err.message }); 
+            res.status(500).json({ error: err.message });
         }
     }
     async addRecord(req, res) {
@@ -194,7 +194,7 @@ class DynamicController {
                 if (!data.project_serial) {
                     data.project_serial = await projectController.generateProjectSerial();
                 }
-                
+
                 // حساب الميزانية بالعملة المحلية آلياً بناءً على العملة الأجنبية وسعر الصرف
                 if (data.fcy_budget && data.fx_rate) {
                     data.budget = parseFloat(data.fcy_budget) * parseFloat(data.fx_rate);
@@ -202,7 +202,7 @@ class DynamicController {
                     // إذا أرسل الفرونت إند budget_lcy نضعه في الحقل الأساسي budget
                     data.budget = parseFloat(data.budget_lcy);
                 }
-                
+
                 // تنظيف البيانات المرسلة لضمان توافقها مع قاعدة البيانات
                 delete data.budget_lcy;
             } else if (type === 'inventory' || type === 'inventory_items') {
@@ -224,6 +224,19 @@ class DynamicController {
                 }
             }
 
+            if (type === 'subcontractor_items') {
+                if (!data.item_desc && data.boq_id) {
+                    const boqRes = await client.query("SELECT item_name, item_desc FROM boq WHERE id = $1 LIMIT 1", [data.boq_id]);
+                    if (boqRes.rows.length > 0) {
+                        data.item_desc = boqRes.rows[0].item_name || boqRes.rows[0].item_desc || 'Unspecified Work';
+                    } else {
+                        data.item_desc = 'Unspecified Work';
+                    }
+                } else if (!data.item_desc) {
+                    data.item_desc = 'Unspecified Work';
+                }
+            }
+
             // 2. Generic Insert
             if (!skipInsert) {
                 // Remove ID if present to allow DB to auto-generate SERIAL ID
@@ -237,16 +250,16 @@ class DynamicController {
                 // Clean data (remove calculated/virtual fields that are not in DB)
                 const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'admins_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty'];
                 calcFields.forEach(f => delete data[f]);
-                
+
                 const keys = Object.keys(data);
                 const values = Object.values(data);
                 const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-                
+
                 // --- 🚀 Elite Workflow Engine Integration 🚀 ---
                 let initialStatus = data.status || 'Active';
                 const amountForWorkflow = parseFloat(data.amount || data.total_amount || data.total || data.budget || 0);
                 let workflowResult = { newStatus: initialStatus };
-                
+
                 // Only run workflow for major modules
                 if (['purchase_orders', 'ar_invoices', 'inventory_sales', 'projects', 'subcontractor_invoices'].includes(type)) {
                     workflowResult = await processApprovalWorkflow(type, null, 'Submit', req.user.username, req.user.role, amountForWorkflow);
@@ -287,7 +300,7 @@ class DynamicController {
                     if (cost > 0) {
                         await AccountingService.recordDoubleEntry(client, {
                             debitAccount: '5100', creditAccount: '1130', amount: cost, costCenter: data.project_name,
-                            description: `صرف خامات للمشروع - صنف: ${data.material} - كمية: ${data.qty}`, 
+                            description: `صرف خامات للمشروع - صنف: ${data.material} - كمية: ${data.qty}`,
                             username: req.user?.username || 'System', referenceNo: `USG-${recordId}`
                         });
                     }
@@ -297,7 +310,7 @@ class DynamicController {
                     if (cost > 0) {
                         await AccountingService.recordDoubleEntry(client, {
                             debitAccount: '1130', creditAccount: '5100', amount: cost, costCenter: data.project_name,
-                            description: `ارتجاع خامات للمخزن - صنف: ${data.material} - كمية: ${data.qty}`, 
+                            description: `ارتجاع خامات للمخزن - صنف: ${data.material} - كمية: ${data.qty}`,
                             username: req.user?.username || 'System', referenceNo: `RET-${recordId}`
                         });
                     }
@@ -322,7 +335,7 @@ class DynamicController {
         } catch (err) {
             await client.query('ROLLBACK');
             console.error(`🔥 [DynamicController] addRecord Error (Table: ${req.params.type}):`, err);
-            
+
             // Handle Unique Constraint Violations
             if (err.code === '23505') {
                 if (err.constraint === 'projects_name_key') {

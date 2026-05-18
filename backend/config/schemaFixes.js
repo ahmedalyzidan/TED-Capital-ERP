@@ -226,6 +226,39 @@ const applySchemaFixes = async () => {
 
     await runQuery("Inventory Items LCY FX Rate", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lcy_fx_rate NUMERIC(15,4) DEFAULT 1`);
     await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
+    await runQuery("Inventory Items Category", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS category VARCHAR(255)`);
+    await runQuery("Inventory Items UOM", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS uom VARCHAR(50)`);
+    await runQuery("Inventory Items Unit", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit VARCHAR(50)`);
+    await runQuery("Inventory Items Status", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'FAST'`);
+    await runQuery("Inventory Items Serial No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS serial_no VARCHAR(100)`);
+    await runQuery("Inventory Items Batch No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_no VARCHAR(100)`);
+    await runQuery("Inventory Items Expiry Date", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS expiry_date DATE`);
+
+    await runQuery("Inventory Movements Table", `CREATE TABLE IF NOT EXISTS inventory_movements (
+        id SERIAL PRIMARY KEY,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
+        movement_type VARCHAR(100),
+        from_warehouse VARCHAR(255),
+        to_warehouse VARCHAR(255),
+        qty NUMERIC(20,6),
+        notes TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Inventory Audits Table", `CREATE TABLE IF NOT EXISTS inventory_audits (
+        id SERIAL PRIMARY KEY,
+        audit_no VARCHAR(100),
+        warehouse VARCHAR(255), status VARCHAR(50) DEFAULT 'Pending',
+        created_by VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Inventory Audit Lines Table", `CREATE TABLE IF NOT EXISTS inventory_audit_lines (
+        id SERIAL PRIMARY KEY,
+        audit_id INTEGER REFERENCES inventory_audits(id) ON DELETE CASCADE,
+        inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
+        recorded_qty NUMERIC(20,6), physical_qty NUMERIC(20,6), variance NUMERIC(20,6)
+    )`);
 
     // --- Stock Returns Module ---
     await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
@@ -254,12 +287,12 @@ const applySchemaFixes = async () => {
         deleted_at       TIMESTAMP,
         metadata         JSONB DEFAULT '{}'::jsonb
     )`);
-    await runQuery("Stock Returns Index Type",   `CREATE INDEX IF NOT EXISTS idx_stock_returns_type    ON stock_returns(return_type)`);
+    await runQuery("Stock Returns Index Type", `CREATE INDEX IF NOT EXISTS idx_stock_returns_type    ON stock_returns(return_type)`);
     await runQuery("Stock Returns Index Status", `CREATE INDEX IF NOT EXISTS idx_stock_returns_status  ON stock_returns(status)`);
-    await runQuery("Stock Returns Index Inv",    `CREATE INDEX IF NOT EXISTS idx_stock_returns_inv     ON stock_returns(inventory_id)`);
-    await runQuery("Stock Returns Index Sale",   `CREATE INDEX IF NOT EXISTS idx_stock_returns_sale    ON stock_returns(source_sale_id)`);
+    await runQuery("Stock Returns Index Inv", `CREATE INDEX IF NOT EXISTS idx_stock_returns_inv     ON stock_returns(inventory_id)`);
+    await runQuery("Stock Returns Index Sale", `CREATE INDEX IF NOT EXISTS idx_stock_returns_sale    ON stock_returns(source_sale_id)`);
 
-    
+
     await runQuery("Job Titles Table", `CREATE TABLE IF NOT EXISTS job_titles (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) UNIQUE NOT NULL,
@@ -267,8 +300,8 @@ const applySchemaFixes = async () => {
     )`);
 
     const defaultJobTitles = [
-        'Project Manager', 'Site Engineer', 'Accountant', 'HR Manager', 
-        'Operations Manager', 'Sales Executive', 'Procurement Officer', 
+        'Project Manager', 'Site Engineer', 'Accountant', 'HR Manager',
+        'Operations Manager', 'Sales Executive', 'Procurement Officer',
         'Technical Office Engineer', 'General Manager', 'Draftsman',
         'Storekeeper', 'Safety Officer', 'Quality Control'
     ];
@@ -295,8 +328,32 @@ const applySchemaFixes = async () => {
         specialty VARCHAR(255),
         phone VARCHAR(50),
         email VARCHAR(255),
+        project_id INTEGER,
+        company VARCHAR(255),
+        tax_id VARCHAR(100),
+        license_number VARCHAR(100),
+        insurance_expiry DATE,
+        credit_limit NUMERIC(15,2) DEFAULT 0,
+        rating NUMERIC(3,2) DEFAULT 5.00,
+        username VARCHAR(150),
+        password_hash VARCHAR(255),
+        portal_access_active BOOLEAN DEFAULT FALSE,
+        metadata JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    // Ensure all dynamic columns exist for Subcontractors 360 & onboarding form
+    await runQuery("Subcontractors project_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS project_id INTEGER");
+    await runQuery("Subcontractors company", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
+    await runQuery("Subcontractors tax_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS tax_id VARCHAR(100)");
+    await runQuery("Subcontractors license_number", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS license_number VARCHAR(100)");
+    await runQuery("Subcontractors insurance_expiry", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS insurance_expiry DATE");
+    await runQuery("Subcontractors credit_limit", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(15,2) DEFAULT 0");
+    await runQuery("Subcontractors rating", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS rating NUMERIC(3,2) DEFAULT 5.00");
+    await runQuery("Subcontractors username", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS username VARCHAR(150)");
+    await runQuery("Subcontractors password_hash", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
+    await runQuery("Subcontractors portal_access_active", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS portal_access_active BOOLEAN DEFAULT FALSE");
+    await runQuery("Subcontractors metadata", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb");
 
     await runQuery("Customers Table", `CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
@@ -523,26 +580,36 @@ const applySchemaFixes = async () => {
         ['1101', 'صندوق نقدية - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
         ['1102', 'صندوق نقدية - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
         ['1103', 'صندوق نقدية - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
+        ['1104', 'صندوق نقدية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
         ['1105', 'صندوق المصروفات النثرية', 'All', 3, '1100', 'Asset', 'EGP', true],
         ['1111', 'بنك CIB - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
         ['1112', 'بنك الأهلي - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
         ['1113', 'بنك مصر - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
+        ['1114', 'بنك فلسطين - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
         ['1120', 'عملاء (حسابات مدينة - AR)', 'All', 3, '1100', 'Asset', 'EGP', false],
+        ['1125', 'تأمين وضمان أعمال طرف الغير', 'All', 3, '1100', 'Asset', 'EGP', true],
         ['1130', 'مخزون خامات ومواد', 'All', 3, '1100', 'Asset', 'EGP', false],
+        ['1134', 'مخزون الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
         ['1150', 'ضريبة الخصم من المنبع', 'All', 3, '1100', 'Asset', 'EGP', true],
         ['1200', 'الأصول الثابتة (Fixed Assets)', 'All', 1, null, 'Asset', 'EGP', false],
         ['2000', 'الالتزامات (Liabilities)', 'All', 1, null, 'Liability', 'EGP', false],
         ['2100', 'الالتزامات المتداولة', 'All', 2, '2000', 'Liability', 'EGP', false],
         ['2110', 'موردين (حسابات دائنة - AP)', 'All', 3, '2100', 'Liability', 'EGP', false],
+        ['2120', 'مقاولي الباطن', 'All', 3, '2100', 'Liability', 'EGP', false],
+        ['2125', 'تأمينات مستقطعة لجهات خارجية', 'All', 3, '2100', 'Liability', 'EGP', true],
         ['2150', 'ضريبة القيمة المضافة', 'All', 3, '2100', 'Liability', 'EGP', true],
         ['2160', 'ضرائب الخصم والإضافة (WHT)', 'All', 3, '2100', 'Liability', 'EGP', false],
         ['2200', 'الضرائب والقيمة المضافة (VAT)', 'All', 2, '2100', 'Liability', 'EGP', false],
         ['3000', 'حقوق الملكية (Equity)', 'All', 1, null, 'Equity', 'EGP', false],
         ['4000', 'الإيرادات (Revenues)', 'All', 1, null, 'Revenue', 'EGP', false],
         ['4100', 'إيرادات مبيعات', 'All', 2, '4000', 'Revenue', 'EGP', true],
+        ['4104', 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '4000', 'Revenue', 'ILS', true],
         ['5000', 'التكاليف المباشرة (COGS)', 'All', 1, null, 'Expense', 'EGP', false],
         ['5100', 'تكاليف المشروعات المباشرة', 'All', 1, null, 'Expense', 'EGP', false],
+        ['5104', 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '5000', 'Expense', 'ILS', true],
+        ['5200', 'تسويات جردية (Inventory Adjustments)', 'All', 3, '5000', 'Expense', 'EGP', true],
         ['6000', 'مصاريف عمومية وإدارية', 'All', 1, null, 'Expense', 'EGP', false],
+        ['6004', 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما', 'PRIMEMED PHARMA', 3, '6000', 'Expense', 'ILS', true],
         ['3900', 'حساب معلق - تسويات نظام', 'All', 3, '3000', 'Equity', 'EGP', true],
         ['6900', 'حساب تسويات الكسور', 'All', 3, '6000', 'Expense', 'EGP', true]
     ];
@@ -605,7 +672,8 @@ const applySchemaFixes = async () => {
     const defaultCompanies = [
         [1, 'TED Capital', 'EGP'],
         [2, 'Design Concept', 'EGP'],
-        [3, 'Master Builder', 'EGP']
+        [3, 'Master Builder', 'EGP'],
+        [4, 'PRIMEMED PHARMA', 'ILS']
     ];
 
     for (const comp of defaultCompanies) {

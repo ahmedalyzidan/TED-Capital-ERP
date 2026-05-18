@@ -314,6 +314,7 @@ export default function Finance() {
          if (comp === 'TED Capital' || comp === 'TED CAPITAL') return '1';
          if (comp === 'Design Concept' || comp === 'DESIGN CONCEPT' || comp === 'ديزاين كونسيبت') return '2';
          if (comp === 'Master Builder' || comp === 'MASTER BUILDER' || comp === 'ماستر بيلدر') return '3';
+         if (comp === 'PRIMEMED PHARMA' || comp === 'PRIMEMED' || comp === 'بريميميد فارما') return '4';
       } catch (e) {}
       return 'all';
    };
@@ -1291,7 +1292,8 @@ function EntityFilter({ selectedCompanyId, setSelectedCompanyId, language }) {
       { id: 'all', labelAr: 'كافة الشركات (المجموعة)', labelEn: 'All Entities (Consolidated)', icon: '🏢' },
       { id: '1', labelAr: 'تيد كابيتال (TED Capital)', labelEn: 'TED Capital', icon: '🏛️' },
       { id: '2', labelAr: 'ديزاين كونسبت (Design Concept)', labelEn: 'Design Concept', icon: '🎨' },
-      { id: '3', labelAr: 'ماستر بيلدر (Master Builder)', labelEn: 'Master Builder', icon: '🏗️' }
+      { id: '3', labelAr: 'ماستر بيلدر (Master Builder)', labelEn: 'Master Builder', icon: '🏗️' },
+      { id: '4', labelAr: 'بريميميد فارما (PRIMEMED PHARMA)', labelEn: 'PRIMEMED PHARMA', icon: '💊' }
    ];
 
    try {

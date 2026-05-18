@@ -44,6 +44,17 @@ export default function Subcontractors() {
   const [selectedSubId, setSelectedSubId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [globalStats, setGlobalStats] = useState(null);
+  const [isEditSubModalOpen, setIsEditSubModalOpen] = useState(false);
+  const [editSubForm, setEditSubForm] = useState({
+    id: '',
+    name: '',
+    phone: '',
+    project_id: '',
+    company: '',
+    tax_id: '',
+    license_number: '',
+    insurance_expiry: ''
+  });
 
   const [subForm, setSubForm] = useState({
     name: '',
@@ -54,6 +65,29 @@ export default function Subcontractors() {
     license_number: '',
     insurance_expiry: ''
   });
+
+  // --- New Subcontractor Progress Claim States ---
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
+  const [selectedPrintInvoice, setSelectedPrintInvoice] = useState(null);
+  const [subcontractorIntelligence, setSubcontractorIntelligence] = useState({ contracts: [], boqs: [], stats: {} });
+  const [claimForm, setClaimForm] = useState({
+    subcontractor_id: '',
+    contract_id: '',
+    sub_item_id: '',
+    curr_qty: '',
+    prev_qty: 0,
+    gross_amount: 0,
+    retention_deduction: 0,
+    dp_recovery: 0,
+    material_deduction: '',
+    tax_deduction: '',
+    net_amount: 0,
+    progress_percent: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
 
   const t = {
     ar: {
@@ -206,6 +240,7 @@ export default function Subcontractors() {
   };
 
   const handleSubChange = (e) => setSubForm({ ...subForm, [e.target.name]: e.target.value });
+  const handleEditSubChange = (e) => setEditSubForm({ ...editSubForm, [e.target.name]: e.target.value });
 
   const fetchProjects = async () => {
     try {
@@ -217,6 +252,47 @@ export default function Subcontractors() {
   const openSubModal = () => {
     fetchProjects();
     setIsSubModalOpen(true);
+  };
+
+  const openEditSubModal = (sub) => {
+    fetchProjects();
+    setEditSubForm({
+      id: sub.id,
+      name: sub.name || '',
+      phone: sub.phone || '',
+      project_id: sub.project_id || '',
+      company: sub.company || '',
+      tax_id: sub.tax_id || '',
+      license_number: sub.license_number || '',
+      insurance_expiry: sub.insurance_expiry ? sub.insurance_expiry.split('T')[0] : ''
+    });
+    setIsEditSubModalOpen(true);
+  };
+
+  const submitEditSubcontractor = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.put(`/update/subcontractors/${editSubForm.id}`, editSubForm);
+      alert(language === 'ar' ? "تم تحديث بيانات المقاول بنجاح!" : "Subcontractor updated successfully!");
+      setIsEditSubModalOpen(false);
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || "Error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubDelete = async (subId) => {
+    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا المقاول؟" : "Are you sure you want to delete this subcontractor?")) return;
+    try {
+      await api.delete(`/delete/subcontractors/${subId}`);
+      alert(language === 'ar' ? "تم حذف المقاول بنجاح!" : "Subcontractor deleted successfully!");
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || "Error");
+    }
   };
 
   const submitSubcontractor = async (e) => {
@@ -244,6 +320,133 @@ export default function Subcontractors() {
       fetchData();
     } catch (error) { alert(error.response?.data?.error || "Error"); }
   };
+
+  const handleClaimSubcontractorChange = async (subId) => {
+    setClaimForm(prev => ({
+      ...prev,
+      subcontractor_id: subId,
+      contract_id: '',
+      sub_item_id: '',
+      curr_qty: '',
+      prev_qty: 0,
+      gross_amount: 0,
+      retention_deduction: 0,
+      dp_recovery: 0,
+      material_deduction: '',
+      tax_deduction: '',
+      net_amount: 0,
+      progress_percent: '',
+      description: ''
+    }));
+    setSubcontractorIntelligence({ contracts: [], boqs: [], stats: {} });
+
+    if (!subId) return;
+
+    try {
+      const res = await api.get(`/subcontractors/intelligence/${subId}`);
+      if (res.data.success) {
+        setSubcontractorIntelligence({
+          contracts: res.data.contracts || [],
+          boqs: res.data.boqs || [],
+          stats: res.data.stats || {}
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch subcontractor intelligence:", err);
+    }
+  };
+
+  const handleClaimFieldChange = (field, value) => {
+    const updatedForm = { ...claimForm, [field]: value };
+
+    const activeContract = subcontractorIntelligence.contracts.find(c => c.id === parseInt(updatedForm.contract_id));
+    const activeBoq = subcontractorIntelligence.boqs.find(b => b.boq_id === parseInt(updatedForm.sub_item_id));
+
+    let prevQty = 0;
+    if (activeBoq) {
+      prevQty = invoices
+        .filter(inv => inv.subcontractor_id === parseInt(updatedForm.subcontractor_id) && inv.sub_item_id === activeBoq.boq_id && (inv.status === 'Approved' || inv.status === 'Paid'))
+        .reduce((sum, curr) => sum + Number(curr.curr_qty || 0), 0);
+
+      updatedForm.prev_qty = prevQty;
+
+      const currQtyVal = parseFloat(field === 'curr_qty' ? value : updatedForm.curr_qty) || 0;
+      const subUnitPrice = parseFloat(activeBoq.sub_unit_price) || 0;
+      const grossVal = currQtyVal * subUnitPrice;
+      updatedForm.gross_amount = Math.round(grossVal * 100) / 100;
+
+      const retentionPct = activeContract ? parseFloat(activeContract.retention_percent) || 0 : 5;
+      updatedForm.retention_deduction = Math.round((grossVal * (retentionPct / 100)) * 100) / 100;
+
+      const advancePct = activeContract ? parseFloat(activeContract.advance_percent) || 0 : 10;
+      updatedForm.dp_recovery = Math.round((grossVal * (advancePct / 100)) * 100) / 100;
+
+      const assignedQty = parseFloat(activeBoq.assigned_qty) || 1;
+      const totalExecutedQty = prevQty + currQtyVal;
+      updatedForm.progress_percent = Math.round(((totalExecutedQty / assignedQty) * 100) * 100) / 100;
+    }
+
+    const gross = parseFloat(updatedForm.gross_amount) || 0;
+    const ret = parseFloat(updatedForm.retention_deduction) || 0;
+    const adv = parseFloat(updatedForm.dp_recovery) || 0;
+    const mat = parseFloat(updatedForm.material_deduction) || 0;
+    const tax = parseFloat(updatedForm.tax_deduction) || 0;
+    
+    updatedForm.net_amount = Math.round((gross - ret - adv - mat - tax) * 100) / 100;
+
+    if (activeBoq && field === 'curr_qty') {
+      updatedForm.description = language === 'ar' 
+        ? `مستخلص جاري لبند: ${activeBoq.item_name} - كمية: ${value} ${activeBoq.uom}`
+        : `Progress Claim for: ${activeBoq.item_name} - Qty: ${value} ${activeBoq.uom}`;
+    }
+
+    setClaimForm(updatedForm);
+  };
+
+  const handleClaimSubmit = async (e) => {
+    e.preventDefault();
+    if (!claimForm.subcontractor_id || !claimForm.contract_id || !claimForm.sub_item_id || !claimForm.curr_qty) {
+      alert(language === 'ar' ? "يرجى ملء جميع الحقول المطلوبة!" : "Please fill in all required fields!");
+      return;
+    }
+    
+    setIsSubmittingClaim(true);
+    try {
+      const activeBoq = subcontractorIntelligence.boqs.find(b => b.boq_id === parseInt(claimForm.sub_item_id));
+      
+      const payload = {
+        ...claimForm,
+        project_name: activeBoq?.project_name || 'General',
+        sub_item_id: activeBoq?.boq_id
+      };
+      
+      await api.post('/subcontractors/progress_claim_detailed', payload);
+      alert(language === 'ar' ? "تم إرسال مستخلص مقاول الباطن للمراجعة والاعتماد بنجاح!" : "Subcontractor progress claim submitted successfully!");
+      setIsClaimModalOpen(false);
+      setClaimForm({
+        subcontractor_id: '',
+        contract_id: '',
+        sub_item_id: '',
+        curr_qty: '',
+        prev_qty: 0,
+        gross_amount: 0,
+        retention_deduction: 0,
+        dp_recovery: 0,
+        material_deduction: '',
+        tax_deduction: '',
+        net_amount: 0,
+        progress_percent: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || "Error registering claim");
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
+
 
   // BOQ Item creation inside global tab
   const handleBoqSubmit = async (e) => {
@@ -517,12 +720,13 @@ export default function Subcontractors() {
                       <th className="px-8 py-5">{cur.subsTab.name}</th>
                       <th className="px-8 py-5">{cur.subsTab.contact}</th>
                       <th className="px-8 py-5">{cur.subsTab.currentProj}</th>
-                      <th className={`px-8 py-5 text-center bg-slate-100/30 text-slate-900`}>{cur.subsTab.totalInvoices}</th>
+                      <th className="px-8 py-5 text-center bg-slate-100/30 text-slate-900">{cur.subsTab.totalInvoices}</th>
+                      <th className="px-8 py-5 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {loading ? (
-                       <tr><td colSpan="4" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.subsTab.loading}</td></tr>
+                       <tr><td colSpan="5" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.subsTab.loading}</td></tr>
                     ) : subcontractors.map(sub => (
                       <tr 
                         key={sub.id} 
@@ -539,8 +743,24 @@ export default function Subcontractors() {
                           <span className="font-bold text-slate-600 text-xs font-mono bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{sub.phone || 'No Contact'}</span>
                         </td>
                         <td className="px-8 py-6 text-slate-500 font-bold text-xs">{sub.project_name || 'Standby'}</td>
-                        <td className={`px-8 py-6 text-center font-black text-emerald-600 text-xl bg-emerald-50/10`}>
+                        <td className="px-8 py-6 text-center font-black text-emerald-600 text-xl bg-emerald-50/10">
                           {Number(sub.total_invoices || 0).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
+                        </td>
+                        <td className="px-8 py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2 justify-center">
+                            <button 
+                              onClick={() => openEditSubModal(sub)}
+                              className="px-3 py-2 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-xl font-black text-[10px] transition-all"
+                            >
+                              ✏️ {language === 'ar' ? 'تعديل' : 'Edit'}
+                            </button>
+                            <button 
+                              onClick={() => handleSubDelete(sub.id)}
+                              className="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl font-black text-[10px] transition-all"
+                            >
+                              🗑️ {language === 'ar' ? 'حذف' : 'Delete'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -552,11 +772,18 @@ export default function Subcontractors() {
 
           {activeTab === 'invoices' && (
             <div className="animate-fade-in">
-              <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+              <div className="p-8 border-b border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
                   <span className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">📄</span>
                   {cur.invoicesTab.title}
                 </h3>
+                <button 
+                  onClick={() => setIsClaimModalOpen(true)} 
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black shadow-lg shadow-slate-950/10 hover:bg-blue-600 transition-all active:scale-[0.98] flex items-center gap-2"
+                >
+                  <span>📝</span>
+                  {language === 'ar' ? 'إصدار مستخلص جديد' : 'Draft New Claim'}
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} whitespace-nowrap`}>
@@ -573,7 +800,7 @@ export default function Subcontractors() {
                     {loading ? (
                       <tr><td colSpan="5" className="p-20 text-center animate-pulse font-black text-slate-400">{cur.invoicesTab.loading}</td></tr>
                     ) : invoices.map(inv => {
-                      const isApproved = inv.status === 'Approved' || inv.status === 'Paid';
+                      const isApproved = inv.status === 'Approved' || inv.status === 'Paid' || inv.status === 'اعتماد مالي';
                       return (
                         <tr key={inv.id} className="hover:bg-slate-50/50 transition-all group">
                           <td className="px-8 py-6">
@@ -586,21 +813,29 @@ export default function Subcontractors() {
                             <span className="font-bold text-slate-700 text-xs font-sans whitespace-normal block max-w-md">{inv.description}</span>
                           </td>
                           <td className="px-8 py-6 text-center font-black text-blue-600 text-sm">
-                            {Number(inv.curr_qty).toLocaleString()}
+                            {Number(inv.curr_qty || 0).toLocaleString()}
                           </td>
                           <td className={`px-8 py-6 ${language === 'ar' ? 'text-left' : 'text-right'} font-black text-emerald-600 text-xl bg-emerald-50/10`}>
-                            {Number(inv.net_amount).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
+                            {Number(inv.net_amount || inv.amount || 0).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
                           </td>
                           <td className="px-8 py-6">
-                            <div className="flex flex-col gap-2 items-center">
-                              <span className={`px-4 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm w-full text-center ${isApproved ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                            <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                              <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm text-center ${isApproved ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                 {isApproved ? cur.invoicesTab.approved : cur.invoicesTab.pending}
                               </span>
-                              {!isApproved && (
-                                <button onClick={() => approveInvoice(inv.id)} className="w-full py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-sm active:scale-95">
-                                  {cur.invoicesTab.approveBtn}
+                              <div className="flex gap-1.5 w-full">
+                                <button 
+                                  onClick={() => setSelectedPrintInvoice(inv)} 
+                                  className="w-full py-2 bg-slate-100 text-slate-700 rounded-lg text-[9px] font-black uppercase hover:bg-slate-200 transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95"
+                                >
+                                  🖨️ {language === 'ar' ? 'طباعة' : 'Print'}
                                 </button>
-                              )}
+                                {!isApproved && (
+                                  <button onClick={() => approveInvoice(inv.id)} className="w-full py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-sm active:scale-95 text-center">
+                                    {cur.invoicesTab.approveBtn}
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -670,6 +905,65 @@ export default function Subcontractors() {
              </div>
              <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
                 {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{cur.modalSub.save}</>}
+             </button>
+          </form>
+        </div>
+      )}
+
+      {/* Edit Subcontractor Modal */}
+      {isEditSubModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsEditSubModalOpen(false)}></div>
+          <form onSubmit={submitEditSubcontractor} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300">
+             <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black uppercase text-slate-900 italic tracking-tighter">
+                  {language === 'ar' ? 'تعديل بيانات المقاول' : 'Edit Subcontractor'}
+                </h2>
+                <button type="button" onClick={() => setIsEditSubModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+             </div>
+             
+             <div className="space-y-6">
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.name}</label>
+                   <input type="text" name="name" value={editSubForm.name} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.phone}</label>
+                   <input type="text" name="phone" value={editSubForm.phone} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.project}</label>
+                   <select 
+                      name="project_id" 
+                      value={editSubForm.project_id} 
+                      onChange={handleEditSubChange} 
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                   >
+                      <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                   </select>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
+                   <input type="text" name="company" value={editSubForm.company} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax ID / VAT</label>
+                      <input type="text" name="tax_id" value={editSubForm.tax_id} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License No.</label>
+                      <input type="text" name="license_number" value={editSubForm.license_number} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                   </div>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insurance Expiry Date</label>
+                   <input type="date" name="insurance_expiry" value={editSubForm.insurance_expiry} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                </div>
+             </div>
+             <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{language === 'ar' ? 'تحديث البيانات' : 'Update Data'}</>}
              </button>
           </form>
         </div>
@@ -855,6 +1149,499 @@ export default function Subcontractors() {
           </form>
         </div>
       )}
+
+      {/* 📝 Subcontractor Progress Claim Wizard Modal */}
+      {isClaimModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsClaimModalOpen(false)}></div>
+          <div className="bg-white w-full max-w-6xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[90vh]">
+            
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-slate-900 text-white rounded-xl text-xl">📝</span>
+                <div className="text-right">
+                  <h2 className="text-xl font-black text-slate-950">
+                    {language === 'ar' ? 'منشئ مستخلصات الباطن الذكي' : 'Engineering Subcontractor Claim Wizard'}
+                  </h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                    {language === 'ar' ? 'نظام الحسابات والكميات المزدوجة المتوافق مع معايير IFRS' : 'IFRS-Compliant Double-Entry Quantity System'}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setIsClaimModalOpen(false)} className="text-slate-400 hover:text-slate-950 transition-colors text-2xl">✖</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Form Side */}
+              <form onSubmit={handleClaimSubmit} className="lg:col-span-7 space-y-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Subcontractor Select */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'مقاول الباطن المستهدف *' : 'Target Subcontractor *'}
+                    </label>
+                    <select
+                      value={claimForm.subcontractor_id}
+                      onChange={(e) => handleClaimSubcontractorChange(e.target.value)}
+                      required
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner cursor-pointer"
+                    >
+                      <option value="">-- {language === 'ar' ? 'اختر مقاول الباطن' : 'Select Subcontractor'} --</option>
+                      {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name} ({s.company || 'Private'})</option>)}
+                    </select>
+                  </div>
+
+                  {/* Contract Select */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'عقد المقاولة المسند *' : 'Active Contract *'}
+                    </label>
+                    <select
+                      value={claimForm.contract_id}
+                      onChange={(e) => handleClaimFieldChange('contract_id', e.target.value)}
+                      required
+                      disabled={!claimForm.subcontractor_id}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
+                    >
+                      <option value="">-- {language === 'ar' ? 'اختر العقد النشط' : 'Select Contract'} --</option>
+                      {subcontractorIntelligence.contracts.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.contract_number} (قيمة: {Number(c.total_value).toLocaleString()} LCY)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* BOQ Item Select */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'بند الأعمال الهندسي *' : 'BOQ Work Item *'}
+                    </label>
+                    <select
+                      value={claimForm.sub_item_id}
+                      onChange={(e) => handleClaimFieldChange('sub_item_id', e.target.value)}
+                      required
+                      disabled={!claimForm.contract_id}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
+                    >
+                      <option value="">-- {language === 'ar' ? 'اختر بند الأعمال' : 'Select BOQ Item'} --</option>
+                      {subcontractorIntelligence.boqs.map(b => (
+                        <option key={b.boq_id} value={b.boq_id}>
+                          {b.item_name} ({b.assigned_qty} {b.uom} | فئة: {Number(b.sub_unit_price).toLocaleString()} LCY)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Quantity Executed */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'الكمية المنفذة الحالية *' : 'Current Executed Qty *'}
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      disabled={!claimForm.sub_item_id}
+                      value={claimForm.curr_qty}
+                      onChange={(e) => handleClaimFieldChange('curr_qty', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Materials Deduction */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'خصم خامات مجهزة (المقاول الرئيسي)' : 'Materials Supplied Deduction'}
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={claimForm.material_deduction}
+                      onChange={(e) => handleClaimFieldChange('material_deduction', e.target.value)}
+                      placeholder="0.00 LCY"
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                    />
+                  </div>
+
+                  {/* Tax Deduction */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'خصم ضرائب وأعباء استقطاع' : 'Tax / Withholding Deduction'}
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={claimForm.tax_deduction}
+                      onChange={(e) => handleClaimFieldChange('tax_deduction', e.target.value)}
+                      placeholder="0.00 LCY"
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                    />
+                  </div>
+
+                  {/* Date Input */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'تاريخ المستخلص' : 'Claim Date'}
+                    </label>
+                    <input
+                      type="date"
+                      value={claimForm.date}
+                      onChange={(e) => handleClaimFieldChange('date', e.target.value)}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                    />
+                  </div>
+                </div>
+
+                {/* Description Statement */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    {language === 'ar' ? 'البيان الهندسي للمستخلص *' : 'Engineering Description *'}
+                  </label>
+                  <textarea
+                    required
+                    value={claimForm.description}
+                    onChange={(e) => handleClaimFieldChange('description', e.target.value)}
+                    rows="2"
+                    placeholder={language === 'ar' ? 'ادخل تفاصيل الأعمال المنجزة والنسب الهندسية...' : 'Describe the progress of works...'}
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none"
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingClaim}
+                  className="w-full py-5 bg-slate-900 hover:bg-slate-950 text-white rounded-[2rem] font-black text-sm transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {isSubmittingClaim ? (
+                    <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>🚀</span>
+                      {language === 'ar' ? 'تسجيل المستخلص واعتماد التوازن المالي' : 'Register Claim & Commit Ledger'}
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Real-time Calculation Waterfall & IFRS Double Entry Preview */}
+              <div className="lg:col-span-5 flex flex-col gap-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                
+                {/* Real-time Cascade Container */}
+                <div className="bg-slate-950 text-white rounded-[2.5rem] p-8 border border-white/10 relative overflow-hidden flex flex-col justify-between flex-1 min-h-[350px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-amber-500/5"></div>
+                  
+                  <div className="relative z-10 space-y-6">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        {language === 'ar' ? 'شلال تصفية المستخلص الهندسي' : 'Progress claim waterfall'}
+                      </span>
+                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-bold">
+                        {language === 'ar' ? 'احتساب تلقائي' : 'Auto Calculate'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Subtotal metrics */}
+                      <div className="flex justify-between text-xs font-bold text-slate-400">
+                        <span>{language === 'ar' ? 'الكمية السابقة المنفذة:' : 'Previous Executed Qty:'}</span>
+                        <span className="font-mono text-white">{claimForm.prev_qty}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-400">
+                        <span>{language === 'ar' ? 'الكمية المنفذة الحالية:' : 'Current Executed Qty:'}</span>
+                        <span className="font-mono text-white">{claimForm.curr_qty || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-400 border-b border-white/5 pb-3">
+                        <span>{language === 'ar' ? 'نسبة الإنجاز الإجمالية:' : 'Total Progress Percent:'}</span>
+                        <span className="font-mono text-indigo-400">{claimForm.progress_percent || 0}%</span>
+                      </div>
+
+                      {/* Financials waterfall */}
+                      <div className="flex justify-between text-sm font-black text-slate-200">
+                        <span>{language === 'ar' ? 'قيمة الأعمال الإجمالية (Gross):' : 'Total Work Value (Gross):'}</span>
+                        <span className="font-mono text-slate-100">{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-rose-400">
+                        <span>{language === 'ar' ? '(-) استقطاع ضمان أعمال (تأمين 5%):' : '(-) Retention Guarantee (5%):'}</span>
+                        <span className="font-mono">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-amber-500">
+                        <span>{language === 'ar' ? '(-) استرداد دفعة مقدمة (10%):' : '(-) Advance Recovery (10%):'}</span>
+                        <span className="font-mono">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-400">
+                        <span>{language === 'ar' ? '(-) خصم خامات ومواد مجهزة:' : '(-) Materials Supplied Offset:'}</span>
+                        <span className="font-mono">-{Number(claimForm.material_deduction || 0).toLocaleString()} LCY</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-400">
+                        <span>{language === 'ar' ? '(-) أعباء وضرائب الخصم:' : '(-) Tax & WHT Withheld:'}</span>
+                        <span className="font-mono">-{Number(claimForm.tax_deduction || 0).toLocaleString()} LCY</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 border-t border-white/5 pt-6 mt-6">
+                    <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                      {language === 'ar' ? 'صافي مستحق الصرف (Net Payable)' : 'Net Amount Payable'}
+                    </span>
+                    <div className="text-3xl font-black text-emerald-400 font-mono tracking-tighter">
+                      {Number(claimForm.net_amount).toLocaleString()} <span className="text-xs text-white opacity-40 font-sans">LCY</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* IFRS Entry Preview Widget */}
+                <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-200 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <span>📊</span> {language === 'ar' ? 'معاينة القيد المزدوج المعياري (IFRS)' : 'IFRS Ledger Entry Preview'}
+                    </span>
+                    <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                      {language === 'ar' ? 'متوازن' : 'Balanced'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    {/* Debit Line */}
+                    <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex flex-col">
+                        <span className="font-black text-indigo-600">{language === 'ar' ? 'Debit (مدين)' : 'Debit'}</span>
+                        <span className="text-[10px] font-bold text-slate-600">تكلفة مقاولي الباطن (COGS)</span>
+                      </div>
+                      <span className="font-mono font-black text-slate-900">+{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
+                    </div>
+
+                    {/* Credit Line 1 */}
+                    <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex flex-col">
+                        <span className="font-black text-emerald-600">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                        <span className="text-[10px] font-bold text-slate-600">مقاولي الباطن (Accounts Payable)</span>
+                      </div>
+                      <span className="font-mono font-black text-slate-900">-{Number(claimForm.net_amount).toLocaleString()} LCY</span>
+                    </div>
+
+                    {/* Credit Line 2 (Retention) */}
+                    {parseFloat(claimForm.retention_deduction) > 0 && (
+                      <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                          <span className="text-[10px] font-bold text-slate-600">تأمينات مستقطعة لجهات خارجية</span>
+                        </div>
+                        <span className="font-mono font-black text-slate-900">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+
+                    {/* Credit Line 3 (Advance Recovery) */}
+                    {parseFloat(claimForm.dp_recovery) > 0 && (
+                      <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                          <span className="text-[10px] font-bold text-slate-600">دفعات مقدمة لمقاولي الباطن</span>
+                        </div>
+                        <span className="font-mono font-black text-slate-900">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 🖨️ Printable Engineering Payment Certificate Modal */}
+      {selectedPrintInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-slate-900/60 backdrop-blur-xl">
+          
+          <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-hidden">
+            
+            {/* Modal Actions Bar (Non-Printable) */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 no-print">
+              <span className="text-sm font-black text-slate-950 flex items-center gap-2">
+                <span>🖨️</span> {language === 'ar' ? 'أمر طباعة وتوجيه المستخلص الهندسي' : 'Print Subcontractor Progress Certificate'}
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                >
+                  {language === 'ar' ? '🖨️ طباعة المستخلص' : 'Print Certificate'}
+                </button>
+                <button
+                  onClick={() => setSelectedPrintInvoice(null)}
+                  className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-black active:scale-95 transition-all"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Paper Mockup Content Area */}
+            <div className="flex-1 overflow-y-auto p-12 bg-white font-sans" id="printable-certificate" dir="rtl">
+              <div className="space-y-10">
+                
+                {/* Certificate Header */}
+                <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
+                  <div className="text-right">
+                    <h1 className="text-3xl font-black text-slate-950 tracking-tighter">مجموعة شركات تيد كابيتال القابضة</h1>
+                    <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">TED CAPITAL HOLDINGS GROUP | ERP SYSTEM</p>
+                    <div className="text-xs text-slate-600 space-y-0.5 mt-4 font-bold">
+                      <div>المكتب الرئيسي: القاهرة الجديدة، التجمع الخامس</div>
+                      <div>الهاتف: +20 2 2489 1234</div>
+                      <div>الرقم الضريبي: 489-125-987</div>
+                    </div>
+                  </div>
+                  <div className="text-left">
+                    <div className="w-16 h-16 bg-slate-950 text-white rounded-2xl flex items-center justify-center text-3xl font-bold font-sans">TED</div>
+                    <div className="mt-4 text-xs font-black text-slate-900 space-y-1 text-right">
+                      <div className="bg-slate-900 text-white px-3 py-1 rounded text-center text-[10px] font-black uppercase tracking-wider">مستخلص أعمال مقاولة باطن جاري</div>
+                      <div>رقم المستخلص: <span className="font-mono text-sm">#INV-{selectedPrintInvoice.id}</span></div>
+                      <div>التاريخ: <span className="font-mono">{new Date(selectedPrintInvoice.date || selectedPrintInvoice.created_at).toLocaleDateString('ar-EG')}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subcontractor & Contract Metadata Grid */}
+                <div className="grid grid-cols-2 gap-8 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-right">
+                  <div className="space-y-2 text-xs font-bold text-slate-700">
+                    <div><span className="text-slate-400 ml-2">المشروع المستهدف:</span> {selectedPrintInvoice.project_name || 'العام'}</div>
+                    <div><span className="text-slate-400 ml-2">مقاول الباطن:</span> {selectedPrintInvoice.subcontractor_name || 'غير محدد'}</div>
+                    <div><span className="text-slate-400 ml-2">طبيعة الأعمال:</span> {selectedPrintInvoice.description || 'مستخلص أعمال جارية'}</div>
+                  </div>
+                  <div className="space-y-2 text-xs font-bold text-slate-700 text-left" dir="ltr">
+                    <div>Contract Ref: <span className="font-mono">{selectedPrintInvoice.contract_id ? `#CNT-${selectedPrintInvoice.contract_id}` : 'General'}</span></div>
+                    <div>Status: <span className="font-mono uppercase text-blue-600">{selectedPrintInvoice.status}</span></div>
+                    <div>Currency: <span className="font-mono">LCY (EGP)</span></div>
+                  </div>
+                </div>
+
+                {/* Quantities & Pricing Ledger Table */}
+                <table className="w-full border-collapse border border-slate-300 text-xs text-right">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-900 font-black">
+                      <th className="border border-slate-300 px-4 py-3 text-center">البيان ومواصفة البند</th>
+                      <th className="border border-slate-300 px-4 py-3 text-center">الوحدة</th>
+                      <th className="border border-slate-300 px-4 py-3 text-center">الكمية السابقة</th>
+                      <th className="border border-slate-300 px-4 py-3 text-center">الكمية الحالية</th>
+                      <th className="border border-slate-300 px-4 py-3 text-center">الكمية الإجمالية</th>
+                      <th className="border border-slate-300 px-4 py-3 text-center">القيمة الإجمالية</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="text-slate-800 font-bold">
+                      <td className="border border-slate-300 px-4 py-4 text-center">{selectedPrintInvoice.description || 'أعمال هندسية مقاولة باطن'}</td>
+                      <td className="border border-slate-300 px-4 py-4 text-center">متر طولي / LM</td>
+                      <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number(selectedPrintInvoice.prev_qty || 0).toLocaleString()}</td>
+                      <td className="border border-slate-300 px-4 py-4 text-center font-mono text-indigo-600">{Number(selectedPrintInvoice.curr_qty || 0).toLocaleString()}</td>
+                      <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number((parseFloat(selectedPrintInvoice.prev_qty) || 0) + (parseFloat(selectedPrintInvoice.curr_qty) || 0)).toLocaleString()}</td>
+                      <td className="border border-slate-300 px-4 py-4 text-left font-mono">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Deductions Waterfall Cascade */}
+                <div className="w-full max-w-md mr-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3 text-right">
+                  <h3 className="text-xs font-black text-slate-900 border-b border-slate-300 pb-2 mb-3 flex items-center justify-between">
+                    <span>شلال التسويات والاستقطاعات المالية</span>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">FINANCIAL CASCADE</span>
+                  </h3>
+                  
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                    <span>إجمالي قيمة الأعمال الحالية المنفذة (Gross):</span>
+                    <span className="font-mono text-slate-900">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
+                  </div>
+
+                  {parseFloat(selectedPrintInvoice.retention_deduction) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-rose-600">
+                      <span>(-) استقطاع ضمان أعمال نهائي (5%):</span>
+                      <span className="font-mono">-{Number(selectedPrintInvoice.retention_deduction).toLocaleString()} LCY</span>
+                    </div>
+                  )}
+
+                  {parseFloat(selectedPrintInvoice.dp_recovery) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-amber-600">
+                      <span>(-) استرداد دفعة مقدمة مستلمة (10%):</span>
+                      <span className="font-mono">-{Number(selectedPrintInvoice.dp_recovery).toLocaleString()} LCY</span>
+                    </div>
+                  )}
+
+                  {parseFloat(selectedPrintInvoice.material_deduction) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-slate-500">
+                      <span>(-) خصم خامات ومواد مجهزة للشركاء:</span>
+                      <span className="font-mono">-{Number(selectedPrintInvoice.material_deduction).toLocaleString()} LCY</span>
+                    </div>
+                  )}
+
+                  {parseFloat(selectedPrintInvoice.tax_deduction) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-slate-500">
+                      <span>(-) استقطاع ضرائب الخصم المنبع:</span>
+                      <span className="font-mono">-{Number(selectedPrintInvoice.tax_deduction).toLocaleString()} LCY</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-300 pt-3 mt-3">
+                    <span>صافي القيمة المستحقة للصرف (Net Payable):</span>
+                    <span className="font-mono text-emerald-600 text-base">{Number(selectedPrintInvoice.net_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
+                  </div>
+                </div>
+
+                {/* Signatures & Execution Section */}
+                <div className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-200">
+                  <div className="space-y-4 text-center">
+                    <div className="text-xs font-black text-slate-900">إعداد / مهندس الموقع</div>
+                    <div className="h-16 border-b border-dashed border-slate-400"></div>
+                    <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                  </div>
+                  <div className="space-y-4 text-center">
+                    <div className="text-xs font-black text-slate-900">مراجعة / المدير المالي للحسابات</div>
+                    <div className="h-16 border-b border-dashed border-slate-400"></div>
+                    <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                  </div>
+                  <div className="space-y-4 text-center">
+                    <div className="text-xs font-black text-slate-900">اعتماد / رئيس مجلس الإدارة</div>
+                    <div className="h-16 border-b border-dashed border-slate-400"></div>
+                    <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Inject Print-CSS Rules dynamically */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-certificate, #printable-certificate * {
+            visibility: visible !important;
+          }
+          #printable-certificate {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 2cm !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}} />
 
       {selectedSubId && (
         <Subcontractor360 

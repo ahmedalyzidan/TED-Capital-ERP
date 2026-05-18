@@ -856,9 +856,10 @@ router.post('/add/:type', async (req, res) => {
         }
 
         let data = req.body;
+        const adjustReasonInput = req.body.adjust_reason || 'أرصدة افتتاحية';
         pNameForSync = data.project_name || (type === 'projects' ? data.name : null);
 
-        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
+        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty', 'adjust_reason'];
         calcFields.forEach(f => delete data[f]);
 
         if (type === 'inventory' || type === 'inventory_sales') {
@@ -964,6 +965,19 @@ router.post('/add/:type', async (req, res) => {
             data.material = itemName;
             data.unit_cost = buyPrice;
             data.est_cost = (parseFloat(data.qty || 0) * buyPrice).toFixed(2);
+        }
+
+        if (type === 'subcontractor_items') {
+            if (!data.item_desc && data.boq_id) {
+                const boqRes = await client.query("SELECT item_name, item_desc FROM boq WHERE id = $1 LIMIT 1", [data.boq_id]);
+                if (boqRes.rows.length > 0) {
+                    data.item_desc = boqRes.rows[0].item_name || boqRes.rows[0].item_desc || 'Unspecified Work';
+                } else {
+                    data.item_desc = 'Unspecified Work';
+                }
+            } else if (!data.item_desc) {
+                data.item_desc = 'Unspecified Work';
+            }
         }
 
 
@@ -1092,9 +1106,30 @@ router.post('/add/:type', async (req, res) => {
                 const title = type === 'inventory' ? 'إضافة مخزون جديد' : (type === 'projects' ? 'مشروع جديد' : 'سجل جديد');
                 const itemName = data.name || data.item_name || newId;
                 await client.query(
-                    "INSERT INTO system_notifications (type, title, message, link) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO notifications (type, title, message, link) VALUES ($1, $2, $3, $4)",
                     [`NEW_${type.toUpperCase()}`, title, `تم إضافة ${itemName} بواسطة ${req.user.username}`, `/${type}/${newId}`]
                 );
+            }
+
+            if (type === 'inventory_items' && !skipInsert) {
+                const initialQty = parseFloat(req.body.quantity || req.body.qty || 0);
+                const initialCost = parseFloat(req.body.buy_price || req.body.unit_cost || 0);
+                const wh = req.body.warehouse || 'المخزن الرئيسي';
+                const itmName = req.body.item_name || req.body.name || `Item #${newId}`;
+                const username = req.user ? req.user.username : 'System';
+
+                await client.query(
+                    "INSERT INTO inventory_movements (inventory_id, movement_type, to_warehouse, qty, notes, created_by) VALUES ($1, $2, $3, $4, $5, $6)",
+                    [newId, 'Initial Stock', wh, initialQty, `أرصدة افتتاحية للصنف: ${itmName} | السبب: ${adjustReasonInput}`, username]
+                );
+
+                const totalVal = initialQty * initialCost;
+                if (totalVal > 0) {
+                    const pName = req.body.project_name || 'General';
+                    const desc = `أرصدة افتتاحية لمخزون خامات ومواد - صنف: ${itmName} | كمية: ${initialQty} | السبب: ${adjustReasonInput}`;
+                    await autoLedgerEntry(client, 'مخزون خامات ومواد', pName, totalVal, 0, desc, username);
+                    await autoLedgerEntry(client, 'تسويات جردية (Inventory Adjustments)', pName, 0, totalVal, desc, username);
+                }
             }
         }
 
@@ -1145,7 +1180,7 @@ router.post('/add/:type', async (req, res) => {
                 if (totalCost > 0) {
                     const projName = data.project_name || 'General';
                     const detailDesc = `صرف خامات ومواد للمشروع - صنف: ${data.material} | كمية: ${data.qty}`;
-                    
+
                     // Debit: تكاليف المشروعات المباشرة (حساب 5100)
                     await autoLedgerEntry(client, 'تكاليف المشروعات المباشرة', projName, totalCost, 0, detailDesc, req.user ? req.user.username : 'System');
                     // Credit: مخزون خامات ومواد (حساب 1130)
@@ -1364,9 +1399,10 @@ router.put('/update/:type/:id', async (req, res) => {
         if (!hasAccess(req.user, accessType, 'update')) throw new Error("Access Denied.");
 
         let data = req.body;
+        const adjustReasonInput = req.body.adjust_reason || 'تسوية جردية وتعديل أرصدة';
         let pNameForSync = data.project_name || (type === 'projects' ? data.name : null);
 
-        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty'];
+        const calcFields = ['charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'expected_profit_amount', 'actual_profit_amount', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'actual_profit', 'waivePenalty', 'adjust_reason'];
 
         calcFields.forEach(f => delete data[f]);
 
@@ -1486,6 +1522,40 @@ router.put('/update/:type/:id', async (req, res) => {
         // تسجيل التغييرات بدقة متناهية بدلاً من رسالة عامة
         await logAdvancedAudit(client, req.user.username, type, id, 'UPDATE', `Updated record in ${type}`, oldData, data);
 
+        if (type === 'inventory_items' && oldData.id) {
+            const oldQty = parseFloat(oldData.quantity || oldData.remaining_qty || 0);
+            const oldCost = parseFloat(oldData.buy_price || oldData.avg_cost || oldData.unit_cost || 0);
+            const newQty = parseFloat(data.quantity || data.remaining_qty || oldQty);
+            const newCost = parseFloat(data.buy_price || data.unit_cost || oldCost);
+            const wh = data.warehouse || oldData.warehouse || 'المخزن الرئيسي';
+            const itmName = data.item_name || oldData.item_name || oldData.name || `Item #${id}`;
+            const username = req.user ? req.user.username : 'System';
+
+            const qtyDiff = newQty - oldQty;
+            const valDiff = (newQty * newCost) - (oldQty * oldCost);
+
+            if (qtyDiff !== 0 || valDiff !== 0) {
+                const moveType = qtyDiff > 0 ? 'Adjustment (Surplus)' : (qtyDiff < 0 ? 'Adjustment (Deficit)' : 'Revaluation');
+                await client.query(
+                    "INSERT INTO inventory_movements (inventory_id, movement_type, from_warehouse, to_warehouse, qty, notes, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    [id, moveType, wh, wh, qtyDiff, `السبب: ${adjustReasonInput} | التكلفة القديمة: ${oldCost} -> الجديدة: ${newCost}`, username]
+                );
+
+                if (valDiff !== 0) {
+                    const pName = data.project_name || oldData.project_name || 'General';
+                    const absVal = Math.abs(valDiff);
+                    const desc = `تسوية جردية لمخزون خامات ومواد - صنف: ${itmName} | ${moveType} | السبب: ${adjustReasonInput}`;
+                    if (valDiff > 0) {
+                        await autoLedgerEntry(client, 'مخزون خامات ومواد', pName, absVal, 0, desc, username);
+                        await autoLedgerEntry(client, 'تسويات جردية (Inventory Adjustments)', pName, 0, absVal, desc, username);
+                    } else {
+                        await autoLedgerEntry(client, 'تسويات جردية (Inventory Adjustments)', pName, absVal, 0, desc, username);
+                        await autoLedgerEntry(client, 'مخزون خامات ومواد', pName, 0, absVal, desc, username);
+                    }
+                }
+            }
+        }
+
         if (type === 'payment_receipts') {
             const recRes = await client.query("SELECT installment_id FROM payment_receipts WHERE id = $1", [id]);
             if (recRes.rows.length > 0) {
@@ -1565,7 +1635,7 @@ router.delete('/delete/:type/:id', async (req, res) => {
                     if (totalCost > 0) {
                         const projName = oldUsage.project_name || 'General';
                         const contraDesc = `[إلغاء] عكس قيد صرف خامات ومواد للمشروع - صنف: ${oldUsage.material}`;
-                        
+
                         // Debit: مخزون خامات ومواد (حساب 1130)
                         await autoLedgerEntry(client, 'مخزون خامات ومواد', projName, totalCost, 0, contraDesc, req.user ? req.user.username : 'System');
                         // Credit: تكاليف المشروعات المباشرة (حساب 5100)
@@ -1642,7 +1712,7 @@ router.delete('/delete/:type/:id', async (req, res) => {
             // تنبيه بالحذف
             if (['inventory', 'projects'].includes(type)) {
                 await client.query(
-                    "INSERT INTO system_notifications (type, title, message) VALUES ($1, $2, $3)",
+                    "INSERT INTO notifications (type, title, message) VALUES ($1, $2, $3)",
                     [`DELETED_${type.toUpperCase()}`, 'حذف سجل', `تم حذف ${deletedItemName} من ${type} بواسطة ${req.user.username}`]
                 );
             }
@@ -2814,7 +2884,7 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
             try {
                 const allCols = [qry.title_col, ...qry.subtitle_cols];
                 const condition = allCols.map(col => `CAST(${col} AS TEXT) ILIKE $1`).join(' OR ');
-                
+
                 let sql = `
                     SELECT DISTINCT 
                         id, 
@@ -2833,7 +2903,7 @@ router.get('/search/global', authenticateToken, isolateData, async (req, res) =>
                     FROM ${qry.table} 
                     WHERE (${condition})
                 `;
-                
+
                 let params = [term];
                 if (req.isolation && req.isolation.company) {
                     if (qry.comp_col) {

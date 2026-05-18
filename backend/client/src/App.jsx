@@ -13,6 +13,13 @@ import ProjectWorkspace from './pages/ProjectWorkspace';
 import Finance from './pages/Finance';
 import Clients from './pages/Clients';
 import Inventory from './pages/Inventory';
+import DirectStockIssue from './pages/DirectStockIssue';
+import StockTransfers from './pages/StockTransfers';
+import StockReconciliation from './pages/StockReconciliation';
+import BatchExpiryMatrix from './pages/BatchExpiryMatrix';
+import SmartReorder from './pages/SmartReorder';
+import PharmaInventory from './pages/PharmaInventory';
+import AdvancedStockControl from './pages/AdvancedStockControl';
 import Invoices from './pages/Invoices';
 import InterCompany from './pages/InterCompany';
 import Expenses from './pages/Expenses';
@@ -60,6 +67,13 @@ function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectWorkspace />} /> 
               <Route path="/inventory" element={<RBACProtectedRoute resource="INVENTORY" action="READ"><Inventory /></RBACProtectedRoute>} />
+              <Route path="/inventory/direct-issue" element={<DirectStockIssue />} />
+              <Route path="/inventory/transfers" element={<Navigate to="/inventory/pharma?tab=transfers" replace />} />
+              <Route path="/inventory/reconciliation" element={<Navigate to="/inventory/pharma?tab=reconciliation" replace />} />
+              <Route path="/inventory/batch-matrix" element={<Navigate to="/inventory/pharma?tab=expiry" replace />} />
+              <Route path="/inventory/reorder" element={<Navigate to="/inventory/pharma?tab=reorder" replace />} />
+              <Route path="/inventory/pharma" element={<PharmaInventory />} />
+              <Route path="/inventory/master-stock" element={<AdvancedStockControl />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/finance" element={<RBACProtectedRoute resource="FINANCE" action="READ"><Finance /></RBACProtectedRoute>} />
               <Route path="/finance/ar-due" element={<ARDueList />} />
