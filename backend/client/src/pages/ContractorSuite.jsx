@@ -548,45 +548,50 @@ export default function ContractorSuite() {
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 print-full-width">
 
         {/* --- DYNAMIC HEADER --- */}
-        <div className="relative rounded-3xl p-8 overflow-hidden border border-white/5 bg-slate-900/40 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl no-print">
+        <div className="relative rounded-3xl p-6 overflow-hidden border border-white/5 bg-slate-900/40 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl no-print">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl opacity-60 translate-x-20 -translate-y-20"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl opacity-40 -translate-x-20 translate-y-20"></div>
 
-          {/* Project selection & Add project */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-5 relative z-10 w-full md:w-auto">
+          {/* Project selection & details */}
+          <div className="flex items-center gap-5 relative z-10 w-full md:w-auto">
             <div className="w-14 h-14 bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-cyan-500/20 transform rotate-2 hover:rotate-0 transition-transform">💎</div>
             <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <select
                   value={activeProjectId}
                   onChange={e => setActiveProjectId(e.target.value)}
-                  className="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  className="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 cursor-pointer"
                 >
                   {projects.map(p => (
                     <option key={p.id} value={p.id} className="text-slate-900 font-bold">{p.name}</option>
                   ))}
                 </select>
-                
-                <button 
-                  onClick={() => setShowAddProject(!showAddProject)}
-                  className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all"
-                >
-                  {showAddProject ? 'إغلاق ✕' : '+ مشروع جديد'}
-                </button>
-                
-                <button 
-                  onClick={() => handleDeleteProject(activeProjectId)}
-                  className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all"
-                >
-                  حذف المشروع 🗑️
-                </button>
+                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 text-[10px] font-black border border-cyan-500/20">نشط 🟢</span>
               </div>
               <p className="text-slate-400 font-bold text-xs mt-1">العميل الحالي للمشروع: <span className="text-white font-black">{activeProject.clientName}</span></p>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="bg-slate-950/60 p-1.5 rounded-2xl border border-white/5 flex gap-1 relative z-10 w-full md:w-auto overflow-x-auto scrollbar-none">
+          {/* Project Action buttons */}
+          <div className="flex items-center gap-3 relative z-10 w-full md:w-auto justify-start md:justify-end">
+            <button 
+              onClick={() => setShowAddProject(!showAddProject)}
+              className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/40 text-cyan-400 text-xs font-black px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
+            >
+              <span>{showAddProject ? '✕ إغلاق' : '+ مشروع جديد'}</span>
+            </button>
+            <button 
+              onClick={() => handleDeleteProject(activeProjectId)}
+              className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 text-xs font-black px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
+            >
+              <span>حذف المشروع 🗑️</span>
+            </button>
+          </div>
+        </div>
+
+        {/* --- PREMIUM RESPONSIVE NAVIGATION GRID --- */}
+        <div className="bg-slate-900/40 p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-xl no-print">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {[
               { id: 'dashboard', label: 'لوحة القيادة', icon: '📊' },
               { id: 'boq', label: 'المقايسة والبنود', icon: '📝' },
@@ -597,10 +602,10 @@ export default function ContractorSuite() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap ${
+                className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-l from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-gradient-to-l from-cyan-500 to-blue-600 text-white border-cyan-400/30 shadow-lg shadow-cyan-500/20 transform -translate-y-[1px]'
+                    : 'text-slate-400 bg-slate-950/20 border-transparent hover:bg-white/5 hover:text-white hover:border-white/5'
                 }`}
               >
                 <span className="text-sm">{tab.icon}</span>
