@@ -755,6 +755,7 @@ router.get('/table/:type', async (req, res) => {
                 if (companyId === '1') entityName = 'TED Capital';
                 if (companyId === '2') entityName = 'Design Concept';
                 if (companyId === '3') entityName = 'Master Builder';
+                if (companyId === '4') entityName = 'PRIMEMED PHARMA';
                 if (entityName) {
                     conditions.push(`(c.company_entity = 'All' OR c.company_entity = $${params.length + 1})`);
                     params.push(entityName);

@@ -35,10 +35,22 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             let ledgerFilter = "AND l.is_deleted = FALSE AND sub.is_deleted = FALSE";
+            let coaFilter = "";
             const params = [];
             if (companyId && companyId !== 'all') {
                 params.push(parseInt(companyId));
                 ledgerFilter += ` AND l.company_id = $1`;
+                
+                let entityName = "";
+                if (String(companyId) === '1') entityName = 'TED Capital';
+                else if (String(companyId) === '2') entityName = 'Design Concept';
+                else if (String(companyId) === '3') entityName = 'Master Builder';
+                else if (String(companyId) === '4') entityName = 'PRIMEMED PHARMA';
+                
+                if (entityName) {
+                    params.push(entityName);
+                    coaFilter = ` AND (c.company_entity = 'All' OR c.company_entity = $2)`;
+                }
             }
 
             // 1. جلب شجرة الحسابات مع الأرصدة المحدثة
@@ -57,9 +69,9 @@ class FinanceController {
                         WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
                         ${ledgerFilter}
                         ), 
-                    0) AS balance 
+                     0) AS balance 
                 FROM chart_of_accounts c
-                WHERE c.is_deleted = FALSE
+                WHERE c.is_deleted = FALSE ${coaFilter}
                 ORDER BY c.account_code
             `, params);
 
