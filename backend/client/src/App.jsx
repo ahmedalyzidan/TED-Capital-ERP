@@ -26,7 +26,7 @@ import InterCompany from './pages/InterCompany';
 import Expenses from './pages/Expenses';
 import RealEstate from './pages/RealEstate';
 import Partners from './pages/Partners';
-import Subcontractors from './pages/Subcontractors';
+import ContractorSuite from './pages/ContractorSuite';
 import HR from './pages/HR';
 import Attendance from './pages/Attendance';
 import Users from './pages/Users';
@@ -88,7 +88,7 @@ function App() {
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/real-estate" element={<RealEstate />} />
               <Route path="/partners" element={<Partners />} />
-              <Route path="/subcontractors" element={<Subcontractors />} />
+              <Route path="/subcontractors" element={<ContractorSuite />} />
               <Route path="/hr" element={<RBACProtectedRoute resource="HR" action="READ"><HR /></RBACProtectedRoute>} />
               <Route path="/attendance" element={<Attendance />} /> 
               <Route path="/users" element={<RBACProtectedRoute resource="USERS" action="READ"><Users /></RBACProtectedRoute>} />
