@@ -288,8 +288,13 @@ const applySchemaFixes = async () => {
         is_deleted BOOLEAN DEFAULT FALSE,
         deleted_by VARCHAR(100),
         deleted_at TIMESTAMP,
+        project_name VARCHAR(255),
+        project_id VARCHAR(255),
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
+
+    await runQuery("Inventory Sales project_name column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
+    await runQuery("Inventory Sales project_id column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_id VARCHAR(255)");
 
     await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
         id               SERIAL PRIMARY KEY,

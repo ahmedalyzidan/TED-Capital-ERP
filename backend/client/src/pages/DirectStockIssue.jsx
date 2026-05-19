@@ -78,6 +78,63 @@ export default function DirectStockIssue() {
 
   const currentAccountMap = getAccountMapping(activeCompId);
 
+  const getCompanyProfile = (companyIdOrName) => {
+    let id = activeCompId; // default fallback
+    if (typeof companyIdOrName === 'number') {
+      id = companyIdOrName;
+    } else if (typeof companyIdOrName === 'string') {
+      const lower = companyIdOrName.toLowerCase();
+      if (lower.includes('design') || lower.includes('ديزاين')) {
+        id = 2;
+      } else if (lower.includes('master') || lower.includes('ماستر')) {
+        id = 3;
+      } else if (lower.includes('prime') || lower.includes('pharma') || lower.includes('بريم') || lower.includes('فارما')) {
+        id = 4;
+      } else if (lower.includes('ted') || lower.includes('تيد')) {
+        id = 1;
+      }
+    }
+
+    const profiles = {
+      1: {
+        nameAr: 'تيد كابيتال للتطوير العقاري والاستثمار',
+        nameEn: 'TED CAPITAL FOR REAL ESTATE DEVELOPMENT & INVESTMENT',
+        taxIdAr: 'الرقم الضريبي: ٥٨٢-٩١٤-٣٠٢',
+        taxIdEn: 'Tax ID: 582-914-302',
+        logoLetter: 'T',
+        logoText: 'TED CAPITAL'
+      },
+      2: {
+        nameAr: 'ديزاين كونسبت لأعمال التصميم والديكور',
+        nameEn: 'DESIGN CONCEPT FOR DESIGN & DECORATION',
+        taxIdAr: 'الرقم الضريبي: ٤٩١-٢٨٤-٦٧٣',
+        taxIdEn: 'Tax ID: 491-284-673',
+        logoLetter: 'D',
+        logoText: 'DESIGN CONCEPT'
+      },
+      3: {
+        nameAr: 'ماستر بيلدر للمقاولات العامة والإنشاءات',
+        nameEn: 'MASTER BUILDER FOR GENERAL CONTRACTING & CONSTRUCTION',
+        taxIdAr: 'الرقم الضريبي: ٣٨٢-١٩٥-٤٠٩',
+        taxIdEn: 'Tax ID: 382-195-409',
+        logoLetter: 'M',
+        logoText: 'MASTER BUILDER'
+      },
+      4: {
+        nameAr: 'برايم ميد فارما للأدوية والمستلزمات الطبية',
+        nameEn: 'PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES',
+        taxIdAr: 'الرقم الضريبي: ٧٧٢-٤٠٩-١١٨',
+        taxIdEn: 'Tax ID: 772-409-118',
+        logoLetter: 'P',
+        logoText: 'PRIMEMED PHARMA'
+      }
+    };
+
+    return profiles[id] || profiles[4];
+  };
+
+  const activeCompanyProfile = getCompanyProfile(activeCompId);
+
   const currencySymbol = isPharma 
     ? (language === 'ar' ? 'ش.ج' : 'ILS') 
     : (language === 'ar' ? 'ج.م' : 'EGP');
@@ -621,9 +678,10 @@ export default function DirectStockIssue() {
         ? (isBooking ? `BKG-${docNoSuffix}` : `INV-${docNoSuffix}`) 
         : `RTN-${docNoSuffix}`;
 
-      // A. Perform inventory updates and log sales/returns in loop
-      for (const line of invoiceLines) {
+      // A. Perform inventory updates and log sales/returns in parallel
+      const inventoryAndSalesPromises = invoiceLines.map(async (line) => {
         const item = inventoryItems.find(i => i.id === parseInt(line.inventory_id));
+        if (!item) return;
         const qtyDiff = activeTab === 'issue' ? -Number(line.qty) : Number(line.qty);
         const newRemainingQty = Number(item.remaining_qty || 0) + qtyDiff;
         
@@ -650,9 +708,12 @@ export default function DirectStockIssue() {
           reference_no: documentNo,
           batch_no: line.batch_no || '',
           uom: line.uom || '',
-          created_by: 'Admin'
+          created_by: 'Admin',
+          project_id: selectedProjectId || null
         });
-      }
+      });
+
+      await Promise.all(inventoryAndSalesPromises);
 
       // B. Create balanced General Ledger postings using active company configuration
       const accountMap = {
@@ -675,13 +736,15 @@ export default function DirectStockIssue() {
             ? accountMap.bank 
             : 'عملاء (حسابات مدينة - AR)';
 
+      const ledgerPosts = [];
+
       if (activeTab === 'issue') {
         // --- SALE/ISSUE POSTINGS ---
         
         if (isBooking) {
           // --- BOOKING / RESERVATION LEDGER ENTRIES (IFRS 15) ---
           // 1. Debit Pending Booking Customer
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: 'عملاء حجز - أرصدة معلقة',
             debit: Number(totals.grandTotal),
@@ -693,7 +756,7 @@ export default function DirectStockIssue() {
           });
 
           // 2. Credit Deferred Booking Revenue
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.deferredRevenue,
             debit: 0,
@@ -706,7 +769,7 @@ export default function DirectStockIssue() {
 
           // 3. VAT (if any)
           if (Number(totals.taxAmount) > 0) {
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: 'ضريبة القيمة المضافة',
               debit: 0,
@@ -719,7 +782,7 @@ export default function DirectStockIssue() {
           }
 
           // 4. Debit Reserved Stock Asset (still owned by company)
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.reservedStock,
             debit: Number(totals.totalCOGS),
@@ -731,7 +794,7 @@ export default function DirectStockIssue() {
           });
 
           // 5. Credit main inventory
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.inventory,
             debit: 0,
@@ -748,7 +811,7 @@ export default function DirectStockIssue() {
           // 1. Handle Wallet Payments & Deposits
           if (walletAction === 'use_balance' && selectedCustomer && walletPayAmount > 0) {
             // Debit customer wallet for the paid portion
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: accountMap.wallet,
               debit: walletPayAmount,
@@ -762,7 +825,7 @@ export default function DirectStockIssue() {
             // Debit remainder to cash/bank/AR
             const remainder = Number(totals.grandTotal) - walletPayAmount;
             if (remainder > 0) {
-              await api.post('/dynamic/add/ledger', {
+              ledgerPosts.push({
                 date: invoiceDate,
                 account_name: targetAccount,
                 debit: remainder,
@@ -778,7 +841,7 @@ export default function DirectStockIssue() {
             
           } else if (walletAction === 'deposit_change' && selectedCustomer && walletDepositAmount > 0) {
             // Debit target cash/bank account for total cash received (Grand Total + Deposit)
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: targetAccount,
               debit: Number(totals.grandTotal) + walletDepositAmount,
@@ -790,7 +853,7 @@ export default function DirectStockIssue() {
             });
 
             // Credit Customer Wallet for the deposited amount
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: accountMap.wallet,
               debit: 0,
@@ -805,7 +868,7 @@ export default function DirectStockIssue() {
             
           } else {
             // Standard Cash/Bank/AR Debit
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: targetAccount,
               debit: Number(totals.grandTotal),
@@ -818,7 +881,7 @@ export default function DirectStockIssue() {
           }
 
           // 2. Credit Sales Revenue (Subtotal)
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.revenue,
             debit: 0,
@@ -831,7 +894,7 @@ export default function DirectStockIssue() {
 
           // 3. Credit VAT Payable (14%)
           if (Number(totals.taxAmount) > 0) {
-            await api.post('/dynamic/add/ledger', {
+            ledgerPosts.push({
               date: invoiceDate,
               account_name: 'ضريبة القيمة المضافة',
               debit: 0,
@@ -844,7 +907,7 @@ export default function DirectStockIssue() {
           }
 
           // 4. Debit Cost of Goods Sold (COGS)
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.cogs,
             debit: Number(totals.totalCOGS),
@@ -856,7 +919,7 @@ export default function DirectStockIssue() {
           });
 
           // 5. Credit Inventory Asset
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.inventory,
             debit: 0,
@@ -875,7 +938,7 @@ export default function DirectStockIssue() {
         if (selectedCustomer && (walletAction === 'use_balance' || walletAction === 'deposit_change')) {
           // If they used the wallet, we return it to the wallet!
           const walletRefund = Number(totals.grandTotal);
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: accountMap.wallet,
             debit: 0,
@@ -888,7 +951,7 @@ export default function DirectStockIssue() {
           updateCustomerWalletBalance(selectedCustomer, walletRefund);
         } else {
           // Standard cash/AR/Bank refund
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: targetAccount,
             debit: 0,
@@ -901,7 +964,7 @@ export default function DirectStockIssue() {
         }
 
         // 1. Debit Sales Returns (Subtotal returned)
-        await api.post('/dynamic/add/ledger', {
+        ledgerPosts.push({
           date: invoiceDate,
           account_name: accountMap.returns,
           debit: Number(totals.subtotal),
@@ -914,7 +977,7 @@ export default function DirectStockIssue() {
 
         // 2. Debit VAT Payable (Tax Amount reverse)
         if (Number(totals.taxAmount) > 0) {
-          await api.post('/dynamic/add/ledger', {
+          ledgerPosts.push({
             date: invoiceDate,
             account_name: 'ضريبة القيمة المضافة',
             debit: Number(totals.taxAmount),
@@ -927,7 +990,7 @@ export default function DirectStockIssue() {
         }
 
         // 4. Debit Inventory Asset (Re-entry of stock at cost)
-        await api.post('/dynamic/add/ledger', {
+        ledgerPosts.push({
           date: invoiceDate,
           account_name: accountMap.inventory,
           debit: Number(totals.totalCOGS),
@@ -939,7 +1002,7 @@ export default function DirectStockIssue() {
         });
 
         // 5. Credit Cost of Goods Sold (COGS reverse)
-        await api.post('/dynamic/add/ledger', {
+        ledgerPosts.push({
           date: invoiceDate,
           account_name: accountMap.cogs,
           debit: 0,
@@ -951,7 +1014,12 @@ export default function DirectStockIssue() {
         });
       }
 
-      // --- Automated Email Notification Trigger ---
+      // Execute all postings concurrently
+      if (ledgerPosts.length > 0) {
+        await Promise.all(ledgerPosts.map(post => api.post('/dynamic/add/ledger', post)));
+      }
+
+      // --- Automated Email Notification Trigger (Non-blocking) ---
       try {
         const itemsList = invoiceLines.map((line, idx) => `${idx + 1}. ${line.item_name || 'صنف غير محدد'} | الكمية: ${line.qty} | سعر الوحدة: ${line.unit_price} ش.ج | الإجمالي: ${line.total} ش.ج`).join('\n');
         const emailBody = `${activeCompName}\n\n` +
@@ -995,7 +1063,8 @@ export default function DirectStockIssue() {
           `المدير المالي والاعتماد: ___________________\n` +
           `========================================`;
 
-        await api.post('/dynamic/add/email_notifications', {
+        // Dispatch in background without awaiting response to eliminate latency
+        api.post('/dynamic/add/email_notifications', {
           recipient: 'ahmedzidan2013@gmail.com, Mo@fekra.studio',
           subject: `إشعار حركة مخزنية: ${activeTab === 'issue' ? (isBooking ? 'حجز بضاعة' : 'صرف مباشر') : 'مرتجع صرف'} - وثيقة رقم ${documentNo}`,
           body: emailBody,
@@ -1013,6 +1082,8 @@ export default function DirectStockIssue() {
           },
           status: 'Sent',
           created_at: new Date().toISOString()
+        }).catch(emailErr => {
+          console.warn('Simulated email notification failed in background', emailErr);
         });
       } catch (emailErr) {
         console.warn('Simulated email notification logged locally for ahmedzidan2013@gmail.com', emailErr);
@@ -1036,7 +1107,9 @@ export default function DirectStockIssue() {
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,
         discount: discount,
-        grandTotal: totals.grandTotal
+        grandTotal: totals.grandTotal,
+        companyId: activeCompId,
+        companyName: activeCompName
       });
       setShowInvoiceModal(true);
 
@@ -2083,7 +2156,9 @@ export default function DirectStockIssue() {
                                 subtotal: subtotal.toFixed(2),
                                 taxAmount: taxAmount.toFixed(2),
                                 discount: 0,
-                                grandTotal: Number(item.grandTotal || 0).toFixed(2)
+                                grandTotal: Number(item.grandTotal || 0).toFixed(2),
+                                companyId: item.ledgerEntry?.company_id,
+                                companyName: item.ledgerEntry?.company
                               });
                               setShowInvoiceModal(true);
                             }}
@@ -2532,13 +2607,15 @@ export default function DirectStockIssue() {
           </style>
           <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
             <div>
-              <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'برايم ميد فارما للأدوية والمستلزمات الطبية' : 'PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES'}</h1>
-              <p className="text-xs font-bold text-slate-500 mt-1">PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES</p>
-              <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٧٧٢-٤٠٩-١١٨' : 'Tax ID: 772-409-118'}</p>
+              <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? activeCompanyProfile.nameAr : activeCompanyProfile.nameEn}</h1>
+              <p className="text-xs font-bold text-slate-500 mt-1">{activeCompanyProfile.nameEn}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? activeCompanyProfile.taxIdAr : activeCompanyProfile.taxIdEn}</p>
             </div>
             <div className="text-left">
-              <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl">P</div>
-              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">PRIMEMED PHARMA</p>
+              <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0">
+                {activeCompanyProfile.logoLetter}
+              </div>
+              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{activeCompanyProfile.logoText}</p>
             </div>
           </div>
 
@@ -2790,204 +2867,209 @@ export default function DirectStockIssue() {
       )}
 
       {/* INVOICE / CREDIT NOTE PRINT MODAL OVERLAY */}
-      {showInvoiceModal && activeInvoiceData && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
-          
-          <style>
-            {`
-              @media print {
-                /* Reset high-level layouts to enable natural multi-page flowing */
-                html, body, #root, #root > div, main, article, section, .space-y-6, .space-y-10 {
-                  height: auto !important;
-                  min-height: 0 !important;
-                  overflow: visible !important;
-                  position: static !important;
-                  display: block !important;
-                }
-                body * {
-                  visibility: hidden !important;
-                }
-                #invoice-print-area, #invoice-print-area * {
-                  visibility: visible !important;
-                }
-                #invoice-print-area {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  direction: ${language === 'ar' ? 'rtl' : 'ltr'} !important;
-                  background: white !important;
-                  color: black !important;
-                  padding: 20px !important;
-                  height: auto !important;
-                  overflow: visible !important;
-                  display: block !important;
-                }
-                .no-print {
-                  display: none !important;
-                }
-              }
-            `}
-          </style>
-          
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200">
+      {showInvoiceModal && activeInvoiceData && (() => {
+        const companyProfile = getCompanyProfile(activeInvoiceData.companyId || activeInvoiceData.companyName);
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
             
-            {/* Modal Header */}
-            <div className={`text-white p-6 flex justify-between items-center transition-colors duration-500 no-print ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{activeInvoiceData.type === 'issue' ? '🧾' : '🔄'}</span>
-                <span className="font-black text-sm">
-                  {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'فاتورة مبيعات وصرف مخزني مباشر' : 'Sales Invoice & Direct Stock Issue') : (language === 'ar' ? 'إشعار دائن - مرتجع مبيعات وصرف مباشر' : 'Sales Return & Settled Credit Note')}
-                </span>
-              </div>
-              <button 
-                type="button"
-                onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
-                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center font-black text-sm transition-all"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Print Area Container */}
-            <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar" id="invoice-print-area">
+            <style>
+              {`
+                @media print {
+                  /* Reset high-level layouts to enable natural multi-page flowing */
+                  html, body, #root, #root > div, main, article, section, .space-y-6, .space-y-10 {
+                    height: auto !important;
+                    min-height: 0 !important;
+                    overflow: visible !important;
+                    position: static !important;
+                    display: block !important;
+                  }
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  #invoice-print-area, #invoice-print-area * {
+                    visibility: visible !important;
+                  }
+                  #invoice-print-area {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    direction: ${language === 'ar' ? 'rtl' : 'ltr'} !important;
+                    background: white !important;
+                    color: black !important;
+                    padding: 20px !important;
+                    height: auto !important;
+                    overflow: visible !important;
+                    display: block !important;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                }
+              `}
+            </style>
+            
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200">
               
-              {/* Corporate Identity Header */}
-              <div className={`flex justify-between items-start border-b-2 pb-6 mb-6 ${activeInvoiceData.type === 'issue' ? 'border-slate-900' : 'border-amber-700'}`}>
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? 'برايم ميد فارما للأدوية والمستلزمات الطبية' : 'PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES'}</h1>
-                  <p className="text-xs font-bold text-slate-500 mt-1">PRIMEMED PHARMA FOR PHARMACEUTICALS & MEDICAL SUPPLIES</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? 'الرقم الضريبي: ٧٧٢-٤٠٩-١١٨' : 'Tax ID: 772-409-118'}</p>
+              {/* Modal Header */}
+              <div className={`text-white p-6 flex justify-between items-center transition-colors duration-500 no-print ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{activeInvoiceData.type === 'issue' ? '🧾' : '🔄'}</span>
+                  <span className="font-black text-sm">
+                    {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'فاتورة مبيعات وصرف مخزني مباشر' : 'Sales Invoice & Direct Stock Issue') : (language === 'ar' ? 'إشعار دائن - مرتجع مبيعات وصرف مباشر' : 'Sales Return & Settled Credit Note')}
+                  </span>
                 </div>
-                <div className="text-left">
-                  <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>P</div>
-                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">PRIMEMED PHARMA</p>
-                </div>
+                <button 
+                  type="button"
+                  onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center font-black text-sm transition-all"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Document Metadata Row */}
-              <div className={`grid grid-cols-2 md:grid-cols-4 gap-6 p-6 rounded-2xl border mb-6 ${activeInvoiceData.type === 'issue' ? 'bg-slate-50 border-slate-200/60' : 'bg-amber-50/30 border-amber-200/40'}`}>
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 block mb-1">
-                    {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'رقم الفاتورة' : 'Invoice Number') : (language === 'ar' ? 'رقم الإشعار الدائن' : 'Credit Note Number')}
-                  </span>
-                  <span className="text-xs font-black text-slate-800">{activeInvoiceData.invoiceNo}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'تاريخ المعاملة' : 'Transaction Date'}</span>
-                  <span className="text-xs font-black text-slate-800">{activeInvoiceData.date}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'العميل المستلم' : 'Recipient Customer'}</span>
-                  <span className="text-xs font-black text-slate-800">{activeInvoiceData.customerName}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 block mb-1">
-                    {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'المستودع المصدر' : 'Source Warehouse') : (language === 'ar' ? 'مستودع الاستلام' : 'Destination Warehouse')}
-                  </span>
-                  <span className="text-xs font-black text-slate-800">{activeInvoiceData.warehouse}</span>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} border-collapse mb-8`}>
-                <thead>
-                  <tr className={`border-b-2 text-xs font-black text-slate-800 ${activeInvoiceData.type === 'issue' ? 'border-slate-950 bg-slate-100/50' : 'border-amber-900 bg-amber-100/30'}`}>
-                    <th className="py-3 px-2">{language === 'ar' ? 'م' : 'No'}</th>
-                    <th className="py-3 px-2">{language === 'ar' ? 'اسم الصنف والباتش' : 'Item Name & Batch'}</th>
-                    <th className="py-3 px-2 text-center">{language === 'ar' ? 'الوحدة' : 'UOM'}</th>
-                    <th className="py-3 px-2 text-center">{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'الالكمية الصادرة' : 'Issued Qty') : (language === 'ar' ? 'الالكمية المرجعة' : 'Returned Qty')}</th>
-                    <th className={`py-3 px-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'سعر الوحدة' : 'Unit Price') : (language === 'ar' ? 'سعر المرتجع' : 'Return Price')}</th>
-                    <th className={`py-3 px-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{language === 'ar' ? 'الإجمالي' : 'Total'}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-xs font-bold text-slate-700">
-                  {activeInvoiceData.lines.map((line, idx) => (
-                    <tr key={idx} className="border-b border-slate-100">
-                      <td className="py-3 px-2">{idx + 1}</td>
-                      <td className="py-3 px-2">
-                        {line.item_name} {line.batch_no && line.batch_no !== 'N/A' ? `(باتش: ${line.batch_no})` : ''}
-                      </td>
-                      <td className="py-3 px-2 text-center">{line.uom}</td>
-                      <td className="py-3 px-2 text-center font-black">{line.qty}</td>
-                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.unit_price).toLocaleString()} {currencySymbol}</td>
-                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.total).toLocaleString()} {currencySymbol}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Financial Waterfall Panel */}
-              <div className={`flex ${language === 'ar' ? 'justify-end' : 'justify-start'} mb-12`}>
-                <div className={`w-full max-w-sm space-y-3 p-5 rounded-2xl border ${activeInvoiceData.type === 'issue' ? 'bg-slate-50 border-slate-200/80' : 'bg-amber-50/20 border-amber-200/60'}`}>
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                    <span>{language === 'ar' ? 'الإجمالي قبل الضريبة:' : 'Subtotal (Excl. Tax):'}</span>
-                    <span>{Number(activeInvoiceData.subtotal).toLocaleString()} {currencySymbol}</span>
+              {/* Modal Print Area Container */}
+              <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar" id="invoice-print-area">
+                
+                {/* Corporate Identity Header */}
+                <div className={`flex justify-between items-start border-b-2 pb-6 mb-6 ${activeInvoiceData.type === 'issue' ? 'border-slate-900' : 'border-amber-700'}`}>
+                  <div>
+                    <h1 className="text-2xl font-black text-slate-900">{language === 'ar' ? companyProfile.nameAr : companyProfile.nameEn}</h1>
+                    <p className="text-xs font-bold text-slate-500 mt-1">{companyProfile.nameEn}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? companyProfile.taxIdAr : companyProfile.taxIdEn}</p>
                   </div>
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                    <span>{language === 'ar' ? 'ضريبة القيمة المضافة (14%):' : 'VAT (14%):'}</span>
-                    <span>{Number(activeInvoiceData.taxAmount).toLocaleString()} {currencySymbol}</span>
-                  </div>
-                  {activeInvoiceData.discount > 0 && (
-                    <div className="flex justify-between items-center text-xs font-bold text-rose-500">
-                      <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'خصم تجاري مباشر:' : 'Direct Discount:') : (language === 'ar' ? 'تنزيل قيمة المرتجع:' : 'Return Value Reduced:')}</span>
-                      <span>-{Number(activeInvoiceData.discount).toLocaleString()} {currencySymbol}</span>
+                  <div className="text-left">
+                    <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>
+                      {companyProfile.logoLetter}
                     </div>
-                  )}
-                  <div className="flex justify-between items-center pt-3 border-t border-slate-200 text-sm font-black text-slate-900">
-                    <span>
-                      {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'الصافي النهائي المستحق:' : 'Net Outstanding Payable:') : (language === 'ar' ? 'الصافي المالي المسترد للعميل:' : 'Net Refundable to Customer:')}
-                    </span>
-                    <span className={`text-lg ${activeInvoiceData.type === 'issue' ? 'text-indigo-700' : 'text-amber-700'}`}>
-                      {Number(activeInvoiceData.grandTotal).toLocaleString()} {currencySymbol}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-2 flex justify-between">
-                    <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'طريقة السداد:' : 'Payment Mode:') : (language === 'ar' ? 'طريقة تسوية المردودات:' : 'Refund Settlement Mode:')}</span>
-                    <span>{activeInvoiceData.paymentMethod}</span>
+                    <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{companyProfile.logoText}</p>
                   </div>
                 </div>
+
+                {/* Document Metadata Row */}
+                <div className={`grid grid-cols-2 md:grid-cols-4 gap-6 p-6 rounded-2xl border mb-6 ${activeInvoiceData.type === 'issue' ? 'bg-slate-50 border-slate-200/60' : 'bg-amber-50/30 border-amber-200/40'}`}>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 block mb-1">
+                      {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'رقم الفاتورة' : 'Invoice Number') : (language === 'ar' ? 'رقم الإشعار الدائن' : 'Credit Note Number')}
+                    </span>
+                    <span className="text-xs font-black text-slate-800">{activeInvoiceData.invoiceNo}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'تاريخ المعاملة' : 'Transaction Date'}</span>
+                    <span className="text-xs font-black text-slate-800">{activeInvoiceData.date}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'العميل المستلم' : 'Recipient Customer'}</span>
+                    <span className="text-xs font-black text-slate-800">{activeInvoiceData.customerName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 block mb-1">
+                      {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'المستودع المصدر' : 'Source Warehouse') : (language === 'ar' ? 'مستودع الاستلام' : 'Destination Warehouse')}
+                    </span>
+                    <span className="text-xs font-black text-slate-800">{activeInvoiceData.warehouse}</span>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} border-collapse mb-8`}>
+                  <thead>
+                    <tr className={`border-b-2 text-xs font-black text-slate-800 ${activeInvoiceData.type === 'issue' ? 'border-slate-950 bg-slate-100/50' : 'border-amber-900 bg-amber-100/30'}`}>
+                      <th className="py-3 px-2">{language === 'ar' ? 'م' : 'No'}</th>
+                      <th className="py-3 px-2">{language === 'ar' ? 'اسم الصنف والباتش' : 'Item Name & Batch'}</th>
+                      <th className="py-3 px-2 text-center">{language === 'ar' ? 'الوحدة' : 'UOM'}</th>
+                      <th className="py-3 px-2 text-center">{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'الالكمية الصادرة' : 'Issued Qty') : (language === 'ar' ? 'الالكمية المرجعة' : 'Returned Qty')}</th>
+                      <th className={`py-3 px-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'سعر الوحدة' : 'Unit Price') : (language === 'ar' ? 'سعر المرتجع' : 'Return Price')}</th>
+                      <th className={`py-3 px-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{language === 'ar' ? 'الإجمالي' : 'Total'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-xs font-bold text-slate-700">
+                    {activeInvoiceData.lines.map((line, idx) => (
+                      <tr key={idx} className="border-b border-slate-100">
+                        <td className="py-3 px-2">{idx + 1}</td>
+                        <td className="py-3 px-2">
+                          {line.item_name} {line.batch_no && line.batch_no !== 'N/A' ? `(باتش: ${line.batch_no})` : ''}
+                        </td>
+                        <td className="py-3 px-2 text-center">{line.uom}</td>
+                        <td className="py-3 px-2 text-center font-black">{line.qty}</td>
+                        <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.unit_price).toLocaleString()} {currencySymbol}</td>
+                        <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.total).toLocaleString()} {currencySymbol}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Financial Waterfall Panel */}
+                <div className={`flex ${language === 'ar' ? 'justify-end' : 'justify-start'} mb-12`}>
+                  <div className={`w-full max-w-sm space-y-3 p-5 rounded-2xl border ${activeInvoiceData.type === 'issue' ? 'bg-slate-50 border-slate-200/80' : 'bg-amber-50/20 border-amber-200/60'}`}>
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-500">
+                      <span>{language === 'ar' ? 'الإجمالي قبل الضريبة:' : 'Subtotal (Excl. Tax):'}</span>
+                      <span>{Number(activeInvoiceData.subtotal).toLocaleString()} {currencySymbol}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-500">
+                      <span>{language === 'ar' ? 'ضريبة القيمة المضافة (14%):' : 'VAT (14%):'}</span>
+                      <span>{Number(activeInvoiceData.taxAmount).toLocaleString()} {currencySymbol}</span>
+                    </div>
+                    {activeInvoiceData.discount > 0 && (
+                      <div className="flex justify-between items-center text-xs font-bold text-rose-500">
+                        <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'خصم تجاري مباشر:' : 'Direct Discount:') : (language === 'ar' ? 'تنزيل قيمة المرتجع:' : 'Return Value Reduced:')}</span>
+                        <span>-{Number(activeInvoiceData.discount).toLocaleString()} {currencySymbol}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-3 border-t border-slate-200 text-sm font-black text-slate-900">
+                      <span>
+                        {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'الصافي النهائي المستحق:' : 'Net Outstanding Payable:') : (language === 'ar' ? 'الصافي المالي المسترد للعميل:' : 'Net Refundable to Customer:')}
+                      </span>
+                      <span className={`text-lg ${activeInvoiceData.type === 'issue' ? 'text-indigo-700' : 'text-amber-700'}`}>
+                        {Number(activeInvoiceData.grandTotal).toLocaleString()} {currencySymbol}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-2 flex justify-between">
+                      <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'طريقة السداد:' : 'Payment Mode:') : (language === 'ar' ? 'طريقة تسوية المردودات:' : 'Refund Settlement Mode:')}</span>
+                      <span>{activeInvoiceData.paymentMethod}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Corporate Signatures Footer */}
+                <div className="grid grid-cols-3 gap-6 text-center text-xs font-black text-slate-700 border-t border-slate-200 pt-10 mt-12">
+                  <div className="space-y-12">
+                    <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'توقيع أمين المستودع' : 'Storekeeper Signature') : (language === 'ar' ? 'توقيع المستلم بالمستودع' : 'Store Recipient Signature')}</span>
+                    <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
+                  </div>
+                  <div className="space-y-12">
+                    <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Signature') : (language === 'ar' ? 'توقيع العميل المرجع' : 'Returning Customer Signature')}</span>
+                    <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
+                  </div>
+                  <div className="space-y-12">
+                    <span>{language === 'ar' ? 'المدير المالي والاعتماد' : 'Chief Financial Officer (CFO)'}</span>
+                    <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Corporate Signatures Footer */}
-              <div className="grid grid-cols-3 gap-6 text-center text-xs font-black text-slate-700 border-t border-slate-200 pt-10 mt-12">
-                <div className="space-y-12">
-                  <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'توقيع أمين المستودع' : 'Storekeeper Signature') : (language === 'ar' ? 'توقيع المستلم بالمستودع' : 'Store Recipient Signature')}</span>
-                  <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
-                </div>
-                <div className="space-y-12">
-                  <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Signature') : (language === 'ar' ? 'توقيع العميل المرجع' : 'Returning Customer Signature')}</span>
-                  <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
-                </div>
-                <div className="space-y-12">
-                  <span>{language === 'ar' ? 'المدير المالي والاعتماد' : 'Chief Financial Officer (CFO)'}</span>
-                  <div className="border-b border-dashed border-slate-400 w-32 mx-auto"></div>
-                </div>
+              {/* Modal Footer Controls */}
+              <div className="bg-slate-50 border-t border-slate-100 p-6 flex justify-end gap-4 no-print">
+                <button
+                  type="button"
+                  onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
+                  className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  {language === 'ar' ? 'إغلاق النافذة' : 'Close Window'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className={`px-8 py-3 text-white rounded-xl font-black text-xs shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${activeInvoiceData.type === 'issue' ? 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-600/20' : 'bg-amber-600 hover:bg-amber-700 hover:shadow-amber-600/20'}`}
+                >
+                  <span>🖨️</span> {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'طباعة الفاتورة الفورية' : 'Print Invoice') : (language === 'ar' ? 'طباعة الإشعار الدائن الفوري' : 'Print Credit Note')}
+                </button>
               </div>
 
             </div>
-
-            {/* Modal Footer Controls */}
-            <div className="bg-slate-50 border-t border-slate-100 p-6 flex justify-end gap-4 no-print">
-              <button
-                type="button"
-                onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
-                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs transition-all active:scale-95 cursor-pointer"
-              >
-                {language === 'ar' ? 'إغلاق النافذة' : 'Close Window'}
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className={`px-8 py-3 text-white rounded-xl font-black text-xs shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${activeInvoiceData.type === 'issue' ? 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-600/20' : 'bg-amber-600 hover:bg-amber-700 hover:shadow-amber-600/20'}`}
-              >
-                <span>🖨️</span> {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'طباعة الفاتورة الفورية' : 'Print Invoice') : (language === 'ar' ? 'طباعة الإشعار الدائن الفوري' : 'Print Credit Note')}
-              </button>
-            </div>
-
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 🌟 Quick Add Customer Modal (Smooth & Seamless) 🌟 */}
       {showAddCustomerModal && (

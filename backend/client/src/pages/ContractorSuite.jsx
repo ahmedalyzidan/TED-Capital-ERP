@@ -106,6 +106,9 @@ export default function ContractorSuite() {
   // 🏢 Governance Organizational Units State
   const [orgUnits, setOrgUnits] = useState([]);
 
+  // 📦 Database Inventory Sales/Expenses State
+  const [dbExpenses, setDbExpenses] = useState([]);
+
   // Cost Center Mode State ('project' | 'company')
   const [costCenterMode, setCostCenterMode] = useState('project');
 
@@ -138,17 +141,69 @@ export default function ContractorSuite() {
     localStorage.setItem('contractor_valuations', JSON.stringify(valuations));
   }, [valuations]);
 
-  // Load orgUnits from Governance registry
+  // Load orgUnits from Governance registry, projects and inventory sales from DB
   useEffect(() => {
-    const fetchOrgUnits = async () => {
+    const fetchAllData = async () => {
       try {
-        const res = await api.get('/dynamic/table/org_units?limit=1000');
-        setOrgUnits(res.data?.data || []);
+        const [orgRes, projRes, salesRes] = await Promise.all([
+          api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
+          api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
+          api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } }))
+        ]);
+
+        // 1. Set Org Units
+        setOrgUnits(orgRes.data?.data || []);
+
+        // 2. Set Projects (Merge database projects with localStorage projects)
+        const dbProjects = projRes.data?.data || [];
+        const mappedProjects = dbProjects.map(p => ({
+          id: String(p.id),
+          name: p.name,
+          clientName: p.client_name || p.client || 'عميل عام',
+          company: p.company || 'TED CAPITAL'
+        }));
+
+        setProjects(prev => {
+          const merged = [...prev];
+          mappedProjects.forEach(mp => {
+            if (!merged.some(p => String(p.id) === String(mp.id))) {
+              merged.push(mp);
+            }
+          });
+          return merged;
+        });
+
+        // 3. Set DB inventory sales as expenses
+        const sales = salesRes.data?.data || [];
+        const mappedExpenses = sales
+          .filter(s => s.project_id)
+          .map(s => {
+            const qtyVal = Number(s.qty || 0);
+            const isReturn = qtyVal < 0;
+            return {
+              id: `db-sale-${s.id}`,
+              projectId: String(s.project_id),
+              beneficiary: isReturn ? 'مرتجع مواد فائضة للمستودع' : 'صرف مخزني مباشر - مستودع المواد',
+              category: 'مواد ومستلزمات',
+              unit: s.uom || 'وحدة',
+              qty: Math.abs(qtyVal),
+              rate: Number(s.sell_price || s.buy_price || 0),
+              total: Math.abs(qtyVal * Number(s.sell_price || s.buy_price || 0)),
+              date: s.date ? s.date.split('T')[0] : (s.sale_date ? s.sale_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+              notes: isReturn
+                ? `مرتجع مواد فائضة من موقع المشروع للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`
+                : `صرف مخزني مباشر للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`,
+              allocationType: 'project'
+            };
+          });
+        setDbExpenses(mappedExpenses);
+
       } catch (err) {
-        console.error('Failed to load organizational units from Governance:', err);
+        console.error('Failed to fetch initial data:', err);
       }
     };
-    fetchOrgUnits();
+
+    fetchAllData();
   }, []);
 
   const activeComp = localStorage.getItem('active_company') || '';
@@ -187,41 +242,41 @@ export default function ContractorSuite() {
     return filteredProjects.filter(p => (p.company || 'TED CAPITAL') === activeCompany);
   }, [filteredProjects, activeProject]);
 
-  // Filtered arrays by current project & active cost center mode
   const currentBoqItems = useMemo(() => {
     if (costCenterMode === 'company') {
-      return boqItems.filter(i => companyProjects.some(cp => cp.id === i.projectId));
+      return boqItems.filter(i => companyProjects.some(cp => String(cp.id) === String(i.projectId)));
     }
-    return boqItems.filter(i => i.projectId === activeProjectId);
+    return boqItems.filter(i => String(i.projectId) === String(activeProjectId));
   }, [boqItems, activeProjectId, costCenterMode, companyProjects]);
 
   const currentExpenses = useMemo(() => {
+    const allExpenses = [...expenses, ...dbExpenses];
     if (costCenterMode === 'company') {
       const activeCompany = activeProject?.company || 'TED CAPITAL';
-      return expenses.filter(e => companyProjects.some(cp => cp.id === e.projectId) || e.projectId === `company-overhead-${activeCompany}`);
+      return allExpenses.filter(e => companyProjects.some(cp => String(cp.id) === String(e.projectId)) || String(e.projectId) === `company-overhead-${activeCompany}`);
     }
-    return expenses.filter(e => e.projectId === activeProjectId);
-  }, [expenses, activeProjectId, costCenterMode, companyProjects, activeProject]);
+    return allExpenses.filter(e => String(e.projectId) === String(activeProjectId));
+  }, [expenses, dbExpenses, activeProjectId, costCenterMode, companyProjects, activeProject]);
 
   const currentInstallments = useMemo(() => {
     if (costCenterMode === 'company') {
-      return installments.filter(inst => companyProjects.some(cp => cp.id === inst.projectId));
+      return installments.filter(inst => companyProjects.some(cp => String(cp.id) === String(inst.projectId)));
     }
-    return installments.filter(inst => inst.projectId === activeProjectId);
+    return installments.filter(inst => String(inst.projectId) === String(activeProjectId));
   }, [installments, activeProjectId, costCenterMode, companyProjects]);
 
   const currentFiles = useMemo(() => {
     if (costCenterMode === 'company') {
-      return projectFiles.filter(f => companyProjects.some(cp => cp.id === f.projectId));
+      return projectFiles.filter(f => companyProjects.some(cp => String(cp.id) === String(f.projectId)));
     }
-    return projectFiles.filter(f => f.projectId === activeProjectId);
+    return projectFiles.filter(f => String(f.projectId) === String(activeProjectId));
   }, [projectFiles, activeProjectId, costCenterMode, companyProjects]);
 
   const currentValuations = useMemo(() => {
     if (costCenterMode === 'company') {
-      return valuations.filter(val => companyProjects.some(cp => cp.id === val.projectId));
+      return valuations.filter(val => companyProjects.some(cp => String(cp.id) === String(val.projectId)));
     }
-    return valuations.filter(val => val.projectId === activeProjectId);
+    return valuations.filter(val => String(val.projectId) === String(activeProjectId));
   }, [valuations, activeProjectId, costCenterMode, companyProjects]);
 
   // --- 2. ACTIVE VIEW NAVIGATION TAB STATE ---
@@ -788,8 +843,10 @@ export default function ContractorSuite() {
   // Filtered expenses
   const filteredExpenses = useMemo(() => {
     return currentExpenses.filter(item => {
-      const matchSearch = item.beneficiary.toLowerCase().includes(expenseSearch.toLowerCase()) ||
-        (item.notes && item.notes.toLowerCase().includes(expenseSearch.toLowerCase()));
+      const beneficiaryStr = (item.beneficiary || '').toLowerCase();
+      const notesStr = (item.notes || '').toLowerCase();
+      const searchStr = (expenseSearch || '').toLowerCase();
+      const matchSearch = beneficiaryStr.includes(searchStr) || notesStr.includes(searchStr);
       const matchCat = expenseCategoryFilter === 'All' || item.category === expenseCategoryFilter;
       return matchSearch && matchCat;
     });
@@ -1554,7 +1611,8 @@ export default function ContractorSuite() {
                   <thead className="bg-[#111827] border-b border-slate-800 print:bg-slate-100 print:text-black">
                     <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black print:text-black">
                       <th className="px-6 py-5">تاريخ الصرف</th>
-                      <th className="px-6 py-5">المستفيد / البيان</th>
+                      <th className="px-6 py-5">الجهة المستفيدة / البائع</th>
+                      <th className="px-6 py-5">البيان والتفاصيل</th>
                       <th className="px-6 py-5">التصنيف الهندسي</th>
                       <th className="px-6 py-5 text-center">الكمية</th>
                       <th className="px-6 py-5 text-center">الفئة</th>
@@ -1567,10 +1625,10 @@ export default function ContractorSuite() {
                       <tr key={item.id} className="hover:bg-cyan-500/[0.03] hover:scale-[1.002] transition-all duration-300 group">
                         <td className="px-6 py-5 font-mono text-xs text-slate-400 print:text-black">{item.date}</td>
                         <td className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors print:text-black">{item.beneficiary}</span>
-                            {item.notes && <span className="text-[10px] text-slate-500 font-bold mt-0.5 print:text-slate-700">{item.notes}</span>}
-                          </div>
+                          <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors print:text-black">{item.beneficiary}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-xs text-slate-300 print:text-black whitespace-normal break-words max-w-[250px] inline-block">{item.notes || '-'}</span>
                         </td>
                         <td className="px-6 py-5">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${activeGrad(item.category)}`}>
@@ -1600,7 +1658,7 @@ export default function ContractorSuite() {
                     ))}
                     {filteredExpenses.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="p-12 text-center text-xs text-slate-500 font-bold">لا توجد مصروفات مسجلة مطابقة للبحث في هذا المشروع.</td>
+                        <td colSpan="8" className="p-12 text-center text-xs text-slate-500 font-bold">لا توجد مصروفات مسجلة مطابقة للبحث في هذا المشروع.</td>
                       </tr>
                     )}
                   </tbody>
