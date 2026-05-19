@@ -31,7 +31,7 @@ import HR from './pages/HR';
 import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import Reports from './pages/Reports';
-import Settings from './pages/Settings'; 
+import Settings from './pages/Settings';
 import EmployeePortal from './pages/EmployeePortal';
 import SubcontractorPortal from './components/SubcontractorPortal';
 import FixedAssets from './pages/FixedAssets';
@@ -62,11 +62,11 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/portal/subcontractor" element={<SubcontractorPortal />} />
-            
+
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/:id" element={<ProjectWorkspace />} /> 
+              <Route path="/projects/:id" element={<ProjectWorkspace />} />
               <Route path="/inventory" element={<RBACProtectedRoute resource="INVENTORY" action="READ"><Inventory /></RBACProtectedRoute>} />
               <Route path="/inventory/direct-issue" element={<DirectStockIssue />} />
               <Route path="/inventory/transfers" element={<Navigate to="/inventory/pharma?tab=transfers" replace />} />
@@ -90,7 +90,7 @@ function App() {
               <Route path="/partners" element={<Partners />} />
               <Route path="/subcontractors" element={<ContractorSuite />} />
               <Route path="/hr" element={<RBACProtectedRoute resource="HR" action="READ"><HR /></RBACProtectedRoute>} />
-              <Route path="/attendance" element={<Attendance />} /> 
+              <Route path="/attendance" element={<Attendance />} />
               <Route path="/users" element={<RBACProtectedRoute resource="USERS" action="READ"><Users /></RBACProtectedRoute>} />
               <Route path="/iam/matrix" element={<RBACProtectedRoute resource="USERS" action="UPDATE"><RBACMatrix /></RBACProtectedRoute>} />
               <Route path="/reports" element={<Reports />} />

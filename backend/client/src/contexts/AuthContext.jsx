@@ -27,11 +27,15 @@ export const AuthProvider = ({ children }) => {
     const refreshUser = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
+      const storedCompany = localStorage.getItem('active_company');
       
       if (storedToken) {
         setToken(storedToken);
         if (storedUser) {
           const userObj = JSON.parse(storedUser);
+          if (storedCompany) {
+            userObj.selectedCompany = storedCompany;
+          }
           setUser(userObj);
         }
         
@@ -44,7 +48,8 @@ export const AuthProvider = ({ children }) => {
                 ...prev, 
                 role: metadata.roles?.[0] || prev?.role,
                 permissions: metadata.flattenedPermissions || [],
-                isSuperAdmin: metadata.isSuperAdmin || false
+                isSuperAdmin: metadata.isSuperAdmin || false,
+                selectedCompany: storedCompany || prev?.selectedCompany || 'كل الشركات'
               };
               localStorage.setItem('user', JSON.stringify(updated));
               return updated;
@@ -63,17 +68,23 @@ export const AuthProvider = ({ children }) => {
 
 
   // دالة تسجيل الدخول (سيتم استدعاؤها من شاشة الـ Login)
-  const login = async (userData, accessToken, refreshToken) => {
+  const login = async (userData, accessToken, refreshToken, selectedCompany) => {
     setToken(accessToken);
     localStorage.setItem('token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
+    if (selectedCompany) {
+      localStorage.setItem('active_company', selectedCompany);
+    } else {
+      localStorage.removeItem('active_company');
+    }
     
     // Fetch granular permissions immediately
     const metadata = await fetchSecurityMetadata(accessToken);
     const enrichedUser = { 
       ...userData, 
       permissions: metadata?.flattenedPermissions || [],
-      isSuperAdmin: metadata?.isSuperAdmin || false
+      isSuperAdmin: metadata?.isSuperAdmin || false,
+      selectedCompany: selectedCompany || 'كل الشركات'
     };
     
     setUser(enrichedUser);
@@ -87,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('active_company');
   };
 
   if (loading) {

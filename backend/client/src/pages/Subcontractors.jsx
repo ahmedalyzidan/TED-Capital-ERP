@@ -321,6 +321,17 @@ export default function Subcontractors() {
     } catch (error) { alert(error.response?.data?.error || "Error"); }
   };
 
+  const deleteInvoice = async (invoiceId) => {
+    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذه الفاتورة وعكس القيود المحاسبية وكميات المقايسة؟' : 'Are you sure you want to delete this invoice and reverse its accounting & BOQ entries?')) return;
+    try {
+      const res = await api.delete(`/subcontractors/delete_invoice/${invoiceId}`);
+      alert(res.data?.message || (language === 'ar' ? 'تم حذف الفاتورة بنجاح.' : 'Invoice deleted successfully.'));
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error deleting invoice');
+    }
+  };
+
   const handleClaimSubcontractorChange = async (subId) => {
     setClaimForm(prev => ({
       ...prev,
@@ -381,7 +392,7 @@ export default function Subcontractors() {
       const advancePct = activeContract ? parseFloat(activeContract.advance_percent) || 0 : 10;
       updatedForm.dp_recovery = Math.round((grossVal * (advancePct / 100)) * 100) / 100;
 
-      const assignedQty = parseFloat(activeBoq.assigned_qty) || 1;
+      const assignedQty = parseFloat(activeBoq.assigned_qty) || parseFloat(activeBoq.est_qty) || 1;
       const totalExecutedQty = prevQty + currQtyVal;
       updatedForm.progress_percent = Math.round(((totalExecutedQty / assignedQty) * 100) * 100) / 100;
     }
@@ -835,6 +846,12 @@ export default function Subcontractors() {
                                     {cur.invoicesTab.approveBtn}
                                   </button>
                                 )}
+                                <button 
+                                  onClick={() => deleteInvoice(inv.id)} 
+                                  className="w-full py-2 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95"
+                                >
+                                  🗑️ {language === 'ar' ? 'حذف' : 'Delete'}
+                                </button>
                               </div>
                             </div>
                           </td>
@@ -1490,8 +1507,8 @@ export default function Subcontractors() {
                 {/* Certificate Header */}
                 <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
                   <div className="text-right">
-                    <h1 className="text-3xl font-black text-slate-950 tracking-tighter">برايم ميد فارما للأدوية والمستلزمات الطبية</h1>
-                    <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">PRIMEMED PHARMA | ERP SYSTEM</p>
+                    <h1 className="text-3xl font-black text-slate-950 tracking-tighter">{selectedPrintInvoice.company || localStorage.getItem('active_company') || 'شركة تيد كابيتال للمقاولات العامة'}</h1>
+                    <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">TED CAPITAL ERP | IFRS DOUBLE-ENTRY SYSTEM</p>
                     <div className="text-xs text-slate-600 space-y-0.5 mt-4 font-bold">
                       <div>المكتب الرئيسي: القاهرة الجديدة، التجمع الخامس</div>
                       <div>الهاتف: +20 2 2489 1234</div>

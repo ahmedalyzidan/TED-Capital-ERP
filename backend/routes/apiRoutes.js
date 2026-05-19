@@ -521,48 +521,105 @@ router.get('/table/:type', async (req, res) => {
         let isolationFilters = [];
         const isMtayem = req.user && req.user.isMtayem;
         const isMsobhi = req.user && req.user.isMsobhi;
-        const isRestricted = Boolean(isMtayem || isMsobhi || req.user.linkedCompany || req.user.linkedProject);
+        const selectedComp = req.user && req.user.selectedCompany;
+        const linkedComp = req.user && req.user.linkedCompany;
+        const linkedProj = req.user && req.user.linkedProject;
 
-        if (isMtayem) {
-            const comps = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
-            if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company IN ${comps}`);
-            else if (type === 'customers') isolationFilters.push(`company_name IN ${comps}`);
-            else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'inventory' || type === 'inventory_sales' || type === 'material_usage' || type === 'ar_invoices') {
-                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+        // 1. Determine active company filter (single company) or allowed list
+        let targetCompany = null;
+        if (selectedComp && !['all', 'كل الشركات', 'all companies'].includes(selectedComp.toLowerCase())) {
+            targetCompany = selectedComp;
+        } else if (linkedComp) {
+            targetCompany = linkedComp;
+        }
+
+        let allowedCompsList = null;
+        if (!targetCompany) {
+            if (isMtayem) {
+                allowedCompsList = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
+            } else if (isMsobhi) {
+                allowedCompsList = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
             }
-            else if (type === 'ledger') {
-                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${comps}) OR cost_center IN ${comps})`);
+        }
+
+        if (targetCompany) {
+            const c = targetCompany.replace(/'/g, "''");
+            let cid = 1;
+            if (c.toLowerCase().includes('design') || c.toLowerCase().includes('ديزاين')) cid = 2;
+            else if (c.toLowerCase().includes('master') || c.toLowerCase().includes('ماستر')) cid = 3;
+            else if (c.toLowerCase().includes('prime') || c.toLowerCase().includes('فارما') || c.toLowerCase().includes('بريم')) cid = 4;
+
+            if (type === 'projects') {
+                isolationFilters.push(`(company ILIKE '%${c}%' OR company_id = ${cid})`);
+            } else if (type === 'staff' || type === 'rfq' || type === 'employees') {
+                isolationFilters.push(`company ILIKE '%${c}%'`);
+            } else if (type === 'customers') {
+                isolationFilters.push(`company_name ILIKE '%${c}%'`);
+            } else if (type === 'purchase_orders') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR warehouse ILIKE '%${c}%' OR supplier ILIKE '%${c}%')`);
+            } else if (type === 'inventory_items' || type === 'inventory') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR warehouse ILIKE '%${c}%' OR company_id = ${cid} OR project_name ILIKE '%${c}%')`);
+            } else if (type === 'inventory_sales') {
+                isolationFilters.push(`(inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR warehouse ILIKE '%${c}%' OR company_id = ${cid} OR project_name ILIKE '%${c}%'))`);
+            } else if (type === 'ar_invoices') {
+                isolationFilters.push(`(id IN (SELECT id FROM ar_invoices WHERE project_id IN (SELECT id FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR notes ILIKE '%${c}%' OR source_module ILIKE '%${c}%'))`);
+            } else if (type === 'material_usage' || type === 'inventory_bookings') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse ILIKE '%${c}%' OR company_id = ${cid}))`);
+            } else if (type === 'boq') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid})`);
+            } else if (type === 'subcontractor_items') {
+                isolationFilters.push(`boq_id IN (SELECT id FROM boq WHERE project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}))`);
+            } else if (type === 'ledger' || type === 'general_ledger') {
+                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid}) OR cost_center ILIKE '%${c}%' OR company ILIKE '%${c}%' OR company_id = ${cid})`);
+            } else if (type === 'subcontractors') {
+                isolationFilters.push(`(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid})) OR company ILIKE '%${c}%')`);
+            } else if (type === 'subcontractor_invoices' || type === 'partners' || type === 'tasks' || type === 'daily_reports') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company ILIKE '%${c}%' OR company_id = ${cid})`);
             }
-            else if (type === 'partners') {
-                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
+        } else if (allowedCompsList) {
+            if (type === 'projects' || type === 'staff' || type === 'rfq' || type === 'employees') {
+                isolationFilters.push(`company IN ${allowedCompsList}`);
+            } else if (type === 'customers') {
+                isolationFilters.push(`company_name IN ${allowedCompsList}`);
+            } else if (type === 'purchase_orders') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}) OR warehouse IN ('غزة - المستودع الرئيسي', 'المخزن الرئيسي', 'مخزن الصيدليات والأدوية'))`);
+            } else if (type === 'inventory_items' || type === 'inventory') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}) OR company_id IN (1, 4) OR warehouse IN ('غزة - المستودع الرئيسي', 'المخزن الرئيسي', 'مخزن الصيدليات والأدوية'))`);
+            } else if (type === 'inventory_sales') {
+                isolationFilters.push(`(inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}) OR company_id IN (1, 4) OR warehouse IN ('غزة - المستودع الرئيسي', 'المخزن الرئيسي', 'مخزن الصيدليات والأدوية')))`);
+            } else if (type === 'ar_invoices') {
+                isolationFilters.push(`(id IN (SELECT id FROM ar_invoices WHERE project_id IN (SELECT id FROM projects WHERE company IN ${allowedCompsList}) OR source_module IN ('Pharma', 'General', 'Inventory')))`);
+            } else if (type === 'material_usage' || type === 'inventory_bookings') {
+                isolationFilters.push(`(project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}) OR inventory_id IN (SELECT id FROM inventory_items WHERE company_id IN (1, 4)))`);
+            } else if (type === 'boq') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList})`);
+            } else if (type === 'subcontractor_items') {
+                isolationFilters.push(`boq_id IN (SELECT id FROM boq WHERE project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}))`);
+            } else if (type === 'ledger' || type === 'general_ledger') {
+                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${allowedCompsList}) OR cost_center IN ${allowedCompsList} OR company IN ${allowedCompsList} OR company_id IN (1, 4))`);
+            } else if (type === 'subcontractors') {
+                isolationFilters.push(`(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${allowedCompsList})) OR company IN ${allowedCompsList})`);
+            } else if (type === 'subcontractor_invoices' || type === 'partners' || type === 'tasks' || type === 'daily_reports') {
+                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${allowedCompsList})`);
             }
-        } else if (isMsobhi) {
-            const comps = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
-            if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company IN ${comps}`);
-            else if (type === 'customers') isolationFilters.push(`company_name IN ${comps}`);
-            else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items' || type === 'inventory' || type === 'inventory_sales' || type === 'material_usage' || type === 'ar_invoices') {
-                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
-            }
-            else if (type === 'ledger') {
-                isolationFilters.push(`(cost_center IN (SELECT name FROM projects WHERE company IN ${comps}) OR cost_center IN ${comps})`);
-            }
-            else if (type === 'partners') {
-                isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company IN ${comps})`);
-            }
-        } else if (isRestricted) {
-            if (req.user.linkedCompany) {
-                const c = req.user.linkedCompany;
-                if (type === 'projects' || type === 'staff' || type === 'rfq') isolationFilters.push(`company = '${c}'`);
-                else if (type === 'customers') isolationFilters.push(`company_name = '${c}'`);
-                else if (type === 'purchase_orders') isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company = '${c}')`);
-                else if (type === 'inventory_items') isolationFilters.push(`project_name IN (SELECT name FROM projects WHERE company = '${c}')`);
-                else if (type === 'ledger') isolationFilters.push(`cost_center IN (SELECT name FROM projects WHERE company = '${c}') OR cost_center = '${c}'`);
-            }
-            if (req.user.linkedProject) {
-                const p = req.user.linkedProject;
-                if (type === 'projects') isolationFilters.push(`name = '${p}'`);
-                else if (type === 'purchase_orders' || type === 'inventory_items' || type === 'inventory_bookings' || type === 'boq' || type === 'subcontractor_items') isolationFilters.push(`project_name = '${p}'`);
-                else if (type === 'ledger') isolationFilters.push(`cost_center = '${p}'`);
+        }
+
+        if (linkedProj) {
+            const p = linkedProj.replace(/'/g, "''");
+            if (type === 'projects') {
+                isolationFilters.push(`name = '${p}'`);
+            } else if (['purchase_orders', 'inventory_items', 'inventory_bookings', 'boq', 'subcontractor_items', 'material_usage', 'ar_invoices', 'inventory_sales', 'tasks', 'daily_reports'].includes(type)) {
+                if (type === 'subcontractor_items') {
+                    isolationFilters.push(`boq_id IN (SELECT id FROM boq WHERE project_name = '${p}')`);
+                } else if (type === 'inventory_sales') {
+                    isolationFilters.push(`inventory_id IN (SELECT id FROM inventory_items WHERE project_name = '${p}')`);
+                } else if (type === 'ar_invoices') {
+                    isolationFilters.push(`project_id IN (SELECT id FROM projects WHERE name = '${p}')`);
+                } else {
+                    isolationFilters.push(`project_name = '${p}'`);
+                }
+            } else if (type === 'ledger' || type === 'general_ledger') {
+                isolationFilters.push(`cost_center = '${p}'`);
             }
         }
 

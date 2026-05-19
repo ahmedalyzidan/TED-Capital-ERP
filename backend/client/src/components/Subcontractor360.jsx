@@ -828,7 +828,7 @@ export default function Subcontractor360({ subId, onClose, language }) {
                )}
 
                {activeTab === 'invoices' && (
-                  <div className="space-y-6">
+                  <div className="space-y-10">
                      <div className="flex justify-between items-center px-4">
                         <h3 className="text-sm font-black uppercase text-slate-900 italic tracking-tighter">
                            {language === 'ar' ? 'سجل مطالبات ومستخلصات مقاول الباطن' : 'Progress Billing & Claims History'}
@@ -840,66 +840,147 @@ export default function Subcontractor360({ subId, onClose, language }) {
                            {language === 'ar' ? '+ تقديم مستخلص جديد' : '+ Submit New Claim'}
                         </button>
                      </div>
-                     <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <table className="w-full text-right" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
-                           <thead className="bg-slate-50 border-b border-slate-100">
-                              <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'تاريخ المستخلص' : 'Billing Date'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'البيان ومجال العمل' : 'Description / Scope'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'نسبة الإنجاز المحققة' : 'Cumulative Progress'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'القيمة الكلية والمستقطعات' : 'Gross, Ret & Adv Recovery'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'صافي المستخلص' : 'Net Amount'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'حالة الاعتماد' : 'Status'}</th>
-                                 <th className="px-8 py-4 text-start">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-slate-50 font-mono text-[11px]">
-                              {invoices.map(inv => (
-                                 <tr key={inv.id} className="hover:bg-slate-50 transition-all">
-                                    <td className="px-8 py-4 text-slate-500">{new Date(inv.date || inv.created_at).toLocaleDateString()}</td>
-                                    <td className="px-8 py-4 font-bold text-slate-750">
-                                       <div>{inv.description || 'N/A'}</div>
-                                       {inv.boq_item_name && <div className="text-[9px] text-slate-400 mt-0.5">{language === 'ar' ? `البند: ${inv.boq_item_name}` : `Item: ${inv.boq_item_name}`}</div>}
-                                    </td>
-                                    <td className="px-8 py-4">
-                                       <div className="flex items-center gap-2">
-                                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                             <div className="h-full bg-emerald-500" style={{ width: `${parseFloat(inv.progress_percent || 0)}%` }}></div>
-                                          </div>
-                                          <span className="font-black text-slate-900">{parseFloat(inv.progress_percent || 0)}%</span>
-                                       </div>
-                                    </td>
-                                    <td className="px-8 py-4 text-slate-500 text-[10px]">
-                                       <div>{language === 'ar' ? `الإجمالي: ${Number(inv.gross_amount || 0).toLocaleString()}` : `Gross: ${Number(inv.gross_amount || 0).toLocaleString()}`}</div>
-                                       <div>{language === 'ar' ? `الضمان: -${Number(inv.retention_deduction || 0).toLocaleString()}` : `Retention: -${Number(inv.retention_deduction || 0).toLocaleString()}`}</div>
-                                       <div>{language === 'ar' ? `استرداد دفعة: -${Number(inv.dp_recovery || 0).toLocaleString()}` : `Adv Recovery: -${Number(inv.dp_recovery || 0).toLocaleString()}`}</div>
-                                    </td>
-                                    <td className="px-8 py-4 font-black text-emerald-600 text-xs">{Number(inv.net_amount || inv.amount || 0).toLocaleString()} LCY</td>
-                                    <td className="px-8 py-4">
-                                       <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${inv.status === 'Paid' || inv.status === 'اعتماد مالي' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                                          }`}>{inv.status || 'Pending'}</span>
-                                    </td>
-                                    <td className="px-8 py-4">
-                                       <div className="flex gap-2">
-                                          <button
-                                             onClick={() => openEditClaim(inv)}
-                                             className="px-3 py-2 bg-slate-50 hover:bg-slate-900 hover:text-white rounded-xl font-black text-[9px] border border-slate-100 transition-all"
-                                          >
-                                             {language === 'ar' ? '✏️ تعديل' : '✏️ Edit'}
-                                          </button>
-                                          <button
-                                             onClick={() => handleClaimDelete(inv.id)}
-                                             className="px-3 py-2 bg-rose-50 hover:bg-rose-600 hover:text-white rounded-xl font-black text-[9px] text-rose-600 border border-rose-100 transition-all"
-                                          >
-                                             {language === 'ar' ? '🗑️ حذف' : '🗑️ Delete'}
-                                          </button>
-                                       </div>
-                                    </td>
+
+                     {/* Table 1: Pending & Active Claims */}
+                     <div className="space-y-3">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-600 px-4 flex items-center gap-2">
+                           <span>⏳</span> {language === 'ar' ? 'المستخلصات الجارية وقيد المراجعة (Pending & Active)' : 'Pending & Active Progress Claims'}
+                        </h4>
+                        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                           <table className="w-full text-right" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+                              <thead className="bg-slate-50 border-b border-slate-100">
+                                 <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'تاريخ المستخلص' : 'Billing Date'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'البيان ومجال العمل' : 'Description / Scope'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'نسبة الإنجاز المحققة' : 'Cumulative Progress'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'القيمة الكلية والمستقطعات' : 'Gross, Ret & Adv Recovery'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'صافي المستخلص' : 'Net Amount'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'حالة الاعتماد' : 'Status'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                                  </tr>
-                              ))}
-                              {invoices.length === 0 && <tr><td colSpan="7" className="p-12 text-center text-slate-400 font-black italic">NO CLAIMS SUBMITTED YET</td></tr>}
-                           </tbody>
-                        </table>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50 font-mono text-[11px]">
+                                 {invoices.filter(inv => inv.status !== 'Approved' && inv.status !== 'Paid' && inv.status !== 'اعتماد مالي').map(inv => (
+                                    <tr key={inv.id} className="hover:bg-slate-50 transition-all">
+                                       <td className="px-8 py-4 text-slate-500">{new Date(inv.date || inv.created_at).toLocaleDateString()}</td>
+                                       <td className="px-8 py-4 font-bold text-slate-750">
+                                          <div>{inv.description || 'N/A'}</div>
+                                          {inv.boq_item_name && <div className="text-[9px] text-slate-400 mt-0.5">{language === 'ar' ? `البند: ${inv.boq_item_name}` : `Item: ${inv.boq_item_name}`}</div>}
+                                       </td>
+                                       <td className="px-8 py-4">
+                                          <div className="flex items-center gap-2">
+                                             <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-amber-500" style={{ width: `${parseFloat(inv.progress_percent || 0)}%` }}></div>
+                                             </div>
+                                             <span className="font-black text-slate-900">{parseFloat(inv.progress_percent || 0)}%</span>
+                                          </div>
+                                       </td>
+                                       <td className="px-8 py-4 text-slate-500 text-[10px]">
+                                          <div>{language === 'ar' ? `الإجمالي: ${Number(inv.gross_amount || 0).toLocaleString()}` : `Gross: ${Number(inv.gross_amount || 0).toLocaleString()}`}</div>
+                                          <div>{language === 'ar' ? `الضمان: -${Number(inv.retention_deduction || 0).toLocaleString()}` : `Retention: -${Number(inv.retention_deduction || 0).toLocaleString()}`}</div>
+                                          <div>{language === 'ar' ? `استرداد دفعة: -${Number(inv.dp_recovery || 0).toLocaleString()}` : `Adv Recovery: -${Number(inv.dp_recovery || 0).toLocaleString()}`}</div>
+                                       </td>
+                                       <td className="px-8 py-4 font-black text-emerald-600 text-xs">{Number(inv.net_amount || inv.amount || 0).toLocaleString()} LCY</td>
+                                       <td className="px-8 py-4">
+                                          <span className="px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-amber-50 text-amber-600 border-amber-100">
+                                             {inv.status || 'Pending'}
+                                          </span>
+                                       </td>
+                                       <td className="px-8 py-4">
+                                          <div className="flex gap-2">
+                                             <button
+                                                onClick={() => openEditClaim(inv)}
+                                                className="px-3 py-2 bg-slate-50 hover:bg-slate-900 hover:text-white rounded-xl font-black text-[9px] border border-slate-100 transition-all"
+                                             >
+                                                {language === 'ar' ? '✏️ تعديل' : '✏️ Edit'}
+                                             </button>
+                                             <button
+                                                onClick={() => handleClaimDelete(inv.id)}
+                                                className="px-3 py-2 bg-rose-50 hover:bg-rose-600 hover:text-white rounded-xl font-black text-[9px] text-rose-600 border border-rose-100 transition-all"
+                                             >
+                                                {language === 'ar' ? '🗑️ حذف' : '🗑️ Delete'}
+                                             </button>
+                                          </div>
+                                       </td>
+                                    </tr>
+                                 ))}
+                                 {invoices.filter(inv => inv.status !== 'Approved' && inv.status !== 'Paid' && inv.status !== 'اعتماد مالي').length === 0 && (
+                                    <tr><td colSpan="7" className="p-12 text-center text-slate-400 font-black italic">NO PENDING CLAIMS</td></tr>
+                                 )}
+                              </tbody>
+                           </table>
+                        </div>
+                     </div>
+
+                     {/* Table 2: Chronological Approved & Paid Claims History */}
+                     <div className="space-y-3">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 px-4 flex items-center gap-2">
+                           <span>📜</span> {language === 'ar' ? 'السجل التاريخي للمستخلصات المعتمدة والمسددة (Approved & Paid History)' : 'Chronological History of Approved & Paid Progress Claims'}
+                        </h4>
+                        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                           <table className="w-full text-right" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+                              <thead className="bg-slate-50 border-b border-slate-100">
+                                 <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'تاريخ المستخلص' : 'Billing Date'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'البيان ومجال العمل' : 'Description / Scope'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'نسبة الإنجاز المحققة' : 'Cumulative Progress'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'القيمة الكلية والمستقطعات' : 'Gross, Ret & Adv Recovery'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'صافي المستخلص' : 'Net Amount'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'حالة الاعتماد' : 'Status'}</th>
+                                    <th className="px-8 py-4 text-start">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                                 </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50 font-mono text-[11px]">
+                                 {invoices.filter(inv => inv.status === 'Approved' || inv.status === 'Paid' || inv.status === 'اعتماد مالي').map(inv => (
+                                    <tr key={inv.id} className="hover:bg-slate-50 transition-all">
+                                       <td className="px-8 py-4 text-slate-500">{new Date(inv.date || inv.created_at).toLocaleDateString()}</td>
+                                       <td className="px-8 py-4 font-bold text-slate-750">
+                                          <div>{inv.description || 'N/A'}</div>
+                                          {inv.boq_item_name && <div className="text-[9px] text-slate-400 mt-0.5">{language === 'ar' ? `البند: ${inv.boq_item_name}` : `Item: ${inv.boq_item_name}`}</div>}
+                                       </td>
+                                       <td className="px-8 py-4">
+                                          <div className="flex items-center gap-2">
+                                             <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500" style={{ width: `${parseFloat(inv.progress_percent || 0)}%` }}></div>
+                                             </div>
+                                             <span className="font-black text-slate-900">{parseFloat(inv.progress_percent || 0)}%</span>
+                                          </div>
+                                       </td>
+                                       <td className="px-8 py-4 text-slate-500 text-[10px]">
+                                          <div>{language === 'ar' ? `الإجمالي: ${Number(inv.gross_amount || 0).toLocaleString()}` : `Gross: ${Number(inv.gross_amount || 0).toLocaleString()}`}</div>
+                                          <div>{language === 'ar' ? `الضمان: -${Number(inv.retention_deduction || 0).toLocaleString()}` : `Retention: -${Number(inv.retention_deduction || 0).toLocaleString()}`}</div>
+                                          <div>{language === 'ar' ? `استرداد دفعة: -${Number(inv.dp_recovery || 0).toLocaleString()}` : `Adv Recovery: -${Number(inv.dp_recovery || 0).toLocaleString()}`}</div>
+                                       </td>
+                                       <td className="px-8 py-4 font-black text-emerald-600 text-xs">{Number(inv.net_amount || inv.amount || 0).toLocaleString()} LCY</td>
+                                       <td className="px-8 py-4">
+                                          <span className="px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100">
+                                             {inv.status || 'Approved'}
+                                          </span>
+                                       </td>
+                                       <td className="px-8 py-4">
+                                          <div className="flex gap-2">
+                                             <button
+                                                onClick={() => openEditClaim(inv)}
+                                                className="px-3 py-2 bg-slate-50 hover:bg-slate-900 hover:text-white rounded-xl font-black text-[9px] border border-slate-100 transition-all"
+                                             >
+                                                {language === 'ar' ? '✏️ تعديل' : '✏️ Edit'}
+                                             </button>
+                                             <button
+                                                onClick={() => handleClaimDelete(inv.id)}
+                                                className="px-3 py-2 bg-rose-50 hover:bg-rose-600 hover:text-white rounded-xl font-black text-[9px] text-rose-600 border border-rose-100 transition-all"
+                                             >
+                                                {language === 'ar' ? '🗑️ حذف' : '🗑️ Delete'}
+                                             </button>
+                                          </div>
+                                       </td>
+                                    </tr>
+                                 ))}
+                                 {invoices.filter(inv => inv.status === 'Approved' || inv.status === 'Paid' || inv.status === 'اعتماد مالي').length === 0 && (
+                                    <tr><td colSpan="7" className="p-12 text-center text-slate-400 font-black italic">NO APPROVED OR PAID CLAIMS HISTORY YET</td></tr>
+                                 )}
+                              </tbody>
+                           </table>
+                        </div>
                      </div>
                   </div>
                )}

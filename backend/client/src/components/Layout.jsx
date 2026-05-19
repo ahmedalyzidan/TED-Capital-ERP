@@ -284,14 +284,14 @@ export default function Layout() {
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/10 to-transparent opacity-30"></div>
           )}
           <div className={`flex items-center gap-4 transition-all duration-500 relative z-10 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>
-              P
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-extrabold text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>
+              {(user?.selectedCompany || localStorage.getItem('active_company') || 'ERP').charAt(0).toUpperCase()}
             </div>
             <div className="whitespace-nowrap">
-              <h1 className={`text-2xl font-black tracking-tighter leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                PRIMEMED PHARMA
+              <h1 className={`text-xl font-extrabold tracking-tight leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات'}
               </h1>
-              <p className={`text-[11px] font-black uppercase tracking-[0.3em] mt-2 opacity-80 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{t.enterprise}</p>
+              <p className={`text-[11px] font-extrabold uppercase tracking-[0.25em] mt-2 opacity-80 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{t.enterprise}</p>
             </div>
           </div>
           <button
@@ -324,7 +324,7 @@ export default function Layout() {
               .filter(group => group.items.length > 0)
               .map((group, gIdx) => (
                 <div key={gIdx} className="space-y-4">
-                  <h3 className={`px-5 text-[12px] font-black uppercase tracking-[0.25em] ${theme === 'dark' ? 'text-white/20' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
+                  <h3 className={`px-5 text-[13px] font-bold uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-white/60' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
                     {isSidebarCollapsed ? '••' : group.title}
                   </h3>
                   <div className="space-y-1.5">
@@ -333,28 +333,32 @@ export default function Layout() {
                         key={iIdx}
                         to={item.path}
                         className={({ isActive }) => `
-                            flex items-center gap-6 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden
+                            flex items-center gap-6 px-6 py-4 rounded-2xl transition-all duration-500 group relative overflow-hidden
                             ${isActive
-                            ? (theme === 'dark' ? 'bg-white/10 text-white shadow-inner border border-white/5' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20')
-                            : (theme === 'dark' ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm')}
+                            ? (theme === 'dark' ? 'bg-white/15 text-white shadow-lg border border-white/15 font-bold' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 font-bold')
+                            : (theme === 'dark' ? 'text-white/90 font-semibold hover:bg-white/10 hover:text-white drop-shadow-sm' : 'text-slate-800 font-semibold hover:bg-slate-100 hover:text-slate-950')}
                             ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                           `}
                       >
                         {({ isActive }) => (
                           <>
                             {isActive && (
-                              <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1 ${theme === 'dark' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white'}`}></div>
+                              <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1.5 ${theme === 'dark' ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]' : 'bg-white'}`}></div>
                             )}
-                            <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'group-hover:scale-110 opacity-70 group-hover:opacity-100'}`}>
+                            <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110 opacity-90 group-hover:opacity-100'}`}>
                               {item.icon}
                             </span>
                             {!isSidebarCollapsed && (
-                              <span className={`font-black text-[17px] tracking-tight transition-all duration-300 ${isActive ? 'translate-x-1' : ''}`}>
+                              <span className={`font-bold text-[17px] tracking-normal transition-all duration-300 ${
+                                isActive 
+                                  ? 'translate-x-1 text-white drop-shadow-md font-extrabold' 
+                                  : (theme === 'dark' ? 'text-white/90 drop-shadow-sm' : 'text-slate-800 drop-shadow-none')
+                              }`}>
                                 {item.label}
                               </span>
                             )}
                             {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
-                              <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
+                              <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[20px] h-[20px] px-1.5 bg-rose-500 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
                                 {sidebarStats[item.badgeKey]}
                               </div>
                             )}
@@ -372,12 +376,12 @@ export default function Layout() {
           <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
                   {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="overflow-hidden">
-                  <p className={`text-[15px] font-black truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.username || 'User'}</p>
-                  <p className={`text-[11px] font-black uppercase tracking-widest mt-1 opacity-70 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
+                  <p className={`text-[15px] font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.username || 'User'}</p>
+                  <p className={`text-[11px] font-bold uppercase tracking-widest mt-1 opacity-70 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
                 </div>
               </div>
             )}
@@ -391,13 +395,13 @@ export default function Layout() {
               </button>
               <button
                 onClick={() => updatePreferences({ language: language === 'ar' ? 'en' : 'ar' })}
-                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all text-[11px] font-black ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all text-[11px] font-bold ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
               >
                 {language === 'ar' ? 'EN' : 'AR'}
               </button>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className={`h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border ${theme === 'dark' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500 hover:text-white' : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white'} ${isSidebarCollapsed ? 'w-12 h-12' : 'flex-[2]'}`}
+                className={`h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border ${theme === 'dark' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500 hover:text-white' : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white'} ${isSidebarCollapsed ? 'w-12 h-12' : 'flex-[2]'}`}
               >
                 {isSidebarCollapsed ? '🚪' : t.logout}
               </button>

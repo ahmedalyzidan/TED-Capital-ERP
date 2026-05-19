@@ -4,10 +4,10 @@
   TED ERP Global Styles 
   Professional Arabic typography and advanced color system 
 */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap');
 
 @theme {
-  --font-sans: 'Inter', 'Cairo', 'Tajawal', sans-serif;
+  --font-sans: 'Alexandria', 'Inter', 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
 
   --color-enterprise-950: #020617;
   --color-enterprise-900: #0f172a;
@@ -34,7 +34,7 @@
   body {
     @apply bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-300;
     direction: rtl;
-    font-family: 'Cairo', sans-serif;
+    font-family: 'Alexandria', 'Inter', 'IBM Plex Sans Arabic', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -134,5 +134,169 @@
   /* Arabic Typography Refinement */
   .ar-heavy {
     @apply font-black tracking-tight leading-none;
+  }
+}
+
+/* ==========================================================================
+   🌟 BREATHTAKING GLOBAL PRINT STYLING (@media print) 🌟
+   Ensures every page in TED ERP prints with executive-level luxury, 
+   perfect A4 margins, crisp typography, and zero clipped numbers!
+   ========================================================================== */
+@page {
+  size: A4;
+  margin: 15mm 15mm 20mm 15mm;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-family: 'Alexandria', 'Inter', 'IBM Plex Sans Arabic', sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    direction: rtl !important;
+  }
+
+  /* Hide UI elements that shouldn't be printed */
+  .no-print, button, nav, header:not(.print-header), footer:not(.print-footer), sidebar, modal, .toast, .notification, [role="dialog"] {
+    display: none !important;
+  }
+
+  /* Ensure containers take full width without padding/margin restrictions */
+  .page-container, main, #root, .app-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Breathtaking Table Layout for Printing */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 2rem !important;
+    page-break-inside: auto !important;
+    font-size: 10pt !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important; /* Repeats table header on every printed page! */
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  th {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    padding: 12px 14px !important;
+    border: 1px solid #cbd5e1 !important;
+    text-align: right !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  td {
+    padding: 10px 14px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+    text-align: right !important;
+    font-size: 10pt !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    white-space: normal !important;
+  }
+
+  /* Fix clipped numbers in amount/currency columns */
+  td:last-child, th:last-child, .amount-cell, .num-cell {
+    text-align: left !important;
+    direction: ltr !important; /* Keeps negative signs and numbers perfectly intact */
+    font-family: monospace, sans-serif !important;
+    font-weight: 800 !important;
+    padding-left: 16px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Executive KPI Cards in Print */
+  .grid, .data-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    margin-bottom: 2.5rem !important;
+    page-break-inside: avoid !important;
+  }
+
+  .enterprise-card, [class*="rounded-3xl"], [class*="rounded-2xl"], [class*="rounded-[2.5rem]"], [class*="p-8"], [class*="p-6"], [class*="p-5"], [class*="p-4"] {
+    border: 1.5px solid #0f172a !important;
+    border-radius: 12px !important;
+    padding: 18px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .metric-label, [class*="text-[10px]"] {
+    font-size: 9pt !important;
+    color: #475569 !important;
+    font-weight: 800 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .metric-value, [class*="text-3xl"], [class*="text-2xl"] {
+    font-size: 18pt !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+  }
+
+  /* Section Titles & Headers */
+  h1, h2, h3, h4 {
+    color: #0f172a !important;
+    page-break-after: avoid !important;
+    font-weight: 800 !important;
+  }
+
+  /* Print Header styling */
+  .print-header, [class*="print:block"] {
+    display: block !important;
+    border-bottom: 3px solid #0f172a !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 28px !important;
+    page-break-after: avoid !important;
+  }
+
+  .print-header h1 {
+    font-size: 24pt !important;
+    margin: 0 0 8px 0 !important;
+    font-weight: 900 !important;
+  }
+
+  .print-header .company-title {
+    font-size: 14pt !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+  }
+
+  .print-header .meta-info {
+    font-size: 10pt !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
   }
 }

@@ -8,10 +8,14 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token'); 
+    const activeCompany = localStorage.getItem('active_company');
     
     // 🌟 حماية صارمة: لا ترسل التوكن إلا إذا كان كوداً حقيقياً وليس مجرد كلمة فارغة
     if (token && token !== 'undefined' && token !== 'null') {
       config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (activeCompany) {
+      config.headers['X-Selected-Company'] = activeCompany;
     }
     return config;
   },

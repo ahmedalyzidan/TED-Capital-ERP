@@ -22,6 +22,59 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ted-capital-super-secure-key-2026-
 
 // 🌟 Public Health Check (No Auth Required)
 router.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));
+
+router.get('/public/companies', async (req, res) => {
+    try {
+        const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
+        const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != ''");
+        const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
+        
+        let baseCompanies = legalComps.rows.map(r => r.name);
+        if (baseCompanies.length === 0) {
+            baseCompanies = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
+        }
+        const govCompanies = orgUnits.rows.filter(u => u.type === 'Company' || u.type === 'Holding').map(u => u.name);
+        const projCompanies = projectComps.rows.map(r => r.company);
+
+        const allCompanies = [...new Set([...baseCompanies, ...govCompanies, ...projCompanies])];
+        res.json({ success: true, companies: allCompanies });
+    } catch (err) {
+        console.error("🔥 [PUBLIC COMPANIES ERROR]:", err);
+        res.json({ success: true, companies: ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'] });
+    }
+});
+
+router.post('/public/forgot-password', async (req, res) => {
+    const { username, recoveryType, email, phone } = req.body;
+    try {
+        const userRes = await pool.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND status = 'Active'", [username]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ success: false, error: "اسم المستخدم غير موجود أو الحساب غير فعال." });
+        }
+        const user = userRes.rows[0];
+
+        if (recoveryType === 'email') {
+            if (!user.email || user.email.toLowerCase() !== (email || '').toLowerCase().trim()) {
+                return res.status(400).json({ success: false, error: "البريد الإلكتروني المدخل لا يتطابق مع البريد المسجل في النظام." });
+            }
+            console.log(`📧 [PASSWORD RECOVERY] Sending recovery email to ${user.email} for user ${user.username}`);
+            return res.json({ success: true, message: "تم إرسال تعليمات استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح." });
+        } else if (recoveryType === 'whatsapp') {
+            if (!phone || phone.trim().length < 8) {
+                return res.status(400).json({ success: false, error: "يرجى إدخال رقم جوال صحيح لإرسال كود الواتساب." });
+            }
+            console.log(`💬 [PASSWORD RECOVERY] Sending WhatsApp recovery message to ${phone} for user ${user.username}`);
+            return res.json({ success: true, message: "تم إرسال كود استعادة كلمة المرور عبر تطبيق الواتساب بنجاح." });
+        } else {
+            return res.status(400).json({ success: false, error: "طريقة استعادة غير صالحة." });
+        }
+    } catch (err) {
+        console.error("🔥 [FORGOT PASSWORD ERROR]:", err);
+        res.status(500).json({ success: false, error: "حدث خطأ داخلي في الخادم أثناء معالجة طلب الاستعادة." });
+    }
+});
+
+
 router.get('/iam/stats', authGuard, iamController.getIAMStats);
 router.get('/iam/metadata', authGuard, iamController.getSecurityMetadata);
 router.get('/iam/audit-trail', authGuard, requireAdmin, iamController.getSecurityAuditTrail);

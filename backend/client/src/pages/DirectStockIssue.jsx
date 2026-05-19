@@ -40,6 +40,10 @@ export default function DirectStockIssue() {
   const [walletDepositAmount, setWalletDepositAmount] = useState(0);
   const [walletPayAmount, setWalletPayAmount] = useState(0);
   const [showVat, setShowVat] = useState(true); // VAT 14% Toggle
+  
+  // 🏗️ Linked Construction Project Integration States
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [contractorProjects, setContractorProjects] = useState([]);
 
   // --- Quick Add Customer State & Handler ---
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -302,6 +306,19 @@ export default function DirectStockIssue() {
       console.error("Error fetching direct issue/return dependencies", err);
     }
   };
+
+  // Fetch Construction Projects from LocalStorage for Project Materials allocation
+  useEffect(() => {
+    const saved = localStorage.getItem('contractor_projects');
+    if (saved) {
+      setContractorProjects(JSON.parse(saved));
+    } else {
+      setContractorProjects([
+        { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
+        { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA' }
+      ]);
+    }
+  }, []);
 
   const fetchReportsData = async () => {
     try {
@@ -828,6 +845,40 @@ export default function DirectStockIssue() {
       });
       setShowInvoiceModal(true);
 
+      // D. Save to contractor_expenses in localStorage if project is linked
+      if (selectedProjectId) {
+        const savedExpensesStr = localStorage.getItem('contractor_expenses');
+        const currentSavedExpenses = savedExpensesStr ? JSON.parse(savedExpensesStr) : [
+          { id: 1, projectId: 'villa-e109', beneficiary: "م. أحمد سالم", category: "أعمال تصميم", unit: "مقطوعيه", qty: 1, rate: 17000, total: 17000, date: "2024-07-23", notes: "تصميم فيلا E109" }
+        ];
+        
+        invoiceLines.forEach((line, idx) => {
+          const qtyVal = activeTab === 'issue' ? Number(line.qty) : -Number(line.qty);
+          const rateVal = Number(line.buy_price || line.unit_price || 0);
+          const totalVal = qtyVal * rateVal;
+          
+          const newExp = {
+            id: `exp-stock-${Date.now()}-${idx}`,
+            projectId: selectedProjectId,
+            beneficiary: activeTab === 'issue' ? 'صرف مخزني مباشر - مستودع المواد' : 'مرتجع مواد فائضة للمستودع',
+            category: 'مواد ومستلزمات',
+            unit: line.uom || 'وحدة',
+            qty: qtyVal,
+            rate: rateVal,
+            total: totalVal,
+            date: invoiceDate,
+            notes: activeTab === 'issue' 
+              ? `صرف مخزني مباشر للصنف: ${line.item_name} (باتش: ${line.batch_no || 'N/A'}) | مستند رقم: ${documentNo}`
+              : `مرتجع مواد فائضة من موقع المشروع للصنف: ${line.item_name} (باتش: ${line.batch_no || 'N/A'}) | مستند رقم: ${documentNo}`,
+            allocationType: 'project'
+          };
+          
+          currentSavedExpenses.push(newExp);
+        });
+        
+        localStorage.setItem('contractor_expenses', JSON.stringify(currentSavedExpenses));
+      }
+
       const opMsg = activeTab === 'issue' 
         ? (isBooking ? 'تم بنجاح حجز الأصناف وتوليد وثيقة الحجز المؤقت في المستودع والميزانية!' : 'تم بنجاح صرف الكميات وتوليد فاتورة المبيعات وإصدار القيود المحاسبية التلقائية بالكامل!')
         : 'تم بنجاح استلام المرتجع وتعديل أرصدة المستودع وعكس القيد المزدوج بالكامل!';
@@ -837,6 +888,7 @@ export default function DirectStockIssue() {
       setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: activeTab === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0 }]);
       setDiscount(0);
       setSelectedCustomer('');
+      setSelectedProjectId('');
       setWalletAction('none');
       setWalletPayAmount(0);
       setWalletDepositAmount(0);
@@ -1041,7 +1093,7 @@ export default function DirectStockIssue() {
                 <span>👤</span> {activeTab === 'issue' ? (language === 'ar' ? 'بيانات العميل واللوجستيات' : 'Customer & Logistics Details') : (language === 'ar' ? 'بيانات العميل المرجع والمخزن' : 'Return Client & Store Details')}
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 
                 {/* Select Customer + Live Search */}
                 <div className="flex flex-col gap-2">
@@ -1097,6 +1149,25 @@ export default function DirectStockIssue() {
                       <option key={w.id} value={w.name}>{w.name}</option>
                     ))}
                     {warehouses.length === 0 && <option value="Main Store">{language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}</option>}
+                  </select>
+                </div>
+
+                {/* Construction Project Selection Dropdown */}
+                <div className="flex flex-col gap-2 justify-end">
+                  <label className="text-xs font-black text-slate-500">
+                    🏗️ {language === 'ar' ? 'ربط بمشروع إنشائي (اختياري)' : 'Link to Construction Project'}
+                  </label>
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
+                  >
+                    <option value="">{language === 'ar' ? '-- بدون مشروع (صرف مباشر) --' : '-- Direct Issue (No Project) --'}</option>
+                    {contractorProjects.map(proj => (
+                      <option key={proj.id} value={proj.id}>
+                        {proj.name} ({proj.company || 'TED CAPITAL'})
+                      </option>
+                    ))}
                   </select>
                 </div>
 

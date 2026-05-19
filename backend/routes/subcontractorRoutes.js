@@ -206,4 +206,45 @@ router.post('/approve_invoice/:id', async (req, res) => {
     }
 });
 
+// --- Invoice Deletion & Automatic Accounting Reversal ---
+router.delete('/delete_invoice/:id', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const invoiceId = req.params.id;
+        const username = req.user ? req.user.username : 'System';
+
+        const invRes = await client.query("SELECT * FROM subcontractor_invoices WHERE id = $1", [invoiceId]);
+        if (invRes.rows.length === 0) throw new Error("Invoice not found.");
+        const invoice = invRes.rows[0];
+
+        // 1. Reverse BOQ quantities and subcontractor costs if it was approved/posted
+        if (invoice.status === 'Paid' || invoice.status === 'Approved' || invoice.status === 'اعتماد مالي' || invoice.status === 'اعتماد فني') {
+            if (invoice.sub_item_id) {
+                const qtyToRemove = parseFloat(invoice.curr_qty) > 0 ? parseFloat(invoice.curr_qty) : (parseFloat(invoice.progress_percent) || 0);
+                const netAmount = parseFloat(invoice.net_amount) || parseFloat(invoice.amount) || 0;
+                await client.query(
+                    "UPDATE boq SET dynamic_act_qty = GREATEST(0, COALESCE(dynamic_act_qty, 0) - $1), actual_subcontractor_cost = GREATEST(0, COALESCE(actual_subcontractor_cost, 0) - $2) WHERE id = $3",
+                    [qtyToRemove, netAmount, invoice.sub_item_id]
+                );
+            }
+
+            // 2. Wipe double-entry ledger records matching reference INV-${invoiceId}
+            await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_id = $1 OR reference_no = $1", [`INV-${invoiceId}`]);
+        }
+
+        // 3. Mark invoice as deleted (Soft Deletion)
+        await client.query("UPDATE subcontractor_invoices SET is_deleted = true, status = 'Deleted' WHERE id = $1", [invoiceId]);
+        await logAdvancedAudit(client, username, 'subcontractor_invoices', invoiceId, 'DELETE_INVOICE', `Deleted invoice #${invoiceId} and reversed accounting/BOQ impacts`, invoice, null);
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'تم حذف الفاتورة وعكس القيود المحاسبية بنجاح.' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
