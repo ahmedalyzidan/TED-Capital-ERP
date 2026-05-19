@@ -1956,6 +1956,28 @@ export default function DirectStockIssue() {
                       .map(parseLedgerInvoice)
                       .filter(Boolean)
                       .filter(item => {
+                        // Filter by active logged in company
+                        const activeComp = localStorage.getItem('active_company') || '';
+                        const activeLower = activeComp.toLowerCase();
+                        if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+                          const customerObj = customers.find(c => c.name === item.customer);
+                          if (customerObj) {
+                            const cCompLower = (customerObj.company_name || '').toLowerCase();
+                            const isMatch = (activeLower.includes('ted') && cCompLower.includes('ted')) ||
+                                            (activeLower.includes('design') && cCompLower.includes('design')) ||
+                                            (activeLower.includes('master') && cCompLower.includes('master')) ||
+                                            (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) ||
+                                            cCompLower.includes(activeLower) || 
+                                            activeLower.includes(cCompLower);
+                            if (!isMatch) return false;
+                          } else {
+                            const custLower = item.customer.toLowerCase();
+                            const isPharmaCust = custLower.includes('أبو تيم') || custLower.includes('حسن') || custLower.includes('محمود') || custLower.includes('صيدلية') || custLower.includes('pharma') || custLower.includes('prime');
+                            const activeIsPharma = activeLower.includes('prime') || activeLower.includes('pharma') || activeLower.includes('بريم') || activeLower.includes('فارما');
+                            if (activeIsPharma !== isPharmaCust) return false;
+                          }
+                        }
+
                         const q = invoiceListSearch.toLowerCase();
                         return (
                           item.docNo.toLowerCase().includes(q) ||
