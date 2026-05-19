@@ -4,7 +4,7 @@ import api from '../services/api';
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState(localStorage.getItem('ted-lang') || 'ar');
+  const [language, setLanguage] = useState(localStorage.getItem('ted-lang') || 'en');
   const [theme, setTheme] = useState(localStorage.getItem('ted-theme') || 'light');
   const [isSynced, setIsSynced] = useState(false);
 

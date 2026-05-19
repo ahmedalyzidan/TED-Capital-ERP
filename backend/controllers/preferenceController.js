@@ -8,7 +8,7 @@ const getPreferences = async (req, res) => {
         if (result.rows.length === 0) {
             // Return default settings if no preferences exist yet
             return res.json({
-                language: 'ar',
+                language: 'en',
                 theme_mode: 'light',
                 timezone: 'Africa/Cairo',
                 date_format: 'DD/MM/YYYY',
