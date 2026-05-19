@@ -307,15 +307,18 @@ export default function Layout() {
         ];
         if (forbiddenPharmaPaths.includes(item.path)) return null;
       } else {
-        const forbiddenNonPharmaPaths = [
-          '/inventory/pharma',
-          '/inventory/supply-chain',
-          '/inventory/transfers',
-          '/inventory/reconciliation',
-          '/inventory/batch-matrix',
-          '/inventory/reorder'
-        ];
-        if (forbiddenNonPharmaPaths.includes(item.path)) return null;
+        const isLocalServer = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!isLocalServer) {
+          const forbiddenNonPharmaPaths = [
+            '/inventory/pharma',
+            '/inventory/supply-chain',
+            '/inventory/transfers',
+            '/inventory/reconciliation',
+            '/inventory/batch-matrix',
+            '/inventory/reorder'
+          ];
+          if (forbiddenNonPharmaPaths.includes(item.path)) return null;
+        }
       }
 
       if (isDesign) {
