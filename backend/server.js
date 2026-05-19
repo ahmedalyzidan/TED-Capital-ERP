@@ -128,6 +128,9 @@ app.use('/api', authRoutes);
 
 app.use('/api', authenticateToken);
 
+const { enforceCompanyIsolation } = require('./middlewares/companyIsolationMiddleware');
+app.use('/api', enforceCompanyIsolation);
+
 // 3. المسارات الموديلار (Modular Routes)
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const projectRoutes = require('./routes/projectRoutes');

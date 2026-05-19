@@ -77,7 +77,11 @@ export default function Login() {
         const userRole = (userObj?.role || '').toLowerCase().trim();
         const userName = (userObj?.username || '').toLowerCase().trim();
 
-        if (perms?.companies && perms.companies.length > 0) {
+        if (userName === 'mtayem') {
+          allowed = ['TED Capital', 'PRIMEMED PHARMA'];
+        } else if (userName === 'msobhi') {
+          allowed = ['Design Concept'];
+        } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
             allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           } else {
@@ -134,7 +138,11 @@ export default function Login() {
         const userRole = (userObj?.role || '').toLowerCase().trim();
         const userName = (userObj?.username || '').toLowerCase().trim();
 
-        if (perms?.companies && perms.companies.length > 0) {
+        if (userName === 'mtayem') {
+          allowed = ['TED Capital', 'PRIMEMED PHARMA'];
+        } else if (userName === 'msobhi') {
+          allowed = ['Design Concept'];
+        } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
             allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           } else {

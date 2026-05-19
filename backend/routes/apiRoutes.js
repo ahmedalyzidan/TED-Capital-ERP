@@ -528,7 +528,19 @@ router.get('/table/:type', async (req, res) => {
         // 1. Determine active company filter (single company) or allowed list
         let targetCompany = null;
         if (selectedComp && !['all', 'كل الشركات', 'all companies'].includes(selectedComp.toLowerCase())) {
-            targetCompany = selectedComp;
+            if (isMtayem) {
+                const allowed = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
+                if (allowed.some(c => selectedComp.toLowerCase().includes(c.toLowerCase()))) {
+                    targetCompany = selectedComp;
+                }
+            } else if (isMsobhi) {
+                const allowed = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
+                if (allowed.some(c => selectedComp.toLowerCase().includes(c.toLowerCase()))) {
+                    targetCompany = selectedComp;
+                }
+            } else {
+                targetCompany = selectedComp;
+            }
         } else if (linkedComp) {
             targetCompany = linkedComp;
         }
@@ -541,6 +553,8 @@ router.get('/table/:type', async (req, res) => {
                 allowedCompsList = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
             }
         }
+
+        const isRestricted = !!(targetCompany || allowedCompsList || linkedProj);
 
         if (targetCompany) {
             const c = targetCompany.replace(/'/g, "''");
