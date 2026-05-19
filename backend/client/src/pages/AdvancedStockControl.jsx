@@ -327,13 +327,8 @@ function AdvancedStockControl({ isSubcomponent }) {
       };
 
       if (modalMode === 'ADD') {
-        if (items.some(i => i.id === 8001)) {
-          // Update mock state
-          setItems(prev => [{ id: Date.now(), ...payload, current_qty_display: Number(qty), unit_cost_display: Number(unitCost), total_value: Number(qty)*Number(unitCost), warehouse_display: warehouse, velocity_flag: velocity, category_display: category }, ...prev]);
-        } else {
-          await api.post('/dynamic/add/inventory_items', payload);
-          fetchData();
-        }
+        await api.post('/dynamic/add/inventory_items', payload);
+        await fetchData();
         alert(language === 'ar' ? "تم تسجيل الصنف الجديد في المخزن بنجاح!" : "New stock item registered successfully!");
       } else {
         if (selectedItem.id > 8000 && selectedItem.id < 8010) {

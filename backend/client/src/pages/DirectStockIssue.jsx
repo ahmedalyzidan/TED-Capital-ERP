@@ -8,7 +8,7 @@ export default function DirectStockIssue() {
   const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
   
   let activeCompId = 4; // default
-  let activeCompName = 'PRIMEMED PHARMA';
+  let activeCompName = activeComp || 'PRIMEMED PHARMA';
   
   if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
     activeCompId = 2;
@@ -134,11 +134,17 @@ export default function DirectStockIssue() {
     e.preventDefault();
     if (!newCustomerName) return;
     setIsAddingCustomer(true);
+
+    // Resolve company name to match active ERP company filter while keeping user input
+    const resolvedCompany = newCustomerCompany 
+      ? `${newCustomerCompany} (${activeCompName})` 
+      : activeCompName;
+
     try {
       const payload = {
         name: newCustomerName,
         phone: newCustomerPhone || '',
-        company_name: newCustomerCompany || '',
+        company_name: resolvedCompany,
         email: newCustomerEmail || '',
         created_at: new Date().toISOString()
       };
@@ -147,7 +153,7 @@ export default function DirectStockIssue() {
       
       // Update customers list
       setCustomers(prev => [newCust, ...prev]);
-      setSelectedCustomer(newCust.id);
+      setSelectedCustomer(String(newCust.id));
       setCustomerSearchQuery(newCust.name);
       
       // Initialize seed wallet
@@ -168,11 +174,11 @@ export default function DirectStockIssue() {
         id: Date.now(),
         name: newCustomerName,
         phone: newCustomerPhone || '',
-        company_name: newCustomerCompany || '',
+        company_name: resolvedCompany,
         email: newCustomerEmail || ''
       };
       setCustomers(prev => [fallbackCust, ...prev]);
-      setSelectedCustomer(fallbackCust.id);
+      setSelectedCustomer(String(fallbackCust.id));
       setCustomerSearchQuery(fallbackCust.name);
       localStorage.setItem(`customer_wallet_${fallbackCust.id}`, 0);
 
@@ -1148,6 +1154,10 @@ export default function DirectStockIssue() {
 
   // Filters
   const filteredCustomers = customers.filter(c => {
+    // If this customer is currently selected, always show them to prevent blank selection
+    if (selectedCustomer && String(c.id) === String(selectedCustomer)) return true;
+    if (selectedStatementCustomer && c.name === selectedStatementCustomer) return true;
+
     const matchSearch = c.name?.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
                         c.company_name?.toLowerCase().includes(customerSearchQuery.toLowerCase());
     if (!matchSearch) return false;
@@ -1160,7 +1170,7 @@ export default function DirectStockIssue() {
     if (activeLower.includes('ted') && cCompLower.includes('ted')) return true;
     if (activeLower.includes('design') && cCompLower.includes('design')) return true;
     if (activeLower.includes('master') && cCompLower.includes('master')) return true;
-    if (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) return true;
+    if (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma') || cCompLower.includes('pharm'))) return true;
 
     return cCompLower.includes(activeLower) || activeLower.includes(cCompLower);
   });
