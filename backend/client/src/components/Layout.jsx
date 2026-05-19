@@ -237,6 +237,8 @@ export default function Layout() {
   ];
 
   const isMtayem = (user?.username || '').toUpperCase() === 'MTAYEM';
+  const usernameUpper = (user?.username || '').toUpperCase();
+  const isAdminOrAbzidan = usernameUpper === 'ADMIN' || usernameUpper === 'ABZIDAN';
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات';
   const activeCompLower = activeCompany.toLowerCase();
@@ -385,6 +387,24 @@ export default function Layout() {
             {activeMenuGroups
               .map(group => {
                 const visibleItems = group.items.filter(item => {
+                  if (isAdminOrAbzidan) {
+                    const allowedMainMenus = [
+                      '/',
+                      '/reports',
+                      '/notifications',
+                      '/approval-inbox',
+                      '/projects',
+                      '/inventory',
+                      '/partners',
+                      '/clients',
+                      '/finance',
+                      '/hr',
+                      '/users',
+                      '/settings',
+                      '/me'
+                    ];
+                    return allowedMainMenus.includes(item.path);
+                  }
                   if (isMtayem) {
                     const allowedMtayemPaths = [
                       '/',
