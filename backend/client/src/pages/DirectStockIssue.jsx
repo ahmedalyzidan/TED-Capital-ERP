@@ -6,6 +6,78 @@ export default function DirectStockIssue() {
   const { language } = useLanguage();
   const activeComp = localStorage.getItem('active_company') || '';
   const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
+  
+  let activeCompId = 4; // default
+  let activeCompName = 'PRIMEMED PHARMA';
+  
+  if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
+    activeCompId = 2;
+    activeCompName = 'Design Concept';
+  } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
+    activeCompId = 3;
+    activeCompName = 'Master Builder';
+  } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
+    activeCompId = 4;
+    activeCompName = 'PRIMEMED PHARMA';
+  } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
+    activeCompId = 1;
+    activeCompName = 'TED Capital';
+  }
+
+  const getAccountMapping = (compId) => {
+    if (compId === 4) {
+      return {
+        cash: { ar: 'صندوق نقدية - بريميميد فارما', en: 'Cash Box - PRIMEMED PHARMA' },
+        bank: { ar: 'بنك فلسطين - بريميميد فارما', en: 'Bank Palestine - PRIMEMED PHARMA' },
+        inventory: { ar: 'مخزون الأدوية والمستلزمات - بريميميد فارما', en: 'Inventory Pharmacy Stock - PRIMEMED' },
+        revenue: { ar: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما', en: 'Pharmacy Sales Revenue - PRIMEMED' },
+        cogs: { ar: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما', en: 'COGS Pharmacy & Supplies - PRIMEMED' },
+        returns: { ar: 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما', en: 'Pharmacy Sales Return - PRIMEMED' },
+        deferredRevenue: { ar: 'إيرادات حجز مؤجلة', en: 'Deferred Revenue' },
+        reservedStock: { ar: 'بضاعة محجوزة لدى المستودع', en: 'Reserved Stock at Warehouse' },
+        wallet: { ar: 'محفظة العملاء (أرصدة مسبقة الدفع)', en: 'Customer Wallet Balance' }
+      };
+    } else if (compId === 2) {
+      return {
+        cash: { ar: 'صندوق نقدية - ديزاين كونسبت', en: 'Cash Box - DESIGN CONCEPT' },
+        bank: { ar: 'بنك الأهلي - ديزاين كونسبت', en: 'National Bank - DESIGN CONCEPT' },
+        inventory: { ar: 'مخزون خامات ومواد', en: 'Inventory Materials - DESIGN CONCEPT' },
+        revenue: { ar: 'إيرادات مستخلصات وخدمات - ديزاين كونسيبت', en: 'Services Revenue - DESIGN CONCEPT' },
+        cogs: { ar: 'تكلفة خامات ومواد (منصرف) - ديزاين كونسيبت', en: 'COGS Materials - DESIGN CONCEPT' },
+        returns: { ar: 'مرتجع مبيعات - ديزاين كونسيبت', en: 'Sales Return - DESIGN CONCEPT' },
+        deferredRevenue: { ar: 'إيرادات حجز مؤجلة', en: 'Deferred Revenue' },
+        reservedStock: { ar: 'بضاعة محجوزة لدى المستودع', en: 'Reserved Stock at Warehouse' },
+        wallet: { ar: 'محفظة العملاء (أرصدة مسبقة الدفع)', en: 'Customer Wallet Balance' }
+      };
+    } else if (compId === 3) {
+      return {
+        cash: { ar: 'صندوق نقدية - ماستر بيلدر', en: 'Cash Box - MASTER BUILDER' },
+        bank: { ar: 'بنك - ماستر بيلدر', en: 'Bank - MASTER BUILDER' },
+        inventory: { ar: 'مخزون خامات ومواد - ماستر بيلدر', en: 'Inventory Materials - MASTER BUILDER' },
+        revenue: { ar: 'إيرادات مستخلصات وخدمات - ماستر بيلدر', en: 'Services Revenue - MASTER BUILDER' },
+        cogs: { ar: 'تكلفة خامات ومواد (منصرف) - ماستر بيلدر', en: 'COGS Materials - MASTER BUILDER' },
+        returns: { ar: 'مرتجع مبيعات - ماستر بيلدر', en: 'Sales Return - MASTER BUILDER' },
+        deferredRevenue: { ar: 'إيرادات حجز مؤجلة', en: 'Deferred Revenue' },
+        reservedStock: { ar: 'بضاعة محجوزة لدى المستودع', en: 'Reserved Stock at Warehouse' },
+        wallet: { ar: 'محفظة العملاء (أرصدة مسبقة الدفع)', en: 'Customer Wallet Balance' }
+      };
+    } else {
+      return {
+        cash: { ar: 'صندوق نقدية - تيد كابيتال', en: 'Cash Box - TED CAPITAL' },
+        bank: { ar: 'بنك CIB - تيد كابيتال', en: 'CIB Bank - TED CAPITAL' },
+        inventory: { ar: 'مخزون خامات ومواد - تيد كابيتال', en: 'Inventory Materials - TED CAPITAL' },
+        revenue: { ar: 'إيرادات مستخلصات وخدمات - تيد كابيتال', en: 'Services Revenue - TED CAPITAL' },
+        cogs: { ar: 'تكلفة خامات ومواد (منصرف) - تيد كابيتال', en: 'COGS Materials - TED CAPITAL' },
+        returns: { ar: 'مرتجع مبيعات - تيد كابيتال', en: 'Sales Return - TED CAPITAL' },
+        deferredRevenue: { ar: 'إيرادات حجز مؤجلة', en: 'Deferred Revenue' },
+        reservedStock: { ar: 'بضاعة محجوزة لدى المستودع', en: 'Reserved Stock at Warehouse' },
+        wallet: { ar: 'محفظة العملاء (أرصدة مسبقة الدفع)', en: 'Customer Wallet Balance' }
+      };
+    }
+  };
+
+  const currentAccountMap = getAccountMapping(activeCompId);
+
   const currencySymbol = isPharma 
     ? (language === 'ar' ? 'ش.ج' : 'ILS') 
     : (language === 'ar' ? 'ج.م' : 'EGP');
@@ -573,78 +645,18 @@ export default function DirectStockIssue() {
         });
       }
 
-      // B. Create balanced General Ledger postings
-      const activeComp = localStorage.getItem('active_company') || '';
-      let activeCompId = 4; // default
-      let activeCompName = 'PRIMEMED PHARMA';
-      
-      if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
-        activeCompId = 2;
-        activeCompName = 'Design Concept';
-      } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
-        activeCompId = 3;
-        activeCompName = 'Master Builder';
-      } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
-        activeCompId = 4;
-        activeCompName = 'PRIMEMED PHARMA';
-      } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
-        activeCompId = 1;
-        activeCompName = 'TED Capital';
-      }
-
-      const getAccountMapping = (compId) => {
-        if (compId === 4) {
-          return {
-            cash: 'صندوق نقدية - بريميميد فارما',
-            bank: 'بنك فلسطين - بريميميد فارما',
-            inventory: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
-            revenue: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
-            cogs: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
-            returns: 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما',
-            deferredRevenue: 'إيرادات حجز مؤجلة',
-            reservedStock: 'بضاعة محجوزة لدى المستودع',
-            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
-          };
-        } else if (compId === 2) {
-          return {
-            cash: 'صندوق نقدية - ديزاين كونسبت',
-            bank: 'بنك الأهلي - ديزاين كونسبت',
-            inventory: 'مخزون خامات ومواد',
-            revenue: 'إيرادات مستخلصات وخدمات',
-            cogs: 'تكلفة خامات ومواد (منصرف)',
-            returns: 'مرتجع مبيعات - ديزاين كونسيبت',
-            deferredRevenue: 'إيرادات حجز مؤجلة',
-            reservedStock: 'بضاعة محجوزة لدى المستودع',
-            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
-          };
-        } else if (compId === 3) {
-          return {
-            cash: 'صندوق نقدية - ماستر بيلدر',
-            bank: 'بنك - ماستر بيلدر',
-            inventory: 'مخزون خامات ومواد',
-            revenue: 'إيرادات مستخلصات وخدمات',
-            cogs: 'تكلفة خامات ومواد (منصرف)',
-            returns: 'مرتجع مبيعات - ماستر بيلدر',
-            deferredRevenue: 'إيرادات حجز مؤجلة',
-            reservedStock: 'بضاعة محجوزة لدى المستودع',
-            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
-          };
-        } else {
-          return {
-            cash: 'صندوق نقدية - تيد كابيتال',
-            bank: 'بنك CIB - تيد كابيتال',
-            inventory: 'مخزون خامات ومواد',
-            revenue: 'إيرادات مستخلصات وخدمات',
-            cogs: 'تكلفة خامات ومواد (منصرف)',
-            returns: 'مرتجع مبيعات - تيد كابيتال',
-            deferredRevenue: 'إيرادات حجز مؤجلة',
-            reservedStock: 'بضاعة محجوزة لدى المستودع',
-            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
-          };
-        }
+      // B. Create balanced General Ledger postings using active company configuration
+      const accountMap = {
+        cash: currentAccountMap.cash.ar,
+        bank: currentAccountMap.bank.ar,
+        inventory: currentAccountMap.inventory.ar,
+        revenue: currentAccountMap.revenue.ar,
+        cogs: currentAccountMap.cogs.ar,
+        returns: currentAccountMap.returns.ar,
+        deferredRevenue: currentAccountMap.deferredRevenue.ar,
+        reservedStock: currentAccountMap.reservedStock.ar,
+        wallet: currentAccountMap.wallet.ar
       };
-
-      const accountMap = getAccountMapping(activeCompId);
 
       const targetAccount = isBooking
         ? 'عملاء حجز - أرصدة معلقة'
@@ -1807,9 +1819,9 @@ export default function DirectStockIssue() {
                         <span className="text-[10px] font-black text-emerald-400 block mb-0.5">{language === 'ar' ? 'مدين (Dr.)' : 'Debit (Dr.)'}</span>
                         <span className="text-slate-200 font-bold">
                           {paymentMethod === 'Cash' 
-                            ? (language === 'ar' ? 'صندوق نقدية - بريميميد فارما' : 'Cash Box - PRIMEMED PHARMA') 
+                            ? (language === 'ar' ? currentAccountMap.cash.ar : currentAccountMap.cash.en) 
                             : paymentMethod === 'Bank' 
-                              ? (language === 'ar' ? 'بنك فلسطين - بريميميد فارما' : 'Bank Palestine - PRIMEMED PHARMA') 
+                              ? (language === 'ar' ? currentAccountMap.bank.ar : currentAccountMap.bank.en) 
                               : (language === 'ar' ? 'عملاء (حسابات مدينة - AR)' : 'Accounts Receivable (AR)')}
                         </span>
                       </div>
@@ -1821,9 +1833,9 @@ export default function DirectStockIssue() {
                         <span className="text-[10px] font-black text-rose-400 block mb-0.5">{language === 'ar' ? 'دائن (Cr.)' : 'Credit (Cr.)'}</span>
                         <span className="text-slate-200 font-bold">
                           {paymentMethod === 'Cash' 
-                            ? (language === 'ar' ? 'صندوق نقدية - بريميميد فارما' : 'Cash Box - PRIMEMED PHARMA') 
+                            ? (language === 'ar' ? currentAccountMap.cash.ar : currentAccountMap.cash.en) 
                             : paymentMethod === 'Bank' 
-                              ? (language === 'ar' ? 'بنك فلسطين - بريميميد فارما' : 'Bank Palestine - PRIMEMED PHARMA') 
+                              ? (language === 'ar' ? currentAccountMap.bank.ar : currentAccountMap.bank.en) 
                               : (language === 'ar' ? 'عملاء (حسابات مدينة - AR)' : 'Accounts Receivable (AR)')}
                         </span>
                       </div>
@@ -1837,7 +1849,9 @@ export default function DirectStockIssue() {
                     <>
                       <div>
                         <span className="text-[10px] font-black text-indigo-400 block mb-0.5">{language === 'ar' ? 'دائن (Cr.)' : 'Credit (Cr.)'}</span>
-                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما' : 'Pharmacy Sales Revenue - PRIMEMED'}</span>
+                        <span className="text-slate-200 font-bold">
+                          {language === 'ar' ? currentAccountMap.revenue.ar : currentAccountMap.revenue.en}
+                        </span>
                       </div>
                       <span className="text-indigo-400 font-black text-sm">-{Number(totals.subtotal).toLocaleString()}</span>
                     </>
@@ -1845,7 +1859,9 @@ export default function DirectStockIssue() {
                     <>
                       <div>
                         <span className="text-[10px] font-black text-emerald-400 block mb-0.5">{language === 'ar' ? 'مدين (Dr.)' : 'Debit (Dr.)'}</span>
-                        <span className="text-slate-200 font-bold">{language === 'ar' ? 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما' : 'Pharmacy Sales Return - PRIMEMED'}</span>
+                        <span className="text-slate-200 font-bold">
+                          {language === 'ar' ? currentAccountMap.returns.ar : currentAccountMap.returns.en}
+                        </span>
                       </div>
                       <span className="text-emerald-400 font-black text-sm">+{Number(totals.subtotal).toLocaleString()}</span>
                     </>
@@ -1873,7 +1889,9 @@ export default function DirectStockIssue() {
                       <span className="text-[10px] font-black block mb-0.5 text-slate-400">
                         {activeTab === 'issue' ? (language === 'ar' ? 'مدين (Dr. COGS)' : 'Debit (Dr. COGS)') : (language === 'ar' ? 'دائن (Cr. COGS)' : 'Credit (Cr. COGS)')}
                       </span>
-                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما' : 'COGS Pharmacy & Supplies - PRIMEMED'}</span>
+                      <span className="text-slate-200 font-bold">
+                        {language === 'ar' ? currentAccountMap.cogs.ar : currentAccountMap.cogs.en}
+                      </span>
                     </div>
                     <span className={`font-black text-sm ${activeTab === 'issue' ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {activeTab === 'issue' ? `+${Number(totals.totalCOGS).toLocaleString()}` : `-${Number(totals.totalCOGS).toLocaleString()}`}
@@ -1885,7 +1903,9 @@ export default function DirectStockIssue() {
                       <span className="text-[10px] font-black block mb-0.5 text-slate-400">
                         {activeTab === 'issue' ? (language === 'ar' ? 'دائن (Cr. Asset)' : 'Credit (Cr. Asset)') : (language === 'ar' ? 'مدين (Dr. Asset)' : 'Debit (Dr. Asset)')}
                       </span>
-                      <span className="text-slate-200 font-bold">{language === 'ar' ? 'مخزون الأدوية والمستلزمات - بريميميد فارما' : 'Inventory Pharmacy Stock - PRIMEMED'}</span>
+                      <span className="text-slate-200 font-bold">
+                        {language === 'ar' ? currentAccountMap.inventory.ar : currentAccountMap.inventory.en}
+                      </span>
                     </div>
                     <span className={`font-black text-sm ${activeTab === 'issue' ? 'text-rose-400' : 'text-emerald-400'}`}>
                       {activeTab === 'issue' ? `-${Number(totals.totalCOGS).toLocaleString()}` : `+${Number(totals.totalCOGS).toLocaleString()}`}
