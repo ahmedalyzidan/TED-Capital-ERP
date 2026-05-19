@@ -37,6 +37,8 @@ function AdvancedStockControl({ isSubcomponent }) {
   const [velocity, setVelocity] = useState('FAST'); // FAST, SLOW, OBSOLETE
   const [adjustReason, setAdjustReason] = useState('تسوية جردية دورية');
   const [barcodeInput, setBarcodeInput] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [companies, setCompanies] = useState([]);
 
   const handleScanBarcode = (code) => {
     if (!code || !code.trim()) {
@@ -268,9 +270,19 @@ function AdvancedStockControl({ isSubcomponent }) {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/dynamic/table/companies?limit=100');
+      setCompanies(res.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching companies', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchSalesData();
+    fetchCompanies();
   }, []);
 
   useEffect(() => {
@@ -308,9 +320,52 @@ function AdvancedStockControl({ isSubcomponent }) {
     setShowModal(true);
   };
 
+  const handleOpenEdit = (item) => {
+    setModalMode('EDIT');
+    setSelectedItem(item);
+    setItemName(item.item_name || '');
+    setCategory(item.category_display || 'مواد بناء');
+    setWarehouse(item.warehouse_display || 'المخزن الرئيسي');
+    setQty(item.current_qty_display || 0);
+    setUnitCost(item.unit_cost_display || 0);
+    setUom(item.uom || item.unit || 'قطعة');
+    setMinLevel(item.min_stock_level || '10');
+    setVelocity(item.velocity_flag || 'FAST');
+    setCompanyId(item.company_id || '');
+    setShowModal(true);
+  };
+
+  const handleDeleteStock = async (id) => {
+    const confirmMsg = language === 'ar' 
+      ? 'هل أنت متأكد من رغبتك في حذف هذا الصنف النهائي من المخزون؟' 
+      : 'Are you sure you want to permanently delete this stock item?';
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      if (id > 8000 && id < 8010) {
+        setItems(prev => prev.filter(i => i.id !== id));
+      } else {
+        await api.delete(`/dynamic/delete/inventory_items/${id}`);
+        await fetchData();
+      }
+      alert(language === 'ar' ? 'تم حذف الصنف بنجاح!' : 'Stock item deleted successfully!');
+    } catch (err) {
+      console.error('Error deleting stock', err);
+      alert(language === 'ar' ? 'فشل حذف الصنف المخزني' : 'Failed to delete stock item.');
+    }
+  };
+
   const handleSaveStock = async (e) => {
     e.preventDefault();
     try {
+      const activeComp = localStorage.getItem('active_company') || '';
+      const matchedCompany = companies.find(c => 
+        c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+        activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+        c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+      );
+      const autoCompanyId = matchedCompany ? matchedCompany.id : null;
+
       const payload = {
         item_name: itemName,
         category: category,
@@ -323,19 +378,28 @@ function AdvancedStockControl({ isSubcomponent }) {
         unit: uom,
         min_stock_level: Number(minLevel),
         status: velocity, // Storing velocity in status column
-        adjust_reason: adjustReason
+        adjust_reason: adjustReason,
+        company_id: autoCompanyId
       };
 
       if (modalMode === 'ADD') {
         await api.post('/dynamic/add/inventory_items', payload);
         await fetchData();
         alert(language === 'ar' ? "تم تسجيل الصنف الجديد في المخزن بنجاح!" : "New stock item registered successfully!");
+      } else if (modalMode === 'EDIT') {
+        if (selectedItem.id > 8000 && selectedItem.id < 8010) {
+          setItems(prev => prev.map(i => i.id === selectedItem.id ? { ...i, ...payload, current_qty_display: Number(qty), unit_cost_display: Number(unitCost), total_value: Number(qty)*Number(unitCost), warehouse_display: warehouse, velocity_flag: velocity, category_display: category } : i));
+        } else {
+          await api.put(`/dynamic/update/inventory_items/${selectedItem.id}`, payload);
+          await fetchData();
+        }
+        alert(language === 'ar' ? "تم تحديث بيانات الصنف بنجاح!" : "Stock item details updated successfully!");
       } else {
         if (selectedItem.id > 8000 && selectedItem.id < 8010) {
           setItems(prev => prev.map(i => i.id === selectedItem.id ? { ...i, ...payload, current_qty_display: Number(qty), unit_cost_display: Number(unitCost), total_value: Number(qty)*Number(unitCost), warehouse_display: warehouse, velocity_flag: velocity, category_display: category } : i));
         } else {
           await api.put(`/dynamic/update/inventory_items/${selectedItem.id}`, payload);
-          fetchData();
+          await fetchData();
         }
         alert(language === 'ar' ? `تمت تسوية رصيد الصنف بنجاح (السبب: ${adjustReason})` : `Stock reconciliation posted successfully (Reason: ${adjustReason})`);
       }
@@ -786,7 +850,10 @@ function AdvancedStockControl({ isSubcomponent }) {
                     <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${isObsolete ? 'bg-rose-50/10' : isSlow ? 'bg-amber-50/10' : ''}`}>
                       <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
                         <span className="block font-black text-slate-900 text-base">{item.item_name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">ID: {item.id} | {language === 'ar' ? `حد الطلب: ${item.min_stock_level || 10}` : `Min Stock: ${item.min_stock_level || 10}`}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          ID: {item.id} | {language === 'ar' ? `حد الطلب: ${item.min_stock_level || 10}` : `Min Stock: ${item.min_stock_level || 10}`}
+                          {companies.find(c => c.id === item.company_id) ? ` | 🏢 ${companies.find(c => c.id === item.company_id).name}` : ''}
+                        </span>
                       </td>
                       <td className="p-5 text-xs text-slate-600 font-bold">{item.category_display}</td>
                       <td className="p-5 text-xs font-black text-indigo-950">{item.warehouse_display}</td>
@@ -818,13 +885,27 @@ function AdvancedStockControl({ isSubcomponent }) {
                         </span>
                       </td>
                       <td className={`p-5 ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button 
                             onClick={() => handleOpenAdjust(item)}
-                            className="px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1 active:scale-95 transition-all"
                             title={language === 'ar' ? "تسوية الرصيد أو تعديل التكلفة" : "Adjust stock count or item cost parameters"}
                           >
-                            <span>⚙️</span> {language === 'ar' ? 'تسوية الرصيد' : 'Adjust Stock'}
+                            <span>⚙️</span> {language === 'ar' ? 'تسوية' : 'Adjust'}
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEdit(item)}
+                            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1 active:scale-95 transition-all"
+                            title={language === 'ar' ? "تعديل تفاصيل الصنف" : "Edit item specifications"}
+                          >
+                            <span>✏️</span> {language === 'ar' ? 'تعديل' : 'Edit'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteStock(item.id)}
+                            className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1 active:scale-95 transition-all"
+                            title={language === 'ar' ? "حذف هذا الصنف نهائياً" : "Permanently delete this stock item"}
+                          >
+                            <span>🗑️</span> {language === 'ar' ? 'حذف' : 'Delete'}
                           </button>
                         </div>
                       </td>
@@ -1054,10 +1135,14 @@ function AdvancedStockControl({ isSubcomponent }) {
             <div className="bg-slate-900 p-8 text-white relative overflow-hidden shrink-0">
               <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
               <h2 className="text-2xl font-black relative z-10 flex items-center gap-3">
-                <span>📦</span> {modalMode === 'ADD' ? (language === 'ar' ? 'إضافة صنف مخزني جديد للمنظومة' : 'Add New Inventory Material') : (language === 'ar' ? 'تسجيل تسوية جردية وتعديل الرصيد' : 'Adjust Existing Stock Parameters')}
+                <span>📦</span> {modalMode === 'ADD' ? (language === 'ar' ? 'إضافة صنف مخزني جديد للمنظومة' : 'Add New Inventory Material') : modalMode === 'EDIT' ? (language === 'ar' ? 'تعديل بيانات الصنف المخزني' : 'Edit Stock Item Details') : (language === 'ar' ? 'تسجيل تسوية جردية وتعديل الرصيد' : 'Adjust Existing Stock Parameters')}
               </h2>
               <p className="text-sm text-slate-400 font-bold mt-2 relative z-10">
-                {modalMode === 'ADD' ? (language === 'ar' ? 'إدخال بيانات الصنف، المستودع، التكلفة، ومعدل الحركة' : `تعديل الرصيد الفعلي للصنف: ${selectedItem?.item_name}`) : (language === 'ar' ? `تعديل الرصيد الفعلي للصنف: ${selectedItem?.item_name}` : `Update current quantity or unit cost of: ${selectedItem?.item_name}`)}
+                {modalMode === 'ADD' 
+                  ? (language === 'ar' ? 'إدخال بيانات الصنف، المستودع، التكلفة، ومعدل الحركة' : 'Enter stock item, warehouse, cost, and velocity information') 
+                  : modalMode === 'EDIT'
+                  ? (language === 'ar' ? `تعديل تفاصيل الصنف: ${selectedItem?.item_name}` : `Editing details for: ${selectedItem?.item_name}`)
+                  : (language === 'ar' ? `تعديل الرصيد الفعلي للصنف: ${selectedItem?.item_name}` : `Update current quantity or unit cost of: ${selectedItem?.item_name}`)}
               </p>
             </div>
             
@@ -1195,7 +1280,11 @@ function AdvancedStockControl({ isSubcomponent }) {
                   type="submit"
                   className="px-8 py-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/20 rounded-xl font-black text-sm transition-all active:scale-95"
                 >
-                  {modalMode === 'ADD' ? (language === 'ar' ? 'حفظ الصنف المخزني' : 'Register Stock Item') : (language === 'ar' ? 'اعتماد التسوية الجردية' : 'Approve & Lock Reconciled Count')}
+                  {modalMode === 'ADD' 
+                    ? (language === 'ar' ? 'حفظ الصنف المخزني' : 'Register Stock Item') 
+                    : modalMode === 'EDIT'
+                    ? (language === 'ar' ? 'تحديث بيانات الصنف' : 'Update Stock Details')
+                    : (language === 'ar' ? 'اعتماد التسوية الجردية' : 'Approve & Lock Reconciled Count')}
                 </button>
               </div>
             </form>

@@ -129,6 +129,7 @@ export default function DirectStockIssue() {
   const [newCustomerCompany, setNewCustomerCompany] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
+  const [companies, setCompanies] = useState([]);
 
   const handleQuickAddCustomer = async (e) => {
     e.preventDefault();
@@ -243,12 +244,14 @@ export default function DirectStockIssue() {
 
   const fetchInitialData = async () => {
     try {
-      const [custRes, invRes, whRes] = await Promise.all([
+      const [custRes, invRes, whRes, compRes] = await Promise.all([
         api.get('/dynamic/table/customers?limit=500').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/inventory_items?limit=1000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/warehouses?limit=100').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/warehouses?limit=100').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/companies?limit=100').catch(() => ({ data: { data: [] } }))
       ]);
       setCustomers(custRes.data?.data || []);
+      setCompanies(compRes.data?.data || []);
       
       const rawItems = invRes.data?.data || [];
       const activeComp = localStorage.getItem('active_company') || '';
@@ -3038,14 +3041,17 @@ export default function DirectStockIssue() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / العيادة' : 'Facility / Clinic Name'}</label>
-                    <input 
-                      type="text" 
-                      placeholder={language === 'ar' ? 'اسم المنشأة' : 'Company Name'}
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم الشركة' : 'Company Name'}</label>
+                    <select 
                       value={newCustomerCompany}
                       onChange={(e) => setNewCustomerCompany(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
-                    />
+                    >
+                      <option value="">{language === 'ar' ? 'اختر الشركة...' : 'Select Company...'}</option>
+                      {companies.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

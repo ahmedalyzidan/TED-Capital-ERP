@@ -655,6 +655,19 @@ function PharmaInventory() {
   const handleSaveDrug = async (e) => {
     e.preventDefault();
     try {
+      const activeComp = localStorage.getItem('active_company') || '';
+      let activeCompId = 4; // default
+      
+      if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
+        activeCompId = 2;
+      } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
+        activeCompId = 3;
+      } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
+        activeCompId = 4;
+      } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
+        activeCompId = 1;
+      }
+
       const payload = {
         item_name: drugName,
         item_code: `PH-${Math.floor(Math.random() * 10000)}`,
@@ -670,6 +683,7 @@ function PharmaInventory() {
         warehouse: 'مخزن الصيدليات والأدوية',
         category: 'PHARMA',
         uom: dosageForm.includes('أقراص') ? 'علبة' : dosageForm.includes('فيال') ? 'فيال' : 'عبوة',
+        company_id: activeCompId,
         metadata: {
           active_substance: activeSubstance,
           dosage_form: dosageForm,
