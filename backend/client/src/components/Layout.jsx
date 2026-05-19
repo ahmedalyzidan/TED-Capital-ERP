@@ -9,7 +9,8 @@ import NotificationCenter from './NotificationCenter';
 export default function Layout() {
   const { logout, user } = useAuth();
   const context = useLanguage();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const tab = new URLSearchParams(search).get('tab') || '';
 
   const language = context?.language || 'ar';
   const theme = context?.theme || 'light';
@@ -83,7 +84,9 @@ export default function Layout() {
         arDue: "المدفوعات المستحقة (AR) 📈",
         apDue: "المستحقات للدفع (AP) 📉",
         inventoryValuation: "تقييم المخزون 📊",
-        cashBalances: "أرصدة النقدية 💵"
+        cashBalances: "أرصدة النقدية 💵",
+        salesHistory: "6. سجل المبيعات والصرف 🛒",
+        constructionStore: "مستودع الإنشاءات 🧱"
       }
     },
     en: {
@@ -142,7 +145,9 @@ export default function Layout() {
         arDue: "AR Due List 📈",
         apDue: "AP Due List 📉",
         inventoryValuation: "Inventory Valuation 📊",
-        cashBalances: "Cash Balances 💵"
+        cashBalances: "Cash Balances 💵",
+        salesHistory: "6. Sales & Dispense History 🛒",
+        constructionStore: "Construction Store 🧱"
       }
     }
   };
@@ -155,16 +160,31 @@ export default function Layout() {
 
   useEffect(() => {
     if (pathname) {
-      const segments = pathname.split('/');
-      if (segments.length > 2) {
-        const parentPath = '/' + segments[1];
-        setExpandedMenus(prev => ({
-          ...prev,
-          [parentPath]: true
-        }));
-      }
+      menuGroups.forEach(group => {
+        group.items.forEach(item => {
+          if (item.children) {
+            const isMatch = item.children.some(child => {
+              try {
+                const childUrl = new URL(child.path, window.location.origin);
+                const pathMatch = childUrl.pathname === pathname;
+                const childTab = childUrl.searchParams.get('tab') || '';
+                const tabMatch = childTab === tab;
+                return pathMatch && tabMatch;
+              } catch (e) {
+                return false;
+              }
+            });
+            if (isMatch) {
+              setExpandedMenus(prev => ({
+                ...prev,
+                [item.path]: true
+              }));
+            }
+          }
+        });
+      });
     }
-  }, [pathname]);
+  }, [pathname, tab]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -202,23 +222,29 @@ export default function Layout() {
       title: t.menuGroups.ops,
       items: [
         { path: '/projects', icon: '🏗️', label: t.menu.projects, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
         {
-          path: '/inventory',
-          icon: '📦',
-          label: t.menu.inventory,
+          path: '/inventory/master-stock',
+          icon: '🧱',
+          label: t.menu.constructionStore,
           perm: 'INV_MANAGE_STOCK',
-          badgeKey: 'inventory',
           children: [
-            { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/transfers', icon: '🔄', label: t.menu.transfers, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/reconciliation', icon: '⚖️', label: t.menu.reconciliation, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/batch-matrix', icon: '📦', label: t.menu.batchMatrix, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/reorder', icon: '🚨', label: t.menu.reorder, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/master-stock', icon: '🗃️', label: t.menu.masterStock, perm: 'INV_MANAGE_STOCK' },
-            { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain, perm: 'INV_MANAGE_STOCK' },
+            { path: '/inventory/master-stock', icon: '🗃️', label: t.menu.masterStock, perm: 'INV_MANAGE_STOCK' }
           ]
         },
+        {
+          path: '/inventory/pharma?tab=store',
+          icon: '💊',
+          label: t.menu.pharma,
+          perm: 'INV_MANAGE_STOCK',
+          children: [
+            { path: '/inventory/pharma?tab=transfers', icon: '🔄', label: t.menu.transfers, perm: 'INV_MANAGE_STOCK' },
+            { path: '/inventory/pharma?tab=expiry', icon: '📦', label: t.menu.batchMatrix, perm: 'INV_MANAGE_STOCK' },
+            { path: '/inventory/pharma?tab=reorder', icon: '🚨', label: t.menu.reorder, perm: 'INV_MANAGE_STOCK' },
+            { path: '/inventory/pharma?tab=sales', icon: '🛒', label: t.menu.salesHistory, perm: 'INV_MANAGE_STOCK' },
+          ]
+        },
+        { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain, perm: 'INV_MANAGE_STOCK' },
         { path: '/fixed-assets', icon: '🏗️', label: t.menu.assets, perm: 'FIN_VIEW_LEDGER' },
         { path: '/subcontractors', icon: '👷', label: t.menu.subcontractors, perm: 'INV_MANAGE_STOCK' },
         { path: '/real-estate', icon: '🏢', label: t.menu.realEstate, perm: 'INV_MANAGE_STOCK' },
@@ -294,6 +320,7 @@ export default function Layout() {
 
   const getFilteredMenu = () => {
     const filterItem = (item) => {
+      const basePath = item.path ? item.path.split('?')[0] : '';
       if (isPharma) {
         const forbiddenPharmaPaths = [
           '/projects',
@@ -305,7 +332,7 @@ export default function Layout() {
           '/invoices',
           '/corporate'
         ];
-        if (forbiddenPharmaPaths.includes(item.path)) return null;
+        if (forbiddenPharmaPaths.includes(basePath)) return null;
       } else {
         const isLocalServer = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (!isLocalServer) {
@@ -317,7 +344,7 @@ export default function Layout() {
             '/inventory/batch-matrix',
             '/inventory/reorder'
           ];
-          if (forbiddenNonPharmaPaths.includes(item.path)) return null;
+          if (forbiddenNonPharmaPaths.includes(basePath)) return null;
         }
       }
 
@@ -330,7 +357,7 @@ export default function Layout() {
           '/invoices',
           '/corporate'
         ];
-        if (forbiddenDesignPaths.includes(item.path)) return null;
+        if (forbiddenDesignPaths.includes(basePath)) return null;
       }
 
       if (item.children) {
@@ -451,6 +478,7 @@ export default function Layout() {
               .map(group => {
                 const visibleItems = group.items
                   .filter(item => {
+                    const itemBasePath = item.path ? item.path.split('?')[0] : '';
                     if (isMtayem) {
                       const allowedMtayemPaths = [
                         '/',
@@ -466,7 +494,10 @@ export default function Layout() {
                         '/hr',
                         '/me'
                       ];
-                      return allowedMtayemPaths.includes(item.path) || (item.children && item.children.some(child => allowedMtayemPaths.includes(child.path)));
+                      return allowedMtayemPaths.includes(itemBasePath) || (item.children && item.children.some(child => {
+                        const childBasePath = child.path ? child.path.split('?')[0] : '';
+                        return allowedMtayemPaths.includes(childBasePath);
+                      }));
                     }
                     return !item.perm || hasPermission(item.perm);
                   })
@@ -479,7 +510,8 @@ export default function Layout() {
                             '/inventory/pharma',
                             '/inventory/supply-chain'
                           ];
-                          return allowedMtayemPaths.includes(child.path);
+                          const childBasePath = child.path ? child.path.split('?')[0] : '';
+                          return allowedMtayemPaths.includes(childBasePath);
                         }
                         return !child.perm || hasPermission(child.perm);
                       });
@@ -496,30 +528,54 @@ export default function Layout() {
                     {isSidebarCollapsed ? '••' : group.title}
                   </h3>
                   <div className="space-y-1.5">
-                    {group.items.map((item, iIdx) => (
-                      <div key={iIdx} className="space-y-1">
-                        <NavLink
-                          to={item.path}
-                          onClick={(e) => handleItemClick(item, e)}
-                          className={({ isActive }) => `
-                              flex items-center gap-6 px-6 py-4 rounded-2xl transition-all duration-500 group relative overflow-hidden
-                              ${isActive
-                              ? (theme === 'dark' ? 'bg-white/15 text-white shadow-lg border border-white/15 font-bold' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 font-bold')
-                              : (theme === 'dark' ? 'text-white/90 font-semibold hover:bg-white/10 hover:text-white drop-shadow-sm' : 'text-slate-800 font-semibold hover:bg-slate-100 hover:text-slate-950')}
+                    {group.items.map((item, iIdx) => {
+                      const isItemActive = (() => {
+                        try {
+                          const itemUrl = new URL(item.path, window.location.origin);
+                          const pathMatch = itemUrl.pathname === pathname;
+                          const itemTab = itemUrl.searchParams.get('tab') || '';
+                          const tabMatch = itemTab === tab;
+                          return pathMatch && tabMatch;
+                        } catch (e) {
+                          return item.path === pathname;
+                        }
+                      })();
+                      const isChildActive = item.children && item.children.some(child => {
+                        try {
+                          const childUrl = new URL(child.path, window.location.origin);
+                          const pathMatch = childUrl.pathname === pathname;
+                          const childTab = childUrl.searchParams.get('tab') || '';
+                          const tabMatch = childTab === tab;
+                          return pathMatch && tabMatch;
+                        } catch (e) {
+                          return false;
+                        }
+                      });
+                      const isReallyActive = isItemActive || isChildActive;
+
+                      return (
+                        <div key={iIdx} className="space-y-1">
+                          <NavLink
+                            to={item.path}
+                            onClick={(e) => handleItemClick(item, e)}
+                            className={`
+                              flex items-center gap-6 px-6 py-4 rounded-2xl transition-all duration-500 group relative overflow-hidden w-full text-left
+                              ${isReallyActive
+                                ? (theme === 'dark' ? 'bg-white/15 text-white shadow-lg border border-white/15 font-bold' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 font-bold')
+                                : (theme === 'dark' ? 'text-white/90 font-semibold hover:bg-white/10 hover:text-white drop-shadow-sm' : 'text-slate-800 font-semibold hover:bg-slate-100 hover:text-slate-950')}
                               ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                             `}
-                        >
-                          {({ isActive }) => (
+                          >
                             <>
-                              {isActive && (
+                              {isReallyActive && (
                                 <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1.5 ${theme === 'dark' ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]' : 'bg-white'}`}></div>
                               )}
-                              <span className={`text-2xl transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110 opacity-90 group-hover:opacity-100'}`}>
+                              <span className={`text-2xl transition-all duration-500 ${isReallyActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110 opacity-90 group-hover:opacity-100'}`}>
                                 {item.icon}
                               </span>
                               {!isSidebarCollapsed && (
                                 <span className={`font-bold text-[17px] tracking-normal transition-all duration-300 ${
-                                  isActive 
+                                  isReallyActive 
                                     ? 'translate-x-1 text-white drop-shadow-md font-extrabold' 
                                     : (theme === 'dark' ? 'text-white/90 drop-shadow-sm' : 'text-slate-800 drop-shadow-none')
                                 }`}>
@@ -549,31 +605,43 @@ export default function Layout() {
                                 </button>
                               )}
                             </>
-                          )}
-                        </NavLink>
+                          </NavLink>
 
-                        {/* SUBMENU ITEMS */}
-                        {expandedMenus[item.path] && !isSidebarCollapsed && item.children && item.children.length > 0 && (
-                          <div className={`mt-2.5 space-y-1.5 border-slate-200/50 dark:border-white/10 ${language === 'ar' ? 'mr-12 border-r pr-4' : 'ml-12 border-l pl-4'}`}>
-                            {item.children.map((child, cIdx) => (
-                              <NavLink
-                                key={cIdx}
-                                to={child.path}
-                                className={({ isActive }) => `
-                                  flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 font-bold text-[14px]
-                                  ${isActive
-                                    ? (theme === 'dark' ? 'bg-white/10 text-white shadow-md border border-white/5 font-extrabold' : 'bg-slate-200/60 text-slate-950 font-extrabold shadow-sm')
-                                    : (theme === 'dark' ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80')}
-                                `}
-                              >
-                                <span className="text-lg">{child.icon}</span>
-                                <span>{child.label}</span>
-                              </NavLink>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          {/* SUBMENU ITEMS */}
+                          {expandedMenus[item.path] && !isSidebarCollapsed && item.children && item.children.length > 0 && (
+                            <div className={`mt-2.5 space-y-1.5 border-slate-200/50 dark:border-white/10 ${language === 'ar' ? 'mr-12 border-r pr-4' : 'ml-12 border-l pl-4'}`}>
+                              {item.children.map((child, cIdx) => {
+                                const isChildReallyActive = (() => {
+                                  try {
+                                    const childUrl = new URL(child.path, window.location.origin);
+                                    const childTab = childUrl.searchParams.get('tab') || '';
+                                    return childUrl.pathname === pathname && childTab === tab;
+                                  } catch (e) {
+                                    return child.path === pathname;
+                                  }
+                                })();
+
+                                return (
+                                  <NavLink
+                                    key={cIdx}
+                                    to={child.path}
+                                    className={`
+                                      flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 font-bold text-[14px] w-full text-left
+                                      ${isChildReallyActive
+                                        ? (theme === 'dark' ? 'bg-white/10 text-white shadow-md border border-white/5 font-extrabold' : 'bg-slate-200/60 text-slate-950 font-extrabold shadow-sm')
+                                        : (theme === 'dark' ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80')}
+                                    `}
+                                  >
+                                    <span className="text-lg">{child.icon}</span>
+                                    <span>{child.label}</span>
+                                  </NavLink>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
