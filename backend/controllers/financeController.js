@@ -2,6 +2,66 @@ const pool = require('../config/db');
 const { logAudit } = require('../utils/helpers');
 const InterCompanyService = require('../services/interCompanyService');
 
+function resolveAllowedCompanies(req) {
+    if (!req.user) return null;
+
+    const username = (req.user.username || '').toUpperCase();
+    const isMtayem = username === 'MTAYEM';
+    const isMsobhi = username === 'MSOBHI';
+    const selectedComp = req.user.selectedCompany;
+
+    const mapComp = (c) => {
+        if (!c) return null;
+        const nameLower = c.toLowerCase();
+        if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
+            return { id: 2, name: 'Design Concept' };
+        }
+        if (nameLower.includes('master') || nameLower.includes('ماستر')) {
+            return { id: 3, name: 'Master Builder' };
+        }
+        if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
+            return { id: 4, name: 'PRIMEMED PHARMA' };
+        }
+        if (nameLower.includes('ted') || nameLower.includes('تيد')) {
+            return { id: 1, name: 'TED Capital' };
+        }
+        return null;
+    };
+
+    // If user has chosen a specific company (and it's not the "all" wildcard)
+    if (selectedComp && !['all', 'كل الشركات', 'all companies'].includes(selectedComp.toLowerCase())) {
+        const resolved = mapComp(selectedComp);
+        if (resolved) {
+            // Apply security constraints for MTAYEM & MSOBHI
+            if (isMtayem && ![1, 4].includes(resolved.id)) {
+                return { ids: [1, 4], names: ['TED Capital', 'PRIMEMED PHARMA'] };
+            }
+            if (isMsobhi && resolved.id !== 2) {
+                return { ids: [2], names: ['Design Concept'] };
+            }
+            return { ids: [resolved.id], names: [resolved.name] };
+        }
+    }
+
+    // Default allowed scopes when no specific company is selected
+    if (isMtayem) {
+        return { ids: [1, 4], names: ['TED Capital', 'PRIMEMED PHARMA'] };
+    }
+    if (isMsobhi) {
+        return { ids: [2], names: ['Design Concept'] };
+    }
+
+    // If user has a linked company in their database profile
+    if (req.user.linkedCompany) {
+        const resolved = mapComp(req.user.linkedCompany);
+        if (resolved) {
+            return { ids: [resolved.id], names: [resolved.name] };
+        }
+    }
+
+    return null; // Admin / Super Admin (unrestricted)
+}
+
 class FinanceController {
     /**
      * Strategic Inter-Company Reconciliation
@@ -34,27 +94,36 @@ class FinanceController {
     async getFinancialStatements(req, res) {
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let ledgerFilter = "AND l.is_deleted = FALSE AND sub.is_deleted = FALSE";
             let coaFilter = "";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 ledgerFilter += ` AND l.company_id = $1`;
                 
                 let entityName = "";
-                if (String(companyId) === '1') entityName = 'TED Capital';
-                else if (String(companyId) === '2') entityName = 'Design Concept';
-                else if (String(companyId) === '3') entityName = 'Master Builder';
-                else if (String(companyId) === '4') entityName = 'PRIMEMED PHARMA';
+                if (String(targetId) === '1') entityName = 'TED Capital';
+                else if (String(targetId) === '2') entityName = 'Design Concept';
+                else if (String(targetId) === '3') entityName = 'Master Builder';
+                else if (String(targetId) === '4') entityName = 'PRIMEMED PHARMA';
                 
                 if (entityName) {
                     params.push(entityName);
                     coaFilter = ` AND (c.company_entity = 'All' OR c.company_entity = $2)`;
                 }
+            } else if (allowed) {
+                ledgerFilter += ` AND l.company_id IN (${allowed.ids.join(',')})`;
+                coaFilter = ` AND (c.company_entity = 'All' OR c.company_entity IN (${allowed.names.map(n => `'${n}'`).join(',')}))`;
             }
 
             // 1. جلب شجرة الحسابات مع الأرصدة المحدثة
-            // نستخدم استعلاماً يحسب الرصيد من جدول الـ ledger لكل حساب
             const coaRes = await pool.query(`
                 SELECT c.id, c.account_code, c.account_name, c.account_type, c.hierarchy_level,
                     COALESCE(
@@ -88,10 +157,9 @@ class FinanceController {
                     revenue: accounts.filter(a => a.account_type === 'Revenue' && a.hierarchy_level === 1),
                     expense: accounts.filter(a => a.account_type === 'Expense' && a.hierarchy_level === 1),
                 },
-                trialBalance: accounts.filter(a => a.hierarchy_level === 3 || a.balance != 0) // حسابات المستوى التفصيلي أو التي بها رصيد
+                trialBalance: accounts.filter(a => a.hierarchy_level === 3 || a.balance != 0)
             };
 
-            // حساب المجاميع الكبرى
             const sum = (arr) => arr.reduce((total, acc) => total + parseFloat(acc.balance), 0);
 
             const summary = {
@@ -127,14 +195,33 @@ class FinanceController {
     async getFinancialDashboard(req, res) {
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let lFilter = "AND l.is_deleted = FALSE AND c.is_deleted = FALSE";
+            let customerFilter = "WHERE is_deleted = FALSE";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 lFilter += " AND l.company_id = $1";
+                
+                let entityName = "";
+                if (String(targetId) === '1') entityName = 'TED Capital';
+                else if (String(targetId) === '2') entityName = 'Design Concept';
+                else if (String(targetId) === '3') entityName = 'Master Builder';
+                else if (String(targetId) === '4') entityName = 'PRIMEMED PHARMA';
+                if (entityName) {
+                    customerFilter += ` AND company_name ILIKE '%${entityName}%'`;
+                }
+            } else if (allowed) {
+                lFilter += ` AND l.company_id IN (${allowed.ids.join(',')})`;
+                customerFilter += ` AND company_name IN (${allowed.names.map(n => `'${n}'`).join(',')})`;
             }
 
-            // we pull from source tables for real-time dashboard accuracy as requested by "INCORRECT RESULTS" feedback
             const stats = await pool.query(`
                 SELECT 
                     -- 1. AR (Receivables) from Ledger
@@ -196,7 +283,7 @@ class FinanceController {
                     ), 0) as total_expenses,
 
                     -- 7. Count
-                    (SELECT COUNT(*) FROM customers WHERE is_deleted = FALSE) as customer_count
+                    (SELECT COUNT(*) FROM customers ${customerFilter}) as customer_count
             `, params);
 
             const data = stats.rows[0];
@@ -221,12 +308,22 @@ class FinanceController {
         console.log("📥 [GET] /api/finance/ap-balances");
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let lFilter = "AND l.is_deleted = FALSE AND coa.is_deleted = FALSE";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 lFilter += " AND l.company_id = $1";
+            } else if (allowed) {
+                lFilter += ` AND l.company_id IN (${allowed.ids.join(',')})`;
             }
+
             const result = await pool.query(`
                 SELECT 
                     coa.account_name, coa.account_code,
@@ -251,12 +348,22 @@ class FinanceController {
         console.log("📥 [GET] /api/finance/inventory-valuation");
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let filter = "WHERE i.quantity != 0";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
-                filter += " AND p.company_id = $1";
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
+                filter += " AND (p.company_id = $1 OR i.company_id = $1)";
+            } else if (allowed) {
+                filter += ` AND (p.company_id IN (${allowed.ids.join(',')}) OR i.company_id IN (${allowed.ids.join(',')}) OR i.project_name IN (SELECT name FROM projects WHERE company_id IN (${allowed.ids.join(',')})))`;
             }
+
             const result = await pool.query(`
                 SELECT 
                     i.item_name, i.project_name, i.quantity, i.uom, i.buy_price,
@@ -278,12 +385,22 @@ class FinanceController {
         console.log("📥 [GET] /api/finance/cash-balances");
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let lFilter = "AND l.is_deleted = FALSE AND coa.is_deleted = FALSE";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 lFilter += " AND l.company_id = $1";
+            } else if (allowed) {
+                lFilter += ` AND l.company_id IN (${allowed.ids.join(',')})`;
             }
+
             const result = await pool.query(`
                 SELECT 
                     coa.account_name, coa.account_code,
@@ -310,12 +427,22 @@ class FinanceController {
     async getMonthlyPerformance(req, res) {
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let lFilter = "AND l.is_deleted = FALSE";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 lFilter += " AND l.company_id = $1";
+            } else if (allowed) {
+                lFilter += ` AND l.company_id IN (${allowed.ids.join(',')})`;
             }
+
             const result = await pool.query(`
                 SELECT 
                     TO_CHAR(l.created_at, 'YYYY-MM') as month_year,
@@ -341,11 +468,20 @@ class FinanceController {
     async getBudgetComparison(req, res) {
         try {
             const companyId = req.query.company_id;
+            const allowed = resolveAllowedCompanies(req);
+            
             let filter = "WHERE p.is_deleted = FALSE";
             const params = [];
+            
             if (companyId && companyId !== 'all') {
-                params.push(parseInt(companyId));
+                let targetId = parseInt(companyId);
+                if (allowed && !allowed.ids.includes(targetId)) {
+                    targetId = allowed.ids[0];
+                }
+                params.push(targetId);
                 filter += " AND p.company_id = $1";
+            } else if (allowed) {
+                filter += ` AND p.company_id IN (${allowed.ids.join(',')})`;
             }
 
             const result = await pool.query(`

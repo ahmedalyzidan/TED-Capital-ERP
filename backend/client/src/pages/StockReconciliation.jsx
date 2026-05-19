@@ -47,7 +47,10 @@ function StockReconciliation({ isSubcomponent }) {
         qty: Number(item.remaining_qty || item.quantity || 0)
       }));
 
-      if (mappedPharma.length < 10) {
+      const activeComp = localStorage.getItem('active_company') || '';
+      const isPharmaAllowed = !activeComp || activeComp.toUpperCase().includes('PRIMEMED') || activeComp.toLowerCase() === 'all' || activeComp === 'كل الشركات';
+      
+      if (mappedPharma.length < 10 && isPharmaAllowed) {
         const mockPharma = [
           {
             id: 9001,

@@ -38,120 +38,232 @@ function StockTransfers({ isSubcomponent }) {
       setTransfers(transfersRes.data.data || []);
 
       let rawInv = inventoryRes.data.data || [];
-      // Filter for Pharma items (exactly like PharmaInventory.jsx)
-      let pharmaItems = rawInv.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
       
-      let mappedPharma = pharmaItems.map(item => ({
-        ...item,
-        quantity: Number(item.remaining_qty || item.quantity || 0),
-        qty: Number(item.remaining_qty || item.quantity || 0)
-      }));
-
-      if (mappedPharma.length < 10) {
-        const mockPharma = [
-          {
-            id: 9001,
-            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
-            active_substance: 'Paracetamol 500mg + Caffeine 65mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 1420,
-            remaining_qty: 1420,
-            qty: 1420,
-            unit_cost: 45,
-            batch_no: 'PH-2026-A10',
-            expiry_date: '2028-05-20',
-            supplier: 'شركة جلاكسو سميث كلاين (GSK)',
-            min_stock_level: 100,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9002,
-            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
-            active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 510,
-            remaining_qty: 510,
-            qty: 510,
-            unit_cost: 130,
-            batch_no: 'PH-2026-B88',
-            expiry_date: '2027-11-15',
-            supplier: 'شركة إيفا فارما',
-            min_stock_level: 50,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9003,
-            item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
-            active_substance: 'Morphine Sulfate 10mg/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'CONTROLLED',
-            storage_temp: '20-25°C (قفل أمني)',
-            quantity: 45,
-            remaining_qty: 45,
-            qty: 45,
-            unit_cost: 350,
-            batch_no: 'NAR-2026-X01',
-            expiry_date: '2027-02-01',
-            supplier: 'هيئة الشراء الموحد (مراقبة)',
-            min_stock_level: 10,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9004,
-            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
-            active_substance: 'Insulin Glargine 100 IU/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'COLD_CHAIN',
-            storage_temp: '2-8°C (ثلاجة)',
-            quantity: 185,
-            remaining_qty: 185,
-            qty: 185,
-            unit_cost: 280,
-            batch_no: 'COLD-2026-99',
-            expiry_date: '2026-12-10',
-            supplier: 'شركة سانوفي (Sanofi)',
-            min_stock_level: 30,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9005,
-            item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
-            active_substance: 'Sodium Chloride 0.9%',
-            dosage_form: 'محلول وريدي (IV Infusion)',
-            pharma_category: 'CONSUMABLE',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 2650,
-            remaining_qty: 2650,
-            qty: 2650,
-            unit_cost: 25,
-            batch_no: 'NS-2026-777',
-            expiry_date: '2029-01-01',
-            supplier: 'شركة النيل للأدوية',
-            min_stock_level: 500,
-            uom: 'عبوة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          }
-        ];
-        const existingIds = new Set(mappedPharma.map(i => i.id));
-        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
-        pharmaItems = [...mappedPharma, ...newMocks];
+      const activeComp = localStorage.getItem('active_company') || '';
+      const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
+      
+      let filteredItems = rawInv;
+      if (isPharma) {
+        filteredItems = rawInv.filter(i => 
+          i.category === 'PHARMA' || 
+          i.category?.includes('أدوية') || 
+          i.category?.includes('مواد عامة') || 
+          i.category?.includes('مواد طبية') || 
+          i.warehouse?.includes('مخزن الصيدليات') || 
+          i.warehouse?.includes('المستودع الرئيسي') || 
+          i.warehouse?.includes('المخزن الرئيسي') || 
+          i.item_name?.includes('دواء') || 
+          i.item_name?.includes('حقن') || 
+          i.item_name?.includes('أقراص') || 
+          i.item_name?.includes('فيال')
+        );
       } else {
-        pharmaItems = mappedPharma;
+        filteredItems = rawInv.filter(i => 
+          !(i.category === 'PHARMA' || 
+            i.category?.includes('أدوية') || 
+            i.category?.includes('مواد طبية') || 
+            i.warehouse?.includes('مخزن الصيدليات') || 
+            i.item_name?.includes('دواء') || 
+            i.item_name?.includes('حقن') || 
+            i.item_name?.includes('أقراص') || 
+            i.item_name?.includes('فيال'))
+        );
       }
 
-      setInventory(pharmaItems.filter(i => i.qty > 0));
+      let mappedItems = filteredItems.map(item => {
+        return {
+          ...item,
+          quantity: Number(item.remaining_qty || item.quantity || 0),
+          qty: Number(item.remaining_qty || item.quantity || 0),
+          batch_no: item.batch_no || item.batch_number || (isPharma ? 'PH-BATCH-001' : 'GEN-BATCH-001')
+        };
+      });
 
-      const prjs = projectsRes.data.data || [];
-      // Provide default projects starting with the Pharmacy Store
-      setProjects([{ id: 9, name: 'مخزن الصيدليات والأدوية' }, ...prjs]);
+      let finalItems = mappedItems;
+      const getMockItemRemainingQty = (itemId, defaultQty) => {
+        const stored = localStorage.getItem(`mock_item_qty_${itemId}`);
+        if (stored !== null) return Number(stored);
+        localStorage.setItem(`mock_item_qty_${itemId}`, defaultQty);
+        return defaultQty;
+      };
+
+      if (mappedItems.length < 5) {
+        if (isPharma) {
+          const mockPharma = [
+            {
+              id: 9001,
+              item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
+              active_substance: 'Paracetamol 500mg + Caffeine 65mg',
+              dosage_form: 'أقراص (Tablets)',
+              pharma_category: 'OTC',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 1500,
+              remaining_qty: getMockItemRemainingQty(9001, 1420),
+              qty: getMockItemRemainingQty(9001, 1420),
+              unit_cost: 45,
+              batch_no: 'PH-2026-A10',
+              expiry_date: '2028-05-20',
+              supplier: 'شركة جلاكسو سميث كلاين (GSK)',
+              min_stock_level: 100,
+              uom: 'علبة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9002,
+              item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
+              active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
+              dosage_form: 'أقراص (Tablets)',
+              pharma_category: 'OTC',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 600,
+              remaining_qty: getMockItemRemainingQty(9002, 510),
+              qty: getMockItemRemainingQty(9002, 510),
+              unit_cost: 130,
+              batch_no: 'PH-2026-B88',
+              expiry_date: '2027-11-15',
+              supplier: 'شركة إيفا فارما',
+              min_stock_level: 50,
+              uom: 'علبة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9003,
+              item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
+              active_substance: 'Morphine Sulfate 10mg/ml',
+              dosage_form: 'حقن فيال (Vials)',
+              pharma_category: 'CONTROLLED',
+              storage_temp: '20-25°C (قفل أمني)',
+              quantity: 50,
+              remaining_qty: getMockItemRemainingQty(9003, 45),
+              qty: getMockItemRemainingQty(9003, 45),
+              unit_cost: 350,
+              batch_no: 'NAR-2026-X01',
+              expiry_date: '2027-02-01',
+              supplier: 'هيئة الشراء الموحد (مراقبة)',
+              min_stock_level: 10,
+              uom: 'فيال',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9004,
+              item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
+              active_substance: 'Insulin Glargine 100 IU/ml',
+              dosage_form: 'حقن فيال (Vials)',
+              pharma_category: 'COLD_CHAIN',
+              storage_temp: '2-8°C (ثلاجة)',
+              quantity: 200,
+              remaining_qty: getMockItemRemainingQty(9004, 185),
+              qty: getMockItemRemainingQty(9004, 185),
+              unit_cost: 280,
+              batch_no: 'COLD-2026-99',
+              expiry_date: '2026-12-10',
+              supplier: 'شركة سانوفي (Sanofi)',
+              min_stock_level: 30,
+              uom: 'فيال',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9005,
+              item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
+              active_substance: 'Sodium Chloride 0.9%',
+              dosage_form: 'محلول وريدي (IV Infusion)',
+              pharma_category: 'CONSUMABLE',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 3000,
+              remaining_qty: getMockItemRemainingQty(9005, 2650),
+              qty: getMockItemRemainingQty(9005, 2650),
+              unit_cost: 25,
+              batch_no: 'NS-2026-777',
+              expiry_date: '2029-01-01',
+              supplier: 'شركة النيل للأدوية',
+              min_stock_level: 500,
+              uom: 'عبوة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            }
+          ];
+          const existingIds = new Set(mappedItems.map(i => i.id));
+          const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+          finalItems = [...mappedItems, ...newMocks];
+        } else {
+          const mockConstruction = [
+            {
+              id: 8001,
+              item_name: 'حديد تسليح عيار 60 (Reinforcement Steel)',
+              active_substance: 'Grade 60 Steel Rebar',
+              dosage_form: 'طن (Tons)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'خارجي (Outdoor)',
+              quantity: 150,
+              remaining_qty: getMockItemRemainingQty(8001, 120),
+              qty: getMockItemRemainingQty(8001, 120),
+              unit_cost: 28000,
+              batch_no: 'STL-2026-01',
+              expiry_date: '2036-12-31',
+              supplier: 'حديد عز',
+              min_stock_level: 10,
+              uom: 'طن',
+              warehouse: 'المخزن الرئيسي'
+            },
+            {
+              id: 8002,
+              item_name: 'أسمنت بورتلاندي عادي (Portland Cement)',
+              active_substance: 'OPC Cement 50kg',
+              dosage_form: 'شكارة (Bags)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'جاف (Dry)',
+              quantity: 2000,
+              remaining_qty: getMockItemRemainingQty(8002, 1750),
+              qty: getMockItemRemainingQty(8002, 1750),
+              unit_cost: 95,
+              batch_no: 'CMT-2026-09',
+              expiry_date: '2026-11-30',
+              supplier: 'أسمنت السويس',
+              min_stock_level: 100,
+              uom: 'شكارة',
+              warehouse: 'المخزن الرئيسي'
+            },
+            {
+              id: 8003,
+              item_name: 'رمل أحمر مبطن (Red Sand)',
+              active_substance: 'Construction Red Sand',
+              dosage_form: 'متر مكعب (CBM)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'خارجي (Outdoor)',
+              quantity: 500,
+              remaining_qty: getMockItemRemainingQty(8003, 410),
+              qty: getMockItemRemainingQty(8003, 410),
+              unit_cost: 180,
+              batch_no: 'SND-2026-03',
+              expiry_date: '2029-12-31',
+              supplier: 'محجر حلوان',
+              min_stock_level: 20,
+              uom: 'متر مكعب',
+              warehouse: 'المخزن الرئيسي'
+            }
+          ];
+          const existingIds = new Set(mappedItems.map(i => i.id));
+          const newMocks = mockConstruction.filter(m => !existingIds.has(m.id));
+          finalItems = [...mappedItems, ...newMocks];
+        }
+      }
+
+      setInventory(finalItems.filter(i => i.qty > 0));
+
+      const rawProjects = projectsRes.data.data || [];
+      const activeLower = activeComp.toLowerCase();
+      
+      const filteredProj = rawProjects.filter(proj => {
+        if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+        const projCompLower = (proj.company || '').toLowerCase();
+        if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+        if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+        if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+        if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+        return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+      });
+
+      const defaultStore = isPharma ? 'مخزن الصيدليات والأدوية' : 'المخزن الرئيسي';
+      setProjects([{ id: 9, name: defaultStore }, ...filteredProj]);
     } catch (err) {
       console.error('Failed to fetch transfers data', err);
     } finally {

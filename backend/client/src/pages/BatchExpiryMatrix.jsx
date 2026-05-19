@@ -29,7 +29,10 @@ function BatchExpiryMatrix({ isSubcomponent }) {
       // Filter Pharma items (exactly like PharmaInventory.jsx)
       let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
 
-      if (pharmaItems.length < 10) {
+      const activeComp = localStorage.getItem('active_company') || '';
+      const isPharmaAllowed = !activeComp || activeComp.toUpperCase().includes('PRIMEMED') || activeComp.toLowerCase() === 'all' || activeComp === 'كل الشركات';
+      
+      if (pharmaItems.length < 10 && isPharmaAllowed) {
         const mockPharma = [
           {
             id: 9001,

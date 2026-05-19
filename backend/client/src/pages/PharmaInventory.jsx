@@ -534,19 +534,67 @@ function PharmaInventory() {
 
       // Package 1: Automated GL Entry for Stock Disposal Loss
       try {
+        const activeComp = localStorage.getItem('active_company') || '';
+        let activeCompId = 4; // default
+        let activeCompName = 'PRIMEMED PHARMA';
+        
+        if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
+          activeCompId = 2;
+          activeCompName = 'Design Concept';
+        } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
+          activeCompId = 3;
+          activeCompName = 'Master Builder';
+        } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
+          activeCompId = 4;
+          activeCompName = 'PRIMEMED PHARMA';
+        } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
+          activeCompId = 1;
+          activeCompName = 'TED Capital';
+        }
+
+        const getAccountMapping = (compId) => {
+          if (compId === 4) {
+            return {
+              disposalLoss: 'تسويات جردية (خسائر بضاعة تالفة ومعدمة)',
+              disposalInv: 'مخزون الأدوية والمستلزمات - بريميميد فارما'
+            };
+          } else if (compId === 2) {
+            return {
+              disposalLoss: 'تسويات جردية (خسائر خامات تالفة ومعدمة)',
+              disposalInv: 'مخزون خامات ومواد'
+            };
+          } else if (compId === 3) {
+            return {
+              disposalLoss: 'تسويات جردية (خسائر خامات تالفة ومعدمة)',
+              disposalInv: 'مخزون خامات ومواد'
+            };
+          } else {
+            return {
+              disposalLoss: 'تسويات جردية (خسائر خامات تالفة ومعدمة)',
+              disposalInv: 'مخزون خامات ومواد'
+            };
+          }
+        };
+
+        const accountMap = getAccountMapping(activeCompId);
+
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'تسويات جردية (خسائر بضاعة تالفة ومعدمة)',
+          account_name: accountMap.disposalLoss,
           transaction_type: 'Debit',
           amount: totalLoss,
           reference_id: payload.protocol_no,
-          description: `إثبات خسائر إعدام وتكهين أدوية وتوالف لصنف: ${disposalDrugItem} (باتش: ${disposalBatchNo})`
+          description: `إثبات خسائر إعدام وتكهين أدوية وتوالف لصنف: ${disposalDrugItem} (باتش: ${disposalBatchNo})`,
+          company: activeCompName,
+          company_id: activeCompId
         });
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'مخزون خامات ومواد (مستودع الأدوية)',
+          account_name: accountMap.disposalInv,
           transaction_type: 'Credit',
           amount: totalLoss,
           reference_id: payload.protocol_no,
-          description: `تخفيض المخزون الدوائي بموجب محضر إعدام وتكهين رقم: ${payload.protocol_no}`
+          description: `تخفيض المخزون الدوائي بموجب محضر إعدام وتكهين رقم: ${payload.protocol_no}`,
+          company: activeCompName,
+          company_id: activeCompId
         });
       } catch (glErr) {
         console.error("GL Disposal Entry Error", glErr);
@@ -695,6 +743,61 @@ function PharmaInventory() {
 
       // 2. Package 1: Automated GL Entries (Double-Entry Bookkeeping)
       try {
+        const activeComp = localStorage.getItem('active_company') || '';
+        let activeCompId = 4; // default
+        let activeCompName = 'PRIMEMED PHARMA';
+        
+        if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
+          activeCompId = 2;
+          activeCompName = 'Design Concept';
+        } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
+          activeCompId = 3;
+          activeCompName = 'Master Builder';
+        } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
+          activeCompId = 4;
+          activeCompName = 'PRIMEMED PHARMA';
+        } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
+          activeCompId = 1;
+          activeCompName = 'TED Capital';
+        }
+
+        const getAccountMapping = (compId) => {
+          if (compId === 4) {
+            return {
+              cash: 'صندوق نقدية - بريميميد فارما',
+              bank: 'بنك فلسطين - بريميميد فارما',
+              inventory: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+              revenue: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
+              cogs: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما'
+            };
+          } else if (compId === 2) {
+            return {
+              cash: 'صندوق نقدية - ديزاين كونسبت',
+              bank: 'بنك الأهلي - ديزاين كونسبت',
+              inventory: 'مخزون خامات ومواد',
+              revenue: 'إيرادات مستخلصات وخدمات',
+              cogs: 'تكلفة خامات ومواد (منصرف)'
+            };
+          } else if (compId === 3) {
+            return {
+              cash: 'صندوق نقدية - ماستر بيلدر',
+              bank: 'بنك - ماستر بيلدر',
+              inventory: 'مخزون خامات ومواد',
+              revenue: 'إيرادات مستخلصات وخدمات',
+              cogs: 'تكلفة خامات ومواد (منصرف)'
+            };
+          } else {
+            return {
+              cash: 'صندوق نقدية - تيد كابيتال',
+              bank: 'بنك CIB - تيد كابيتال',
+              inventory: 'مخزون خامات ومواد',
+              revenue: 'إيرادات مستخلصات وخدمات',
+              cogs: 'تكلفة خامات ومواد (منصرف)'
+            };
+          }
+        };
+
+        const accountMap = getAccountMapping(activeCompId);
         const tpaClaimVal = (totalCost * tpaCoveragePercent) / 100;
         const patientCopayVal = totalCost - tpaClaimVal;
 
@@ -705,53 +808,53 @@ function PharmaInventory() {
             amount: tpaClaimVal,
             reference_id: `TPA-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
             description: `مطالبة تأمين طبي للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name}, كود الموافقة: ${tpaApprovalCode})`,
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
         }
         if (patientCopayVal > 0) {
           await api.post('/dynamic/add/general_ledger', {
-            account_name: 'صندوق نقدية - بريميميد فارما',
+            account_name: accountMap.cash,
             transaction_type: 'Debit',
             amount: patientCopayVal,
             reference_id: `CASH-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
             description: `تحصيل نسبة تحمل المريض (Co-Pay) بالعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
         }
 
         // Credit Sales Revenue
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
+          account_name: accountMap.revenue,
           transaction_type: 'Credit',
           amount: totalCost,
           reference_id: `REV-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
           description: `إيرادات مبيعات أدوية وصرف للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
 
         // Debit Cost of Goods Sold (COGS)
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
+          account_name: accountMap.cogs,
           transaction_type: 'Debit',
           amount: totalCost,
           reference_id: `COGS-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
           description: `تكلفة الأدوية المنصرفة للعيادة: ${recipientClinic} (صنف: ${dispenseDrug.item_name})`,
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
 
         // Credit Inventory Asset
         await api.post('/dynamic/add/general_ledger', {
-          account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+          account_name: accountMap.inventory,
           transaction_type: 'Credit',
           amount: totalCost,
           reference_id: `DISP-${dispenseDrug.id}-${Date.now().toString().slice(-4)}`,
           description: `تخفيض مخزون الأدوية بموجب إذن صرف للعيادة: ${recipientClinic}`,
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
       } catch (glErr) {
         console.error("GL Dispense Entry Error", glErr);

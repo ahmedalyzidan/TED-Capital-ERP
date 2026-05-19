@@ -74,7 +74,14 @@ export default function Layout() {
         users: "المستخدمين",
         expenses: "المصروفات",
         accountant360: "المحاسب 360 ⚡",
-        settings: "الإعدادات"
+        settings: "الإعدادات",
+        interCompany: "المعاملات بين الشركات 🏢",
+        attendance: "سجل الحضور 📅",
+        rbacMatrix: "مصفوفة الصلاحيات 🛡️",
+        arDue: "المدفوعات المستحقة (AR) 📈",
+        apDue: "المستحقات للدفع (AP) 📉",
+        inventoryValuation: "تقييم المخزون 📊",
+        cashBalances: "أرصدة النقدية 💵"
       }
     },
     en: {
@@ -126,7 +133,14 @@ export default function Layout() {
         users: "IAM",
         expenses: "Expenses",
         accountant360: "Accountant 360 ⚡",
-        settings: "Settings"
+        settings: "Settings",
+        interCompany: "Inter-Company 🏢",
+        attendance: "Attendance 📅",
+        rbacMatrix: "RBAC Matrix 🛡️",
+        arDue: "AR Due List 📈",
+        apDue: "AP Due List 📉",
+        inventoryValuation: "Inventory Valuation 📊",
+        cashBalances: "Cash Balances 💵"
       }
     }
   };
@@ -176,6 +190,11 @@ export default function Layout() {
         { path: '/inventory', icon: '📦', label: t.menu.inventory, perm: 'INV_MANAGE_STOCK', badgeKey: 'inventory' },
         { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
         { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/transfers', icon: '🔄', label: t.menu.transfers, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/reconciliation', icon: '⚖️', label: t.menu.reconciliation, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/batch-matrix', icon: '📦', label: t.menu.batchMatrix, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/reorder', icon: '🚨', label: t.menu.reorder, perm: 'INV_MANAGE_STOCK' },
+        { path: '/inventory/master-stock', icon: '🗃️', label: t.menu.masterStock, perm: 'INV_MANAGE_STOCK' },
         { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain, perm: 'INV_MANAGE_STOCK' },
         { path: '/fixed-assets', icon: '🏗️', label: t.menu.assets, perm: 'FIN_VIEW_LEDGER' },
         { path: '/subcontractors', icon: '👷', label: t.menu.subcontractors, perm: 'INV_MANAGE_STOCK' },
@@ -194,11 +213,18 @@ export default function Layout() {
       items: [
         { path: '/finance/360', icon: '⚡', label: t.menu.accountant360, perm: 'FIN_VIEW_LEDGER' },
         { path: '/finance', icon: '💰', label: t.menu.finance, perm: 'FIN_VIEW_LEDGER', badgeKey: 'finance' },
+        { path: '/finance/ar-due', icon: '📈', label: t.menu.arDue, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/finance/ap-due', icon: '📉', label: t.menu.apDue, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/finance/inventory-valuation', icon: '📊', label: t.menu.inventoryValuation, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/finance/cash-balances', icon: '💵', label: t.menu.cashBalances, perm: 'FIN_VIEW_LEDGER' },
+        { path: '/inter-company', icon: '🏢', label: t.menu.interCompany, perm: 'FIN_VIEW_LEDGER' },
         { path: '/expenses', icon: '💸', label: t.menu.expenses, perm: 'FIN_VIEW_LEDGER' },
         { path: '/invoices', icon: '🧾', label: t.menu.invoices, perm: 'FIN_POST_ENTRY' },
         { path: '/hr', icon: '👥', label: t.menu.hr, perm: 'HR_VIEW_STAFF' },
+        { path: '/attendance', icon: '📅', label: t.menu.attendance, perm: 'HR_VIEW_STAFF' },
         { path: '/corporate', icon: '🏛️', label: t.menu.corporate, perm: 'HR_VIEW_STAFF' },
         { path: '/users', icon: '🔐', label: t.menu.users, perm: 'IAM_MANAGE_ROLES' },
+        { path: '/iam/matrix', icon: '🛡️', label: t.menu.rbacMatrix, perm: 'IAM_MANAGE_ROLES' },
         { path: '/settings', icon: '⚙️', label: t.menu.settings, perm: 'IAM_MANAGE_ROLES' },
       ]
     },
@@ -212,27 +238,68 @@ export default function Layout() {
 
   const isMtayem = (user?.username || '').toUpperCase() === 'MTAYEM';
 
-  const mtayemMenuGroups = [
-    {
-      title: t.menuGroups.ops || "العمليات والمخازن",
-      items: [
-        { path: '/inventory/supply-chain', icon: '🚛', label: t.menu.supplyChain },
-        { path: '/inventory/pharma', icon: '💊', label: t.menu.pharma },
-        { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue },
-      ]
-    },
-    {
-      title: t.menuGroups.admin || "المالية والعلاقات",
-      items: [
-        { path: '/finance', icon: '💰', label: t.menu.finance, badgeKey: 'finance' },
-        { path: '/clients', icon: '🤝', label: t.menu.crm },
-        { path: '/partners', icon: '🤝', label: t.menu.partners },
-        { path: '/hr', icon: '👥', label: t.menu.hr },
-      ]
-    }
-  ];
+  const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات';
+  const activeCompLower = activeCompany.toLowerCase();
+  
+  const isPharma = activeCompLower.includes('prime') || activeCompLower.includes('pharma') || activeCompLower.includes('بريم') || activeCompLower.includes('فارما');
+  const isDesign = activeCompLower.includes('design') || activeCompLower.includes('ديزاين');
+  const isTed = activeCompLower.includes('ted') || activeCompLower.includes('تيد');
 
-  const activeMenuGroups = isMtayem ? mtayemMenuGroups : menuGroups;
+  const getFilteredMenu = () => {
+    if (activeCompLower === 'كل الشركات' || activeCompLower === 'all' || activeCompLower === 'all companies') {
+      return menuGroups;
+    }
+
+    return menuGroups.map(group => {
+      const filteredItems = group.items.filter(item => {
+        if (isPharma) {
+          const forbiddenPharmaPaths = [
+            '/projects',
+            '/subcontractors',
+            '/real-estate',
+            '/partners',
+            '/finance/360',
+            '/fixed-assets',
+            '/invoices',
+            '/corporate'
+          ];
+          return !forbiddenPharmaPaths.includes(item.path);
+        }
+
+        // Non-Pharma (TED Capital, Design Concept, Master Builder, etc.)
+        // Hide pharma-specific modules, while keeping Inventory Ledger (/inventory) and Master Stock (/inventory/master-stock)
+        const forbiddenNonPharmaPaths = [
+          '/inventory/pharma',
+          '/inventory/supply-chain',
+          '/inventory/transfers',
+          '/inventory/reconciliation',
+          '/inventory/batch-matrix',
+          '/inventory/reorder'
+        ];
+
+        if (forbiddenNonPharmaPaths.includes(item.path)) {
+          return false;
+        }
+
+        if (isDesign) {
+          const forbiddenDesignPaths = [
+            '/real-estate',
+            '/partners',
+            '/finance/360',
+            '/fixed-assets',
+            '/invoices',
+            '/corporate'
+          ];
+          return !forbiddenDesignPaths.includes(item.path);
+        }
+
+        return true;
+      });
+      return { ...group, items: filteredItems };
+    }).filter(group => group.items.length > 0);
+  };
+
+  const activeMenuGroups = getFilteredMenu();
 
   const [sidebarStats, setSidebarStats] = useState({ approvals: 0, inventory: 0, command: 0, finance: 0 });
 
@@ -317,8 +384,25 @@ export default function Layout() {
           <div className="py-8 space-y-12">
             {activeMenuGroups
               .map(group => {
-                const visibleItems = group.items
-                  .filter(i => isMtayem || (!i.perm || hasPermission(i.perm)));
+                const visibleItems = group.items.filter(item => {
+                  if (isMtayem) {
+                    const allowedMtayemPaths = [
+                      '/',
+                      '/projects',
+                      '/inventory/direct-issue',
+                      '/inventory/pharma',
+                      '/inventory/supply-chain',
+                      '/subcontractors',
+                      '/real-estate',
+                      '/clients',
+                      '/finance',
+                      '/hr',
+                      '/me'
+                    ];
+                    return allowedMtayemPaths.includes(item.path);
+                  }
+                  return !item.perm || hasPermission(item.perm);
+                });
                 return { ...group, items: visibleItems };
               })
               .filter(group => group.items.length > 0)

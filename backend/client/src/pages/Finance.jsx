@@ -307,9 +307,17 @@ export default function Finance() {
    const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
    const [isSubmitting, setIsSubmitting] = useState(false);
 
-   const getInitialCompanyId = () => {
-      try {
-         const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const getInitialCompanyId = () => {
+       try {
+          const activeCompany = localStorage.getItem('active_company');
+          if (activeCompany && !['all', 'كل الشركات', 'all companies'].includes(activeCompany.toLowerCase())) {
+             const nameLower = activeCompany.toLowerCase();
+             if (nameLower.includes('ted') || nameLower.includes('تيد')) return '1';
+             if (nameLower.includes('design') || nameLower.includes('ديزاين')) return '2';
+             if (nameLower.includes('master') || nameLower.includes('ماستر')) return '3';
+             if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) return '4';
+          }
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
          if (u?.username?.toUpperCase() === 'MTAYEM') return '1';
          if (u?.username?.toUpperCase() === 'MSOBHI') return '2';
          const comp = u?.linkedCompany || u?.linked_company || null;
@@ -1302,34 +1310,62 @@ function EntityFilter({ selectedCompanyId, setSelectedCompanyId, language }) {
       { id: '4', labelAr: 'بريميميد فارما (PRIMEMED PHARMA)', labelEn: 'PRIMEMED PHARMA', icon: '💊' }
    ];
 
-   try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      if (u?.username?.toUpperCase() === 'MTAYEM') {
-         entities = [
-            { id: '1', labelAr: 'تيد كابيتال (TED Capital)', labelEn: 'TED Capital', icon: '🏛️' },
-            { id: '4', labelAr: 'بريميميد فارما (PRIMEMED PHARMA)', labelEn: 'PRIMEMED PHARMA', icon: '💊' }
-         ];
-      } else if (u?.username?.toUpperCase() === 'MSOBHI') {
-         entities = [
-            { id: '2', labelAr: 'ديزاين كونسبت (Design Concept)', labelEn: 'Design Concept', icon: '🎨' }
-         ];
-      } else {
-         const comp = u?.linkedCompany || u?.linked_company || null;
-         if (comp) {
-            const matchName = comp.toLowerCase().trim();
-            const filtered = entities.filter(ent => {
-               const ar = ent.labelAr.toLowerCase();
-               const en = ent.labelEn.toLowerCase();
-               return ar.includes(matchName) || en.includes(matchName);
-            });
-            if (filtered.length > 0) {
-               entities = filtered;
-            } else {
-               entities = [{ id: 'custom', labelAr: comp, labelEn: comp, icon: '🏢' }];
+   const activeCompany = localStorage.getItem('active_company') || 'كل الشركات';
+   const activeCompLower = activeCompany.toLowerCase();
+   const isSpecificCompany = !['all', 'كل الشركات', 'all companies'].includes(activeCompLower);
+
+   if (isSpecificCompany) {
+      entities = entities.filter(ent => {
+         const ar = ent.labelAr.toLowerCase();
+         const en = ent.labelEn.toLowerCase();
+         if (activeCompLower.includes('ted') || activeCompLower.includes('تيد')) {
+            return ent.id === '1';
+         }
+         if (activeCompLower.includes('design') || activeCompLower.includes('ديزاين')) {
+            return ent.id === '2';
+         }
+         if (activeCompLower.includes('master') || activeCompLower.includes('ماستر')) {
+            return ent.id === '3';
+         }
+         if (activeCompLower.includes('prime') || activeCompLower.includes('فارما') || activeCompLower.includes('بريم')) {
+            return ent.id === '4';
+         }
+         return ar.includes(activeCompLower) || en.includes(activeCompLower);
+      });
+   } else {
+      try {
+         const u = JSON.parse(localStorage.getItem('user') || '{}');
+         if (u?.username?.toUpperCase() === 'MTAYEM') {
+            entities = [
+               { id: '1', labelAr: 'تيد كابيتال (TED Capital)', labelEn: 'TED Capital', icon: '🏛️' },
+               { id: '4', labelAr: 'بريميميد فارما (PRIMEMED PHARMA)', labelEn: 'PRIMEMED PHARMA', icon: '💊' }
+            ];
+         } else if (u?.username?.toUpperCase() === 'MSOBHI') {
+            entities = [
+               { id: '2', labelAr: 'ديزاين كونسبت (Design Concept)', labelEn: 'Design Concept', icon: '🎨' }
+            ];
+         } else {
+            const comp = u?.linkedCompany || u?.linked_company || null;
+            if (comp) {
+               const matchName = comp.toLowerCase().trim();
+               const filtered = entities.filter(ent => {
+                  const ar = ent.labelAr.toLowerCase();
+                  const en = ent.labelEn.toLowerCase();
+                  return ar.includes(matchName) || en.includes(matchName);
+               });
+               if (filtered.length > 0) {
+                  entities = filtered;
+               } else {
+                  entities = [{ id: 'custom', labelAr: comp, labelEn: comp, icon: '🏢' }];
+               }
             }
          }
-      }
-   } catch (e) {}
+      } catch (e) {}
+   }
+
+   if (entities.length <= 1) {
+      return null;
+   }
 
    return (
       <div className="flex items-center bg-slate-100/80 border border-slate-200/80 rounded-[2.5rem] p-2 shadow-inner overflow-x-auto max-w-full gap-2">

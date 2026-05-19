@@ -151,17 +151,41 @@ export default function ContractorSuite() {
     fetchOrgUnits();
   }, []);
 
+  const activeComp = localStorage.getItem('active_company') || '';
+
+  const filteredProjects = useMemo(() => {
+    const activeLower = activeComp.toLowerCase();
+    return projects.filter(proj => {
+      if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+      const projCompLower = (proj.company || '').toLowerCase();
+      if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+      if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+      if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+      if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+      return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+    });
+  }, [projects, activeComp]);
+
   // Current active project details
   const activeProject = useMemo(() => {
-    return projects.find(p => p.id === activeProjectId) || projects[0];
-  }, [projects, activeProjectId]);
+    return filteredProjects.find(p => p.id === activeProjectId) || filteredProjects[0] || projects[0];
+  }, [filteredProjects, activeProjectId, projects]);
+
+  useEffect(() => {
+    if (filteredProjects.length > 0) {
+      const exists = filteredProjects.some(p => p.id === activeProjectId);
+      if (!exists) {
+        setActiveProjectId(filteredProjects[0].id);
+      }
+    }
+  }, [filteredProjects, activeProjectId]);
 
   // Derived company projects for company-level cost center calculation
   const companyProjects = useMemo(() => {
     if (!activeProject) return [];
     const activeCompany = activeProject.company || 'TED CAPITAL';
-    return projects.filter(p => (p.company || 'TED CAPITAL') === activeCompany);
-  }, [projects, activeProject]);
+    return filteredProjects.filter(p => (p.company || 'TED CAPITAL') === activeCompany);
+  }, [filteredProjects, activeProject]);
 
   // Filtered arrays by current project & active cost center mode
   const currentBoqItems = useMemo(() => {
@@ -850,7 +874,7 @@ export default function ContractorSuite() {
                     onChange={e => setActiveProjectId(e.target.value)}
                     className="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 cursor-pointer"
                   >
-                    {projects.map(p => (
+                    {filteredProjects.map(p => (
                       <option key={p.id} value={p.id} className="text-slate-900 font-bold">{p.name}</option>
                     ))}
                   </select>

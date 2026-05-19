@@ -4,6 +4,11 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export default function DirectStockIssue() {
   const { language } = useLanguage();
+  const activeComp = localStorage.getItem('active_company') || '';
+  const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
+  const currencySymbol = isPharma 
+    ? (language === 'ar' ? 'ش.ج' : 'ILS') 
+    : (language === 'ar' ? 'ج.م' : 'EGP');
   const [activeTab, setActiveTab] = useState('issue'); // 'issue', 'return', 'invoice_list', 'customer_statement'
   
   const [customers, setCustomers] = useState([]);
@@ -168,156 +173,253 @@ export default function DirectStockIssue() {
       setCustomers(custRes.data?.data || []);
       
       const rawItems = invRes.data?.data || [];
-      // Filter only medical and pharmacy stock
-      let pharmaItems = rawItems.filter(i => 
-        i.category === 'PHARMA' || 
-        i.category?.includes('أدوية') || 
-        i.category?.includes('مواد عامة') || 
-        i.category?.includes('مواد طبية') || 
-        i.warehouse?.includes('مخزن الصيدليات') || 
-        i.warehouse?.includes('المستودع الرئيسي') || 
-        i.warehouse?.includes('المخزن الرئيسي') || 
-        i.item_name?.includes('دواء') || 
-        i.item_name?.includes('حقن') || 
-        i.item_name?.includes('أقراص') || 
-        i.item_name?.includes('فيال')
-      );
+      const activeComp = localStorage.getItem('active_company') || '';
+      const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
+      
+      let filteredItems = rawItems;
+      if (isPharma) {
+        filteredItems = rawItems.filter(i => 
+          i.category === 'PHARMA' || 
+          i.category?.includes('أدوية') || 
+          i.category?.includes('مواد عامة') || 
+          i.category?.includes('مواد طبية') || 
+          i.warehouse?.includes('مخزن الصيدليات') || 
+          i.warehouse?.includes('المستودع الرئيسي') || 
+          i.warehouse?.includes('المخزن الرئيسي') || 
+          i.item_name?.includes('دواء') || 
+          i.item_name?.includes('حقن') || 
+          i.item_name?.includes('أقراص') || 
+          i.item_name?.includes('فيال')
+        );
+      } else {
+        filteredItems = rawItems.filter(i => 
+          !(i.category === 'PHARMA' || 
+            i.category?.includes('أدوية') || 
+            i.category?.includes('مواد طبية') || 
+            i.warehouse?.includes('مخزن الصيدليات') || 
+            i.item_name?.includes('دواء') || 
+            i.item_name?.includes('حقن') || 
+            i.item_name?.includes('أقراص') || 
+            i.item_name?.includes('فيال'))
+        );
+      }
 
-      let mappedPharma = pharmaItems.map(item => {
+      let mappedItems = filteredItems.map(item => {
         const meta = item.metadata || {};
         return {
           ...item,
-          active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
-          dosage_form: meta.dosage_form || item.unit || 'أقراص / عبوة',
+          active_substance: meta.active_substance || item.item_description || (isPharma ? 'مادة فعالة قياسية' : 'مواصفات قياسية'),
+          dosage_form: meta.dosage_form || item.unit || (isPharma ? 'أقراص / عبوة' : 'وحدة'),
           pharma_category: meta.pharma_category || (item.item_name?.includes('مورفين') ? 'CONTROLLED' : item.item_name?.includes('أنسولين') ? 'COLD_CHAIN' : 'OTC'),
           storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)'),
           remaining_qty: Number(item.remaining_qty || item.quantity || 0),
           unit_cost: Number(item.unit_cost || item.buy_price || 50),
           buy_price: Number(item.unit_cost || item.buy_price || 50),
-          batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
+          batch_no: item.batch_no || item.batch_number || (isPharma ? 'PH-BATCH-001' : 'GEN-BATCH-001'),
           expiry_date: item.expiry_date || '2027-12-31',
-          uom: item.uom || item.unit || 'علبة'
+          uom: item.uom || item.unit || (isPharma ? 'علبة' : 'وحدة')
         };
       });
 
-      if (mappedPharma.length < 10) {
-        const mockPharma = [
-          {
-            id: 9001,
-            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
-            active_substance: 'Paracetamol 500mg + Caffeine 65mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 1500,
-            remaining_qty: getMockItemRemainingQty(9001, 1420),
-            unit_cost: 45,
-            buy_price: 45,
-            batch_no: 'PH-2026-A10',
-            expiry_date: '2028-05-20',
-            supplier: 'شركة جلاكسو سميث كلاين (GSK)',
-            min_stock_level: 100,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9002,
-            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
-            active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 600,
-            remaining_qty: getMockItemRemainingQty(9002, 510),
-            unit_cost: 130,
-            buy_price: 130,
-            batch_no: 'PH-2026-B88',
-            expiry_date: '2027-11-15',
-            supplier: 'شركة إيفا فارما',
-            min_stock_level: 50,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9003,
-            item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
-            active_substance: 'Morphine Sulfate 10mg/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'CONTROLLED',
-            storage_temp: '20-25°C (قفل أمني)',
-            quantity: 50,
-            remaining_qty: getMockItemRemainingQty(9003, 45),
-            unit_cost: 350,
-            buy_price: 350,
-            batch_no: 'NAR-2026-X01',
-            expiry_date: '2027-02-01',
-            supplier: 'هيئة الشراء الموحد (مراقبة)',
-            min_stock_level: 10,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9004,
-            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
-            active_substance: 'Insulin Glargine 100 IU/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'COLD_CHAIN',
-            storage_temp: '2-8°C (ثلاجة)',
-            quantity: 200,
-            remaining_qty: getMockItemRemainingQty(9004, 185),
-            unit_cost: 280,
-            buy_price: 280,
-            batch_no: 'COLD-2026-99',
-            expiry_date: '2026-12-10',
-            supplier: 'شركة سانوفي (Sanofi)',
-            min_stock_level: 30,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9005,
-            item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
-            active_substance: 'Sodium Chloride 0.9%',
-            dosage_form: 'محلول وريدي (IV Infusion)',
-            pharma_category: 'CONSUMABLE',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 3000,
-            remaining_qty: getMockItemRemainingQty(9005, 2650),
-            unit_cost: 25,
-            buy_price: 25,
-            batch_no: 'NS-2026-777',
-            expiry_date: '2029-01-01',
-            supplier: 'شركة النيل للأدوية',
-            min_stock_level: 500,
-            uom: 'عبوة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          }
-        ];
-        const existingIds = new Set(mappedPharma.map(i => i.id));
-        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
-        pharmaItems = [...mappedPharma, ...newMocks];
-      } else {
-        pharmaItems = mappedPharma;
+      let finalItems = mappedItems;
+      if (mappedItems.length < 5) {
+        if (isPharma) {
+          const mockPharma = [
+            {
+              id: 9001,
+              item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
+              active_substance: 'Paracetamol 500mg + Caffeine 65mg',
+              dosage_form: 'أقراص (Tablets)',
+              pharma_category: 'OTC',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 1500,
+              remaining_qty: getMockItemRemainingQty(9001, 1420),
+              unit_cost: 45,
+              buy_price: 45,
+              batch_no: 'PH-2026-A10',
+              expiry_date: '2028-05-20',
+              supplier: 'شركة جلاكسو سميث كلاين (GSK)',
+              min_stock_level: 100,
+              uom: 'علبة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9002,
+              item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
+              active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
+              dosage_form: 'أقراص (Tablets)',
+              pharma_category: 'OTC',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 600,
+              remaining_qty: getMockItemRemainingQty(9002, 510),
+              unit_cost: 130,
+              buy_price: 130,
+              batch_no: 'PH-2026-B88',
+              expiry_date: '2027-11-15',
+              supplier: 'شركة إيفا فارما',
+              min_stock_level: 50,
+              uom: 'علبة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9003,
+              item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
+              active_substance: 'Morphine Sulfate 10mg/ml',
+              dosage_form: 'حقن فيال (Vials)',
+              pharma_category: 'CONTROLLED',
+              storage_temp: '20-25°C (قفل أمني)',
+              quantity: 50,
+              remaining_qty: getMockItemRemainingQty(9003, 45),
+              unit_cost: 350,
+              buy_price: 350,
+              batch_no: 'NAR-2026-X01',
+              expiry_date: '2027-02-01',
+              supplier: 'هيئة الشراء الموحد (مراقبة)',
+              min_stock_level: 10,
+              uom: 'فيال',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9004,
+              item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
+              active_substance: 'Insulin Glargine 100 IU/ml',
+              dosage_form: 'حقن فيال (Vials)',
+              pharma_category: 'COLD_CHAIN',
+              storage_temp: '2-8°C (ثلاجة)',
+              quantity: 200,
+              remaining_qty: getMockItemRemainingQty(9004, 185),
+              unit_cost: 280,
+              buy_price: 280,
+              batch_no: 'COLD-2026-99',
+              expiry_date: '2026-12-10',
+              supplier: 'شركة سانوفي (Sanofi)',
+              min_stock_level: 30,
+              uom: 'فيال',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            },
+            {
+              id: 9005,
+              item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
+              active_substance: 'Sodium Chloride 0.9%',
+              dosage_form: 'محلول وريدي (IV Infusion)',
+              pharma_category: 'CONSUMABLE',
+              storage_temp: '20-25°C (غرفة)',
+              quantity: 3000,
+              remaining_qty: getMockItemRemainingQty(9005, 2650),
+              unit_cost: 25,
+              buy_price: 25,
+              batch_no: 'NS-2026-777',
+              expiry_date: '2029-01-01',
+              supplier: 'شركة النيل للأدوية',
+              min_stock_level: 500,
+              uom: 'عبوة',
+              warehouse: 'مخزن الصيدليات والأدوية'
+            }
+          ];
+          const existingIds = new Set(mappedItems.map(i => i.id));
+          const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
+          finalItems = [...mappedItems, ...newMocks];
+        } else {
+          const mockConstruction = [
+            {
+              id: 8001,
+              item_name: 'حديد تسليح عيار 60 (Reinforcement Steel)',
+              active_substance: 'Grade 60 Steel Rebar',
+              dosage_form: 'طن (Tons)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'خارجي (Outdoor)',
+              quantity: 150,
+              remaining_qty: getMockItemRemainingQty(8001, 120),
+              unit_cost: 28000,
+              buy_price: 28000,
+              batch_no: 'STL-2026-01',
+              expiry_date: '2036-12-31',
+              supplier: 'حديد عز',
+              min_stock_level: 10,
+              uom: 'طن',
+              warehouse: 'المخزن الرئيسي'
+            },
+            {
+              id: 8002,
+              item_name: 'أسمنت بورتلاندي عادي (Portland Cement)',
+              active_substance: 'OPC Cement 50kg',
+              dosage_form: 'شكارة (Bags)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'جاف (Dry)',
+              quantity: 2000,
+              remaining_qty: getMockItemRemainingQty(8002, 1750),
+              unit_cost: 95,
+              buy_price: 95,
+              batch_no: 'CMT-2026-09',
+              expiry_date: '2026-11-30',
+              supplier: 'أسمنت السويس',
+              min_stock_level: 100,
+              uom: 'شكارة',
+              warehouse: 'المخزن الرئيسي'
+            },
+            {
+              id: 8003,
+              item_name: 'رمل أحمر مبطن (Red Sand)',
+              active_substance: 'Construction Red Sand',
+              dosage_form: 'متر مكعب (CBM)',
+              pharma_category: 'GENERAL',
+              storage_temp: 'خارجي (Outdoor)',
+              quantity: 500,
+              remaining_qty: getMockItemRemainingQty(8003, 410),
+              unit_cost: 180,
+              buy_price: 180,
+              batch_no: 'SND-2026-05',
+              expiry_date: '2030-12-31',
+              supplier: 'محاجر تيد الوطنية',
+              min_stock_level: 50,
+              uom: 'متر مكعب',
+              warehouse: 'المخزن الرئيسي'
+            }
+          ];
+          const existingIds = new Set(mappedItems.map(i => i.id));
+          const newMocks = mockConstruction.filter(m => !existingIds.has(m.id));
+          finalItems = [...mappedItems, ...newMocks];
+        }
       }
 
-      setInventoryItems(pharmaItems);
+      setInventoryItems(finalItems);
       setWarehouses(whRes.data?.data || []);
     } catch (err) {
       console.error("Error fetching direct issue/return dependencies", err);
     }
   };
 
-  // Fetch Construction Projects from LocalStorage for Project Materials allocation
+
+  // Fetch Construction Projects from Database or LocalStorage
   useEffect(() => {
-    const saved = localStorage.getItem('contractor_projects');
-    if (saved) {
-      setContractorProjects(JSON.parse(saved));
-    } else {
-      setContractorProjects([
-        { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
-        { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA' }
-      ]);
-    }
+    const fetchProjects = async () => {
+      try {
+        const res = await api.get('/dynamic/table/projects?limit=500');
+        const dbProjects = res.data?.data || [];
+        const activeProjects = dbProjects.filter(p => !p.is_deleted && p.status !== 'Inactive');
+        
+        if (activeProjects.length > 0) {
+          setContractorProjects(activeProjects);
+        } else {
+          setContractorProjects([
+            { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
+            { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA' }
+          ]);
+        }
+      } catch (err) {
+        console.error("Error fetching projects from DB:", err);
+        const saved = localStorage.getItem('contractor_projects');
+        if (saved) {
+          setContractorProjects(JSON.parse(saved));
+        } else {
+          setContractorProjects([
+            { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
+            { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA' }
+          ]);
+        }
+      }
+    };
+    fetchProjects();
   }, []);
 
   const fetchReportsData = async () => {
@@ -472,12 +574,84 @@ export default function DirectStockIssue() {
       }
 
       // B. Create balanced General Ledger postings
+      const activeComp = localStorage.getItem('active_company') || '';
+      let activeCompId = 4; // default
+      let activeCompName = 'PRIMEMED PHARMA';
+      
+      if (activeComp.toLowerCase().includes('design') || activeComp.toLowerCase().includes('ديزاين')) {
+        activeCompId = 2;
+        activeCompName = 'Design Concept';
+      } else if (activeComp.toLowerCase().includes('master') || activeComp.toLowerCase().includes('ماستر')) {
+        activeCompId = 3;
+        activeCompName = 'Master Builder';
+      } else if (activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما')) {
+        activeCompId = 4;
+        activeCompName = 'PRIMEMED PHARMA';
+      } else if (activeComp.toLowerCase().includes('ted') || activeComp.toLowerCase().includes('تيد')) {
+        activeCompId = 1;
+        activeCompName = 'TED Capital';
+      }
+
+      const getAccountMapping = (compId) => {
+        if (compId === 4) {
+          return {
+            cash: 'صندوق نقدية - بريميميد فارما',
+            bank: 'بنك فلسطين - بريميميد فارما',
+            inventory: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+            revenue: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
+            cogs: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
+            returns: 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما',
+            deferredRevenue: 'إيرادات حجز مؤجلة',
+            reservedStock: 'بضاعة محجوزة لدى المستودع',
+            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
+          };
+        } else if (compId === 2) {
+          return {
+            cash: 'صندوق نقدية - ديزاين كونسبت',
+            bank: 'بنك الأهلي - ديزاين كونسبت',
+            inventory: 'مخزون خامات ومواد',
+            revenue: 'إيرادات مستخلصات وخدمات',
+            cogs: 'تكلفة خامات ومواد (منصرف)',
+            returns: 'مرتجع مبيعات - ديزاين كونسيبت',
+            deferredRevenue: 'إيرادات حجز مؤجلة',
+            reservedStock: 'بضاعة محجوزة لدى المستودع',
+            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
+          };
+        } else if (compId === 3) {
+          return {
+            cash: 'صندوق نقدية - ماستر بيلدر',
+            bank: 'بنك - ماستر بيلدر',
+            inventory: 'مخزون خامات ومواد',
+            revenue: 'إيرادات مستخلصات وخدمات',
+            cogs: 'تكلفة خامات ومواد (منصرف)',
+            returns: 'مرتجع مبيعات - ماستر بيلدر',
+            deferredRevenue: 'إيرادات حجز مؤجلة',
+            reservedStock: 'بضاعة محجوزة لدى المستودع',
+            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
+          };
+        } else {
+          return {
+            cash: 'صندوق نقدية - تيد كابيتال',
+            bank: 'بنك CIB - تيد كابيتال',
+            inventory: 'مخزون خامات ومواد',
+            revenue: 'إيرادات مستخلصات وخدمات',
+            cogs: 'تكلفة خامات ومواد (منصرف)',
+            returns: 'مرتجع مبيعات - تيد كابيتال',
+            deferredRevenue: 'إيرادات حجز مؤجلة',
+            reservedStock: 'بضاعة محجوزة لدى المستودع',
+            wallet: 'محفظة العملاء (أرصدة مسبقة الدفع)'
+          };
+        }
+      };
+
+      const accountMap = getAccountMapping(activeCompId);
+
       const targetAccount = isBooking
         ? 'عملاء حجز - أرصدة معلقة'
         : paymentMethod === 'Cash' 
-          ? 'صندوق نقدية - بريميميد فارما' 
+          ? accountMap.cash 
           : paymentMethod === 'Bank' 
-            ? 'بنك فلسطين - بريميميد فارما' 
+            ? accountMap.bank 
             : 'عملاء (حسابات مدينة - AR)';
 
       if (activeTab === 'issue') {
@@ -493,20 +667,20 @@ export default function DirectStockIssue() {
             credit: 0,
             description: `حجز بضاعة مؤقت معلق رقم ${documentNo} - للعميل: ${customerName}`,
             cost_center: 'حجز بضاعة معلق',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
           // 2. Credit Deferred Booking Revenue
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'إيرادات حجز مؤجلة',
+            account_name: accountMap.deferredRevenue,
             debit: 0,
             credit: Number(totals.subtotal),
             description: `إيراد حجز مؤجل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
             cost_center: 'حجز بضاعة معلق',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
           // 3. VAT (if any)
@@ -518,33 +692,33 @@ export default function DirectStockIssue() {
               credit: Number(totals.taxAmount),
               description: `ضريبة مخرجات مؤجلة للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
               cost_center: 'حجز بضاعة معلق',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
           }
 
           // 4. Debit Reserved Stock Asset (still owned by company)
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'بضاعة محجوزة لدى المستودع',
+            account_name: accountMap.reservedStock,
             debit: Number(totals.totalCOGS),
             credit: 0,
             description: `بضاعة محجوزة لدى المستودع للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
             cost_center: 'حجز بضاعة معلق',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
           // 5. Credit main inventory
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+            account_name: accountMap.inventory,
             debit: 0,
             credit: Number(totals.totalCOGS),
             description: `تخفيض المخزون للصنف المحجوز رقم ${documentNo} - للعميل: ${customerName}`,
             cost_center: 'حجز بضاعة معلق',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
         } else {
@@ -555,13 +729,13 @@ export default function DirectStockIssue() {
             // Debit customer wallet for the paid portion
             await api.post('/dynamic/add/ledger', {
               date: invoiceDate,
-              account_name: 'محفظة العملاء (أرصدة مسبقة الدفع)',
+              account_name: accountMap.wallet,
               debit: walletPayAmount,
               credit: 0,
               description: `سداد من محفظة العميل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
               cost_center: 'صرف مخزني مباشر',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
             
             // Debit remainder to cash/bank/AR
@@ -574,8 +748,8 @@ export default function DirectStockIssue() {
                 credit: 0,
                 description: `سداد باقي الفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
                 cost_center: 'صرف مخزني مباشر',
-                company: 'PRIMEMED PHARMA',
-                company_id: 4
+                company: activeCompName,
+                company_id: activeCompId
               });
             }
             // Update wallet balance in localStorage
@@ -590,20 +764,20 @@ export default function DirectStockIssue() {
               credit: 0,
               description: `استلام نقدية شاملة إيداع المحفظة للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
               cost_center: 'صرف مخزني مباشر',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
 
             // Credit Customer Wallet for the deposited amount
             await api.post('/dynamic/add/ledger', {
               date: invoiceDate,
-              account_name: 'محفظة العملاء (أرصدة مسبقة الدفع)',
+              account_name: accountMap.wallet,
               debit: 0,
               credit: walletDepositAmount,
               description: `إيداع مالي في محفظة العميل للفاتورة رقم ${documentNo} - للعميل: ${customerName}`,
               cost_center: 'صرف مخزني مباشر',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
             // Update wallet balance in localStorage
             updateCustomerWalletBalance(selectedCustomer, walletDepositAmount);
@@ -617,21 +791,21 @@ export default function DirectStockIssue() {
               credit: 0,
               description: `فاتورة صرف مخزني مباشر رقم ${documentNo} - للعميل: ${customerName}`,
               cost_center: 'صرف مخزني مباشر',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
           }
 
           // 2. Credit Sales Revenue (Subtotal)
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما',
+            account_name: accountMap.revenue,
             debit: 0,
             credit: Number(totals.subtotal),
             description: `إيراد فاتورة صرف مباشر - للعميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
           // 3. Credit VAT Payable (14%)
@@ -643,33 +817,33 @@ export default function DirectStockIssue() {
               credit: Number(totals.taxAmount),
               description: `ضريبة مخرجات قيمة مضافة فاتورة صرف مباشر - للعميل: ${customerName}`,
               cost_center: 'صرف مخزني مباشر',
-              company: 'PRIMEMED PHARMA',
-              company_id: 4
+              company: activeCompName,
+              company_id: activeCompId
             });
           }
 
           // 4. Debit Cost of Goods Sold (COGS)
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
+            account_name: accountMap.cogs,
             debit: Number(totals.totalCOGS),
             credit: 0,
             description: `تكلفة البضاعة المنصرفة فاتورة صرف مباشر - للعميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
 
           // 5. Credit Inventory Asset
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+            account_name: accountMap.inventory,
             debit: 0,
             credit: Number(totals.totalCOGS),
             description: `تخفيض قيمة المخزون المنصرف فاتورة صرف مباشر - للعميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
         }
 
@@ -682,13 +856,13 @@ export default function DirectStockIssue() {
           const walletRefund = Number(totals.grandTotal);
           await api.post('/dynamic/add/ledger', {
             date: invoiceDate,
-            account_name: 'محفظة العملاء (أرصدة مسبقة الدفع)',
+            account_name: accountMap.wallet,
             debit: 0,
             credit: walletRefund,
             description: `رد قيمة المرتجع لمحفظة العميل رقم ${documentNo} - من العميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
           updateCustomerWalletBalance(selectedCustomer, walletRefund);
         } else {
@@ -700,21 +874,21 @@ export default function DirectStockIssue() {
             credit: Number(totals.grandTotal),
             description: `إرجاع قيمة فاتورة صرف مباشر رقم ${documentNo} - للعميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
         }
 
         // 1. Debit Sales Returns (Subtotal returned)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'مرتجع مبيعات الصيدلية والأدوية - بريميميد فارما',
+          account_name: accountMap.returns,
           debit: Number(totals.subtotal),
           credit: 0,
           description: `مرتجع مبيعات وصرف مباشر رقم ${documentNo} - من العميل: ${customerName}`,
           cost_center: 'صرف مخزني مباشر',
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
 
         // 2. Debit VAT Payable (Tax Amount reverse)
@@ -726,40 +900,40 @@ export default function DirectStockIssue() {
             credit: 0,
             description: `تسوية ضريبة مبيعات مرتجعة فاتورة صرف مباشر - للعميل: ${customerName}`,
             cost_center: 'صرف مخزني مباشر',
-            company: 'PRIMEMED PHARMA',
-            company_id: 4
+            company: activeCompName,
+            company_id: activeCompId
           });
         }
 
         // 4. Debit Inventory Asset (Re-entry of stock at cost)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'مخزون الأدوية والمستلزمات - بريميميد فارما',
+          account_name: accountMap.inventory,
           debit: Number(totals.totalCOGS),
           credit: 0,
           description: `إعادة إدخال خامات مرتجعة للمخزن فاتورة مباشر - للعميل: ${customerName}`,
           cost_center: 'صرف مخزني مباشر',
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
 
         // 5. Credit Cost of Goods Sold (COGS reverse)
         await api.post('/dynamic/add/ledger', {
           date: invoiceDate,
-          account_name: 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما',
+          account_name: accountMap.cogs,
           debit: 0,
           credit: Number(totals.totalCOGS),
           description: `تخفيض تكلفة المبيعات بالمرتجع فاتورة صرف مباشر - للعميل: ${customerName}`,
           cost_center: 'صرف مخزني مباشر',
-          company: 'PRIMEMED PHARMA',
-          company_id: 4
+          company: activeCompName,
+          company_id: activeCompId
         });
       }
 
       // --- Automated Email Notification Trigger ---
       try {
         const itemsList = invoiceLines.map((line, idx) => `${idx + 1}. ${line.item_name || 'صنف غير محدد'} | الكمية: ${line.qty} | سعر الوحدة: ${line.unit_price} ش.ج | الإجمالي: ${line.total} ش.ج`).join('\n');
-        const emailBody = `PRIMEMED PHARMA\n\n` +
+        const emailBody = `${activeCompName}\n\n` +
           `إشعار حركة مخزنية وفاتورة مبيعات\n` +
           `----------------------------------------\n` +
           `ورقم الفاتورة : ${documentNo}\n` +
@@ -774,10 +948,10 @@ export default function DirectStockIssue() {
           `ضريبة القيمة المضافة (14%): ${totals.taxAmount} ش.ج\n` +
           `الخصم: ${discount} ش.ج\n` +
           `الإجمالي النهائي المستحق: ${totals.grandTotal} شاكل\n\n` +
-          `مع تحيات نظام إدارة الموارد PRIMEMED PHARMA ERP`;
+          `مع تحيات نظام إدارة الموارد ${activeCompName} ERP`;
 
         const attachmentContent = `========================================\n` +
-          `           PRIMEMED PHARMA             \n` +
+          `           ${activeCompName}             \n` +
           `    فاتورة مبيعات وصرف مخزني مباشر     \n` +
           `========================================\n` +
           `رقم الفاتورة : ${documentNo}\n` +
@@ -961,10 +1135,59 @@ export default function DirectStockIssue() {
         : 'bg-emerald-500/30 text-emerald-300';
 
   // Filters
-  const filteredCustomers = customers.filter(c => 
-    c.name?.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
-    c.company_name?.toLowerCase().includes(customerSearchQuery.toLowerCase())
+  const filteredCustomers = customers.filter(c => {
+    const matchSearch = c.name?.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                        c.company_name?.toLowerCase().includes(customerSearchQuery.toLowerCase());
+    if (!matchSearch) return false;
+
+    const activeComp = localStorage.getItem('active_company') || '';
+    const activeLower = activeComp.toLowerCase();
+    if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+
+    const cCompLower = (c.company_name || '').toLowerCase();
+    if (activeLower.includes('ted') && cCompLower.includes('ted')) return true;
+    if (activeLower.includes('design') && cCompLower.includes('design')) return true;
+    if (activeLower.includes('master') && cCompLower.includes('master')) return true;
+    if (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) return true;
+
+    return cCompLower.includes(activeLower) || activeLower.includes(cCompLower);
+  });
+
+  const filteredContractorProjects = contractorProjects.filter(proj => {
+    const activeComp = localStorage.getItem('active_company') || '';
+    const activeLower = activeComp.toLowerCase();
+    if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+
+    const projCompLower = (proj.company || '').toLowerCase();
+    if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+    if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+    if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+    if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+
+    return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+  });
+
+  const filteredWarehouses = warehouses.filter(w => {
+    const activeComp = localStorage.getItem('active_company') || '';
+    const activeLower = activeComp.toLowerCase();
+    if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+
+    const wNameLower = (w.name || '').toLowerCase();
+    const isPharmaWarehouse = wNameLower.includes('pharm') || wNameLower.includes('صيدل') || wNameLower.includes('مستودع') || wNameLower.includes('غزة');
+
+    if (activeLower.includes('prime') || activeLower.includes('pharma') || activeLower.includes('بريم') || activeLower.includes('فارما')) {
+      return isPharmaWarehouse;
+    } else {
+      return !isPharmaWarehouse;
+    }
+  });
+
+  const displayWarehouses = filteredWarehouses.length > 0 ? filteredWarehouses : (
+    (localStorage.getItem('active_company') || '').toLowerCase().includes('prime') || (localStorage.getItem('active_company') || '').toLowerCase().includes('pharma')
+      ? [{ id: 'ph1', name: 'مخزن الصيدليات والأدوية' }, { id: 'ph2', name: 'غزة - المستودع الرئيسي' }]
+      : [{ id: 'ted1', name: 'المخزن الرئيسي' }]
   );
+
 
   // 🔗 2-Way Dynamic Field Linking & Auto-Selection (Declared after filteredCustomers)
   useEffect(() => {
@@ -1145,31 +1368,32 @@ export default function DirectStockIssue() {
                     onChange={(e) => setSelectedWarehouse(e.target.value)}
                     className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
                   >
-                    {warehouses.map(w => (
+                    {displayWarehouses.map(w => (
                       <option key={w.id} value={w.name}>{w.name}</option>
                     ))}
-                    {warehouses.length === 0 && <option value="Main Store">{language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}</option>}
                   </select>
                 </div>
 
                 {/* Construction Project Selection Dropdown */}
-                <div className="flex flex-col gap-2 justify-end">
-                  <label className="text-xs font-black text-slate-500">
-                    🏗️ {language === 'ar' ? 'ربط بمشروع إنشائي (اختياري)' : 'Link to Construction Project'}
-                  </label>
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
-                  >
-                    <option value="">{language === 'ar' ? '-- بدون مشروع (صرف مباشر) --' : '-- Direct Issue (No Project) --'}</option>
-                    {contractorProjects.map(proj => (
-                      <option key={proj.id} value={proj.id}>
-                        {proj.name} ({proj.company || 'TED CAPITAL'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {filteredContractorProjects.length > 0 && (
+                  <div className="flex flex-col gap-2 justify-end">
+                    <label className="text-xs font-black text-slate-500">
+                      🏗️ {language === 'ar' ? 'ربط بمشروع إنشائي (اختياري)' : 'Link to Construction Project'}
+                    </label>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
+                    >
+                      <option value="">{language === 'ar' ? '-- بدون مشروع (صرف مباشر) --' : '-- Direct Issue (No Project) --'}</option>
+                      {filteredContractorProjects.map(proj => (
+                        <option key={proj.id} value={proj.id}>
+                          {proj.name} ({proj.company || 'TED CAPITAL'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Document Date */}
                 <div className="flex flex-col gap-2 justify-end">
@@ -1288,7 +1512,7 @@ export default function DirectStockIssue() {
                         {/* Line Total */}
                         <td className="py-4">
                           <span className="text-xs font-black text-slate-900 block text-center">
-                            {Number(line.total).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                            {Number(line.total).toLocaleString()} {currencySymbol}
                           </span>
                         </td>
 
@@ -1364,7 +1588,7 @@ export default function DirectStockIssue() {
                             👛 {language === 'ar' ? 'محفظة العميل الإلكترونية:' : 'Client E-Wallet:'}
                           </span>
                           <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-xl">
-                            {walletBal.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                            {walletBal.toLocaleString()} {currencySymbol}
                           </span>
                         </div>
                         
@@ -1409,7 +1633,7 @@ export default function DirectStockIssue() {
                           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
                             <div className="flex justify-between items-center text-[10px] font-bold text-emerald-800">
                               <span>{language === 'ar' ? 'قيمة الخصم من المحفظة:' : 'Deducted from Wallet:'}</span>
-                              <span className="font-black text-xs text-emerald-600">-{Math.min(walletBal, Number(totals.grandTotal)).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                              <span className="font-black text-xs text-emerald-600">-{Math.min(walletBal, Number(totals.grandTotal)).toLocaleString()} {currencySymbol}</span>
                             </div>
                             <p className="text-[9px] text-emerald-600 font-bold leading-relaxed">
                               {language === 'ar' ? 'سيقوم النظام تلقائياً بخصم هذا المبلغ من رصيد محفظة العميل عند الحفظ وتخفيض المطلوب نقداً.' : 'The system will automatically deduct this amount from the client wallet and decrease cash due.'}
@@ -1419,7 +1643,7 @@ export default function DirectStockIssue() {
                         
                         {walletAction === 'deposit_change' && (
                           <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 space-y-3 animate-in slide-in-from-top-2 duration-300">
-                            <label className="text-[9px] font-black text-indigo-800 block">{language === 'ar' ? 'المبلغ المراد شحنه أو إيداعه بالمحفظة (ش.ج):' : 'Amount to deposit/charge in wallet (ILS):'}</label>
+                            <label className="text-[9px] font-black text-indigo-800 block">{language === 'ar' ? `المبلغ المراد شحنه أو إيداعه بالمحفظة (${currencySymbol}):` : `Amount to deposit/charge in wallet (${currencySymbol}):`}</label>
                             <div className="flex gap-2">
                               <input
                                 type="number"
@@ -1454,7 +1678,7 @@ export default function DirectStockIssue() {
 
                 {/* Discount / Penalty value input */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? 'خصم تجاري مباشر (ش.ج)' : 'Commercial Discount (ILS)') : (language === 'ar' ? 'تخفيض قيمة المرتجع (ش.ج)' : 'Reduce Return Value (ILS)')}</label>
+                  <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? `خصم تجاري مباشر (${currencySymbol})` : `Commercial Discount (${currencySymbol})`) : (language === 'ar' ? `تخفيض قيمة المرتجع (${currencySymbol})` : `Reduce Return Value (${currencySymbol})`)}</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -1499,7 +1723,7 @@ export default function DirectStockIssue() {
                 <div className="border-t border-slate-100 pt-5 space-y-4">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-500">
                     <span>{activeTab === 'issue' ? (language === 'ar' ? 'الإجمالي الفرعي:' : 'Subtotal:') : (language === 'ar' ? 'إجمالي المرتجع الفرعي:' : 'Subtotal Return:')}</span>
-                    <span className="font-mono">{Number(totals.subtotal).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                    <span className="font-mono">{Number(totals.subtotal).toLocaleString()} {currencySymbol}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-xs font-bold text-slate-500">
@@ -1513,27 +1737,27 @@ export default function DirectStockIssue() {
                         {showVat ? (language === 'ar' ? '✓ نشط' : '✓ Active') : (language === 'ar' ? '✗ إعفاء' : '✗ Exempt')}
                       </button>
                     </span>
-                    <span className="font-mono">{Number(totals.taxAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                    <span className="font-mono">{Number(totals.taxAmount).toLocaleString()} {currencySymbol}</span>
                   </div>
                   
                   {discount > 0 && (
                     <div className="flex justify-between items-center text-xs font-bold text-rose-500 bg-rose-50 p-2.5 rounded-xl border border-rose-100">
                       <span>{activeTab === 'issue' ? (language === 'ar' ? 'خصم تجاري:' : 'Commercial Discount:') : (language === 'ar' ? 'تنزيل قيمة المرتجع:' : 'Return Reduced:')}</span>
-                      <span className="font-mono font-black">-{Number(discount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span className="font-mono font-black">-{Number(discount).toLocaleString()} {currencySymbol}</span>
                     </div>
                   )}
                   
                   {walletAction === 'use_balance' && walletPayAmount > 0 && (
                     <div className="flex justify-between items-center text-xs font-bold text-emerald-600 bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
                       <span>{language === 'ar' ? 'الدفع المخصوم من المحفظة:' : 'Wallet Paid Deduction:'}</span>
-                      <span className="font-mono font-black">-{Number(walletPayAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span className="font-mono font-black">-{Number(walletPayAmount).toLocaleString()} {currencySymbol}</span>
                     </div>
                   )}
 
                   {walletAction === 'deposit_change' && walletDepositAmount > 0 && (
                     <div className="flex justify-between items-center text-xs font-bold text-indigo-600 bg-indigo-50 p-2.5 rounded-xl border border-indigo-100">
                       <span>{language === 'ar' ? 'شحن وتغذية محفظة العميل:' : 'Wallet Top Up / Deposit:'}</span>
-                      <span className="font-mono font-black">+{Number(walletDepositAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span className="font-mono font-black">+{Number(walletDepositAmount).toLocaleString()} {currencySymbol}</span>
                     </div>
                   )}
 
@@ -1555,7 +1779,7 @@ export default function DirectStockIssue() {
                           finalAmt = finalAmt + walletDepositAmount;
                         }
                         return finalAmt.toLocaleString();
-                      })()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                      })()} {currencySymbol}
                     </span>
                   </div>
                 </div>
@@ -1760,7 +1984,7 @@ export default function DirectStockIssue() {
                         </td>
                         <td className="py-4 font-mono font-black">{item.docNo}</td>
                         <td className="py-4 font-black">{item.customer}</td>
-                        <td className={`py-4 ${language === 'ar' ? 'text-left pr-4' : 'text-right pl-4'} font-black text-slate-900`}>{Number(item.grandTotal).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                        <td className={`py-4 ${language === 'ar' ? 'text-left pr-4' : 'text-right pl-4'} font-black text-slate-900`}>{Number(item.grandTotal).toLocaleString()} {currencySymbol}</td>
                         <td className="py-4 text-center">
                           <button
                             type="button"
@@ -1999,15 +2223,15 @@ export default function DirectStockIssue() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl text-right">
                         <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'إجمالي المبيعات والمسحوبات' : 'Total Sales & Withdrawals'}</span>
-                        <span className="text-xl font-black text-slate-900 font-mono">{totalDebit.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                        <span className="text-xl font-black text-slate-900 font-mono">{totalDebit.toLocaleString()} {currencySymbol}</span>
                       </div>
                       <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl text-right">
                         <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'إجمالي المرتجعات والمدفوعات' : 'Total Returns & Payments'}</span>
-                        <span className="text-xl font-black text-amber-700 font-mono">{totalCredit.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                        <span className="text-xl font-black text-amber-700 font-mono">{totalCredit.toLocaleString()} {currencySymbol}</span>
                       </div>
                       <div className={`p-6 border rounded-3xl text-right ${balance > 0 ? 'bg-indigo-50/50 border-indigo-100' : 'bg-emerald-50/50 border-emerald-100'}`}>
                         <span className="text-[10px] font-black text-slate-400 block mb-1">{language === 'ar' ? 'الرصيد المتبقي المستحق' : 'Outstanding Remaining Balance'}</span>
-                        <span className={`text-xl font-black font-mono ${balance > 0 ? 'text-indigo-700' : 'text-emerald-700'}`}>{balance.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                        <span className={`text-xl font-black font-mono ${balance > 0 ? 'text-indigo-700' : 'text-emerald-700'}`}>{balance.toLocaleString()} {currencySymbol}</span>
                       </div>
                     </div>
 
@@ -2102,13 +2326,13 @@ export default function DirectStockIssue() {
                                     <td className="p-4">{row.date?.split('T')[0]}</td>
                                     <td className="p-4 font-black">{row.description}</td>
                                     <td className={`p-4 ${language === 'ar' ? 'text-left' : 'text-right'} text-emerald-600 font-black font-mono`}>
-                                      {row.debit > 0 ? `+${Number(row.debit).toLocaleString()} ${language === 'ar' ? 'ش.ج' : 'ILS'}` : '—'}
+                                      {row.debit > 0 ? `+${Number(row.debit).toLocaleString()} ${currencySymbol}` : '—'}
                                     </td>
                                     <td className={`p-4 ${language === 'ar' ? 'text-left' : 'text-right'} text-rose-500 font-black font-mono`}>
-                                      {row.credit > 0 ? `-${Number(row.credit).toLocaleString()} ${language === 'ar' ? 'ش.ج' : 'ILS'}` : '—'}
+                                      {row.credit > 0 ? `-${Number(row.credit).toLocaleString()} ${currencySymbol}` : '—'}
                                     </td>
                                     <td className={`p-4 ${language === 'ar' ? 'text-left' : 'text-right'} font-mono font-black text-slate-900`}>
-                                      {Number(row.runningBalance).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                                      {Number(row.runningBalance).toLocaleString()} {currencySymbol}
                                     </td>
                                   </tr>
                                   {expandAllStatementDetails && items.length > 0 && (
@@ -2127,8 +2351,8 @@ export default function DirectStockIssue() {
                                               <div key={iIdx} className="grid grid-cols-5 gap-2 text-[11px] font-bold text-slate-700">
                                                 <div className="col-span-2 font-black">{it.item_name} {it.batch_no && it.batch_no !== 'N/A' ? `(باتش: ${it.batch_no})` : ''}</div>
                                                 <div className="text-center font-mono">{Math.abs(it.qty)} {it.uom || (language === 'ar' ? 'وحدة' : 'unit')}</div>
-                                                <div className={`font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(it.sell_price).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</div>
-                                                <div className={`font-mono font-black text-slate-950 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{(Math.abs(it.qty) * it.sell_price).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</div>
+                                                <div className={`font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(it.sell_price).toLocaleString()} {currencySymbol}</div>
+                                                <div className={`font-mono font-black text-slate-950 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{(Math.abs(it.qty) * it.sell_price).toLocaleString()} {currencySymbol}</div>
                                               </div>
                                             ))}
                                           </div>
@@ -2186,9 +2410,9 @@ export default function DirectStockIssue() {
                                     <td className={`py-3.5 text-center font-mono font-black ${agg.netQty > 0 ? 'text-indigo-600' : 'text-slate-500'}`}>
                                       {agg.netQty} {agg.uom}
                                     </td>
-                                    <td className={`py-3.5 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.avgPrice).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                                    <td className={`py-3.5 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.avgPrice).toLocaleString()} {currencySymbol}</td>
                                     <td className={`py-3.5 font-mono font-black text-slate-900 ${language === 'ar' ? 'text-left' : 'text-right'}`}>
-                                      {Number(agg.totalAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                                      {Number(agg.totalAmount).toLocaleString()} {currencySymbol}
                                     </td>
                                   </tr>
                                 ))
@@ -2401,13 +2625,13 @@ export default function DirectStockIssue() {
                             <td className="p-3 border-r border-slate-300">{row.date?.split('T')[0]}</td>
                             <td className="p-3 border-r border-slate-300 font-bold">{row.description}</td>
                             <td className={`p-3 border-r border-slate-300 ${language === 'ar' ? 'text-left' : 'text-right'} font-mono font-bold text-emerald-600`}>
-                              {row.debit > 0 ? `+${Number(row.debit).toLocaleString()} ${language === 'ar' ? 'ش.ج' : 'ILS'}` : '—'}
+                              {row.debit > 0 ? `+${Number(row.debit).toLocaleString()} ${currencySymbol}` : '—'}
                             </td>
                             <td className={`p-3 border-r border-slate-300 ${language === 'ar' ? 'text-left' : 'text-right'} font-mono font-bold text-rose-500`}>
-                              {row.credit > 0 ? `-${Number(row.credit).toLocaleString()} ${language === 'ar' ? 'ش.ج' : 'ILS'}` : '—'}
+                              {row.credit > 0 ? `-${Number(row.credit).toLocaleString()} ${currencySymbol}` : '—'}
                             </td>
                             <td className={`p-3 ${language === 'ar' ? 'text-left' : 'text-right'} font-mono font-black text-slate-955 bg-slate-50`}>
-                              {Number(row.runningBalance).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                              {Number(row.runningBalance).toLocaleString()} {currencySymbol}
                             </td>
                           </tr>
                           {expandAllStatementDetails && items.length > 0 && (
@@ -2428,8 +2652,8 @@ export default function DirectStockIssue() {
                                         <tr key={iIdx} className="border-b border-slate-100">
                                           <td className="p-2 border-r border-slate-200">{it.item_name} {it.batch_no && it.batch_no !== 'N/A' ? `(باتش: ${it.batch_no})` : ''}</td>
                                           <td className="p-2 border-r border-slate-200 text-center">{Math.abs(it.qty)} {it.uom || (language === 'ar' ? 'وحدة' : 'unit')}</td>
-                                          <td className={`p-2 border-r border-slate-200 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(it.sell_price).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
-                                          <td className={`p-2 font-mono font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{(Math.abs(it.qty) * it.sell_price).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                                          <td className={`p-2 border-r border-slate-200 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(it.sell_price).toLocaleString()} {currencySymbol}</td>
+                                          <td className={`p-2 font-mono font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{(Math.abs(it.qty) * it.sell_price).toLocaleString()} {currencySymbol}</td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -2448,15 +2672,15 @@ export default function DirectStockIssue() {
                   <div className="w-80 border border-slate-400 p-4 space-y-2 bg-slate-50 text-xs">
                     <div className="flex justify-between font-bold">
                       <span>{language === 'ar' ? 'إجمالي المبيعات:' : 'Total Sales:'}</span>
-                      <span>{totalDebit.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span>{totalDebit.toLocaleString()} {currencySymbol}</span>
                     </div>
                     <div className="flex justify-between font-bold">
                       <span>{language === 'ar' ? 'إجمالي المسدد/المرتجع:' : 'Total Returns/Payments:'}</span>
-                      <span>{totalCredit.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span>{totalCredit.toLocaleString()} {currencySymbol}</span>
                     </div>
                     <div className="flex justify-between font-black border-t border-slate-400 pt-2 text-sm text-slate-950">
                       <span>{language === 'ar' ? 'الرصيد النهائي المستحق:' : 'Outstanding Final Balance:'}</span>
-                      <span>{balance.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span>{balance.toLocaleString()} {currencySymbol}</span>
                     </div>
                   </div>
                 </div>
@@ -2485,8 +2709,8 @@ export default function DirectStockIssue() {
                             <td className="p-2 border-r border-slate-300 text-center font-mono">{agg.qtyIssued} {agg.uom}</td>
                             <td className="p-2 border-r border-slate-300 text-center font-mono">{agg.qtyReturned > 0 ? `${agg.qtyReturned} ${agg.uom}` : '—'}</td>
                             <td className="p-2 border-r border-slate-300 text-center font-mono font-bold bg-slate-50">{agg.netQty} {agg.uom}</td>
-                            <td className={`p-2 border-r border-slate-300 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.avgPrice).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
-                            <td className={`p-2 font-mono font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.totalAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                            <td className={`p-2 border-r border-slate-300 font-mono ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.avgPrice).toLocaleString()} {currencySymbol}</td>
+                            <td className={`p-2 font-mono font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(agg.totalAmount).toLocaleString()} {currencySymbol}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2631,8 +2855,8 @@ export default function DirectStockIssue() {
                       </td>
                       <td className="py-3 px-2 text-center">{line.uom}</td>
                       <td className="py-3 px-2 text-center font-black">{line.qty}</td>
-                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.unit_price).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
-                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.total).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.unit_price).toLocaleString()} {currencySymbol}</td>
+                      <td className={`py-3 px-2 font-black ${language === 'ar' ? 'text-left' : 'text-right'}`}>{Number(line.total).toLocaleString()} {currencySymbol}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2643,16 +2867,16 @@ export default function DirectStockIssue() {
                 <div className={`w-full max-w-sm space-y-3 p-5 rounded-2xl border ${activeInvoiceData.type === 'issue' ? 'bg-slate-50 border-slate-200/80' : 'bg-amber-50/20 border-amber-200/60'}`}>
                   <div className="flex justify-between items-center text-xs font-bold text-slate-500">
                     <span>{language === 'ar' ? 'الإجمالي قبل الضريبة:' : 'Subtotal (Excl. Tax):'}</span>
-                    <span>{Number(activeInvoiceData.subtotal).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                    <span>{Number(activeInvoiceData.subtotal).toLocaleString()} {currencySymbol}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs font-bold text-slate-500">
                     <span>{language === 'ar' ? 'ضريبة القيمة المضافة (14%):' : 'VAT (14%):'}</span>
-                    <span>{Number(activeInvoiceData.taxAmount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                    <span>{Number(activeInvoiceData.taxAmount).toLocaleString()} {currencySymbol}</span>
                   </div>
                   {activeInvoiceData.discount > 0 && (
                     <div className="flex justify-between items-center text-xs font-bold text-rose-500">
                       <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'خصم تجاري مباشر:' : 'Direct Discount:') : (language === 'ar' ? 'تنزيل قيمة المرتجع:' : 'Return Value Reduced:')}</span>
-                      <span>-{Number(activeInvoiceData.discount).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
+                      <span>-{Number(activeInvoiceData.discount).toLocaleString()} {currencySymbol}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-3 border-t border-slate-200 text-sm font-black text-slate-900">
@@ -2660,7 +2884,7 @@ export default function DirectStockIssue() {
                       {activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'الصافي النهائي المستحق:' : 'Net Outstanding Payable:') : (language === 'ar' ? 'الصافي المالي المسترد للعميل:' : 'Net Refundable to Customer:')}
                     </span>
                     <span className={`text-lg ${activeInvoiceData.type === 'issue' ? 'text-indigo-700' : 'text-amber-700'}`}>
-                      {Number(activeInvoiceData.grandTotal).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                      {Number(activeInvoiceData.grandTotal).toLocaleString()} {currencySymbol}
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-2 flex justify-between">

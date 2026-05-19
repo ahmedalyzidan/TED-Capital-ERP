@@ -145,38 +145,69 @@ class DynamicController {
             const normalizedUsername = (req.user.username || '').toLowerCase().trim();
             const isAdmin = req.user.isSuperAdmin || userRole.includes('admin') || normalizedUsername === 'admin';
 
-            const isMtayem = req.user && req.user.isMtayem;
-            const isMsobhi = req.user && req.user.isMsobhi;
-            const selectedComp = req.user && req.user.selectedCompany;
-            const linkedComp = req.user && req.user.linkedCompany;
             const linkedProj = req.user && req.user.linkedProject;
 
-            // 1. Determine active company filter (single company) or allowed list
-            let targetCompany = null;
-            if (selectedComp && !['all', 'كل الشركات', 'all companies'].includes(selectedComp.toLowerCase())) {
-                if (isMtayem) {
-                    const allowed = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
-                    if (allowed.some(c => selectedComp.toLowerCase().includes(c.toLowerCase()))) {
-                        targetCompany = selectedComp;
-                    }
-                } else if (isMsobhi) {
-                    const allowed = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
-                    if (allowed.some(c => selectedComp.toLowerCase().includes(c.toLowerCase()))) {
-                        targetCompany = selectedComp;
-                    }
-                } else {
-                    targetCompany = selectedComp;
+            const resolveScope = (user) => {
+                if (!user) return null;
+                const username = (user.username || '').toUpperCase();
+                const selected = user.selectedCompany;
+                
+                let allowedNames = null;
+                let allowedIds = null;
+                
+                if (username === 'MTAYEM') {
+                    allowedNames = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
+                    allowedIds = [1, 4];
+                } else if (username === 'MSOBHI') {
+                    allowedNames = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
+                    allowedIds = [2];
                 }
-            } else if (linkedComp) {
-                targetCompany = linkedComp;
-            }
+                
+                if (selected && !['all', 'كل الشركات', 'all companies'].includes(selected.toLowerCase())) {
+                    const nameLower = selected.toLowerCase();
+                    let resolvedId = null;
+                    let resolvedName = null;
+                    
+                    if (nameLower.includes('design') || nameLower.includes('ديزاين')) { resolvedId = 2; resolvedName = 'Design Concept'; }
+                    else if (nameLower.includes('master') || nameLower.includes('ماستر')) { resolvedId = 3; resolvedName = 'Master Builder'; }
+                    else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { resolvedId = 4; resolvedName = 'PRIMEMED PHARMA'; }
+                    else if (nameLower.includes('ted') || nameLower.includes('تيد')) { resolvedId = 1; resolvedName = 'TED Capital'; }
+                    
+                    if (resolvedId && resolvedName) {
+                        if (allowedIds && !allowedIds.includes(resolvedId)) {
+                            return { names: allowedNames, ids: allowedIds };
+                        }
+                        return { names: [resolvedName], ids: [resolvedId] };
+                    }
+                }
+                
+                if (allowedIds) return { names: allowedNames, ids: allowedIds };
+                
+                if (user.linkedCompany) {
+                    const nameLower = user.linkedCompany.toLowerCase();
+                    let resolvedId = null;
+                    let resolvedName = null;
+                    if (nameLower.includes('design') || nameLower.includes('ديزاين')) { resolvedId = 2; resolvedName = 'Design Concept'; }
+                    else if (nameLower.includes('master') || nameLower.includes('ماستر')) { resolvedId = 3; resolvedName = 'Master Builder'; }
+                    else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { resolvedId = 4; resolvedName = 'PRIMEMED PHARMA'; }
+                    else if (nameLower.includes('ted') || nameLower.includes('تيد')) { resolvedId = 1; resolvedName = 'TED Capital'; }
+                    if (resolvedId && resolvedName) {
+                        return { names: [resolvedName], ids: [resolvedId] };
+                    }
+                }
+                
+                return null;
+            };
 
+            const scope = resolveScope(req.user);
+            let targetCompany = null;
             let allowedCompsList = null;
-            if (!targetCompany) {
-                if (isMtayem) {
-                    allowedCompsList = `('TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP')`;
-                } else if (isMsobhi) {
-                    allowedCompsList = `('Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت')`;
+
+            if (scope) {
+                if (scope.names.length === 1) {
+                    targetCompany = scope.names[0];
+                } else {
+                    allowedCompsList = `(${scope.names.map(n => `'${n}'`).join(', ')})`;
                 }
             }
 
