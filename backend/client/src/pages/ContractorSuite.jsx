@@ -796,7 +796,7 @@ export default function ContractorSuite() {
   }, [currentExpenses, expenseSearch, expenseCategoryFilter]);
 
   const categoryGradients = {
-    "أعمال صحية وعزل": "from-cyan-500/20 to-blue-500/10 border-cyan-500/30 text-cyan-400 bg-cyan-500/5",
+    "أعمال صحية وعزل": "from-cyan-500/20 to-blue-500/10 border-cyan-600/30 text-cyan-400 bg-cyan-500/5",
     "أعمال كهرباء": "from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-400 bg-amber-500/5",
     "أسقف جبس بورد": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
     "محارة ودهانات": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
@@ -811,7 +811,9 @@ export default function ContractorSuite() {
   const activeGrad = (cat) => categoryGradients[cat] || "from-slate-500/20 to-slate-600/10 border-slate-500/30 text-slate-400 bg-slate-500/5";
 
   return (
-    <div className="bg-[#080b11] text-slate-100 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-slate-950 font-sans print:bg-white print:text-black" dir="rtl">
+    <div className="bg-[#03060c] text-slate-100 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-slate-950 font-sans print:bg-white print:text-black relative overflow-hidden" dir="rtl">
+      {/* Background Radial Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[350px] bg-gradient-to-b from-indigo-500/10 via-sky-500/5 to-transparent rounded-full blur-[140px] pointer-events-none no-print"></div>
 
       {/* Printable page layout adjustments */}
       <style dangerouslySetInnerHTML={{
@@ -846,7 +848,7 @@ export default function ContractorSuite() {
       {/* --- TOAST NOTIFICATIONS --- */}
       {notification && (
         <div className="fixed top-6 left-6 z-50 animate-bounce">
-          <div className={`px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-3 font-bold text-xs ${notification.type === 'warning'
+          <div className={`px-6 py-4 rounded-2xl shadow-2xl  border flex items-center gap-3 font-bold text-xs ${notification.type === 'warning'
             ? 'bg-rose-950/90 border-rose-500/30 text-rose-300'
             : 'bg-emerald-950/90 border-emerald-500/30 text-emerald-300'
             }`}>
@@ -859,42 +861,43 @@ export default function ContractorSuite() {
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 print-full-width">
 
         {/* --- DYNAMIC HEADER --- */}
-        <div className="relative rounded-3xl p-6 overflow-hidden border border-white/5 bg-slate-900/40 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl no-print">
+        <div className="relative rounded-[2rem] p-8 overflow-hidden border border-slate-800 bg-[#161e2f] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 shadow-2xl no-print">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl opacity-60 translate-x-20 -translate-y-20"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl opacity-40 -translate-x-20 translate-y-20"></div>
 
-          {/* Project selection & details */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-5 relative z-10 w-full lg:w-auto">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-cyan-500/20 transform rotate-2 hover:rotate-0 transition-transform">💎</div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <select
-                    value={activeProjectId}
-                    onChange={e => setActiveProjectId(e.target.value)}
-                    className="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 cursor-pointer"
-                  >
-                    {filteredProjects.map(p => (
-                      <option key={p.id} value={p.id} className="text-slate-900 font-bold">{p.name}</option>
-                    ))}
-                  </select>
-                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 text-[10px] font-black border border-cyan-500/20">{activeProject.company || 'TED CAPITAL'} 🏢</span>
-                </div>
-                <p className="text-slate-400 font-bold text-xs mt-1">العميل الحالي للمشروع: <span className="text-white font-black">{activeProject.clientName}</span></p>
-              </div>
+          {/* Left Column: Project Details & Context */}
+          <div className="flex flex-col items-start gap-2 relative z-10 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest">
+              💎 CONTRACTOR & SUBCONTRACTORS SUITE
             </div>
+            
+            <div className="flex items-center gap-2 mt-1">
+              <select
+                value={activeProjectId}
+                onChange={e => setActiveProjectId(e.target.value)}
+                className="bg-transparent border-none text-white text-3xl font-black tracking-tight focus:outline-none cursor-pointer p-0"
+              >
+                {filteredProjects.map(p => (
+                  <option key={p.id} value={p.id} className="text-slate-900 font-bold">{p.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <p className="text-slate-400 font-bold text-xs mt-1.5 leading-relaxed">
+              العميل الحالي للمشروع: <span className="text-white font-black">{activeProject.clientName}</span> | الشركة: <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
+            </p>
 
             {/* Segmented Cost Center Toggle */}
-            <div className="bg-slate-950/60 p-1.5 rounded-2xl border border-white/5 flex gap-1 self-start lg:self-auto">
+            <div className="bg-[#070a13] p-1 rounded-xl border border-slate-800 flex gap-1 mt-2.5">
               <button
                 type="button"
                 onClick={() => {
                   setCostCenterMode('project');
                   triggerNotification('📁 تم تفعيل مركز تكلفة المشروع');
                 }}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${costCenterMode === 'project'
-                  ? 'bg-gradient-to-l from-cyan-500 to-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
+                className={`px-3.5 py-2 rounded-lg text-[10px] font-black transition-all border ${costCenterMode === 'project'
+                  ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md'
+                  : 'text-slate-450 border-transparent hover:text-slate-200'
                   }`}
               >
                 📁 مركز تكلفة المشروع
@@ -905,35 +908,72 @@ export default function ContractorSuite() {
                   setCostCenterMode('company');
                   triggerNotification(`🏢 تم تفعيل مركز تكلفة الشركة: ${activeProject.company || 'TED CAPITAL'}`);
                 }}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${costCenterMode === 'company'
-                  ? 'bg-gradient-to-l from-indigo-500 to-purple-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
+                className={`px-3.5 py-2 rounded-lg text-[10px] font-black transition-all border ${costCenterMode === 'company'
+                  ? 'bg-[#1e293b] border-indigo-500/30 text-indigo-400 shadow-md'
+                  : 'text-slate-450 border-transparent hover:text-slate-200'
                   }`}
               >
                 🏢 مركز تكلفة الشركة
               </button>
             </div>
+
+            {/* Project Action buttons */}
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                onClick={() => setShowAddProject(!showAddProject)}
+                className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-slate-800 hover:border-cyan-500/40 text-cyan-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <span>{showAddProject ? '✕ إغلاق' : '+ مشروع جديد'}</span>
+              </button>
+              <button
+                onClick={() => handleDeleteProject(activeProjectId)}
+                className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <span>حذف المشروع 🗑️</span>
+              </button>
+            </div>
           </div>
 
-          {/* Project Action buttons */}
-          <div className="flex items-center gap-3 relative z-10 w-full md:w-auto justify-start md:justify-end">
-            <button
-              onClick={() => setShowAddProject(!showAddProject)}
-              className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/40 text-cyan-400 text-xs font-black px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
-            >
-              <span>{showAddProject ? '✕ إغلاق' : '+ مشروع جديد'}</span>
-            </button>
-            <button
-              onClick={() => handleDeleteProject(activeProjectId)}
-              className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 text-xs font-black px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
-            >
-              <span>حذف المشروع 🗑️</span>
-            </button>
+          {/* Right Column: Neat Horizontal KPI cards aligned exactly like the screenshot */}
+          <div className="flex flex-wrap items-center gap-3 relative z-10 w-full lg:w-auto">
+            
+            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">قيمة المقايسة</span>
+              <div className="mt-1">
+                <span className="text-base font-black font-mono text-cyan-400">{totals.totalBOQ.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+              </div>
+            </div>
+
+            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المصروفات الفعلية</span>
+              <div className="mt-1">
+                <span className="text-base font-black font-mono text-rose-400">{totals.totalExpenses.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+              </div>
+            </div>
+
+            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">الربح المتوقع</span>
+              <div className="mt-1">
+                <span className="text-base font-black font-mono text-emerald-400">{totals.estProfit.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+              </div>
+            </div>
+
+            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المحصل من العميل</span>
+              <div className="mt-1">
+                <span className="text-base font-black font-mono text-amber-400">{totals.totalCollected.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-500 font-bold block">ج.م محصل</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
         {/* --- PREMIUM RESPONSIVE NAVIGATION GRID --- */}
-        <div className="bg-slate-900/40 p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-xl no-print">
+        <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {[
               { id: 'dashboard', label: 'لوحة القيادة', icon: '📊' },
@@ -946,8 +986,8 @@ export default function ContractorSuite() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === tab.id
-                  ? 'bg-gradient-to-l from-cyan-500 to-blue-600 text-white border-cyan-400/30 shadow-lg shadow-cyan-500/20 transform -translate-y-[1px]'
-                  : 'text-slate-400 bg-slate-950/20 border-transparent hover:bg-white/5 hover:text-white hover:border-white/5'
+                  ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
+                  : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
                   }`}
               >
                 <span className="text-sm">{tab.icon}</span>
@@ -959,7 +999,7 @@ export default function ContractorSuite() {
 
         {/* Modal / Form to create new project */}
         {showAddProject && (
-          <form onSubmit={handleCreateProject} className="bg-slate-900/70 border border-white/5 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
+          <form onSubmit={handleCreateProject} className="bg-slate-900/70 border border-slate-800 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
             <h4 className="text-sm font-black text-cyan-400">تأسيس مشروع إنشائي جديد</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
@@ -969,7 +1009,7 @@ export default function ContractorSuite() {
                   placeholder="مثال: فيلا E111 - زايد الجديد"
                   value={newProjectForm.name}
                   onChange={e => setNewProjectForm({ ...newProjectForm, name: e.target.value })}
-                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                   required
                 />
               </div>
@@ -981,7 +1021,7 @@ export default function ContractorSuite() {
                   placeholder="مثال: الأستاذ محمد عبد الرحمن"
                   value={newProjectForm.clientName}
                   onChange={e => setNewProjectForm({ ...newProjectForm, clientName: e.target.value })}
-                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                   required
                 />
               </div>
@@ -991,7 +1031,7 @@ export default function ContractorSuite() {
                 <select
                   value={newProjectForm.company}
                   onChange={e => setNewProjectForm({ ...newProjectForm, company: e.target.value })}
-                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                 >
                   <option value="">-- اختر الشركة من الحوكمة --</option>
                   {orgUnits.map(unit => (
@@ -1007,7 +1047,7 @@ export default function ContractorSuite() {
               </div>
             </div>
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setShowAddProject(false)} className="px-5 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400">إلغاء</button>
+              <button type="button" onClick={() => setShowAddProject(false)} className="px-5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400">إلغاء</button>
               <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-white">تأسيس المشروع الآن 🏢</button>
             </div>
           </form>
@@ -1028,7 +1068,7 @@ export default function ContractorSuite() {
 
         {/* --- COMPANY COST CENTER INFO BANNER --- */}
         {costCenterMode === 'company' && (
-          <div className="relative overflow-hidden rounded-3xl p-6 border border-indigo-500/20 bg-indigo-950/20 backdrop-blur-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xl animate-in slide-in-from-top duration-500 no-print">
+          <div className="relative overflow-hidden rounded-3xl p-6 border border-indigo-500/20 bg-indigo-950/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xl animate-in slide-in-from-top duration-500 no-print">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl opacity-60 translate-x-10 -translate-y-10"></div>
             <div className="flex items-center gap-4 relative z-10">
               <span className="text-3xl">🏢</span>
@@ -1051,67 +1091,6 @@ export default function ContractorSuite() {
           </div>
         )}
 
-        {/* --- CORE KPI COUNTERS --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 print:grid print:grid-cols-4 print:gap-4 print:mb-6">
-
-          <div className="relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-xl shadow-lg group print:p-4 print:border print:border-black print:rounded-xl print:bg-transparent print:shadow-none">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all no-print"></div>
-            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest block mb-1 print:text-black">قيمة العقد المعتمد (المقايسة)</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black font-mono tracking-tighter text-white print:text-black">{totals.totalBOQ.toLocaleString()}</span>
-              <span className="text-xs text-slate-500 font-bold print:text-black">جنيه</span>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse no-print"></span>
-              <span className="text-[10px] font-bold text-slate-400 print:text-black">عدد بنود المقايسة: {currentBoqItems.length}</span>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-xl shadow-lg group print:p-4 print:border print:border-black print:rounded-xl print:bg-transparent print:shadow-none">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all no-print"></div>
-            <span className="text-[10px] font-black text-red-400 uppercase tracking-widest block mb-1 print:text-black">إجمالي المصروفات الفعلية</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black font-mono tracking-tighter text-white print:text-black">{totals.totalExpenses.toLocaleString()}</span>
-              <span className="text-xs text-slate-500 font-bold print:text-black">جنيه</span>
-            </div>
-            <div className="mt-3">
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden no-print">
-                <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min(totals.costPercent, 100)}%` }}></div>
-              </div>
-              <span className="text-[9px] text-slate-400 font-bold mt-1.5 block print:text-black">معدل الصرف الفعلي: {totals.costPercent.toFixed(1)}%</span>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-xl shadow-lg group print:p-4 print:border print:border-black print:rounded-xl print:bg-transparent print:shadow-none">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all no-print"></div>
-            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1 print:text-black">صافي هامش الربح المتوقع</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black font-mono tracking-tighter text-emerald-400 print:text-black">{totals.estProfit.toLocaleString()}</span>
-              <span className="text-xs text-slate-500 font-bold print:text-black">جنيه</span>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 print:border-none print:p-0 print:text-black">ممتاز</span>
-              <span className="text-[10px] text-slate-400 font-bold print:text-black">نسبة الربحية {((totals.estProfit / (totals.totalBOQ || 1)) * 100).toFixed(1)}%</span>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-xl shadow-lg group print:p-4 print:border print:border-black print:rounded-xl print:bg-transparent print:shadow-none">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all no-print"></div>
-            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-1 print:text-black">المحصل من العميل</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black font-mono tracking-tighter text-white print:text-black">{totals.totalCollected.toLocaleString()}</span>
-              <span className="text-xs text-slate-500 font-bold print:text-black">ج.م محصل</span>
-            </div>
-            <div className="mt-3">
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden no-print">
-                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(totals.progressPercent, 100)}%` }}></div>
-              </div>
-              <span className="text-[9px] text-slate-400 font-bold mt-1.5 block print:text-black">المتبقي: <span className="font-mono font-black text-amber-400 print:text-black">{totals.remainingClient.toLocaleString()}</span> جنيه ({totals.progressPercent.toFixed(0)}% محصل)</span>
-            </div>
-          </div>
-
-        </div>
-
         {/* --- MAIN INTERACTIVE SECTIONS --- */}
 
         {/* 1. DASHBOARD VIEW */}
@@ -1119,12 +1098,12 @@ export default function ContractorSuite() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom duration-500">
 
             {/* Category breakdown visual bars */}
-            <div className="lg:col-span-2 bg-slate-900/40 border border-white/5 p-8 rounded-3xl shadow-lg space-y-6">
+            <div className="lg:col-span-2 bg-[#0f172a] border border-slate-800 p-8 rounded-3xl shadow-lg space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-black text-white flex items-center gap-3">
                   <span>📊</span> مقارنة الموازنة والمنصرف الفعلي لكل بند (Budget vs Actual)
                 </h3>
-                <button onClick={handlePrint} className="bg-slate-950 border border-white/10 hover:bg-slate-900 text-slate-300 px-4 py-2 rounded-xl text-xs font-black no-print flex items-center gap-2">
+                <button onClick={handlePrint} className="bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 px-4 py-2 rounded-xl text-xs font-black no-print flex items-center gap-2">
                   <span>🖨️</span> طباعة التقرير
                 </button>
               </div>
@@ -1155,7 +1134,7 @@ export default function ContractorSuite() {
                       </div>
 
                       {/* Interactive Bar */}
-                      <div className="w-full bg-slate-950/80 h-3 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                      <div className="w-full bg-[#070a13] h-3 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
                         <div
                           className={`h-full rounded-full transition-all duration-1000 ${usagePercent > 100 ? 'bg-gradient-to-l from-red-600 to-rose-400' :
                             usagePercent > 70 ? 'bg-gradient-to-l from-amber-600 to-orange-400' : 'bg-gradient-to-l from-emerald-600 to-teal-400'
@@ -1173,14 +1152,14 @@ export default function ContractorSuite() {
             <div className="space-y-6 no-print">
 
               {/* Financial Health Summary */}
-              <div className="bg-slate-900/40 border border-white/5 p-8 rounded-3xl shadow-lg relative overflow-hidden">
+              <div className="bg-[#0f172a] border border-slate-800 p-8 rounded-3xl shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"></div>
                 <h3 className="text-lg font-black text-white mb-4 flex items-center gap-3">
                   <span>💡</span> توصيات الموقف المالي
                 </h3>
 
                 <div className="space-y-4 text-xs font-bold text-slate-300">
-                  <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5 flex gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800 flex gap-3">
                     <span className="text-xl">💰</span>
                     <div>
                       <h4 className="text-white font-black">هامش الربح التشغيلي</h4>
@@ -1188,7 +1167,7 @@ export default function ContractorSuite() {
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5 flex gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800 flex gap-3">
                     <span className="text-xl">🚨</span>
                     <div>
                       <h4 className="text-white font-black">السيولة النقدية</h4>
@@ -1199,14 +1178,14 @@ export default function ContractorSuite() {
               </div>
 
               {/* Quick Transaction Log preview */}
-              <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-4">
+              <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-3xl shadow-lg space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-black text-white">آخر الحركات المالية للمشروع</h3>
                   <button onClick={() => setActiveTab('expenses')} className="text-cyan-400 hover:text-cyan-300 text-xs font-bold">عرض الكل ←</button>
                 </div>
                 <div className="space-y-3">
                   {currentExpenses.slice(-4).reverse().map(item => (
-                    <div key={item.id} className="p-3 bg-slate-950/40 border border-white/5 rounded-xl flex justify-between items-center">
+                    <div key={item.id} className="p-3 bg-[#070a13] border border-slate-800 rounded-xl flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-xs font-black text-white">{item.beneficiary}</span>
                         <span className="text-[10px] text-slate-500 font-bold mt-0.5">{item.date}</span>
@@ -1229,15 +1208,15 @@ export default function ContractorSuite() {
         {activeTab === 'boq' && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg no-print">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl no-print">
               <div>
                 <h3 className="text-lg font-black text-white flex items-center gap-3">
-                  <span>📝</span> مقايسة البنود والكميات التقديرية للفيلا
+                  <span className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/25 text-cyan-400">📝</span> مقايسة البنود والكميات التقديرية للفيلا
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">تعديل الأسعار والكميات والموافقة عليها وتصدير التقارير في ثوانٍ</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={handlePrint} className="bg-slate-950 border border-white/10 hover:bg-slate-900 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2">
+                <button onClick={handlePrint} className="bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all">
                   <span>🖨️</span> طباعة المقايسة
                 </button>
                 <button
@@ -1246,7 +1225,7 @@ export default function ContractorSuite() {
                     setEditingItemType(null);
                     setShowAddBoq(!showAddBoq);
                   }}
-                  className="px-5 py-2.5 bg-gradient-to-l from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform"
+                  className="px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-black transition-all active:scale-95"
                 >
                   {showAddBoq ? 'إغلاق النموذج' : '+ إضافة بند أعمال جديد'}
                 </button>
@@ -1255,15 +1234,18 @@ export default function ContractorSuite() {
 
             {/* Add / Edit BOQ Form */}
             {(showAddBoq || (editingItemType === 'boq' && editingItemId)) && (
-              <form onSubmit={editingItemId ? handleSaveEditBoq : handleAddBoq} className="bg-slate-900/70 border border-white/5 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
-                <h4 className="text-sm font-black text-cyan-400">{editingItemId ? '✍️ تعديل بند بالمقايسة' : 'إدخال بند جديد بالمقايسة'}</h4>
+              <form onSubmit={editingItemId ? handleSaveEditBoq : handleAddBoq} className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] space-y-4 animate-in slide-in-from-top duration-300 no-print shadow-2xl">
+                <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
+                  <span>{editingItemId ? '✍️' : '✨'}</span>
+                  {editingItemId ? 'تعديل بند بالمقايسة' : 'إدخال بند جديد بالمقايسة'}
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] text-slate-400 font-bold">القسم الأساسي</label>
                     <select
                       value={editingItemId ? editForm.category : newBoq.category}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, category: e.target.value }) : setNewBoq({ ...newBoq, category: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     >
                       {boqCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -1276,7 +1258,7 @@ export default function ContractorSuite() {
                       placeholder="مثال: توريد وتركيب رخام بريشيا داينو..."
                       value={editingItemId ? editForm.item_name : newBoq.item_name}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, item_name: e.target.value }) : setNewBoq({ ...newBoq, item_name: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1288,7 +1270,7 @@ export default function ContractorSuite() {
                       placeholder="مثال: م2، عدد، مقطوعية"
                       value={editingItemId ? editForm.unit : newBoq.unit}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, unit: e.target.value }) : setNewBoq({ ...newBoq, unit: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     />
                   </div>
 
@@ -1300,7 +1282,7 @@ export default function ContractorSuite() {
                       placeholder="1"
                       value={editingItemId ? editForm.quantity : newBoq.quantity}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, quantity: e.target.value }) : setNewBoq({ ...newBoq, quantity: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1312,7 +1294,7 @@ export default function ContractorSuite() {
                       placeholder="0.00"
                       value={editingItemId ? editForm.price : newBoq.price}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, price: e.target.value }) : setNewBoq({ ...newBoq, price: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1324,14 +1306,14 @@ export default function ContractorSuite() {
                       placeholder="أي ملاحظات فنية أو شروط تشطيب..."
                       value={editingItemId ? editForm.notes : newBoq.notes}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, notes: e.target.value }) : setNewBoq({ ...newBoq, notes: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => { setShowAddBoq(false); setEditingItemId(null); }} className="px-5 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400">إلغاء</button>
-                  <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-white">
+                  <button type="button" onClick={() => { setShowAddBoq(false); setEditingItemId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                  <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-955 transition-all">
                     {editingItemId ? 'حفظ التعديلات 💾' : 'إضافة البند الآن 🚀'}
                   </button>
                 </div>
@@ -1339,24 +1321,24 @@ export default function ContractorSuite() {
             )}
 
             {/* Interactive BOQ List */}
-            <div className="bg-slate-900/40 border border-white/5 rounded-3xl overflow-hidden shadow-lg print:border-black print:bg-white">
+            <div className="bg-[#131b2e] border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl print:border-black print:bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-right whitespace-nowrap">
-                  <thead className="bg-slate-950/60 border-b border-white/5 print:bg-slate-100 print:text-black">
+                  <thead className="bg-[#111827] border-b border-slate-800 print:bg-slate-100 print:text-black">
                     <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black print:text-black">
-                      <th className="px-6 py-4">مسلسل</th>
-                      <th className="px-6 py-4">القسم والبيان</th>
-                      <th className="px-6 py-4">وصف البند الهندسي</th>
-                      <th className="px-6 py-4 text-center">الكمية</th>
-                      <th className="px-6 py-4 text-center">الوحدة</th>
-                      <th className="px-6 py-4 text-center">الفئة</th>
-                      <th className="px-6 py-4 text-center">الإجمالي</th>
-                      <th className="px-6 py-4 text-left no-print">الإجراءات</th>
+                      <th className="px-6 py-5">مسلسل</th>
+                      <th className="px-6 py-5">القسم والبيان</th>
+                      <th className="px-6 py-5">وصف البند الهندسي</th>
+                      <th className="px-6 py-5 text-center">الكمية</th>
+                      <th className="px-6 py-5 text-center">الوحدة</th>
+                      <th className="px-6 py-5 text-center">الفئة</th>
+                      <th className="px-6 py-5 text-center">الإجمالي</th>
+                      <th className="px-6 py-5 text-left no-print">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 print:divide-black">
                     {currentBoqItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-white/5 transition-all group print:bg-transparent">
+                      <tr key={item.id} className="hover:bg-cyan-500/[0.03] hover:scale-[1.002] transition-all duration-300 group print:bg-transparent">
                         <td className="px-6 py-5 font-mono text-xs text-slate-500 print:text-black">{idx + 1}</td>
                         <td className="px-6 py-5">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${activeGrad(item.category)} print:border-none print:p-0 print:text-black print:bg-transparent print:font-bold`}>
@@ -1365,8 +1347,8 @@ export default function ContractorSuite() {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-col max-w-lg print:max-w-none">
-                            <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors leading-relaxed whitespace-normal print:text-black">{item.item_name}</span>
-                            {item.notes && <span className="text-[10px] text-slate-400 mt-1 italic whitespace-normal font-medium bg-slate-950/40 p-2 rounded-lg border border-white/5 print:text-slate-600 print:border-none print:bg-transparent print:p-0 print:mt-1 print:block">{item.notes}</span>}
+                            <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors leading-relaxed whitespace-normal print:text-black">{item.item_name}</span>
+                            {item.notes && <span className="text-[10px] text-slate-400 mt-1 italic whitespace-normal font-medium bg-[#070a13] p-2 rounded-lg border border-slate-800 print:text-slate-600 print:border-none print:bg-transparent print:p-0 print:mt-1 print:block">{item.notes}</span>}
                           </div>
                         </td>
                         <td className="px-6 py-5 text-center font-mono font-black text-slate-300 print:text-black">{item.quantity}</td>
@@ -1377,13 +1359,13 @@ export default function ContractorSuite() {
                           <div className="flex gap-2 justify-end">
                             <button
                               onClick={() => handleStartEditBoq(item)}
-                              className="px-2.5 py-1.5 bg-slate-950 border border-white/10 hover:bg-cyan-500 hover:text-slate-950 rounded-lg text-[9px] font-black transition-all"
+                              className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-cyan-600 hover:bg-cyan-500 hover:text-slate-950 rounded-xl text-[9px] font-black transition-all"
                             >
                               تعديل ✏️
                             </button>
                             <button
                               onClick={() => handleDeleteBoq(item.id)}
-                              className="px-2.5 py-1.5 bg-rose-950/30 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-lg text-[9px] font-black transition-all"
+                              className="px-3 py-1.5 bg-rose-955/30 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-xl text-[9px] font-black transition-all"
                             >
                               حذف 🗑️
                             </button>
@@ -1408,15 +1390,15 @@ export default function ContractorSuite() {
         {activeTab === 'expenses' && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg no-print">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl no-print">
               <div>
                 <h3 className="text-lg font-black text-white flex items-center gap-3">
-                  <span>💸</span> دفتر وقيد المصروفات الفعلية للمشروع
+                  <span className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/25 text-rose-400">💸</span> دفتر وقيد المصروفات الفعلية للمشروع
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">تتبع المشتريات ومستخلصات مقاولي الباطن والعمالة والتوريدات</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={handlePrint} className="bg-slate-950 border border-white/10 hover:bg-slate-900 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2">
+                <button onClick={handlePrint} className="bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all">
                   <span>🖨️</span> طباعة المصروفات
                 </button>
                 <button
@@ -1425,7 +1407,7 @@ export default function ContractorSuite() {
                     setEditingItemType(null);
                     setShowAddExpense(!showAddExpense);
                   }}
-                  className="px-5 py-2.5 bg-gradient-to-l from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform"
+                  className="px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-black transition-all active:scale-95"
                 >
                   {showAddExpense ? 'إغلاق النموذج' : '+ تسجيل مصروف جديد'}
                 </button>
@@ -1434,8 +1416,11 @@ export default function ContractorSuite() {
 
             {/* Add / Edit Expense Form */}
             {(showAddExpense || (editingItemType === 'expense' && editingItemId)) && (
-              <form onSubmit={editingItemId ? handleSaveEditExpense : handleAddExpense} className="bg-slate-900/70 border border-white/5 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
-                <h4 className="text-sm font-black text-cyan-400">{editingItemId ? '✍️ تعديل مصروف مسجل' : 'تسجيل حركة صرف جديدة للمشروع'}</h4>
+              <form onSubmit={editingItemId ? handleSaveEditExpense : handleAddExpense} className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] space-y-4 animate-in slide-in-from-top duration-300 no-print shadow-2xl">
+                <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
+                  <span>{editingItemId ? '✍️' : '✨'}</span>
+                  {editingItemId ? 'تعديل مصروف مسجل' : 'تسجيل حركة صرف جديدة للمشروع'}
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] text-slate-400 font-bold">الجهة المستفيدة / البائع</label>
@@ -1444,7 +1429,7 @@ export default function ContractorSuite() {
                       placeholder="مثال: المعلم أحمد، شركة السلاب..."
                       value={editingItemId ? editForm.beneficiary : newExpense.beneficiary}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, beneficiary: e.target.value }) : setNewExpense({ ...newExpense, beneficiary: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1454,7 +1439,7 @@ export default function ContractorSuite() {
                     <select
                       value={editingItemId ? editForm.category : newExpense.category}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, category: e.target.value }) : setNewExpense({ ...newExpense, category: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     >
                       {boqCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -1466,7 +1451,7 @@ export default function ContractorSuite() {
                       type="date"
                       value={editingItemId ? editForm.date : newExpense.date}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, date: e.target.value }) : setNewExpense({ ...newExpense, date: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1475,10 +1460,10 @@ export default function ContractorSuite() {
                     <label className="text-[10px] text-slate-400 font-bold">الوحدة</label>
                     <input
                       type="text"
-                      placeholder="مثال: عدد، مقطوعية، فاتورة"
+                      placeholder="مثال: م2، عدد، مقطوعية"
                       value={editingItemId ? editForm.unit : newExpense.unit}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, unit: e.target.value }) : setNewExpense({ ...newExpense, unit: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     />
                   </div>
 
@@ -1488,7 +1473,7 @@ export default function ContractorSuite() {
                       type="number"
                       value={editingItemId ? editForm.qty : newExpense.qty}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, qty: e.target.value }) : setNewExpense({ ...newExpense, qty: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1500,7 +1485,7 @@ export default function ContractorSuite() {
                       placeholder="0.00"
                       value={editingItemId ? editForm.rate : newExpense.rate}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, rate: e.target.value }) : setNewExpense({ ...newExpense, rate: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                       required
                     />
                   </div>
@@ -1510,7 +1495,7 @@ export default function ContractorSuite() {
                     <select
                       value={editingItemId ? (editForm.allocationType || 'project') : (newExpense.allocationType || 'project')}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, allocationType: e.target.value }) : setNewExpense({ ...newExpense, allocationType: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     >
                       <option value="project">📁 تخصيص مباشر للمشروع الحالي</option>
                       <option value="company">🏢 مصاريف إدارية عمومية للشركة</option>
@@ -1524,14 +1509,14 @@ export default function ContractorSuite() {
                       placeholder="أي ملاحظات أو أرقام فواتير..."
                       value={editingItemId ? editForm.notes : newExpense.notes}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, notes: e.target.value }) : setNewExpense({ ...newExpense, notes: e.target.value })}
-                      className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => { setShowAddExpense(false); setEditingItemId(null); }} className="px-5 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400">إلغاء</button>
-                  <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-white">
+                  <button type="button" onClick={() => { setShowAddExpense(false); setEditingItemId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                  <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-955 transition-all">
                     {editingItemId ? 'حفظ التعديلات 💾' : 'تسجيل المصروف الآن 💸'}
                   </button>
                 </div>
@@ -1539,73 +1524,73 @@ export default function ContractorSuite() {
             )}
 
             {/* Search & Filter Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-900/20 border border-white/5 p-4 rounded-2xl no-print">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#131b2e] border border-slate-800 p-5 rounded-2xl no-print">
               <input
                 type="text"
                 placeholder="🔍 ابحث عن مصروف بالجهة أو الملاحظات..."
                 value={expenseSearch}
                 onChange={e => setExpenseSearch(e.target.value)}
-                className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
               />
 
               <select
                 value={expenseCategoryFilter}
                 onChange={e => setExpenseCategoryFilter(e.target.value)}
-                className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
               >
                 <option value="All">كل الفئات والتصنيفات</option>
                 {boqCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
 
               <div className="text-xs font-bold flex items-center justify-end text-slate-400">
-                إجمالي المصاريف المصفاة: <span className="font-mono text-cyan-400 font-black text-sm mr-2">{filteredExpenses.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()} جنيه</span>
+                إجمالي المصاريف المصفاة: <span className="font-mono text-cyan-400 font-black text-sm mr-2 bg-cyan-500/10 border border-slate-850 px-3 py-1.5 rounded-xl">{filteredExpenses.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()} ج.م</span>
               </div>
             </div>
 
             {/* Expenses List */}
-            <div className="bg-slate-900/40 border border-white/5 rounded-3xl overflow-hidden shadow-lg print:border-black">
+            <div className="bg-[#131b2e] border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl print:border-black print:bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-right whitespace-nowrap">
-                  <thead className="bg-slate-950/60 border-b border-white/5 print:bg-slate-100 print:text-black">
+                  <thead className="bg-[#111827] border-b border-slate-800 print:bg-slate-100 print:text-black">
                     <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black print:text-black">
-                      <th className="px-6 py-4">تاريخ الصرف</th>
-                      <th className="px-6 py-4">المستفيد / البيان</th>
-                      <th className="px-6 py-4">التصنيف الهندسي</th>
-                      <th className="px-6 py-4 text-center">الكمية</th>
-                      <th className="px-6 py-4 text-center">الفئة</th>
-                      <th className="px-6 py-4 text-center">المبلغ الإجمالي</th>
-                      <th className="px-6 py-4 text-left no-print">الإجراءات</th>
+                      <th className="px-6 py-5">تاريخ الصرف</th>
+                      <th className="px-6 py-5">المستفيد / البيان</th>
+                      <th className="px-6 py-5">التصنيف الهندسي</th>
+                      <th className="px-6 py-5 text-center">الكمية</th>
+                      <th className="px-6 py-5 text-center">الفئة</th>
+                      <th className="px-6 py-5 text-center">المبلغ الإجمالي</th>
+                      <th className="px-6 py-5 text-left no-print">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 print:divide-black">
                     {filteredExpenses.map(item => (
-                      <tr key={item.id} className="hover:bg-white/5 transition-all group">
+                      <tr key={item.id} className="hover:bg-cyan-500/[0.03] hover:scale-[1.002] transition-all duration-300 group">
                         <td className="px-6 py-5 font-mono text-xs text-slate-400 print:text-black">{item.date}</td>
                         <td className="px-6 py-5">
                           <div className="flex flex-col">
-                            <span className="text-xs font-black text-white group-hover:text-cyan-400 transition-colors print:text-black">{item.beneficiary}</span>
+                            <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors print:text-black">{item.beneficiary}</span>
                             {item.notes && <span className="text-[10px] text-slate-500 font-bold mt-0.5 print:text-slate-700">{item.notes}</span>}
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${activeGrad(item.category)}`}>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${activeGrad(item.category)}`}>
                             {item.category}
                           </span>
                         </td>
                         <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.qty} {item.unit || 'فاتورة'}</td>
                         <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.rate.toLocaleString()}</td>
-                        <td className="px-6 py-5 text-center font-mono font-black text-red-400 text-sm print:text-black">-{item.total.toLocaleString()} جنيه</td>
+                        <td className="px-6 py-5 text-center font-mono font-black text-rose-400 text-sm print:text-black">-{item.total.toLocaleString()} جنيه</td>
                         <td className="px-6 py-5 text-left no-print">
                           <div className="flex gap-2 justify-end">
                             <button
                               onClick={() => handleStartEditExpense(item)}
-                              className="px-2.5 py-1.5 bg-slate-950 border border-white/10 hover:bg-cyan-500 hover:text-slate-950 rounded-lg text-[9px] font-black transition-all"
+                              className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-cyan-600 hover:bg-cyan-500 hover:text-slate-955 rounded-xl text-[9px] font-black transition-all"
                             >
                               تعديل ✏️
                             </button>
                             <button
                               onClick={() => handleDeleteExpense(item.id)}
-                              className="px-2.5 py-1.5 bg-rose-950/30 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-lg text-[9px] font-black transition-all"
+                              className="px-3 py-1.5 bg-rose-955/30 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-xl text-[9px] font-black transition-all"
                             >
                               حذف 🗑️
                             </button>
@@ -1631,21 +1616,21 @@ export default function ContractorSuite() {
           <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
 
             {/* 4.1 Financial Highlights / Balances */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
-              <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 no-print">
+              <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-slate-400">قيمة العقد المعتمد (BOQ)</span>
                 <div className="text-xl font-black text-white font-mono">{totals.totalBOQ.toLocaleString()} <span className="text-xs">ج.م</span></div>
                 <div className="text-[9px] text-slate-500 font-bold">مجموع بنود مقايسة البنود والكميات</div>
               </div>
-              <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-2">
+              <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-cyan-400">إجمالي المستخلصات المعتمدة</span>
                 <div className="text-xl font-black text-cyan-400 font-mono">
                   {totals.totalValuations.toLocaleString()} <span className="text-xs">ج.م</span>
-                  <span className="mr-2 text-xs font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">{totals.valuationProgressPercent.toFixed(1)}%</span>
+                  <span className="mr-2 text-xs font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-slate-850">{totals.valuationProgressPercent.toFixed(1)}%</span>
                 </div>
                 <div className="text-[9px] text-slate-500 font-bold">قيمة مستخلصات الإنجاز الصادرة</div>
               </div>
-              <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-2">
+              <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-emerald-400">إجمالي التحصيلات الفعلية</span>
                 <div className="text-xl font-black text-emerald-400 font-mono">
                   {totals.totalCollected.toLocaleString()} <span className="text-xs">ج.م</span>
@@ -1653,7 +1638,7 @@ export default function ContractorSuite() {
                 </div>
                 <div className="text-[9px] text-slate-500 font-bold">المبالغ المقبوضة نقدياً وبنكياً</div>
               </div>
-              <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-2">
+              <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-amber-400">مستخلصات غير مسددة / ذمم مدينة</span>
                 <div className="text-xl font-black text-amber-400 font-mono">{(Math.max(0, totals.totalValuations - totals.totalCollected)).toLocaleString()} <span className="text-xs">ج.م</span></div>
                 <div className="text-[9px] text-slate-500 font-bold">مستخلصات معتمدة بانتظار سداد العميل</div>
@@ -1662,40 +1647,40 @@ export default function ContractorSuite() {
 
             {/* 4.2 Dynamic Progress Claims (Valuations) Wizard Modal / Section */}
             {showAddValuation && (
-              <form onSubmit={handleAddValuation} className="bg-slate-900/80 border border-cyan-500/20 p-6 rounded-3xl space-y-6 no-print animate-in slide-in-from-top duration-300">
-                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+              <form onSubmit={handleAddValuation} className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] space-y-6 no-print animate-in slide-in-from-top duration-300 shadow-2xl">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-800">
                   <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
-                    <span>🏗️</span> إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة)
+                    <span className="p-1.5 bg-cyan-500/10 rounded-lg text-cyan-400">🏗️</span> إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة)
                   </h4>
                   <div className="flex items-center gap-3">
-                    <label className="text-xs text-slate-400">تاريخ المستخلص:</label>
+                    <label className="text-xs text-slate-400 font-bold">تاريخ المستخلص:</label>
                     <input
                       type="date"
                       value={valuationDate}
                       onChange={e => setValuationDate(e.target.value)}
-                      className="bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-600"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl border border-white/5">
+                <div className="overflow-x-auto rounded-2xl border border-slate-800">
                   <table className="w-full text-right text-xs">
-                    <thead className="bg-slate-950/60 text-slate-400 font-bold">
+                    <thead className="bg-[#111827] text-slate-400 font-bold">
                       <tr>
-                        <th className="p-3">البند والتوصيف</th>
-                        <th className="p-3 text-center">الكمية الكلية</th>
-                        <th className="p-3 text-center">الفئة</th>
-                        <th className="p-3 text-center">القيمة الكلية</th>
-                        <th className="p-3 text-center">الكمية المنفذة السابقة</th>
-                        <th className="p-3 text-center">الكمية التراكمية الحالية</th>
-                        <th className="p-3 text-center">النسبة الحالية (%)</th>
-                        <th className="p-3 text-center">كمية الفترة الحالية</th>
-                        <th className="p-3 text-center">نسبة الفترة الحالية</th>
-                        <th className="p-3 text-center">قيمة المستخلص الحالي</th>
+                        <th className="p-4">البند والتوصيف</th>
+                        <th className="p-4 text-center">الكمية الكلية</th>
+                        <th className="p-4 text-center">الفئة</th>
+                        <th className="p-4 text-center">القيمة الكلية</th>
+                        <th className="p-4 text-center">الكمية المنفذة السابقة</th>
+                        <th className="p-4 text-center">الكمية التراكمية الحالية</th>
+                        <th className="p-4 text-center">النسبة الحالية (%)</th>
+                        <th className="p-4 text-center">كمية الفترة الحالية</th>
+                        <th className="p-4 text-center">نسبة الفترة الحالية</th>
+                        <th className="p-4 text-center">قيمة المستخلص الحالي</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-white/5 bg-slate-950/20">
                       {currentBoqItems.map(item => {
                         const prevPercent = getPrevCompletionPercent(item.id);
                         const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
@@ -1710,18 +1695,18 @@ export default function ContractorSuite() {
                         const netClaimVal = netQty * item.price;
 
                         return (
-                          <tr key={item.id} className="hover:bg-white/5">
-                            <td className="p-3 font-black text-slate-200">
+                          <tr key={item.id} className="hover:bg-cyan-500/[0.02] transition-colors">
+                            <td className="p-4 font-black text-slate-200">
                               <div>{item.item_name}</div>
-                              <span className="text-[9px] text-slate-500">{item.category}</span>
+                              <span className="text-[9px] text-slate-500 font-bold mt-1 block">{item.category}</span>
                             </td>
-                            <td className="p-3 text-center font-mono">{item.quantity} {item.unit}</td>
-                            <td className="p-3 text-center font-mono">{item.price.toLocaleString()}</td>
-                            <td className="p-3 text-center font-mono text-slate-400">{(item.quantity * item.price).toLocaleString()}</td>
-                            <td className="p-3 text-center font-mono font-black text-amber-400">
-                              {prevQty} <span className="text-[9px] text-slate-500">({prevPercent.toFixed(1)}%)</span>
+                            <td className="p-4 text-center font-mono text-slate-450">{item.quantity} {item.unit}</td>
+                            <td className="p-4 text-center font-mono text-cyan-400">{item.price.toLocaleString()}</td>
+                            <td className="p-4 text-center font-mono text-slate-400">{(item.quantity * item.price).toLocaleString()}</td>
+                            <td className="p-4 text-center font-mono font-black text-amber-400">
+                              {prevQty} <span className="text-[9px] text-slate-500 font-bold">({prevPercent.toFixed(1)}%)</span>
                             </td>
-                            <td className="p-3 text-center">
+                            <td className="p-4 text-center">
                               <input
                                 type="number"
                                 min={prevQty}
@@ -1732,20 +1717,20 @@ export default function ContractorSuite() {
                                   ...newValuationItems,
                                   [item.id]: e.target.value
                                 })}
-                                className="bg-slate-950 border border-white/10 rounded-lg p-1.5 text-center text-xs text-white font-mono w-20 focus:outline-none focus:border-cyan-500"
+                                className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl p-1.5 text-center text-xs text-white font-mono w-20 focus:outline-none"
                                 required
                               />
                             </td>
-                            <td className="p-3 text-center font-mono font-bold text-slate-300">
+                            <td className="p-4 text-center font-mono font-bold text-slate-300">
                               {currentPercent.toFixed(1)}%
                             </td>
-                            <td className="p-3 text-center font-mono font-black text-cyan-400">
+                            <td className="p-4 text-center font-mono font-black text-cyan-400">
                               +{netQty.toFixed(2)}
                             </td>
-                            <td className="p-3 text-center font-mono font-black text-cyan-400">
+                            <td className="p-4 text-center font-mono font-black text-cyan-400">
                               +{netPercent.toFixed(1)}%
                             </td>
-                            <td className="p-3 text-center font-mono font-black text-emerald-400">
+                            <td className="p-4 text-center font-mono font-black text-emerald-400">
                               {netClaimVal.toLocaleString()} ج.م
                             </td>
                           </tr>
@@ -1755,10 +1740,10 @@ export default function ContractorSuite() {
                   </table>
                 </div>
 
-                <div className="flex justify-between items-center bg-slate-950/40 p-4 rounded-2xl border border-white/5">
-                  <div className="text-xs font-bold text-slate-300">
+                <div className="flex justify-between items-center bg-[#0f172a] p-5 rounded-2xl border border-slate-800">
+                  <div className="text-xs font-bold text-slate-350">
                     إجمالي صافي قيمة المستخلص المالي المقدر:
-                    <span className="font-mono text-lg font-black text-emerald-400 mr-2">
+                    <span className="font-mono text-lg font-black text-emerald-400 mr-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">
                       {currentBoqItems.reduce((acc, curr) => {
                         const prevPercent = getPrevCompletionPercent(curr.id);
                         const prevQty = Number(((prevPercent / 100) * curr.quantity).toFixed(2));
@@ -1770,8 +1755,8 @@ export default function ContractorSuite() {
                   </div>
 
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setShowAddValuation(false)} className="px-5 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400">إلغاء</button>
-                    <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-slate-950">اعتماد وتوليد الفاتورة 🏗️</button>
+                    <button type="button" onClick={() => setShowAddValuation(false)} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 transition-all">اعتماد وتوليد الفاتورة 🏗️</button>
                   </div>
                 </div>
               </form>
@@ -1781,17 +1766,17 @@ export default function ContractorSuite() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left 2 Cols: Valuations Claims and Invoices */}
               <div className="lg:col-span-2 space-y-6">
-                <div className="bg-slate-900/40 border border-white/5 p-8 rounded-3xl shadow-lg space-y-6">
+                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="text-lg font-black text-white flex items-center gap-3">
-                        <span>📑</span> مستخلصات وفواتير إنجاز الأعمال المعتمدة
+                        <span className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/25 text-cyan-400">📑</span> مستخلصات وفواتير إنجاز الأعمال المعتمدة
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">المستخلصات الدورية الصادرة للعميل بناءً على نسب إنجاز البنود على أرض الواقع</p>
                     </div>
                     <button
                       onClick={handleStartNewValuation}
-                      className="px-5 py-2.5 bg-gradient-to-l from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform no-print"
+                      className="px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-black transition-all active:scale-95 no-print"
                     >
                       + إصدار مستخلص جديد 🏗️
                     </button>
@@ -1799,7 +1784,7 @@ export default function ContractorSuite() {
 
                   <div className="space-y-4">
                     {currentValuations.map(val => (
-                      <div key={val.id} className="p-5 bg-slate-950/40 border border-white/5 rounded-2xl flex flex-col gap-4 hover:border-cyan-500/30 transition-colors">
+                      <div key={val.id} className="p-5 bg-[#070a13] border border-slate-800 rounded-2xl flex flex-col gap-4 hover:border-cyan-600/30 transition-colors">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-3">
@@ -1824,15 +1809,15 @@ export default function ContractorSuite() {
                               <button
                                 onClick={() => setExpandedValuationId(expandedValuationId === val.id ? null : val.id)}
                                 className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${expandedValuationId === val.id
-                                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
-                                  : 'bg-slate-900 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800'
+                                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-600/30'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                                   }`}
                               >
                                 {expandedValuationId === val.id ? 'إغلاق التفاصيل 📂' : 'عرض التفاصيل 📋'}
                               </button>
                               <button
                                 onClick={() => setSelectedPrintValuation(val)}
-                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/5 rounded-lg text-[10px] font-bold flex items-center gap-1"
+                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg text-[10px] font-bold flex items-center gap-1"
                               >
                                 🖨️ الفاتورة
                               </button>
@@ -1848,14 +1833,14 @@ export default function ContractorSuite() {
 
                         {/* Dropdown details showing history breakdown */}
                         {expandedValuationId === val.id && (
-                          <div className="pt-4 border-t border-white/5 space-y-3 animate-in slide-in-from-top duration-300">
+                          <div className="pt-4 border-t border-slate-800 space-y-3 animate-in slide-in-from-top duration-300">
                             <h5 className="text-[10px] font-black text-cyan-400 flex items-center gap-1.5">
                               <span>📂</span> تفصيل بنود وكميات المستخلص {val.claimNo}:
                             </h5>
 
-                            <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/20">
+                            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
                               <table className="w-full text-right text-[10px]">
-                                <thead className="bg-slate-950/40 text-slate-400 font-bold">
+                                <thead className="bg-[#070a13] text-slate-400 font-bold">
                                   <tr>
                                     <th className="p-2.5">بيان البند والتوصيف</th>
                                     <th className="p-2.5 text-center">الوحدة</th>
@@ -1907,29 +1892,29 @@ export default function ContractorSuite() {
                 </div>
 
                 {/* Received Payments History with linked claims */}
-                <div className="bg-slate-900/40 border border-white/5 p-8 rounded-3xl shadow-lg space-y-6">
+                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="text-lg font-black text-white flex items-center gap-3">
-                        <span>💳</span> سجل دفعات وأقساط العميل المقبوضة
+                        <span className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/25 text-emerald-400">💳</span> سجل دفعات وأقساط العميل المقبوضة
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">تتبع التدفق النقدي الوارد من سداد الدفعات وربطها بالمستخلصات المعتمدة لبيان التسوية</p>
                     </div>
                   </div>
 
-                  <div className="relative border-r border-white/10 pr-6 space-y-6 py-4">
+                  <div className="relative border-r border-slate-800 pr-6 space-y-6 py-4">
                     {currentInstallments.map((inst, index) => {
                       const linkedVal = valuations.find(v => v.id === inst.valuationId);
                       return (
                         <div key={inst.id} className="relative group">
                           <div className="absolute right-0 top-1 w-3 h-3 rounded-full bg-cyan-500 border-2 border-slate-900 translate-x-[24px] group-hover:scale-125 transition-transform z-10"></div>
 
-                          <div className="p-5 bg-slate-950/40 border border-white/5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/30 transition-colors">
+                          <div className="p-5 bg-[#070a13] border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-600/30 transition-colors">
                             <div className="space-y-1">
                               <div className="flex items-center gap-3">
                                 <span className="text-xs text-cyan-400 font-black">الدفعة رقم #{index + 1}</span>
                                 {linkedVal && (
-                                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-black border border-cyan-500/20">
+                                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-black border border-slate-850">
                                     تسوية مستخلص: {linkedVal.claimNo}
                                   </span>
                                 )}
@@ -1965,9 +1950,9 @@ export default function ContractorSuite() {
 
               {/* Right Col: Collection wizard and payment linkage Form */}
               <div className="space-y-6 no-print">
-                <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-4">
+                <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-4">
                   <h3 className="text-sm font-black text-white flex items-center gap-2">
-                    <span>💰</span> تسجيل تحصيل دفعة جديدة وتسويتها
+                    <span className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-455">💰</span> تسجيل تحصيل دفعة جديدة وتسويتها
                   </h3>
 
                   <form onSubmit={handleAddInstallment} className="space-y-4">
@@ -1978,7 +1963,7 @@ export default function ContractorSuite() {
                         placeholder="0.00"
                         value={newInstallment.amount}
                         onChange={e => setNewInstallment({ ...newInstallment, amount: e.target.value })}
-                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                         required
                       />
                     </div>
@@ -1988,7 +1973,7 @@ export default function ContractorSuite() {
                       <select
                         value={newInstallment.valuationId}
                         onChange={e => setNewInstallment({ ...newInstallment, valuationId: e.target.value })}
-                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                       >
                         <option value="">-- تحصيل دفعة عامة (غير مرتبطة بمستخلص) --</option>
                         {currentValuations.map(val => (
@@ -2005,7 +1990,7 @@ export default function ContractorSuite() {
                         type="date"
                         value={newInstallment.date}
                         onChange={e => setNewInstallment({ ...newInstallment, date: e.target.value })}
-                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                         required
                       />
                     </div>
@@ -2017,13 +2002,13 @@ export default function ContractorSuite() {
                         placeholder="مثال: دفعة تحت حساب التشطيبات..."
                         value={newInstallment.notes}
                         onChange={e => setNewInstallment({ ...newInstallment, notes: e.target.value })}
-                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-full"
+                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-gradient-to-l from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/10 transition-transform active:scale-95"
+                      className="w-full py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-black transition-all active:scale-95"
                     >
                       تسجيل وقيد الدفعة بنجاح 🟢
                     </button>
@@ -2031,7 +2016,7 @@ export default function ContractorSuite() {
                 </div>
 
                 {/* Progress Summary Gauge */}
-                <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg relative overflow-hidden flex flex-col items-center text-center space-y-4">
+                <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col items-center text-center space-y-4 hover:scale-[1.02] transition-all duration-300">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي نسبة التحصيل من العقد</span>
 
                   {/* Circular Gauge */}
@@ -2061,7 +2046,7 @@ export default function ContractorSuite() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom duration-500 no-print">
 
             {/* Files List Directory */}
-            <div className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg space-y-4">
+            <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-black text-white flex items-center gap-2">
                   <span>📁</span> مستندات وملفات المشروع المتعلقة
@@ -2069,7 +2054,7 @@ export default function ContractorSuite() {
 
                 <button
                   onClick={() => fileInputRef.current.click()}
-                  className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all"
+                  className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-slate-850 text-cyan-400 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all"
                 >
                   + رفع ملف
                 </button>
@@ -2087,8 +2072,8 @@ export default function ContractorSuite() {
                     key={file.id}
                     onClick={() => handleOpenFile(file)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex justify-between items-center ${openedFile && openedFile.id === file.id
-                      ? 'bg-cyan-500/10 border-cyan-500/30'
-                      : 'bg-slate-950/40 border-white/5 hover:bg-slate-950/80'
+                      ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 font-bold'
+                      : 'bg-[#0f172a] border-slate-800 hover:bg-[#111827] text-slate-350'
                       }`}
                   >
                     <div className="flex items-center gap-3">
@@ -2117,10 +2102,10 @@ export default function ContractorSuite() {
             </div>
 
             {/* Premium Inline File Editor (Auto-Save built in) */}
-            <div className="lg:col-span-2 bg-slate-900/40 border border-white/5 p-6 rounded-3xl shadow-lg flex flex-col min-h-[450px]">
+            <div className="lg:col-span-2 bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl flex flex-col min-h-[450px]">
               {openedFile ? (
                 <div className="flex-1 flex flex-col space-y-4">
-                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-800">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">📁</span>
                       <h4 className="text-sm font-black text-white">{openedFile.name}</h4>
@@ -2160,7 +2145,7 @@ export default function ContractorSuite() {
                           value={fileEditorContent}
                           onChange={handleEditorChange}
                           placeholder="اكتب ملاحظاتك هنا..."
-                          className="flex-1 w-full bg-slate-950/80 border border-white/10 rounded-2xl p-5 text-sm font-mono text-slate-200 leading-relaxed focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none min-h-[300px]"
+                          className="flex-1 w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-2xl p-5 text-sm font-mono text-slate-200 leading-relaxed focus:outline-none focus:ring-1 focus:ring-cyan-500/30 resize-none min-h-[300px]"
                         />
                       );
                     }
@@ -2170,8 +2155,8 @@ export default function ContractorSuite() {
 
                     if (isImage) {
                       return (
-                        <div className="flex-grow flex flex-col items-center justify-center bg-slate-950/80 border border-white/10 rounded-2xl p-5 overflow-auto max-h-[500px]">
-                          <img src={openedFile.content} className="max-w-full max-h-[400px] object-contain rounded-lg shadow-lg border border-white/10" alt={openedFile.name} />
+                        <div className="flex-grow flex flex-col items-center justify-center bg-[#111827] border border-slate-800 rounded-2xl p-5 overflow-auto max-h-[500px]">
+                          <img src={openedFile.content} className="max-w-full max-h-[400px] object-contain rounded-lg shadow-lg border border-slate-800" alt={openedFile.name} />
                           <div className="mt-4 flex gap-3">
                             <a href={openedFile.content} download={openedFile.name} className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2">
                               <span>⬇️</span> تحميل الصورة
@@ -2200,7 +2185,7 @@ export default function ContractorSuite() {
 
                     // Other binary files (e.g. Word, Excel, ZIP)
                     return (
-                      <div className="flex-grow flex flex-col items-center justify-center bg-slate-950/80 border border-white/10 rounded-2xl p-8 text-center">
+                      <div className="flex-grow flex flex-col items-center justify-center bg-[#111827] border border-slate-800 rounded-2xl p-8 text-center">
                         <span className="text-6xl mb-4">{getFileIcon(openedFile.name, openedFile.type)}</span>
                         <h4 className="text-sm font-black text-slate-300">{openedFile.name}</h4>
                         <p className="text-xs text-slate-500 mt-2 max-w-xs">هذا الملف ثنائي ولا يمكن تحريره مباشرة. يمكنك تحميله أو استعراضه.</p>
@@ -2227,15 +2212,15 @@ export default function ContractorSuite() {
 
       {/* 6. PRINT PREVIEW MODAL */}
       {selectedPrintValuation && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 no-print animate-in fade-in duration-300">
-          <div className="bg-[#0b0f19] border border-white/10 rounded-3xl w-full max-w-4xl p-8 space-y-6 overflow-y-auto max-h-[90vh] shadow-2xl flex flex-col">
-            <div className="flex justify-between items-center pb-4 border-b border-white/5">
+        <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center p-4 z-50 no-print animate-in fade-in duration-300">
+          <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-4xl p-8 space-y-6 overflow-y-auto max-h-[90vh] shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-800">
               <h3 className="text-sm font-black text-cyan-400 flex items-center gap-2">
                 <span>🧾</span> معاينة وطباعة فاتورة المستخلص المالي
               </h3>
               <button
                 onClick={() => setSelectedPrintValuation(null)}
-                className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-white/5 rounded-xl text-xs text-slate-400 font-bold"
+                className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold"
               >
                 إغلاق المعاينة ✕
               </button>
@@ -2361,10 +2346,10 @@ export default function ContractorSuite() {
             </div>
 
             {/* Modal Controls */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
               <button
                 onClick={() => setSelectedPrintValuation(null)}
-                className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 border border-white/5 rounded-xl text-xs text-slate-400 font-bold"
+                className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold"
               >
                 إلغاء
               </button>

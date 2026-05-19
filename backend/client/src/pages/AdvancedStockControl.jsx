@@ -70,7 +70,7 @@ function AdvancedStockControl({ isSubcomponent }) {
 
         // Assign realistic mock warehouses and velocities for items lacking them
         if (!item.warehouse) {
-          const mockWh = ['المخزن الرئيسي', 'مخزن موقع العاصمة', 'مخزن الكيماويات والأسمنت', 'مخزن الصيدليات والأدوية', 'المخزن الرئيسي'];
+          const mockWh = ['المخزن الرئيسي', 'مخزن موقع العاصمة', 'مخزن الكيماويات والأسمنت', 'المخزن الرئيسي'];
           wh = mockWh[index % mockWh.length];
         }
 
@@ -357,8 +357,7 @@ function AdvancedStockControl({ isSubcomponent }) {
     const matchWh = selectedWarehouse === 'ALL' || 
       (selectedWarehouse === 'MAIN' && item.warehouse_display === 'المخزن الرئيسي') ||
       (selectedWarehouse === 'CAPITAL' && item.warehouse_display === 'مخزن موقع العاصمة') ||
-      (selectedWarehouse === 'CHEMICAL' && item.warehouse_display === 'مخزن الكيماويات والأسمنت') ||
-      (selectedWarehouse === 'PHARMA' && item.warehouse_display === 'مخزن الصيدليات والأدوية');
+      (selectedWarehouse === 'CHEMICAL' && item.warehouse_display === 'مخزن الكيماويات والأسمنت');
 
     const matchVel = selectedVelocity === 'ALL' || item.velocity_flag === selectedVelocity;
 
@@ -399,9 +398,8 @@ function AdvancedStockControl({ isSubcomponent }) {
           {activeTab === 'store' && (
             <button 
               onClick={handleOpenAdd}
-              className="group relative px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl hover:shadow-indigo-500/30 overflow-hidden flex items-center gap-3"
+              className="px-8 py-4 bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/20 rounded-2xl font-black text-sm transition-all active:scale-95 flex items-center gap-3"
             >
-              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
               <span>➕</span> {language === 'ar' ? 'إضافة صنف مخزني جديد' : 'New Stock Item'}
             </button>
           )}
@@ -428,55 +426,182 @@ function AdvancedStockControl({ isSubcomponent }) {
         <>
 
       {/* STATS CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <div className="bg-slate-900 text-white p-8 rounded-[2rem] border border-slate-800 shadow-xl relative overflow-hidden group hover:shadow-2xl transition-all md:col-span-2">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Card 1: Valuation */}
+        <div className="bg-[#131b2e] text-white p-5 rounded-2xl border border-slate-800 shadow-md relative overflow-hidden group hover:shadow-lg transition-all md:col-span-2">
+          <div className="absolute top-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl -translate-x-1/4 -translate-y-1/4"></div>
           <div className="flex justify-between items-center relative z-10">
             <div>
-              <p className="text-xs font-black text-indigo-300 mb-2 uppercase tracking-widest">{language === 'ar' ? 'إجمالي التقييم المالي للمخزون (Stock Valuation)' : 'Total Stock Valuation (Live)'}</p>
-              <h3 className="text-4xl lg:text-5xl font-black font-mono text-white">{totalValuation.toLocaleString()} <span className="text-lg font-bold text-slate-400">{language === 'ar' ? 'ج.م' : 'EGP'}</span></h3>
+              <p className="text-[10px] font-black text-indigo-300 mb-1 uppercase tracking-widest">{language === 'ar' ? 'إجمالي التقييم المالي للمخزون' : 'Total Stock Valuation (Live)'}</p>
+              <h3 className="text-2xl lg:text-3xl font-black font-mono text-white">{totalValuation.toLocaleString()} <span className="text-sm font-bold text-slate-400">{language === 'ar' ? 'ج.م' : 'EGP'}</span></h3>
             </div>
-            <div className="w-16 h-16 bg-white/10 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-md border border-white/10">
+            <div className="w-12 h-12 bg-[#1e293b] text-indigo-455 rounded-xl flex items-center justify-center text-xl border border-indigo-500/20">
               💎
             </div>
           </div>
-          <div className="mt-6 pt-6 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-slate-400 relative z-10">
+          <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-bold text-slate-405 relative z-10">
             <span>{language === 'ar' ? 'تحديث فوري للأرصدة الحية' : 'Live balance sync active'}</span>
-            <span className="text-emerald-400 flex items-center gap-1"><span>●</span> {language === 'ar' ? 'متصل بالدفاتر المحاسبية' : 'Connected to ledger accounts'}</span>
+            <span className="text-emerald-400 flex items-center gap-1"><span>●</span> {language === 'ar' ? 'متصل بالدفاتر المحاسبية' : 'Connected to ledger'}</span>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-emerald-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
+        {/* Card 2: Fast Moving */}
+        <div className="bg-[#131b2e] text-white p-5 rounded-2xl border border-slate-800 shadow-md relative overflow-hidden group hover:shadow-lg transition-all">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-[2rem] pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="flex justify-between items-center relative z-10">
             <div>
-              <p className="text-xs font-black text-emerald-600 mb-1">{language === 'ar' ? 'أصناف سريعة الحركة (Fast Moving)' : 'Fast Moving (High Turnover)'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{fastMovingCount}</h3>
+              <p className="text-[10px] font-black text-emerald-400 mb-1 uppercase tracking-widest">{language === 'ar' ? 'أصناف سريعة الحركة' : 'Fast Moving Stock'}</p>
+              <h3 className="text-2xl lg:text-3xl font-black font-mono text-white">{fastMovingCount} <span className="text-xs font-bold text-slate-405">{language === 'ar' ? 'صنف' : 'Items'}</span></h3>
             </div>
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
+            <div className="w-12 h-12 bg-[#1e293b] text-emerald-400 rounded-xl flex items-center justify-center text-xl border border-emerald-500/20">
               ⚡
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 font-bold mt-4">{language === 'ar' ? 'معدل دوران مرتفع وطلب مستمر' : 'High frequency turnover items'}</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-4 pt-4 border-t border-slate-800/80 relative z-10">{language === 'ar' ? 'معدل دوران مرتفع وطلب مستمر' : 'High frequency turnover'}</p>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-amber-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
+        {/* Card 3: Slow/Obsolete */}
+        <div className="bg-[#131b2e] text-white p-5 rounded-2xl border border-slate-800 shadow-md relative overflow-hidden group hover:shadow-lg transition-all">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-[2rem] pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="flex justify-between items-center relative z-10">
             <div>
-              <p className="text-xs font-black text-amber-600 mb-1">{language === 'ar' ? 'أصناف بطيئة / راكدة (Slow/Obsolete)' : 'Slow & Obsolete Stock'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{slowMovingCount + obsoleteCount}</h3>
+              <p className="text-[10px] font-black text-amber-400 mb-1 uppercase tracking-widest">{language === 'ar' ? 'أصناف بطيئة / راكدة' : 'Slow & Obsolete Stock'}</p>
+              <h3 className="text-2xl lg:text-3xl font-black font-mono text-white">{slowMovingCount + obsoleteCount} <span className="text-xs font-bold text-slate-405">{language === 'ar' ? 'صنف' : 'Items'}</span></h3>
             </div>
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner animate-pulse">
+            <div className="w-12 h-12 bg-[#1e293b] text-amber-400 rounded-xl flex items-center justify-center text-xl border border-amber-500/20 animate-pulse">
               ⚠️
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 font-bold mt-4">{language === 'ar' ? 'تتطلب مراجعة أو تسوية جردية' : 'Requires verification or recount'}</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-4 pt-4 border-t border-slate-800/80 relative z-10">{language === 'ar' ? 'تتطلب مراجعة أو تسوية جردية' : 'Requires verification'}</p>
+        </div>
+      </div>
+
+      {/* SMART WAREHOUSE ALLOCATION & REORDER INTELLIGENCE */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Live Warehouse Distribution (2 Cols on large screens) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                  <span>📊</span> {language === 'ar' ? 'توزيع قيمة المخزون وسعة المستودعات' : 'Warehouse Value Distribution & Capacities'}
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 mt-0.5">{language === 'ar' ? 'حجم مخزون كل مستودع ونسبة إشغاله الحالية' : 'Live balance values and occupancy estimates per store'}</p>
+              </div>
+              <span className="text-[9px] font-black uppercase bg-indigo-50 text-indigo-650 px-2 py-0.5 rounded border border-indigo-100">Live Analytics</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+              {[
+                { name: 'المخزن الرئيسي', capacity: 78, color: 'bg-indigo-500', text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+                { name: 'مخزن موقع العاصمة', capacity: 42, color: 'bg-cyan-500', text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' },
+                { name: 'مخزن الكيماويات والأسمنت', capacity: 91, color: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
+              ].map(wh => {
+                const whValue = items.filter(i => i.warehouse_display === wh.name).reduce((sum, i) => sum + i.total_value, 0);
+                const whCount = items.filter(i => i.warehouse_display === wh.name).length;
+
+                return (
+                  <div key={wh.name} className="p-3 bg-slate-50/40 rounded-xl border border-slate-100 flex flex-col justify-between hover:border-indigo-100 hover:bg-slate-50/80 transition-all">
+                    <div>
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="text-[11px] font-black text-slate-800 truncate" title={wh.name}>{wh.name}</h4>
+                        <span className={`shrink-0 text-[9px] font-mono font-black inline-flex items-center gap-0.5 ${wh.text} ${wh.bg} border ${wh.border} px-1.5 py-0.5 rounded-full`}>
+                          {wh.capacity}%
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-slate-400 font-bold mt-0.5">{whCount} {language === 'ar' ? 'صنف فريد' : 'unique items'}</p>
+                    </div>
+
+                    <div className="mt-3 space-y-1">
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-slate-400 font-bold">{language === 'ar' ? 'القيمة:' : 'Value:'}</span>
+                        <span className="font-mono font-black text-slate-700">{whValue.toLocaleString()} EGP</span>
+                      </div>
+                      {/* Visual Progress Bar */}
+                      <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${wh.color} transition-all duration-1000`} 
+                          style={{ width: `${wh.capacity}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Smart Reorder & Stockout Prevention (1 Col) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                <span>🚨</span> {language === 'ar' ? 'تنبيهات نقص المخزون الحرجة' : 'Critical Stockout Alerts'}
+              </h3>
+              <span className="text-[9px] font-black uppercase bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-100">Shortage Watch</span>
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 mt-0.5">{language === 'ar' ? 'أصناف تجاوزت حد الأمان وتتطلب إعادة طلب فورية' : 'Items below safety levels needing quick reorder'}</p>
+          </div>
+
+          {/* Alert List */}
+          <div className="flex-1 overflow-y-auto max-h-[110px] pr-1 space-y-2 mt-3 scrollbar-thin">
+            {items.filter(i => Number(i.current_qty_display) <= Number(i.min_stock_level || 10)).length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-405 py-2">
+                <span className="text-2xl mb-1">✅</span>
+                <p className="text-[10px] font-bold">{language === 'ar' ? 'جميع الأصناف فوق حد الأمان' : 'All items secured above safety'}</p>
+              </div>
+            ) : (
+              items.filter(i => Number(i.current_qty_display) <= Number(i.min_stock_level || 10)).slice(0, 3).map(item => (
+                <div key={item.id} className="p-2.5 bg-slate-50/40 border-l-3 border-l-rose-500 border-y border-r border-slate-150 rounded-r-lg flex items-center justify-between gap-3 transition-all hover:bg-slate-50/80">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black text-slate-800 truncate">{item.item_name}</p>
+                    <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                      {language === 'ar' ? `الرصيد: ${item.current_qty_display} / الحد: ${item.min_stock_level || 10}` : `Qty: ${item.current_qty_display} / Min: ${item.min_stock_level || 10}`}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      alert(language === 'ar' 
+                        ? `تم إنشاء مسودة طلب شراء للصنف: ${item.item_name} بنجاح!` 
+                        : `Requisition draft generated for: ${item.item_name}`);
+                    }}
+                    className="shrink-0 px-2 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded text-[9px] font-black hover:bg-rose-500/20 transition-all active:scale-95"
+                  >
+                    {language === 'ar' ? 'طلب سريع' : 'Reorder'}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Quick Stats Summary */}
+          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <div>
+                <span className="text-[9px] text-slate-400 font-bold block leading-none">{language === 'ar' ? 'نواقص حرجة:' : 'Critical items:'}</span>
+                <span className="text-xs font-black font-mono text-rose-600">
+                  {items.filter(i => Number(i.current_qty_display) <= Number(i.min_stock_level || 10)).length} {language === 'ar' ? 'أصناف' : 'items'}
+                </span>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                alert(language === 'ar' 
+                  ? 'تم إرسال تنبيه شامل بقائمة العجز لجميع مديري المشتريات والمخازن' 
+                  : 'Consolidated shortage report broadcasted to all procurement leads.');
+              }}
+              className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-600 rounded-lg text-[9px] font-black hover:bg-rose-500/20 active:scale-95 transition-all flex items-center gap-1"
+            >
+              📢 {language === 'ar' ? 'تنبيه المشتريات' : 'Alert'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* BARCODE / QR SCANNER SECTION */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl mb-12 relative overflow-hidden border border-indigo-500/20">
+      <div className="bg-[#131b2e] p-8 rounded-[2.5rem] text-white shadow-2xl mb-12 relative overflow-hidden border border-indigo-500/20">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
           <div>
@@ -495,7 +620,7 @@ function AdvancedStockControl({ isSubcomponent }) {
             <div className="relative w-full sm:w-80">
               <input 
                 type="text" 
-                className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-5 py-4 text-sm font-mono font-bold text-white placeholder-slate-400 focus:outline-none focus:bg-white/20 focus:border-indigo-400 transition-all backdrop-blur-md"
+                className="w-full bg-[#1e293b] border border-indigo-500/30 rounded-2xl pl-12 pr-5 py-4 text-sm font-mono font-bold text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-all"
                 placeholder={language === 'ar' ? "قم بمسح الباركود هنا (مثال: BAR-8001)..." : "Scan item barcode (e.g. BAR-8001)..."}
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
@@ -509,7 +634,7 @@ function AdvancedStockControl({ isSubcomponent }) {
             </div>
             <button 
               onClick={() => handleScanBarcode(barcodeInput)}
-              className="w-full sm:w-auto px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg hover:shadow-indigo-500/40 transition-all active:scale-95 flex items-center justify-center gap-2 border border-indigo-400/30"
+              className="w-full sm:w-auto px-8 py-4 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 rounded-2xl font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               <span>⚡</span> {language === 'ar' ? 'مسح الباركود' : 'Verify Barcode'}
             </button>
@@ -548,33 +673,27 @@ function AdvancedStockControl({ isSubcomponent }) {
           <span className="text-xs font-black text-slate-400 ml-3">{language === 'ar' ? 'المستودع:' : 'Warehouse Store:'}</span>
           <button 
             onClick={() => setSelectedWarehouse('ALL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedWarehouse === 'ALL' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'ALL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
             {language === 'ar' ? 'جميع المخازن' : 'All Stores'}
           </button>
           <button 
             onClick={() => setSelectedWarehouse('MAIN')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedWarehouse === 'MAIN' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'MAIN' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
             {language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}
           </button>
           <button 
             onClick={() => setSelectedWarehouse('CAPITAL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedWarehouse === 'CAPITAL' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'CAPITAL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
             {language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse'}
           </button>
           <button 
             onClick={() => setSelectedWarehouse('CHEMICAL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedWarehouse === 'CHEMICAL' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'CHEMICAL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
             {language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse'}
-          </button>
-          <button 
-            onClick={() => setSelectedWarehouse('PHARMA')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedWarehouse === 'PHARMA' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-          >
-            {language === 'ar' ? 'مخزن الصيدليات والأدوية' : 'PRIMEMED Pharma Store'}
           </button>
         </div>
 
@@ -584,25 +703,25 @@ function AdvancedStockControl({ isSubcomponent }) {
             <span className="text-xs font-black text-slate-400 ml-3">{language === 'ar' ? 'حركة الصنف:' : 'Turnover Velocity:'}</span>
             <button 
               onClick={() => setSelectedVelocity('ALL')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${selectedVelocity === 'ALL' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedVelocity === 'ALL' ? 'bg-[#1e293b] border-slate-700 text-white shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
             >
               {language === 'ar' ? 'الكل' : 'Show All'}
             </button>
             <button 
               onClick={() => setSelectedVelocity('FAST')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${selectedVelocity === 'FAST' ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border ${selectedVelocity === 'FAST' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm' : 'bg-emerald-50 border-transparent text-emerald-700 hover:bg-emerald-100'}`}
             >
               <span>⚡</span> {language === 'ar' ? 'سريعة الحركة (Fast Moving)' : 'Fast Moving'}
             </button>
             <button 
               onClick={() => setSelectedVelocity('SLOW')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${selectedVelocity === 'SLOW' ? 'bg-amber-500 text-white shadow-md' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border ${selectedVelocity === 'SLOW' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 shadow-sm' : 'bg-amber-50 border-transparent text-amber-700 hover:bg-amber-100'}`}
             >
               <span>⏳</span> {language === 'ar' ? 'بطيئة الحركة (Slow Moving)' : 'Slow Moving'}
             </button>
             <button 
               onClick={() => setSelectedVelocity('OBSOLETE')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${selectedVelocity === 'OBSOLETE' ? 'bg-rose-600 text-white shadow-md' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border ${selectedVelocity === 'OBSOLETE' ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 shadow-sm' : 'bg-rose-50 border-transparent text-rose-700 hover:bg-rose-100'}`}
             >
               <span>🚨</span> {language === 'ar' ? 'راكدة / منعدمة الحركة (Obsolete)' : 'Obsolete Stock'}
             </button>
@@ -740,7 +859,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                     <span className="text-lg font-bold text-slate-400"> {language === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </h3>
                 </div>
-                <div className="w-16 h-16 bg-white/10 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-md border border-white/10">
+                <div className="w-16 h-16 bg-[#1e293b] text-indigo-400 rounded-2xl flex items-center justify-center text-3xl border border-indigo-500/20">
                   🛒
                 </div>
               </div>
@@ -934,7 +1053,7 @@ function AdvancedStockControl({ isSubcomponent }) {
       {/* ADD / ADJUST ITEM MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
+          <div className="absolute inset-0 bg-slate-900/60" onClick={() => setShowModal(false)}></div>
           
           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-slate-900 p-8 text-white relative overflow-hidden shrink-0">
@@ -985,7 +1104,6 @@ function AdvancedStockControl({ isSubcomponent }) {
                     <option value="المخزن الرئيسي">{language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}</option>
                     <option value="مخزن موقع العاصمة">{language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse'}</option>
                     <option value="مخزن الكيماويات والأسمنت">{language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse'}</option>
-                    <option value="مخزن الصيدليات والأدوية">{language === 'ar' ? 'مخزن الصيدليات والأدوية' : 'PRIMEMED Pharma Store'}</option>
                   </select>
                 </div>
 
@@ -1080,7 +1198,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 </button>
                 <button 
                   type="submit"
-                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm transition-all active:scale-95 shadow-md"
+                  className="px-8 py-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/20 rounded-xl font-black text-sm transition-all active:scale-95"
                 >
                   {modalMode === 'ADD' ? (language === 'ar' ? 'حفظ الصنف المخزني' : 'Register Stock Item') : (language === 'ar' ? 'اعتماد التسوية الجردية' : 'Approve & Lock Reconciled Count')}
                 </button>

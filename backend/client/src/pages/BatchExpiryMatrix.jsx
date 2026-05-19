@@ -7,6 +7,7 @@ function BatchExpiryMatrix({ isSubcomponent }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, SAFE, WARNING, EXPIRED
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modal State for Editing Batch & Expiry
   const [showEditModal, setShowEditModal] = useState(false);
@@ -222,8 +223,12 @@ function BatchExpiryMatrix({ isSubcomponent }) {
 
   // Filtered Items
   const filteredItems = items.filter(item => {
-    if (filterStatus === 'ALL') return true;
-    return item.status_flag === filterStatus;
+    const matchStatus = filterStatus === 'ALL' || item.status_flag === filterStatus;
+    const matchQuery = !searchQuery || 
+      (item.item_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.batch_no_display || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.supplier_display || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchStatus && matchQuery;
   });
 
   // Stats
@@ -233,118 +238,113 @@ function BatchExpiryMatrix({ isSubcomponent }) {
 
   return (
     <div className={isSubcomponent ? "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white py-4" : "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white p-8 lg:p-12 max-w-[1600px] mx-auto"} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div>
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 text-indigo-700 rounded-2xl font-black text-xs tracking-wider uppercase mb-3 backdrop-blur-sm">
-            <span>📦</span> Batch & Expiry Matrix
+      {/* HEADER & COMPLIANCE ACTIONS */}
+      <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-black uppercase tracking-widest mb-3">
+              📦 Batch & Expiry Matrix
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              {language === 'ar' ? 'تتبع الباتشات وتواريخ الصلاحية' : 'Batch Expiry & Shelf-Life Matrix'}
+            </h1>
+            <p className="text-xs text-slate-300 font-bold mt-2 max-w-xl leading-relaxed">
+              {language === 'ar'
+                ? 'مراقبة الأكواد، السيريالات، وتواريخ الصلاحية للأصناف المخزنية، مع نظام الحظر التلقائي لمنع صرف المواد المنتهية للمشاريع.'
+                : 'Audit serial numbers, shelf-life, and expiry dates of warehouse batches, featuring an automated lockdown system to stop expired supply issuance.'}
+            </p>
           </div>
-          <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-            {language === 'ar' ? 'تتبع الباتشات وتواريخ الصلاحية' : 'Batch Expiry & Shelf-Life Matrix'}
-          </h1>
-          <p className="text-sm font-bold text-slate-500 mt-3 max-w-xl leading-relaxed">
-            {language === 'ar'
-              ? 'مراقبة الأكواد، السيريالات، وتواريخ الصلاحية للأصناف المخزنية (المواد الكيميائية والأسمنت)، مع نظام الحظر التلقائي لمنع صرف المواد المنتهية للمشاريع.'
-              : 'Audit serial numbers, shelf-life, and expiry dates of warehouse batches, featuring an automated lockdown system to stop expired supply issuance.'}
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60 shadow-inner flex-wrap">
+          {/* KPI Cards on Right */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'باتشات آمنة' : 'Safe Batches'}</span>
+              <h4 className="text-lg font-black text-emerald-400 font-mono mt-2">{safeCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'صنف' : 'Items'}</span></h4>
+            </div>
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'قاربت على الانتهاء' : 'Near Expiry'}</span>
+              <h4 className="text-lg font-black text-amber-500 font-mono mt-2">{warningCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'صنف' : 'Items'}</span></h4>
+            </div>
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'منتهي ومحظور' : 'Expired & Locked'}</span>
+              <h4 className="text-lg font-black text-rose-500 font-mono mt-2">{expiredCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'صنف' : 'Items'}</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTER & SEARCH BAR */}
+      <div className="bg-white rounded-[2rem] p-4 flex flex-col xl:flex-row justify-between items-center gap-4 shadow-md mb-8">
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
           <button
             onClick={() => setFilterStatus('ALL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${filterStatus === 'ALL' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${filterStatus === 'ALL' ? 'bg-[#0b0f19] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
           >
             {language === 'ar' ? `الكل (${items.length})` : `All (${items.length})`}
           </button>
           <button
             onClick={() => setFilterStatus('SAFE')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${filterStatus === 'SAFE' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-700 hover:bg-emerald-50'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterStatus === 'SAFE' ? 'bg-emerald-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span> {language === 'ar' ? `آمن (${safeCount})` : `Safe (${safeCount})`}
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {language === 'ar' ? `آمن (${safeCount})` : `Safe (${safeCount})`}
           </button>
           <button
             onClick={() => setFilterStatus('WARNING')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${filterStatus === 'WARNING' ? 'bg-amber-500 text-white shadow-md' : 'text-amber-700 hover:bg-amber-50'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterStatus === 'WARNING' ? 'bg-amber-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span> {language === 'ar' ? `قارب على الانتهاء (${warningCount})` : `Near Expiry (${warningCount})`}
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> {language === 'ar' ? `قارب على الانتهاء (${warningCount})` : `Near Expiry (${warningCount})`}
           </button>
           <button
             onClick={() => setFilterStatus('EXPIRED')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${filterStatus === 'EXPIRED' ? 'bg-rose-600 text-white shadow-md' : 'text-rose-700 hover:bg-rose-50'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterStatus === 'EXPIRED' ? 'bg-rose-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
           >
-            <span className="w-2 h-2 rounded-full bg-rose-400"></span> {language === 'ar' ? `منتهي الصلاحية (${expiredCount})` : `Expired (${expiredCount})`}
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span> {language === 'ar' ? `منتهي الصلاحية (${expiredCount})` : `Expired (${expiredCount})`}
           </button>
         </div>
-      </div>
 
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-white p-8 rounded-[2rem] border border-emerald-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-emerald-600 mb-1">{language === 'ar' ? 'باتشات آمنة الصلاحية (> 60 يوم)' : 'Safe Batches (> 60 Days)'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{safeCount}</h3>
-            </div>
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-              🛡️
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2rem] border border-amber-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-amber-600 mb-1">{language === 'ar' ? 'باتشات قاربت على الانتهاء (≤ 60 يوم)' : 'Critical Near-Expiry (≤ 60 Days)'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{warningCount}</h3>
-            </div>
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-              ⚠️
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2rem] border border-rose-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-rose-600 mb-1">{language === 'ar' ? 'باتشات منتهية ومحظورة الصرف' : 'Expired & Locked Batches'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{expiredCount}</h3>
-            </div>
-            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner animate-pulse">
-              🚨
-            </div>
+        <div className="flex items-center gap-4 w-full xl:w-auto justify-end">
+          <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+            💡 Tip: {language === 'ar' ? 'النظام يقفل آلياً أي تحويل للصلاحيات المنتهية.' : 'Locked items trigger real-time ledger quarantine blocks.'}
+          </span>
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              className="w-full bg-slate-100 border border-slate-200 text-slate-700 placeholder-slate-400 rounded-full pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-slate-300"
+              placeholder={language === 'ar' ? 'بحث بالاسم، الباتش أو المورد...' : 'Search by name, batch, or supplier...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <span className="absolute left-3.5 top-2.5 text-slate-400 text-xs">🔍</span>
           </div>
         </div>
       </div>
 
-      {/* MATRIX TABLE / CARDS GRID */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100/60 overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 to-transparent pointer-events-none h-32"></div>
-
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center relative z-10">
-          <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
+      {/* MATRIX TABLE */}
+      <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden p-6 mb-12">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+          <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
             <span>🗂️</span> {language === 'ar' ? 'مصفوفة الباتشات وتواريخ الصلاحية' : 'Shelf-Life Matrix Logs'}
           </h2>
+          <span className="text-xs text-slate-500 font-bold">
+            {language === 'ar' ? `النتائج: ${filteredItems.length} صنف` : `Results: ${filteredItems.length} items`}
+          </span>
         </div>
 
-        <div className="overflow-x-auto relative z-10">
-          <table className={`w-full border-collapse ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-slate-700">
             <thead>
-              <tr className={`bg-slate-50/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'الصنف (Item Name)' : 'Pharmaceutical / Item'}</th>
-                <th className="p-5 font-black">{language === 'ar' ? 'رقم الباتش (Batch No)' : 'Batch Code'}</th>
-                <th className="p-5 font-black">{language === 'ar' ? 'رقم السيريال (Serial No)' : 'Serial Number'}</th>
-                <th className="p-5 font-black">{language === 'ar' ? 'الرصيد المتاح' : 'Quantity'}</th>
-                <th className="p-5 font-black">{language === 'ar' ? 'المورد المعتمد' : 'Supplier'}</th>
-                <th className="p-5 font-black">{language === 'ar' ? 'تاريخ الصلاحية' : 'Expiry Date'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'حالة الصلاحية' : 'Status'}</th>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إجراءات التتبع والصرف' : 'Actions'}</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الصنف' : 'Pharmaceutical / Item'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'رقم الباتش' : 'Batch Code'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'رقم السيريال' : 'Serial Number'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Quantity'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'المورد المعتمد' : 'Supplier'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'تاريخ الصلاحية' : 'Expiry Date'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 [...Array(3)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -355,70 +355,71 @@ function BatchExpiryMatrix({ isSubcomponent }) {
                 ))
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-16 text-center text-slate-400 font-bold">
-                    {language === 'ar' ? 'لا توجد أصناف تطابق الفلتر المحدد' : 'No pharmaceutical items matched this status criteria.'}
+                  <td colSpan="8" className="text-center py-12 text-slate-400 font-medium">
+                    {language === 'ar' ? 'لا توجد أصناف تطابق البحث حالياً.' : 'No pharmaceuticals match your search.'}
                   </td>
                 </tr>
               ) : (
-                filteredItems.map(item => {
+                filteredItems.map((item) => {
                   const isExpired = item.status_flag === 'EXPIRED';
                   const isWarning = item.status_flag === 'WARNING';
 
                   return (
-                    <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${isExpired ? 'bg-rose-50/20' : isWarning ? 'bg-amber-50/20' : ''}`}>
-                      <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
-                        <span className="block font-black text-slate-900 text-base">{item.item_name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">ID: {item.id} | UOM: {item.uom || item.unit || 'علبة'}</span>
+                    <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${isExpired ? 'bg-rose-50/10' : isWarning ? 'bg-amber-50/10' : ''}`}>
+                      <td className="px-4 py-3.5 text-center">
+                        <div className="font-bold text-slate-900 text-sm">{item.item_name}</div>
+                        <div className="text-[10px] text-slate-500">ID: {item.id} | UOM: {item.uom || item.unit || 'pcs'}</div>
                       </td>
-                      <td className="p-5 font-mono text-xs font-black text-indigo-600">{item.batch_no_display}</td>
-                      <td className="p-5 font-mono text-xs text-slate-500">{item.serial_no_display}</td>
-                      <td className="p-5 font-mono font-black text-slate-900">{Number(item.remaining_qty || item.quantity || 0).toLocaleString()}</td>
-                      <td className="p-5 text-slate-600">{item.supplier_display}</td>
-                      <td className="p-5 font-mono text-xs text-slate-600">{item.expiry_date_display}</td>
-                      <td className="p-5 text-center">
-                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black inline-flex items-center gap-1.5 border ${isExpired
-                            ? 'bg-rose-100 text-rose-700 border-rose-200 animate-pulse'
+                      <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-indigo-600">{item.batch_no_display}</td>
+                      <td className="px-4 py-3.5 text-center text-xs font-mono text-slate-500">{item.serial_no_display}</td>
+                      <td className="px-4 py-3.5 text-center font-mono font-bold text-sm text-slate-900">{Number(item.remaining_qty || item.quantity || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3.5 text-center text-xs text-slate-600">{item.supplier_display}</td>
+                      <td className="px-4 py-3.5 text-center text-xs font-mono text-slate-600">{item.expiry_date_display}</td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black inline-flex items-center gap-1 border ${
+                          isExpired
+                            ? 'bg-rose-50 text-rose-600 border-rose-100 animate-pulse'
                             : isWarning
-                              ? 'bg-amber-100 text-amber-700 border-amber-200'
-                              : 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          }`}>
+                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                            : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
                           {isExpired
-                            ? (language === 'ar' ? 'منتهي الصلاحية (محظور)' : 'Expired (Locked)')
+                            ? (language === 'ar' ? 'منتهي (محظور)' : 'Expired (Locked)')
                             : isWarning
-                              ? (language === 'ar' ? `متبقي ${item.days_remaining} يوم` : `${item.days_remaining} days left`)
-                              : (language === 'ar' ? `آمن (${item.days_remaining} يوم)` : `Safe (${item.days_remaining} days)`)}
+                            ? (language === 'ar' ? `متبقي ${item.days_remaining} يوم` : `${item.days_remaining} days left`)
+                            : (language === 'ar' ? `آمن` : `Safe`)}
                         </span>
                       </td>
-                      <td className={`p-5 ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           {isExpired ? (
                             <button
                               onClick={() => handlePreventIssue(item)}
-                              className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 hover:bg-rose-700 active:scale-95 transition-all animate-bounce"
-                              title={language === 'ar' ? "حظر آلي: يمنع النظام صرف هذا الباتش للمواقع" : "Auto Lockdown: Expired batches cannot be issued"}
+                              className="px-2.5 py-1 bg-rose-600 text-white rounded text-[10px] font-bold animate-pulse"
+                              title={language === 'ar' ? "محظور الصرف للمواقع" : "Locked"}
                             >
-                              <span>🔒</span> {language === 'ar' ? 'محظور الصرف' : 'Locked'}
+                              🔒 {language === 'ar' ? 'محظور' : 'Locked'}
                             </button>
                           ) : (
                             <button
                               onClick={() => alert(language === 'ar' ? `✅ الباتش #${item.batch_no_display} صالح للاستخدام ومتاح للصرف للمشاريع الحالية.` : `✅ Batch #${item.batch_no_display} is valid and released for site usage.`)}
-                              className="px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+                              className="px-2.5 py-1 bg-[#0b0f19] hover:bg-slate-800 text-white rounded text-[10px] font-bold"
                             >
-                              <span>📦</span> {language === 'ar' ? 'إذن صرف' : 'Issue Stock'}
+                              {language === 'ar' ? 'صرف' : 'Issue'}
                             </button>
                           )}
                           <button
                             onClick={() => handleOpenTrackModal(item)}
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-colors flex items-center gap-1"
-                            title={language === 'ar' ? "تتبع مسار الباتش من المورد للمشروع" : "Audit batch life cycle"}
+                            className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors"
+                            title={language === 'ar' ? "تتبع" : "Trace"}
                           >
-                            <span>🔍</span> {language === 'ar' ? 'تتبع' : 'Trace'}
+                            🔍
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(item)}
-                            className="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-colors"
-                            title={language === 'ar' ? "تعديل بيانات الباتش والصلاحية" : "Edit Batch Info"}
+                            className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                            title={language === 'ar' ? "تعديل" : "Edit"}
                           >
                             ✏️
                           </button>

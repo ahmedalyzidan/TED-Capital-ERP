@@ -9,6 +9,7 @@ function StockTransfers({ isSubcomponent }) {
   const [projects, setProjects] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // New Transfer State
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -339,6 +340,13 @@ function StockTransfers({ isSubcomponent }) {
   // Stats
   const activeTransfersCount = transfers.filter(t => t.status?.includes('قيد')).length;
   const completedTransfersCount = transfers.filter(t => t.status?.includes('مكتمل')).length;
+  
+  const filteredTransfers = transfers.filter(tr => 
+    (tr.material || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (`trn-${tr.id}`).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tr.from_project || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tr.to_project || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="font-sans text-slate-900 selection:bg-indigo-500 selection:text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -426,85 +434,96 @@ function StockTransfers({ isSubcomponent }) {
       )}
 
       <div className={`${isSubcomponent ? 'py-4' : 'p-8 lg:p-12 max-w-[1600px] mx-auto'} print:hidden`}>
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 text-indigo-700 rounded-2xl font-black text-xs tracking-wider uppercase mb-3 backdrop-blur-sm">
-              <span>🚚</span> {language === 'ar' ? 'التحويلات اللوجستية واللوجستيات' : 'Enterprise Logistics'}
+        {/* HEADER & COMPLIANCE ACTIONS */}
+        <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-black uppercase tracking-widest mb-3">
+                🚚 {language === 'ar' ? 'التحويلات اللوجستية واللوجستيات' : 'Enterprise Logistics'}
+              </div>
+              <h1 className="text-3xl font-black text-white tracking-tight">
+                {language === 'ar' ? 'التحويلات المخزنية وإمداد المواقع' : 'Warehouse Stock Transfers'}
+              </h1>
+              <p className="text-xs text-slate-300 font-bold mt-2 max-w-xl leading-relaxed">
+                {language === 'ar'
+                  ? 'إدارة نقل العهد والبضائع بين المخازن الرئيسية ومواقع المشاريع المختلفة، مع توثيق طباعي كامل لرحلة البضاعة.'
+                  : 'Management of cargo and equipment transit between primary central warehouses and project locations, with full waybill printing.'}
+              </p>
             </div>
-            <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-              {language === 'ar' ? 'التحويلات المخزنية وإمداد المواقع' : 'Warehouse Stock Transfers'}
-            </h1>
-            <p className="text-sm font-bold text-slate-500 mt-3 max-w-xl leading-relaxed">
-              {language === 'ar'
-                ? 'إدارة نقل العهد والبضائع بين المخازن الرئيسية ومواقع المشاريع المختلفة، مع توثيق طباعي كامل لرحلة البضاعة.'
-                : 'Management of cargo and equipment transit between primary central warehouses and project locations, with full waybill printing.'}
-            </p>
+
+            {/* KPI Cards on Right */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'بضائع قيد النقل' : 'In Transit'}</span>
+                <h4 className="text-lg font-black text-amber-500 font-mono mt-2">{activeTransfersCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'تحويل' : 'Ops'}</span></h4>
+              </div>
+              <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'تحويلات مستلمة' : 'Received'}</span>
+                <h4 className="text-lg font-black text-white font-mono mt-2">{completedTransfersCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'مكتمل' : 'Ops'}</span></h4>
+              </div>
+              <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'إجمالي التحويلات' : 'Total Transfers'}</span>
+                <h4 className="text-lg font-black text-cyan-400 font-mono mt-2">{transfers.length} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'تحويل' : 'Ops'}</span></h4>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={() => setShowTransferModal(true)}
-            className="group relative px-8 py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl hover:shadow-indigo-500/30 overflow-hidden"
-          >
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-            <span className="flex items-center gap-3 relative z-10">
+          {/* Actions Row */}
+          <div className="flex flex-wrap items-center justify-end border-t border-slate-800/80 pt-6 gap-4">
+            <button
+              onClick={() => setShowTransferModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-slate-950 rounded-xl font-bold text-xs transition-all duration-300 shadow-xl hover:shadow-teal-500/20 flex items-center gap-2 border border-teal-400/30"
+            >
               <span>➕</span> {language === 'ar' ? 'إنشاء إذن تحويل مخزني' : 'Create Stock Transfer'}
-            </span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-xs font-black text-slate-400 mb-1">{language === 'ar' ? 'بضائع قيد النقل للمواقع' : 'Shipments In Transit'}</p>
-                <h3 className="text-4xl font-black text-slate-900 font-mono">{activeTransfersCount}</h3>
-              </div>
-              <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-                🚚
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-xs font-black text-slate-400 mb-1">{language === 'ar' ? 'تحويلات مكتملة ومستلمة' : 'Completed & Received'}</p>
-                <h3 className="text-4xl font-black text-slate-900 font-mono">{completedTransfersCount}</h3>
-              </div>
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-                ✅
-              </div>
-            </div>
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100/60 overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 to-transparent pointer-events-none h-32"></div>
+        {/* SEARCH BAR */}
+        <div className="bg-white rounded-[2rem] p-4 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-md mb-8">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <input
+                type="text"
+                className="w-full bg-slate-100 border border-slate-200 text-slate-700 placeholder-slate-400 rounded-full pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-slate-300"
+                placeholder={language === 'ar' ? 'بحث بالصنف أو المصدر أو رقم الإذن...' : 'Search by item, source, or waybill...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <span className="absolute left-3.5 top-2.5 text-slate-400 text-xs">🔍</span>
+            </div>
+          </div>
+          <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+            💡 Tip: {language === 'ar' ? 'تأكد من طباعة بوليصة النقل والتوقيع المالي قبل خروج الشاحنة.' : 'Print the waybill and get supervisor signature before shipping.'}
+          </span>
+        </div>
 
-          <div className="p-8 border-b border-slate-100 flex justify-between items-center relative z-10">
-            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
+        {/* TRANSFERS TABLE */}
+        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden p-6 mb-12">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+            <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
               <span>📋</span> {language === 'ar' ? 'سجل التحويلات وإمداد المشاريع' : 'Transfers Registry & Supply Logs'}
             </h2>
+            <span className="text-xs text-slate-500 font-bold">
+              {language === 'ar' ? `النتائج: ${filteredTransfers.length} إذن` : `Results: ${filteredTransfers.length} transfers`}
+            </span>
           </div>
 
-          <div className="overflow-x-auto relative z-10">
-            <table className={`w-full border-collapse ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-slate-700">
               <thead>
-                <tr className={`bg-slate-50/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'رقم الإذن' : 'Waybill ID'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'الصنف والباتش' : 'Item & Batch'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'الكمية' : 'Quantity'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'المصدر (من)' : 'Source (From)'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'الوجهة (إلى)' : 'Destination (To)'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'التاريخ' : 'Date'}</th>
-                  <th className="p-5 font-black">{language === 'ar' ? 'الحالة' : 'Status'}</th>
-                  <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إجراءات' : 'Actions'}</th>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'رقم الإذن' : 'Waybill ID'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الصنف والباتش' : 'Item & Batch'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الكمية' : 'Quantity'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'المصدر (من)' : 'Source (From)'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الوجهة (إلى)' : 'Destination (To)'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                  <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+              <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   [...Array(3)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
@@ -513,38 +532,39 @@ function StockTransfers({ isSubcomponent }) {
                       </td>
                     </tr>
                   ))
-                ) : transfers.length === 0 ? (
+                ) : filteredTransfers.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-16 text-center text-slate-400 font-bold">
-                      {language === 'ar' ? 'لا توجد عمليات تحويل مسجلة حتى الآن' : 'No recorded stock transfers found.'}
+                    <td colSpan="8" className="text-center py-12 text-slate-400 font-medium">
+                      {language === 'ar' ? 'لا توجد عمليات تحويل تطابق البحث حالياً.' : 'No transfers match your search.'}
                     </td>
                   </tr>
                 ) : (
-                  transfers.map(tr => {
+                  filteredTransfers.map((tr) => {
                     const isCompleted = tr.status?.includes('مكتمل');
                     return (
-                      <tr key={tr.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className={`p-5 font-mono text-xs text-indigo-600 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>TRN-{tr.id.toString().padStart(5, '0')}</td>
-                        <td className="p-5">
-                          <span className="block font-black text-slate-900">{tr.material}</span>
-                          <span className="text-[10px] font-bold text-slate-400 font-mono">Batch: {tr.batch_number || 'N/A'}</span>
+                      <tr key={tr.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-indigo-600">TRN-{tr.id.toString().padStart(5, '0')}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <div className="font-bold text-slate-900">{tr.material}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">Batch: {tr.batch_number || 'N/A'}</div>
                         </td>
-                        <td className="p-5 font-mono font-black text-lg text-slate-800">{Number(tr.qty).toLocaleString()}</td>
-                        <td className="p-5 text-slate-600">{tr.from_project}</td>
-                        <td className="p-5 text-slate-900 font-black">{tr.to_project}</td>
-                        <td className="p-5 text-xs text-slate-500 font-mono">{tr.date?.split('T')[0]}</td>
-                        <td className="p-5">
-                          <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black inline-flex items-center gap-1.5 border ${isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
-                            }`}>
+                        <td className="px-4 py-3.5 text-center font-mono font-bold text-sm text-slate-900">{Number(tr.qty).toLocaleString()}</td>
+                        <td className="px-4 py-3.5 text-center text-xs text-slate-600">{tr.from_project}</td>
+                        <td className="px-4 py-3.5 text-center text-xs font-bold text-slate-900">{tr.to_project}</td>
+                        <td className="px-4 py-3.5 text-center text-xs font-mono text-slate-500">{tr.date?.split('T')[0]}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black inline-flex items-center gap-1 border ${
+                            isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+                          }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
                             {tr.status}
                           </span>
                         </td>
-                        <td className={`p-5 ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>
-                          <div className={`flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                        <td className="px-4 py-3.5 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => printWaybill(tr)}
-                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors animate-none"
+                              className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
                               title={language === 'ar' ? "طباعة بوليصة النقل" : "Print waybill"}
                             >
                               🖨️
@@ -552,10 +572,9 @@ function StockTransfers({ isSubcomponent }) {
                             {!isCompleted && (
                               <button
                                 onClick={() => handleReceiveTransfer(tr.id)}
-                                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black transition-colors"
-                                title={language === 'ar' ? "تأكيد وصول البضاعة" : "Confirm goods receipt"}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold transition-all"
                               >
-                                {language === 'ar' ? 'تأكيد الاستلام' : 'Receive Stock'}
+                                {language === 'ar' ? 'استلام' : 'Receive'}
                               </button>
                             )}
                           </div>

@@ -77,6 +77,7 @@ export default function Layout() {
         users: "المستخدمين",
         expenses: "المصروفات",
         accountant360: "المحاسب 360 ⚡",
+        portal360: "بوابة 360 الموحدة 🌀",
         settings: "الإعدادات",
         interCompany: "المعاملات بين الشركات 🏢",
         attendance: "سجل الحضور 📅",
@@ -138,6 +139,7 @@ export default function Layout() {
         users: "IAM",
         expenses: "Expenses",
         accountant360: "Accountant 360 ⚡",
+        portal360: "Unified 360 Portal 🌀",
         settings: "Settings",
         interCompany: "Inter-Company 🏢",
         attendance: "Attendance 📅",
@@ -213,6 +215,7 @@ export default function Layout() {
       title: t.menuGroups.core,
       items: [
         { path: '/', icon: '📊', label: t.menu.dashboard },
+        { path: '/360', icon: '🌀', label: t.menu.portal360 },
         { path: '/reports', icon: '📈', label: t.menu.reports, perm: 'FIN_VIEW_LEDGER' },
         { path: '/notifications', icon: '🛰️', label: t.menu.command, badgeKey: 'command' },
         { path: '/approval-inbox', icon: '⚡', label: t.menu.approvals, badgeKey: 'approvals' },

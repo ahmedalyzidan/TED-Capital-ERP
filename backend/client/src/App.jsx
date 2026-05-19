@@ -45,6 +45,7 @@ import RBACMatrix from './pages/RBACMatrix';
 import ApprovalInbox from './pages/ApprovalInbox';
 import StrategicCommandCenter from './pages/StrategicCommandCenter';
 import Accountant360 from './pages/Accountant360';
+import Portal360 from './pages/Portal360';
 import { RBACProtectedRoute } from './components/RBAC';
 
 // Route Protection
@@ -99,6 +100,7 @@ function App() {
               <Route path="/fixed-assets" element={<FixedAssets />} />
               <Route path="/corporate" element={<Corporate />} />
               <Route path="/approval-inbox" element={<ApprovalInbox />} />
+              <Route path="/360" element={<Portal360 />} />
               <Route path="/approvals" element={<Navigate to="/approval-inbox" replace />} />
               <Route path="/notifications" element={<StrategicCommandCenter />} />
               <Route path="/clients/:id/soa" element={<ClientSOA />} />

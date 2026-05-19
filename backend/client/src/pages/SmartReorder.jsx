@@ -13,6 +13,7 @@ function SmartReorder({ isSubcomponent }) {
   const [minStockLevel, setMinStockLevel] = useState(0);
   const [suggestedOrderQty, setSuggestedOrderQty] = useState(0);
 
+  const [searchQuery, setSearchQuery] = useState('');
   // PO Generation Log State
   const [generatedPOs, setGeneratedPOs] = useState([]);
 
@@ -287,95 +288,93 @@ function SmartReorder({ isSubcomponent }) {
 
   return (
     <div className={isSubcomponent ? "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white py-4" : "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white p-8 lg:p-12 max-w-[1600px] mx-auto"} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div>
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-rose-50/50 border border-rose-100/50 text-rose-700 rounded-2xl font-black text-xs tracking-wider uppercase mb-3 backdrop-blur-sm">
-            <span>🚨</span> {language === 'ar' ? 'نواقص وإعادة التعبئة' : 'Smart Reorder & Replenishment'}
+      {/* HEADER & COMPLIANCE ACTIONS */}
+      <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-black uppercase tracking-widest mb-3">
+              🚨 {language === 'ar' ? 'نواقص وإعادة التعبئة' : 'Smart Reorder & Replenishment'}
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              {language === 'ar' ? 'نواقص المخزن وإعادة الطلب التلقائي' : 'Deficits & Auto Reorders'}
+            </h1>
+            <p className="text-xs text-slate-300 font-bold mt-2 max-w-xl leading-relaxed">
+              {language === 'ar'
+                ? 'كشف ذكي بالأصناف التي هبطت تحت "حد الطلب (Reorder Level)"، مع اقتراح كميات الشراء اللازمة وتوليد أوامر الشراء.'
+                : 'Trace items drop below reorder buffers, evaluate minimum stock constraints, and route automated replenishment purchase orders (POs) in real time.'}
+            </p>
           </div>
-          <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-            {language === 'ar' ? 'نواقص المخزن وإعادة الطلب التلقائي' : 'Deficits & Auto Reorders'}
-          </h1>
-          <p className="text-sm font-bold text-slate-500 mt-3 max-w-xl leading-relaxed">
-            {language === 'ar'
-              ? 'كشف ذكي بالأصناف التي هبطت تحت "حد الطلب (Reorder Level)"، مع اقتراح كميات الشراء اللازمة وتوليد أوامر الشراء (Generate PO) بضغطة زر واحدة لقسم المشتريات.'
-              : 'Trace items drop below reorder buffers, evaluate minimum stock constraints, and route automated replenishment purchase orders (POs) in real time.'}
-          </p>
+
+          {/* KPI Cards on Right */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'أصناف بها عجز' : 'Depleted Items'}</span>
+              <h4 className="text-lg font-black text-rose-500 font-mono mt-2">{deficitItems.length} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'صنف' : 'Items'}</span></h4>
+            </div>
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-44 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'تكلفة الشراء التقديرية' : 'Estimated Cost'}</span>
+              <h4 className="text-lg font-black text-amber-500 font-mono mt-2">{totalDeficitCost.toLocaleString()} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'ILS' : 'ILS'}</span></h4>
+            </div>
+            <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'أصناف آمنة' : 'Stable Items'}</span>
+              <h4 className="text-lg font-black text-white font-mono mt-2">{normalItems.length} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'صنف' : 'Items'}</span></h4>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={handleGenerateBulkPOs}
-          disabled={deficitItems.length === 0}
-          className={`group relative px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-xl overflow-hidden flex items-center gap-3 ${deficitItems.length === 0
-              ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-              : 'bg-rose-600 hover:bg-rose-700 text-white active:scale-95 hover:shadow-rose-500/30'
+        {/* Actions Row */}
+        <div className="flex flex-wrap items-center justify-between border-t border-slate-800/80 pt-6 gap-4">
+          <div className="text-xs text-slate-400 font-semibold">
+            {language === 'ar' ? 'التحليلات اللوجستية تتنبأ بمواعيد نقص الأدوية والمستلزمات.' : 'Logistical buffers predict item depletion thresholds.'}
+          </div>
+          <button
+            onClick={handleGenerateBulkPOs}
+            disabled={deficitItems.length === 0}
+            className={`px-6 py-3 rounded-xl font-bold text-xs transition-all duration-300 shadow-xl flex items-center gap-2 border ${deficitItems.length === 0
+              ? 'bg-slate-800 text-slate-500 border-slate-800 cursor-not-allowed'
+              : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500/30 hover:shadow-rose-500/20'
             }`}
-        >
-          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-          <span>⚡</span> {language === 'ar' ? `إصدار أوامر شراء مجمعة للنواقص (${deficitItems.length})` : `Bulk Generate Deficit POs (${deficitItems.length})`}
-        </button>
+          >
+            <span>⚡</span> {language === 'ar' ? `شراء النواقص مجمعاً (${deficitItems.length})` : `Bulk Generate POs (${deficitItems.length})`}
+          </button>
+        </div>
       </div>
 
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-white p-8 rounded-[2rem] border border-rose-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-rose-600 mb-1">{language === 'ar' ? 'أصناف تعاني من عجز (تحت حد الطلب)' : 'Depleted Items (Below Reorder Level)'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{deficitItems.length}</h3>
-            </div>
-            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner animate-pulse">
-              🚨
-            </div>
+      {/* SEARCH BAR */}
+      <div className="bg-white rounded-[2rem] p-4 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-md mb-8">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              className="w-full bg-slate-100 border border-slate-200 text-slate-700 placeholder-slate-400 rounded-full pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-slate-300"
+              placeholder={language === 'ar' ? 'بحث بالاسم التجاري أو الكود...' : 'Search by name or code...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <span className="absolute left-3.5 top-2.5 text-slate-400 text-xs">🔍</span>
           </div>
         </div>
-
-        <div className="bg-white p-8 rounded-[2rem] border border-indigo-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-indigo-600 mb-1">{language === 'ar' ? 'التكلفة التقديرية لشراء النواقص' : 'Estimated Replenishment Cost'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{totalDeficitCost.toLocaleString()} <span className="text-base font-bold text-slate-400">{language === 'ar' ? 'ش.ج' : 'ILS'}</span></h3>
-            </div>
-            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-              💰
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2rem] border border-emerald-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs font-black text-emerald-600 mb-1">{language === 'ar' ? 'أصناف آمنة ومستقرة الرصيد' : 'Stable / Adequate Buffer Items'}</p>
-              <h3 className="text-4xl font-black text-slate-900 font-mono">{normalItems.length}</h3>
-            </div>
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-              ✅
-            </div>
-          </div>
-        </div>
+        <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+          💡 Tip: {language === 'ar' ? 'يمكنك مراجعة المسودات المولدة في شاشة أوامر الشراء.' : 'Orders are generated as drafts for safety reviews.'}
+        </span>
       </div>
 
       {/* GENERATED POs LOG */}
       {generatedPOs.length > 0 && (
-        <div className="bg-indigo-950 text-white p-8 rounded-[2.5rem] mb-12 shadow-xl relative overflow-hidden border border-indigo-800/50">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <h3 className="text-lg font-black mb-6 flex items-center gap-3 relative z-10 text-indigo-300">
-            <span>⚡</span> {language === 'ar' ? 'سجل أوامر الشراء الصادرة آلياً لإدارة المشتريات (Live PO Feed)' : 'Auto-routed Procurement PO Stream'}
+        <div className="bg-[#0b0f19] text-white p-6 rounded-[2.5rem] mb-12 shadow-xl border border-slate-800/80">
+          <h3 className="text-sm font-black mb-4 flex items-center gap-2 text-rose-400">
+            <span>⚡</span> {language === 'ar' ? 'سجل أوامر الشراء الصادرة حديثاً (Live PO Feed)' : 'Auto-routed Procurement PO Stream'}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10 max-h-48 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-48 overflow-y-auto">
             {generatedPOs.map((po, i) => (
-              <div key={i} className="bg-indigo-900/50 border border-indigo-700/50 p-4 rounded-2xl flex justify-between items-center backdrop-blur-sm">
+              <div key={i} className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl flex justify-between items-center">
                 <div>
-                  <span className="block font-black text-sm text-white">{po.item_name}</span>
-                  <span className="text-[10px] text-indigo-300 font-mono">{language === 'ar' ? `الكمية: ${po.qty} | القيمة: ${po.cost.toLocaleString()} ش.ج` : `Qty: ${po.qty} | Value: ${po.cost.toLocaleString()} ILS`}</span>
+                  <span className="block font-black text-xs text-white">{po.item_name}</span>
+                  <span className="text-[9px] text-slate-400 font-mono">{language === 'ar' ? `الكمية: ${po.qty} | القيمة: ${po.cost.toLocaleString()}` : `Qty: ${po.qty} | Value: ${po.cost.toLocaleString()} ILS`}</span>
                 </div>
-                <div className={language === 'ar' ? 'text-left' : 'text-right'}>
-                  <span className="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-mono font-black block">PO-#{po.id}</span>
-                  <span className="text-[9px] text-indigo-400 font-mono mt-1 block">{po.date}</span>
+                <div className="text-right">
+                  <span className="bg-slate-950 text-white px-2 py-0.5 rounded text-[9px] font-mono font-black block">PO-#{po.id}</span>
+                  <span className="text-[8px] text-slate-500 font-mono mt-1 block">{po.date}</span>
                 </div>
               </div>
             ))}
@@ -384,32 +383,30 @@ function SmartReorder({ isSubcomponent }) {
       )}
 
       {/* DEFICIT ITEMS TABLE */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100/60 overflow-hidden relative mb-12">
-        <div className="absolute inset-0 bg-gradient-to-b from-rose-50/30 to-transparent pointer-events-none h-32"></div>
-
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center relative z-10">
-          <h2 className="text-xl font-black text-rose-700 flex items-center gap-3">
+      <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden p-6 mb-12">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+          <h2 className="text-base font-black text-rose-700 flex items-center gap-2">
             <span>🚨</span> {language === 'ar' ? 'قائمة النواقص المخزنية (تحت حد الطلب)' : 'Depleted Pharmacy & Medical Supplies'}
           </h2>
-          <span className="bg-rose-100 text-rose-700 px-4 py-1.5 rounded-2xl text-xs font-black">
-            {language === 'ar' ? 'يتطلب الشراء الفوري' : 'Requires Critical Acquisition'}
+          <span className="text-xs text-rose-700 bg-rose-50 border border-rose-100 px-3 py-1 rounded-xl font-bold">
+            {language === 'ar' ? 'طلب فوري للمشتريات' : 'Requires Critical Acquisition'}
           </span>
         </div>
 
-        <div className="overflow-x-auto relative z-10">
-          <table className={`w-full border-collapse ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-slate-700">
             <thead>
-              <tr className={`bg-slate-50/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'الصنف (Item Name)' : 'Pharmaceutical Item'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الفعلي المتاح' : 'Available Stock'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'حد الطلب (Reorder Level)' : 'Reorder Threshold'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'مقدار العجز' : 'Deficit Amount'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'الكمية المقترحة للشراء' : 'Recommended Replenishment'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'التكلفة التقديرية' : 'Estimated Value'}</th>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إجراءات الشراء الفوري' : 'Acquisition'}</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الصنف' : 'Pharmaceutical Item'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Available Stock'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'حد الطلب' : 'Reorder Threshold'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'مقدار العجز' : 'Deficit Amount'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الكمية المقترحة' : 'Replenishment Suggested'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'التكلفة التقديرية' : 'Estimated Value'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 [...Array(2)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -418,47 +415,45 @@ function SmartReorder({ isSubcomponent }) {
                     </td>
                   </tr>
                 ))
-              ) : deficitItems.length === 0 ? (
+              ) : deficitItems.filter(i => !searchQuery || i.item_name?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-16 text-center text-emerald-600 font-black text-lg">
+                  <td colSpan="7" className="text-center py-12 text-emerald-600 font-bold text-base">
                     {language === 'ar' ? '🎉 المخزن مستقر تماماً ولا توجد أصناف تحت حد الطلب حالياً' : '🎉 Stock fully optimized. No deficit items.'}
                   </td>
                 </tr>
               ) : (
-                deficitItems.map(item => (
+                deficitItems.filter(i => !searchQuery || i.item_name?.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
                   <tr key={item.id} className="hover:bg-rose-50/20 transition-colors bg-rose-50/10">
-                    <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
-                      <span className="block font-black text-slate-900 text-base">{item.item_name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">ID: {item.id} | UOM: {item.uom || item.unit || (language === 'ar' ? 'قطعة' : 'Unit')}</span>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="font-bold text-slate-900 text-sm">{item.item_name}</div>
+                      <div className="text-[10px] text-slate-500">ID: {item.id} | UOM: {item.uom || item.unit || 'pcs'}</div>
                     </td>
-                    <td className="p-5 text-center font-mono font-black text-rose-600 text-base">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-sm text-rose-600">
                       {item.current_qty_display.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center font-mono text-slate-600 font-bold">
+                    <td className="px-4 py-3.5 text-center font-mono text-xs text-slate-600">
                       {item.min_stock_level_display.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center font-mono font-black text-rose-700" dir="ltr">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-rose-700">
                       -{item.deficit_qty.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center font-mono font-black text-indigo-600 text-base">
-                      {item.suggested_order_qty.toLocaleString()} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'وحدة' : 'units'}</span>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-indigo-600 text-sm">
+                      {item.suggested_order_qty.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center font-mono text-slate-700 font-black">
-                      {item.estimated_total_cost.toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-900">
+                      {item.estimated_total_cost.toLocaleString()} ILS
                     </td>
-                    <td className={`p-5 ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleGenerateSinglePO(item)}
-                          className="px-5 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 active:scale-95 transition-all"
-                          title={language === 'ar' ? "توليد أمر شراء آلي وتحويله لقسم المشتريات" : "Generate automated replenishment order"}
+                          className="px-3 py-1.5 bg-[#0b0f19] hover:bg-slate-800 text-white rounded text-[10px] font-bold"
                         >
-                          <span>🛒</span> Generate PO
+                          🛒 Generate PO
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(item)}
-                          className="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-colors"
-                          title={language === 'ar' ? "تعديل حد الطلب والكميات" : "Configure minimum stock buffers"}
+                          className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
                         >
                           ⚙️
                         </button>
@@ -473,30 +468,28 @@ function SmartReorder({ isSubcomponent }) {
       </div>
 
       {/* NORMAL ITEMS TABLE */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100/60 overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/20 to-transparent pointer-events-none h-32"></div>
-
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center relative z-10">
-          <h2 className="text-xl font-black text-emerald-800 flex items-center gap-3">
+      <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden p-6">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+          <h2 className="text-base font-black text-emerald-800 flex items-center gap-2">
             <span>✅</span> {language === 'ar' ? 'قائمة الأصناف الآمنة والمستقرة' : 'Stable Stock Buffers'}
           </h2>
-          <span className="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-2xl text-xs font-black">
+          <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl font-bold">
             {language === 'ar' ? 'أرصدة كافية' : 'Adequate Reserves'}
           </span>
         </div>
 
-        <div className="overflow-x-auto relative z-10">
-          <table className={`w-full border-collapse ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-slate-700">
             <thead>
-              <tr className={`bg-slate-50/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'الصنف (Item Name)' : 'Pharmaceutical Item'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الفعلي المتاح' : 'Available Stock'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'حد الطلب (Reorder Level)' : 'Reorder Threshold'}</th>
-                <th className="p-5 font-black text-center">{language === 'ar' ? 'حالة الرصيد' : 'Status'}</th>
-                <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إعدادات حد الطلب' : 'Action'}</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الصنف' : 'Pharmaceutical Item'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Available Stock'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'حد الطلب' : 'Reorder Threshold'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 [...Array(2)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -505,34 +498,36 @@ function SmartReorder({ isSubcomponent }) {
                     </td>
                   </tr>
                 ))
-              ) : normalItems.length === 0 ? (
+              ) : normalItems.filter(i => !searchQuery || i.item_name?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-16 text-center text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أصناف آمنة حالياً' : 'No stable items registered.'}</td>
+                  <td colSpan="5" className="text-center py-12 text-slate-400 font-medium">
+                    {language === 'ar' ? 'لا توجد أصناف آمنة حالياً' : 'No stable items registered.'}
+                  </td>
                 </tr>
               ) : (
-                normalItems.map(item => (
+                normalItems.filter(i => !searchQuery || i.item_name?.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
-                      <span className="block font-black text-slate-900 text-base">{item.item_name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">ID: {item.id} | UOM: {item.uom || item.unit || (language === 'ar' ? 'قطعة' : 'Unit')}</span>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="font-bold text-slate-900 text-sm">{item.item_name}</div>
+                      <div className="text-[10px] text-slate-500">ID: {item.id} | UOM: {item.uom || item.unit || 'pcs'}</div>
                     </td>
-                    <td className="p-5 text-center font-mono font-black text-emerald-600 text-base">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-sm text-emerald-600">
                       {item.current_qty_display.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center font-mono text-slate-600">
+                    <td className="px-4 py-3.5 text-center font-mono text-xs text-slate-600">
                       {item.min_stock_level_display.toLocaleString()}
                     </td>
-                    <td className="p-5 text-center">
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {language === 'ar' ? 'رصيد آمن' : 'Adequate Reserves'}
+                    <td className="px-4 py-3.5 text-center">
+                      <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black inline-flex items-center gap-1 border bg-emerald-50 text-emerald-600 border-emerald-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {language === 'ar' ? 'رصيد كافٍ' : 'Safe'}
                       </span>
                     </td>
-                    <td className={`p-5 ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>
+                    <td className="px-4 py-3.5 text-center">
                       <button
                         onClick={() => handleOpenEditModal(item)}
-                        className={`px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 ${language === 'ar' ? 'ml-auto' : 'mr-auto'}`}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold"
                       >
-                        <span>⚙️</span> {language === 'ar' ? 'تعديل حد الطلب' : 'Adjust Level'}
+                        ⚙️ {language === 'ar' ? 'حد الطلب' : 'Adjust Level'}
                       </button>
                     </td>
                   </tr>

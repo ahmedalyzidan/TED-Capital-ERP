@@ -708,11 +708,11 @@ export default function PharmaSupplyChain() {
    return (
       <div className="min-h-screen bg-slate-950 text-slate-100 pb-20 animate-fade-in font-sans" dir={language === 'ar' ? 'rtl' : 'ltr'}>
          {/* Premium Header */}
-         <div className="bg-slate-900/60 border-b border-slate-800 backdrop-blur-2xl sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
+         <div className="bg-[#161e2f] border-b border-slate-800 sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
             <div className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-8">
                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                   <div className="flex items-center gap-6">
-                     <div className="w-16 h-16 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center text-3xl shadow-xl shadow-cyan-500/20 transform hover:rotate-6 transition-all duration-500 flex-shrink-0">
+                     <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-3xl flex items-center justify-center text-3xl shadow-sm transform hover:rotate-6 transition-all duration-500 flex-shrink-0">
                         🚛
                      </div>
                      <div>
@@ -728,7 +728,7 @@ export default function PharmaSupplyChain() {
                </div>
 
                {/* Gorgeous Tab Navigation Pill Container */}
-               <div className="bg-slate-950/60 p-2.5 rounded-[2rem] border border-slate-800/80 shadow-inner flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+               <div className="bg-[#070a13] p-2.5 rounded-[2rem] border border-slate-800 shadow-inner flex flex-wrap items-center gap-2 sm:gap-3 w-full">
                   {[
                      { id: 'shipments', label: t.tabs.shipments, icon: '📍' },
                      { id: 'items', label: t.tabs.items, icon: '📦' },
@@ -740,8 +740,8 @@ export default function PharmaSupplyChain() {
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex-1 min-w-[240px] px-6 py-4 rounded-2xl text-xs uppercase font-black tracking-wider transition-all duration-300 flex items-center justify-center gap-3 border ${
                            activeTab === tab.id
-                              ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-slate-950 border-cyan-400 shadow-xl shadow-cyan-500/30 transform -translate-y-0.5'
-                              : 'bg-slate-900/50 text-slate-400 border-slate-800/80 hover:text-white hover:bg-slate-800/80 hover:border-slate-700'
+                              ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-0.5'
+                              : 'bg-[#131b2e] text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/80 hover:border-slate-700'
                         }`}
                      >
                         <span className="text-lg">{tab.icon}</span> 
@@ -763,14 +763,14 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 1: SHIPMENTS TRACKER ================= */}
                   {activeTab === 'shipments' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex justify-between items-center bg-slate-900/40 border border-slate-800 p-8 rounded-3xl backdrop-blur-md shadow-2xl">
+                        <div className="flex justify-between items-center bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.shipments.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.shipments.sub}</p>
                            </div>
                            <button
                               onClick={handleOpenAddShipment}
-                              className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
+                              className="px-8 py-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 font-black rounded-2xl text-xs uppercase tracking-widest transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
                            >
                               <span>➕</span> {t.shipments.createBtn}
                            </button>
@@ -778,7 +778,7 @@ export default function PharmaSupplyChain() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                            {shipments.map(s => (
-                              <div key={s.id} className="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 space-y-8 backdrop-blur-md hover:border-slate-700 transition-all group flex flex-col justify-between shadow-xl shadow-slate-950/50">
+                              <div key={s.id} className="bg-[#131b2e] border border-slate-800 rounded-3xl p-8 space-y-8 hover:border-slate-700 transition-all group flex flex-col justify-between shadow-xl shadow-slate-950/50">
                                  <div className="space-y-6">
                                     <div className="flex justify-between items-start">
                                        <div>
@@ -789,14 +789,14 @@ export default function PharmaSupplyChain() {
                                     </div>
 
                                     {/* Visual Journey Timeline */}
-                                    <div className="py-4 border-y border-slate-800/80 space-y-4 font-sans">
+                                    <div className="py-4 border-y border-slate-800 space-y-4 font-sans">
                                        <div className="flex justify-between items-center text-[11px] font-black text-slate-400 uppercase tracking-widest">
                                           <span>{t.shipments.egypt}</span>
                                           <span>{t.shipments.border}</span>
                                           <span>{t.shipments.gaza}</span>
                                        </div>
                                        <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                          <div className={`absolute top-0 h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-1000 ${
+                                          <div className={`absolute top-0 h-full bg-cyan-500 transition-all duration-1000 ${
                                              s.status === 'Pending_Departure' ? 'w-1/4' :
                                              s.status === 'In_Transit_Customs' ? 'w-1/2' :
                                              s.status === 'At_Border_Crossing' ? 'w-3/4' : 'w-full'
@@ -805,7 +805,7 @@ export default function PharmaSupplyChain() {
                                     </div>
 
                                     {/* Financial Breakdown */}
-                                    <div className="space-y-3 bg-slate-950/50 p-6 rounded-2xl border border-slate-800/80 font-mono">
+                                    <div className="space-y-3 bg-slate-950/50 p-6 rounded-2xl border border-slate-800 font-mono">
                                        <div className="flex justify-between items-center text-xs">
                                           <span className="text-slate-400 font-sans font-bold">{t.shipments.invVal}</span>
                                           <span className="font-black text-white">{Number(s.initial_value).toLocaleString()} <span className="text-[10px] text-cyan-400 font-sans">{s.currency}</span></span>
@@ -822,7 +822,7 @@ export default function PharmaSupplyChain() {
                                  </div>
 
                                  {/* Interactive Actions */}
-                                 <div className="space-y-4 pt-4 border-t border-slate-800/80">
+                                 <div className="space-y-4 pt-4 border-t border-slate-800">
                                     <div className="flex gap-3">
                                        <button
                                           onClick={() => { setSelectedShipmentId(s.id); setActiveTab('items'); }}
@@ -838,7 +838,7 @@ export default function PharmaSupplyChain() {
                                        </button>
                                     </div>
 
-                                    <div className="flex items-center gap-2 bg-slate-950/40 p-1.5 rounded-xl border border-slate-800">
+                                    <div className="flex items-center gap-2 bg-[#070a13] p-1.5 rounded-xl border border-slate-800">
                                        <span className="text-[10px] font-black text-slate-500 px-3 uppercase tracking-widest">{t.shipments.updatePath}</span>
                                        <select
                                           value={s.status}
@@ -877,7 +877,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 1.5: SHIPMENT ITEMS (CBM PRORATION) ================= */}
                   {activeTab === 'items' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/40 border border-slate-800 p-8 rounded-3xl backdrop-blur-md shadow-2xl">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.items.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.items.sub}</p>
@@ -897,7 +897,7 @@ export default function PharmaSupplyChain() {
 
                               <button
                                  onClick={handleOpenAddItem}
-                                 className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
+                                 className="px-8 py-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 font-black rounded-2xl text-xs uppercase tracking-widest transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
                               >
                                  <span>➕</span> {t.items.createBtn}
                               </button>
@@ -920,8 +920,8 @@ export default function PharmaSupplyChain() {
                            const scoreColor = overheadRatio <= 15 ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10' : overheadRatio <= 30 ? 'text-blue-400 border-blue-500/20 bg-blue-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10';
 
                            return (
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80 border border-slate-800 p-8 rounded-3xl backdrop-blur-xl shadow-2xl my-8">
-                                 <div className="border-l border-slate-800/80 pl-6 last:border-none space-y-2">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80 border border-slate-800 p-8 rounded-3xl shadow-2xl my-8">
+                                 <div className="border-l border-slate-800 pl-6 last:border-none space-y-2">
                                     <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest">
                                        <span>📦</span> {t.items.metrics.buyVal}
                                     </div>
@@ -931,7 +931,7 @@ export default function PharmaSupplyChain() {
                                     <p className="text-[10px] text-slate-500 font-bold">{t.items.metrics.buyValSub}</p>
                                  </div>
 
-                                 <div className="border-l border-slate-800/80 pl-6 last:border-none space-y-2">
+                                 <div className="border-l border-slate-800 pl-6 last:border-none space-y-2">
                                     <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest">
                                        <span>🚚</span> {t.items.metrics.shipExp}
                                     </div>
@@ -941,7 +941,7 @@ export default function PharmaSupplyChain() {
                                     <p className="text-[10px] text-slate-500 font-bold">{t.items.metrics.shipExpSub}</p>
                                  </div>
 
-                                 <div className="border-l border-slate-800/80 pl-6 last:border-none space-y-2">
+                                 <div className="border-l border-slate-800 pl-6 last:border-none space-y-2">
                                     <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest">
                                        <span>💎</span> {t.items.metrics.landedVal}
                                     </div>
@@ -969,19 +969,19 @@ export default function PharmaSupplyChain() {
                            );
                         })()}
 
-                        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+                        <div className="bg-[#131b2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
                            <div className="overflow-x-auto">
                               <table className="w-full text-right whitespace-nowrap">
                                  <thead>
-                                    <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
+                                    <tr className="bg-[#070a13] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
                                        <th className="px-8 py-6">{t.items.table.shipNo}</th>
                                        <th className="px-8 py-6">{t.items.table.itemName}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.qty}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.buyPrice}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.unitCbm}</th>
                                        <th className="px-8 py-6 text-center bg-slate-900/30">{t.items.table.totalCbm}</th>
-                                       <th className="px-8 py-6 text-center text-amber-400 bg-slate-900/50">{t.items.table.shipShare}</th>
-                                       <th className="px-8 py-6 text-center text-emerald-400 bg-slate-900/80 font-black text-sm">{t.items.table.landedUnit}</th>
+                                       <th className="px-8 py-6 text-center text-amber-400 bg-[#131b2e]">{t.items.table.shipShare}</th>
+                                       <th className="px-8 py-6 text-center text-emerald-400 bg-[#111827] font-black text-sm">{t.items.table.landedUnit}</th>
                                        <th className="px-8 py-6 text-center bg-slate-900/90">{t.items.table.actions}</th>
                                     </tr>
                                  </thead>
@@ -1008,16 +1008,16 @@ export default function PharmaSupplyChain() {
                                              <td className="px-8 py-6 font-black text-xs text-center text-cyan-400">
                                                 {Number(i.cbm_per_unit).toFixed(4)} <span className="text-[10px] text-slate-500">m³</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-sm text-center text-cyan-300 bg-slate-900/20">
+                                             <td className="px-8 py-6 font-black text-sm text-center text-cyan-300 bg-[#131b2e]">
                                                 {Number(i.total_cbm).toFixed(4)} <span className="text-[10px] text-slate-500">m³</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-sm text-center text-amber-400 bg-slate-900/40">
+                                             <td className="px-8 py-6 font-black text-sm text-center text-amber-400 bg-[#131b2e]">
                                                 {Number(i.allocated_shipping_ils).toLocaleString()} <span className="text-[10px] text-slate-500">ILS</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-lg text-center text-emerald-400 bg-slate-900/60 shadow-inner">
+                                             <td className="px-8 py-6 font-black text-lg text-center text-emerald-400 bg-[#161e2f] shadow-inner">
                                                 {Number(i.landed_unit_cost_ils).toFixed(2)} <span className="text-xs text-slate-500 font-sans">ILS</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-center bg-slate-900/80">
+                                             <td className="px-8 py-6 font-black text-center bg-[#111827]">
                                                 <div className="flex items-center justify-center gap-2 font-sans">
                                                    <button
                                                       onClick={() => handleOpenEdit('shipment_items', i)}
@@ -1048,7 +1048,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 2: LANDED COST & EXPENSES ================= */}
                   {activeTab === 'expenses' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/40 border border-slate-800 p-8 rounded-3xl backdrop-blur-md shadow-2xl">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.expenses.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.expenses.sub}</p>
@@ -1068,26 +1068,26 @@ export default function PharmaSupplyChain() {
 
                               <button
                                  onClick={handleOpenAddExpense}
-                                 className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
+                                 className="px-8 py-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 font-black rounded-2xl text-xs uppercase tracking-widest transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
                               >
                                  <span>➕</span> {t.expenses.createBtn}
                               </button>
                            </div>
                         </div>
 
-                        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+                        <div className="bg-[#131b2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
                            <div className="overflow-x-auto">
                               <table className="w-full text-right whitespace-nowrap">
                                  <thead>
-                                    <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
+                                    <tr className="bg-[#070a13] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
                                        <th className="px-8 py-6">{t.expenses.table.shipNo}</th>
                                        <th className="px-8 py-6">{t.expenses.table.expType}</th>
                                        <th className="px-8 py-6">{t.expenses.table.paidTo}</th>
                                        <th className="px-8 py-6 text-center">{t.expenses.table.amount}</th>
                                        <th className="px-8 py-6 text-center">{t.expenses.table.rate}</th>
-                                       <th className="px-8 py-6 text-center bg-slate-900/50">{t.expenses.table.amountIls}</th>
+                                       <th className="px-8 py-6 text-center bg-[#131b2e]">{t.expenses.table.amountIls}</th>
                                        <th className="px-8 py-6">{t.expenses.table.ref}</th>
-                                       <th className="px-8 py-6 text-center bg-slate-900/80">{t.expenses.table.actions}</th>
+                                       <th className="px-8 py-6 text-center bg-[#111827]">{t.expenses.table.actions}</th>
                                     </tr>
                                  </thead>
                                  <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -1113,7 +1113,7 @@ export default function PharmaSupplyChain() {
                                                 {Number(e.amount_ils).toLocaleString()} <span className="text-xs text-slate-500 font-sans">ILS</span>
                                              </td>
                                              <td className="px-8 py-6 font-black text-xs text-slate-500 uppercase">{e.reference_no || `EXP-${e.id}`}</td>
-                                             <td className="px-8 py-6 font-black text-center bg-slate-900/60">
+                                             <td className="px-8 py-6 font-black text-center bg-[#161e2f]">
                                                 <div className="flex items-center justify-center gap-2 font-sans">
                                                    <button
                                                       onClick={() => handleOpenEdit('shipment_expenses', e)}
@@ -1144,14 +1144,14 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 3: CURRENCIES HUB ================= */}
                   {activeTab === 'currencies' && (
                      <div className="space-y-10 animate-fade-in max-w-5xl mx-auto">
-                        <div className="flex justify-between items-center bg-slate-900/40 border border-slate-800 p-8 rounded-3xl backdrop-blur-md shadow-2xl">
+                        <div className="flex justify-between items-center bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.currencies.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.currencies.sub}</p>
                            </div>
                            <button
                               onClick={handleOpenAddCurrency}
-                              className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
+                              className="px-8 py-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 font-black rounded-2xl text-xs uppercase tracking-widest transform hover:-translate-y-0.5 transition-all flex items-center gap-3"
                            >
                               <span>💱</span> {t.currencies.createBtn}
                            </button>
@@ -1159,7 +1159,7 @@ export default function PharmaSupplyChain() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                            {currencies.map(c => (
-                              <div key={c.id} className="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 space-y-6 backdrop-blur-md hover:border-slate-700 transition-all shadow-xl shadow-slate-950/50 flex flex-col justify-between">
+                              <div key={c.id} className="bg-[#131b2e] border border-slate-800 rounded-3xl p-8 space-y-6 hover:border-slate-700 transition-all shadow-xl shadow-slate-950/50 flex flex-col justify-between">
                                  <div className="flex justify-between items-center border-b border-slate-800 pb-6">
                                     <div className="flex items-center gap-4">
                                        <span className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center font-mono font-black text-lg text-cyan-400 shadow-md">
@@ -1188,7 +1188,7 @@ export default function PharmaSupplyChain() {
                                     </div>
                                  </div>
 
-                                 <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-800/80 flex justify-between items-center font-mono">
+                                 <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-800 flex justify-between items-center font-mono">
                                     <span className="text-slate-400 font-sans font-bold text-xs">{t.currencies.rateLabel}</span>
                                     <span className="text-2xl font-black text-white">{Number(c.rate_to_ils).toFixed(4)} <span className="text-xs text-cyan-400 font-sans">ILS</span></span>
                                  </div>
@@ -1207,9 +1207,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 1: CREATE/EDIT SHIPMENT ================= */}
          {isShipmentModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-fade-in">
+            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>📦</span> {editMode ? t.modals.shipment.editTitle : t.modals.shipment.addTitle}
                      </h3>
@@ -1305,7 +1305,7 @@ export default function PharmaSupplyChain() {
                      <div className="flex gap-4 pt-4 border-t border-slate-800">
                         <button
                            type="submit"
-                           className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-50 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
+                           className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-50 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
                         >
                            {editMode ? t.modals.shipment.editSubmit : t.modals.shipment.addSubmit}
                         </button>
@@ -1324,9 +1324,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 1.5: CREATE/EDIT ITEM ================= */}
          {isItemModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-fade-in">
+            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>📦</span> {editMode ? t.modals.item.editTitle : t.modals.item.addTitle}
                      </h3>
@@ -1422,7 +1422,7 @@ export default function PharmaSupplyChain() {
                      <div className="flex gap-4 pt-4 border-t border-slate-800">
                         <button
                            type="submit"
-                           className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
+                           className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
                         >
                            {editMode ? t.modals.item.editSubmit : t.modals.item.addSubmit}
                         </button>
@@ -1441,9 +1441,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 2: CREATE/EDIT EXPENSE ================= */}
          {isExpenseModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-fade-in">
+            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>🚚</span> {editMode ? t.modals.expense.editTitle : t.modals.expense.addTitle}
                      </h3>
@@ -1557,7 +1557,7 @@ export default function PharmaSupplyChain() {
                      <div className="flex gap-4 pt-4 border-t border-slate-800">
                         <button
                            type="submit"
-                           className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
+                           className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
                         >
                            {editMode ? t.modals.expense.editSubmit : t.modals.expense.addSubmit}
                         </button>
@@ -1576,9 +1576,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 3: CREATE/EDIT CURRENCY ================= */}
          {isCurrencyModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-fade-in">
+            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>💱</span> {editMode ? t.modals.currency.editTitle : t.modals.currency.addTitle}
                      </h3>
@@ -1629,7 +1629,7 @@ export default function PharmaSupplyChain() {
                      <div className="flex gap-4 pt-4 border-t border-slate-800">
                         <button
                            type="submit"
-                           className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
+                           className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
                         >
                            {editMode ? t.modals.currency.editSubmit : t.modals.currency.addSubmit}
                         </button>

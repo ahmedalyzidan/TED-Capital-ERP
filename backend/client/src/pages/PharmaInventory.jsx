@@ -106,6 +106,7 @@ function PharmaInventory() {
   const [salesSearch, setSalesSearch] = useState('');
 
   const [logs, setLogs] = useState([]);
+  const [iotLogs, setIotLogs] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleDeleteSale = async (id) => {
@@ -411,6 +412,13 @@ function PharmaInventory() {
         }
 
         const nowStr = new Date().toLocaleTimeString('ar-EG');
+        const newLog = {
+          time: new Date().toLocaleTimeString(),
+          temp: `${randomTemp}°C`,
+          status: isExcursion ? 'WARNING' : 'NORMAL'
+        };
+        setIotLogs(prev => [newLog, ...prev.slice(0, 15)]);
+
         setIotTelemetry({
           sensorId: 'ESP32-COLD-01',
           status: isExcursion ? 'EXCURSION_ALERT' : 'STREAMING',
@@ -931,23 +939,24 @@ function PharmaInventory() {
 
       {/* 🌌 Ambient Calm Background Glows */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-teal-500/5 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse"></div>
-      <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+      <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse [animation-delay:2s]"></div>
+      <div className="absolute top-1/2 left-10 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse"></div>
 
       {/* 🔮 Emdad 360 - The Unified Master Control Center Layout */}
       <div className="flex flex-col gap-8 relative z-10">
 
         {/* 📋 Premium Horizontal Navigation representing the precise warehouse flow order */}
         <div className="w-full no-print mb-2">
-          <div className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 p-5 rounded-[2.5rem] shadow-2xl shadow-black/40 flex flex-col xl:flex-row xl:items-center justify-between gap-6 transition-all duration-500 hover:border-white/20">
+          <div className="bg-[#0b0f19]/90 backdrop-blur-2xl border border-slate-800 p-4 rounded-[2.5rem] shadow-2xl flex flex-col xl:flex-row xl:items-center justify-between gap-6">
             <div className="shrink-0 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500/20 to-cyan-500/20 border border-teal-500/30 flex items-center justify-center text-2xl shadow-inner animate-pulse">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-xl shadow-inner">
                 🔮
               </div>
               <div>
-                <h3 className="text-base font-black text-white tracking-wider uppercase flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white tracking-wider uppercase flex items-center gap-2">
                   <span>{language === 'ar' ? 'بوابة إمداد 360 | الحركة الطبية' : 'Emdad 360 Gateway | Medical Flow'}</span>
                 </h3>
-                <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest mt-0.5">{language === 'ar' ? 'الخدمات اللوجستية والرعاية الصحية للمؤسسات' : 'Enterprise Health & Logistics'}</p>
+                <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mt-0.5">{language === 'ar' ? 'الخدمات اللوجستية والرعاية الصحية للمؤسسات' : 'Enterprise Health & Logistics'}</p>
               </div>
             </div>
 
@@ -955,79 +964,66 @@ function PharmaInventory() {
               {/* Tab 1: Pharma Store */}
               <button
                 onClick={() => setSearchParams({ tab: 'store' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'store'
-                    ? 'bg-gradient-to-r from-teal-500/80 via-emerald-500/80 to-cyan-600/80 text-white shadow-[0_0_25px_rgba(20,184,166,0.3)] transform scale-[1.02] border border-teal-300/30'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'store'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
                   }`}
               >
                 <span className="text-base">💊</span>
                 <span>{language === 'ar' ? '1. مستودع الأدوية' : '1. Pharma Store'}</span>
-                {activeTab === 'store' && <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+                {activeTab === 'store' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
 
               {/* Tab 2: Stock Transfers */}
               <button
                 onClick={() => setSearchParams({ tab: 'transfers' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'transfers'
-                    ? 'bg-gradient-to-r from-indigo-500/80 via-purple-500/80 to-blue-600/80 text-white shadow-[0_0_25px_rgba(99,102,241,0.3)] transform scale-[1.02] border border-indigo-300/30'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'transfers'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
                   }`}
               >
                 <span className="text-base">🔄</span>
                 <span>{language === 'ar' ? '2. التحويلات اللوجستية' : '2. Logistics Transfers'}</span>
-                {activeTab === 'transfers' && <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+                {activeTab === 'transfers' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
 
               {/* Tab 3: Batch Expiry Matrix */}
               <button
                 onClick={() => setSearchParams({ tab: 'expiry' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'expiry'
-                    ? 'bg-gradient-to-r from-amber-500/80 via-orange-500/80 to-yellow-600/80 text-white shadow-[0_0_25px_rgba(245,158,11,0.3)] transform scale-[1.02] border border-amber-300/30'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'expiry'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
                   }`}
               >
                 <span className="text-base">📅</span>
                 <span>{language === 'ar' ? '3. مصفوفة الصلاحية' : '3. Batch Expiry Matrix'}</span>
-                {activeTab === 'expiry' && <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+                {activeTab === 'expiry' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
 
-              {/* Tab 4: Stock Count & Reconciliation */}
-              <button
-                onClick={() => setSearchParams({ tab: 'reconciliation' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'reconciliation'
-                    ? 'bg-gradient-to-r from-emerald-500/80 via-teal-500/80 to-green-600/80 text-white shadow-[0_0_25px_rgba(16,185,129,0.3)] transform scale-[1.02] border border-emerald-300/30'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
-                  }`}
-              >
-                <span className="text-base">⚖️</span>
-                <span>{language === 'ar' ? '4. الجرد والتسويات' : '4. Stock Count & Reconciliation'}</span>
-                {activeTab === 'reconciliation' && <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
-              </button>
-
-              {/* Tab 5: Smart Reorder */}
+              {/* Tab 4: Smart Reorder */}
               <button
                 onClick={() => setSearchParams({ tab: 'reorder' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'reorder'
-                    ? 'bg-gradient-to-r from-rose-500/80 via-red-500/80 to-pink-600/80 text-white shadow-[0_0_25px_rgba(244,63,94,0.3)] transform scale-[1.02] border border-rose-300/30'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'reorder'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
                   }`}
               >
                 <span className="text-base">🚨</span>
-                <span>{language === 'ar' ? '5. إعادة الطلب الذكي' : '5. Smart Reorder'}</span>
-                {activeTab === 'reorder' && <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+                <span>{language === 'ar' ? '4. إعادة الطلب الذكي' : '4. Smart Reorder'}</span>
+                {activeTab === 'reorder' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
 
-              {/* Tab 6: Sales & Dispensing History */}
+              {/* Tab 5: Sales & Dispensing History */}
               <button
                 onClick={() => setSearchParams({ tab: 'sales' })}
-                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black transition-all duration-500 ${activeTab === 'sales'
-                    ? 'bg-gradient-to-r from-amber-400/90 via-amber-500/90 to-yellow-500/90 text-slate-950 shadow-[0_0_25px_rgba(251,191,36,0.3)] transform scale-[1.02] border border-amber-200/40'
-                    : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'sales'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
                   }`}
               >
                 <span className="text-base">🛒</span>
-                <span>{language === 'ar' ? '6. سجل المبيعات والصرف' : '6. Sales & Dispense History'}</span>
-                {activeTab === 'sales' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-black shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+                <span>{language === 'ar' ? '5. سجل المبيعات والصرف' : '5. Sales & Dispense History'}</span>
+                {activeTab === 'sales' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
             </nav>
           </div>
@@ -1040,775 +1036,221 @@ function PharmaInventory() {
             <>
 
               {/* HEADER & COMPLIANCE ACTIONS */}
-              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] shadow-2xl shadow-black/30">
-                <div>
-                  <div className="inline-flex items-center gap-3 px-4 py-2 bg-teal-500/10 border border-teal-500/20 text-teal-300 rounded-2xl font-black text-xs tracking-wider uppercase mb-4 backdrop-blur-md shadow-inner">
-                    <span>💊</span> {language === 'ar' ? 'بوابة إمداد 360 للرقابة الطبية والمخازن' : 'Medical & Pharma Inventory Control'}
+              <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-black uppercase tracking-widest mb-3">
+                      💊 {language === 'ar' ? 'بوابة إمداد 360 للرقابة الطبية والمخازن' : 'Medical & Pharma Inventory Control'}
+                    </div>
+                    <h1 className="text-3xl font-black text-white tracking-tight">
+                      {language === 'ar' ? 'مخازن الصيدليات والأدوية' : 'Pharmacy & Drug Warehouses'}
+                    </h1>
+                    <p className="text-xs text-slate-300 font-bold mt-2 max-w-xl leading-relaxed">
+                      {language === 'ar'
+                        ? 'إدارة المخزون الدوائي والمستلزمات الطبية للعيادات والمشاريع، تتبع أدوية الثلاجة (Cold Chain) وأدوية الجدول والمراقبة (Controlled Drugs).'
+                        : 'Management of pharmaceutical inventory and medical supplies for clinics and projects, tracking cold chain medicines and controlled drugs.'}
+                    </p>
                   </div>
-                  <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tight">
-                    {language === 'ar' ? 'مخازن الصيدليات والأدوية' : 'Pharmacy & Drug Warehouses'}
-                  </h1>
-                  <p className="text-sm font-bold text-slate-400 mt-3 max-w-2xl leading-relaxed">
-                    {language === 'ar'
-                      ? 'إدارة المخزون الدوائي والمستلزمات الطبية للعيادات والمشاريع، تتبع أدوية الثلاجة (Cold Chain) وأدوية الجدول والمراقبة (Controlled Drugs) مع نظام الصرف المباشر.'
-                      : 'Management of pharmaceutical inventory and medical supplies for clinics and projects, tracking cold chain medicines and controlled drugs with direct stock issue systems.'}
-                  </p>
+
+                  {/* KPI Cards on Right */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-44 flex flex-col justify-between h-24 shadow-md">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'قيمة المخزون الدوائي' : 'Total Inventory Value'}</span>
+                      <h4 className="text-lg font-black text-amber-500 font-mono mt-2">{totalInventoryValue.toLocaleString()} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'ILS' : 'ILS'}</span></h4>
+                    </div>
+                    <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'أصناف التبريد' : 'Cold Chain Items'}</span>
+                      <h4 className="text-lg font-black text-white font-mono mt-2">{coldChainCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'أصناف' : 'Packs'}</span></h4>
+                    </div>
+                    <div className="bg-[#1e293b]/60 border border-slate-800 p-4 rounded-2xl w-40 flex flex-col justify-between h-24 shadow-md">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'أدوية الجدول والمراقبة' : 'Controlled Drugs'}</span>
+                      <h4 className="text-lg font-black text-cyan-400 font-mono mt-2">{controlledCount} <span className="text-xs font-bold text-slate-400">{language === 'ar' ? 'أصناف' : 'Packs'}</span></h4>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-end">
-                  <button
-                    onClick={() => setShowNarcoticsModal(true)}
-                    className="px-6 py-4 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/40 text-rose-300 rounded-2xl font-black text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-500/5 flex items-center gap-2.5"
-                  >
-                    <span className="text-base animate-pulse">🔒</span> {language === 'ar' ? 'سجل عهدة المخدرات' : 'Narcotics Ledger'}
-                  </button>
+                {/* Actions Row */}
+                <div className="flex flex-wrap items-center justify-between border-t border-slate-800/80 pt-6 gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => setShowNarcoticsModal(true)}
+                      className="px-5 py-3 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/40 text-rose-300 rounded-xl font-bold text-xs transition-all duration-300 flex items-center gap-2"
+                    >
+                      <span>🔒</span> {language === 'ar' ? 'سجل عهدة المخدرات' : 'Narcotics Ledger'}
+                    </button>
 
-                  <button
-                    onClick={() => setShowColdChainModal(true)}
-                    className="px-6 py-4 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-500/40 text-cyan-300 rounded-2xl font-black text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/5 flex items-center gap-2.5"
-                  >
-                    <span className="text-base">❄️</span> {language === 'ar' ? 'مراقبة أدوية الثلاجة' : 'Cold Chain Logs'}
-                  </button>
+                    <button
+                      onClick={() => setShowColdChainModal(true)}
+                      className="px-5 py-3 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-500/40 text-cyan-300 rounded-xl font-bold text-xs transition-all duration-300 flex items-center gap-2"
+                    >
+                      <span>❄️</span> {language === 'ar' ? 'مراقبة أدوية الثلاجة' : 'Cold Chain Logs'}
+                    </button>
 
-                  <button
-                    onClick={() => setShowDisposalModal(true)}
-                    className="px-6 py-4 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40 text-amber-300 rounded-2xl font-black text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/5 flex items-center gap-2.5"
-                  >
-                    <span className="text-base">🗑️</span> {language === 'ar' ? 'محاضر الإعدام والتكهين' : 'Disposal Protocols'}
-                  </button>
+                    <button
+                      onClick={() => setShowDisposalModal(true)}
+                      className="px-5 py-3 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40 text-amber-300 rounded-xl font-bold text-xs transition-all duration-300 flex items-center gap-2"
+                    >
+                      <span>🗑️</span> {language === 'ar' ? 'محاضر الإعدام والتكهين' : 'Disposal Protocols'}
+                    </button>
+                  </div>
 
                   <button
                     onClick={handleOpenAdd}
-                    className="group relative px-8 py-4 bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-600 hover:from-teal-400 hover:via-emerald-400 hover:to-cyan-500 text-slate-950 rounded-2xl font-black text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-teal-500/30 overflow-hidden flex items-center gap-3 border border-teal-300/40"
+                    className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-slate-950 rounded-xl font-bold text-xs transition-all duration-300 shadow-xl hover:shadow-teal-500/20 flex items-center gap-2 border border-teal-400/30"
                   >
-                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                    <span className="text-base">➕</span> {language === 'ar' ? 'تسجيل صنف دوائي جديد' : 'Register New Pharmaceutical'}
+                    <span>➕</span> {language === 'ar' ? 'تسجيل صنف دوائي جديد' : 'Register New Pharmaceutical'}
                   </button>
-                </div>
-              </div>
-
-              {/* 🌟 Package 2 & 2.3: GS1 2D DataMatrix Barcode Fast Dispensing & PWA Mobile Scanner 🌟 */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl p-6 sm:p-8 rounded-[2.5rem] shadow-2xl mb-12 border border-indigo-500/30 text-white relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-500">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-transform duration-700"></div>
-
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10 mb-6 border-b border-indigo-500/20 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-inner transition-all ${isPwaMode ? 'bg-indigo-600 text-white animate-pulse shadow-indigo-500/50' : 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-300'}`}>
-                      {isPwaMode ? '📱' : '📶'}
-                    </div>
-                    <div>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-indigo-300 text-[10px] font-black uppercase tracking-widest mb-1 font-mono">
-                        <span>GS1 2D DataMatrix</span> {isPwaMode ? 'PWA MOBILE SCANNER ACTIVE 🟢' : 'DESKTOP SCANNER'}
-                      </div>
-                      <h3 className="text-xl font-black text-white tracking-tight">
-                        {language === 'ar' ? 'الفحص والصرف الفوري عبر باركود GS1 (وضع الموبايل PWA)' : 'Instant Audit & Dispensing via GS1 Barcode (PWA Mode)'}
-                      </h3>
-                      <p className="text-xs text-slate-400 font-bold mt-0.5 max-w-xl">
-                        {language === 'ar' ? 'قم بمسح باركود GS1 لاستخراج الـ GTIN والباتش والصلاحية آلياً، متوافق مع كاميرات الهواتف الذكية وأجهزة الجرد المحمولة.' : 'Scan GS1 barcode to automatically parse GTIN, Batch & Expiry, optimized for smartphone cameras and handheld scanners.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 w-full lg:w-auto justify-end shrink-0">
-                    {isPwaMode && (
-                      <button
-                        type="button"
-                        onClick={() => setTorchActive(!torchActive)}
-                        className={`px-4 py-3 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-lg ${torchActive ? 'bg-amber-500 text-slate-950 shadow-amber-500/30 animate-pulse' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-                      >
-                        <span>🔦</span> {torchActive ? (language === 'ar' ? 'إطفاء الفلاش' : 'Torch OFF') : (language === 'ar' ? 'تشغيل الفلاش' : 'Torch ON')}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsPwaMode(!isPwaMode)}
-                      className={`px-6 py-3 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-lg ${isPwaMode ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30'}`}
-                    >
-                      <span>{isPwaMode ? '💻' : '📱'}</span> {isPwaMode ? (language === 'ar' ? 'العودة لوضع سطح المكتب' : 'Desktop View') : (language === 'ar' ? 'تفعيل واجهة الموبايل (PWA)' : 'Launch PWA Mobile View')}
-                    </button>
-                  </div>
-                </div>
-
-                {/* PWA Mobile Viewport Simulation */}
-                {isPwaMode ? (
-                  <div className="flex flex-col items-center justify-center py-4 relative z-10 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="w-full max-w-sm bg-slate-950 rounded-[3rem] p-4 border-4 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative">
-                      {/* Phone Speaker & Camera notch */}
-                      <div className="w-28 h-4 bg-slate-900 rounded-full mx-auto mb-4 flex items-center justify-center gap-2 border border-slate-800/80 shadow-inner">
-                        <div className="w-12 h-1 bg-slate-700 rounded-full"></div>
-                        <div className="w-2 h-2 bg-slate-700 rounded-full"></div>
-                      </div>
-
-                      {/* Mobile Screen Area */}
-                      <div className="bg-slate-900 rounded-[2.2rem] overflow-hidden border border-slate-800 flex flex-col min-h-[480px]">
-                        {/* Mobile Top Bar */}
-                        <div className="bg-slate-950 px-5 py-3 flex justify-between items-center text-[10px] font-mono text-slate-400 border-b border-slate-800/80">
-                          <span className="font-black text-indigo-400">PMP MOBILE v1.0</span>
-                          <div className="flex items-center gap-2">
-                            <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-[9px] font-black animate-pulse">● REC</span>
-                            <span>🔋 98%</span>
-                          </div>
-                        </div>
-
-                        {/* Simulated Camera Viewfinder */}
-                        <div className="relative bg-black h-64 flex items-center justify-center overflow-hidden border-b border-slate-800">
-                          {/* Camera background grid / blur */}
-                          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
-
-                          {/* Torch Simulation Glow */}
-                          {torchActive && (
-                            <div className="absolute inset-0 bg-amber-500/10 pointer-events-none animate-pulse"></div>
-                          )}
-
-                          {/* Viewfinder Target Brackets */}
-                          <div className="absolute w-48 h-48 border-2 border-indigo-500/40 rounded-2xl flex items-center justify-center pointer-events-none shadow-[0_0_30px_rgba(99,102,241,0.2)]">
-                            <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-xl"></div>
-                            <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-xl"></div>
-                            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-xl"></div>
-                            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-xl"></div>
-
-                            {/* Laser Scanner Line overlay */}
-                            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,1)] animate-[bounce_2s_infinite]"></div>
-                          </div>
-
-                          <div className="absolute bottom-3 text-center z-10 bg-black/60 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
-                            <p className="text-[10px] font-bold text-slate-300">
-                              {language === 'ar' ? 'قم بتوجيه الكاميرا نحو باركود GS1 2D' : 'Align GS1 2D barcode within frame'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Mobile Controls & Presets */}
-                        <div className="p-5 flex-1 flex flex-col justify-between bg-gradient-to-b from-slate-900 to-slate-950">
-                          <div className="space-y-3">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider text-center">
-                              {language === 'ar' ? '✨ محاكاة مسح الأصناف عبر كاميرا الموبايل:' : '✨ Quick Mobile Scan Simulation:'}
-                            </p>
-                            <div className="grid grid-cols-1 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setGs1Barcode('01062810000001011728052010PH-INS-2026')}
-                                className="w-full py-2.5 px-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-xl text-cyan-300 font-mono text-xs font-bold transition-all text-left flex items-center justify-between group"
-                              >
-                                <span className="truncate">💉 010...1728052010PH-INS-2026</span>
-                                <span className="px-2 py-0.5 bg-cyan-500 text-slate-950 rounded text-[10px] font-black group-hover:scale-105 transition-transform shrink-0 ml-2">أنسولين ثلاجة</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setGs1Barcode('01062810000001021728052010PH-MOR-2026')}
-                                className="w-full py-2.5 px-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl text-rose-300 font-mono text-xs font-bold transition-all text-left flex items-center justify-between group"
-                              >
-                                <span className="truncate">🔒 010...1728052010PH-MOR-2026</span>
-                                <span className="px-2 py-0.5 bg-rose-500 text-white rounded text-[10px] font-black group-hover:scale-105 transition-transform shrink-0 ml-2">مورفين جدول</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setGs1Barcode('01062810000001031728052010PH-PAN-2026')}
-                                className="w-full py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-300 font-mono text-xs font-bold transition-all text-left flex items-center justify-between group"
-                              >
-                                <span className="truncate">💊 010...1728052010PH-PAN-2026</span>
-                                <span className="px-2 py-0.5 bg-emerald-500 text-slate-950 rounded text-[10px] font-black group-hover:scale-105 transition-transform shrink-0 ml-2">بنادول عام</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          <form onSubmit={handleScanGS1} className="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
-                            <div className="relative">
-                              <input
-                                type="text"
-                                className="w-full bg-black/60 border border-indigo-500/40 rounded-xl px-4 py-2.5 text-xs font-mono text-indigo-100 placeholder-slate-600 focus:outline-none focus:border-indigo-400 text-center"
-                                placeholder="GS1 String / Barcode Data"
-                                value={gs1Barcode}
-                                onChange={(e) => setGs1Barcode(e.target.value)}
-                              />
-                            </div>
-                            <button
-                              type="submit"
-                              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
-                            >
-                              <span>⚡</span> {language === 'ar' ? 'صرف وتوثيق فوري' : 'Instant Parse & Dispense'}
-                            </button>
-                          </form>
-                        </div>
-
-                        {/* Mobile Home Indicator bar */}
-                        <div className="bg-slate-950 py-2 flex items-center justify-center">
-                          <div className="w-32 h-1 bg-slate-700 rounded-full"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={handleScanGS1} className="flex items-center gap-3 w-full max-w-2xl mx-auto relative z-10">
-                    <div className="relative w-full">
-                      <input
-                        type="text"
-                        className="w-full bg-black/40 border border-indigo-500/30 rounded-2xl pl-12 pr-4 py-4 text-sm font-mono text-indigo-100 placeholder-slate-500 focus:outline-none focus:bg-black/60 focus:border-indigo-400 transition-all shadow-inner"
-                        placeholder={language === 'ar' ? 'مسح باركود GS1 (مثال: 01062810000001231728052010PH...)' : 'Scan GS1 Barcode (e.g. 010628100...)'}
-                        value={gs1Barcode}
-                        onChange={(e) => setGs1Barcode(e.target.value)}
-                      />
-                      <span className="absolute left-4 top-4 text-slate-400 text-base">🔍</span>
-                    </div>
-                    <button
-                      type="submit"
-                      className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-indigo-600/30 shrink-0 flex items-center gap-2"
-                    >
-                      <span>⚡</span> {language === 'ar' ? 'تحليل وصرف' : 'Parse & Dispense'}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* 🔮 Emdad 360 AI Co-Pilot & Automation Console */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl text-white p-8 rounded-[2.5rem] shadow-2xl mb-12 relative overflow-hidden border border-teal-500/30 group hover:border-teal-500/50 transition-all duration-500">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-transform duration-700"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-teal-500/20 border border-teal-500/30 rounded-xl text-teal-300 text-xs font-black uppercase tracking-widest mb-3 backdrop-blur-md">
-                      <span>🤖</span> {language === 'ar' ? 'مساعد الأتمتة والذكاء الاصطناعي إمداد 360' : 'Emdad 360 AI Co-Pilot & Live Automation'}
-                    </div>
-                    <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white">
-                      {language === 'ar' ? 'نظام التزامن اللوجستي الذكي والأتمتة الذاتية (AI Hub)' : 'Smart Logistics Sync & Self-Automation (AI Hub)'}
-                    </h3>
-                    <p className="text-sm text-slate-300 font-bold mt-2 max-w-2xl leading-relaxed">
-                      {language === 'ar'
-                        ? 'يقوم مساعد الذكاء الاصطناعي بمطابقة حركة النقل بين المستودعات والمشاريع، وفحص تواريخ الصلاحيات آلياً، وحظر الأدوية التالفة، وإرسال نواقص الأدوية لقسم المشتريات فوراً بدون تدخل بشري.'
-                        : 'The AI co-pilot automatically reconciles transit shipments between warehouses and projects, performs automated expiry audits, restricts expired batches, and routes supply deficits to purchasing.'}
-                    </p>
-                  </div>
-
-                  <div className="shrink-0 w-full lg:w-auto">
-                    <button
-                      onClick={runGlobalAutomationSync}
-                      disabled={isSyncing}
-                      className={`w-full lg:w-auto group relative px-8 py-5 rounded-2xl font-black text-sm transition-all duration-300 active:scale-95 shadow-xl overflow-hidden flex items-center justify-center gap-3 ${isSyncing
-                          ? 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
-                          : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 hover:shadow-teal-500/30 border border-teal-300/40'
-                        }`}
-                    >
-                      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                      <span>
-                        {isSyncing
-                          ? (language === 'ar' ? '⏳ جاري تشغيل معالجة التزامن...' : '⏳ Running Global Sync Process...')
-                          : (language === 'ar' ? '⚡ تشغيل معالج التزامن والأتمتة الشامل' : '⚡ Run Global Sync & Automation Processor')}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 📊 Live Integration Map & Status indicators */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8 pt-8 border-t border-white/10 relative z-10">
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center backdrop-blur-md hover:border-white/20 transition-all">
-                    <span className="text-2xl mb-2">💊</span>
-                    <span className="text-xs font-black text-slate-200">
-                      {language === 'ar' ? '1. الدفاتر والأرصدة' : '1. Ledger & Balances'}
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg font-black mt-2 border border-emerald-500/30 shadow-inner">
-                      {language === 'ar' ? 'متزامن بنجاح 🟢' : 'Synced Successfully 🟢'}
-                    </span>
-                  </div>
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center backdrop-blur-md hover:border-white/20 transition-all">
-                    <span className="text-2xl mb-2">🔙</span>
-                    <span className="text-xs font-black text-slate-200">
-                      {language === 'ar' ? '2. حركة الشحن والنقل' : '2. Transit & Shipping'}
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg font-black mt-2 border border-emerald-500/30 shadow-inner">
-                      {language === 'ar' ? 'تتبع حي متصل 🟢' : 'Live Connected 🟢'}
-                    </span>
-                  </div>
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center backdrop-blur-md hover:border-white/20 transition-all">
-                    <span className="text-2xl mb-2">📦</span>
-                    <span className="text-xs font-black text-slate-200">
-                      {language === 'ar' ? '3. الصلاحيات والـ Batches' : '3. Batch & Expiry'}
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg font-black mt-2 border border-emerald-500/30 shadow-inner">
-                      {language === 'ar' ? 'فحص مستمر 🟢' : 'Continuous Audit 🟢'}
-                    </span>
-                  </div>
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center backdrop-blur-md hover:border-white/20 transition-all">
-                    <span className="text-2xl mb-2">⚖️</span>
-                    <span className="text-xs font-black text-slate-200">
-                      {language === 'ar' ? '4. مطابقة الفروقات الجردية' : '4. Variance Reconciliation'}
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg font-black mt-2 border border-emerald-500/30 shadow-inner">
-                      {language === 'ar' ? 'تعديل فوري 🟢' : 'Instant Posting 🟢'}
-                    </span>
-                  </div>
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-2xl flex flex-col items-center text-center col-span-2 md:col-span-1 backdrop-blur-md hover:border-white/20 transition-all">
-                    <span className="text-2xl mb-2">🚨</span>
-                    <span className="text-xs font-black text-slate-200">
-                      {language === 'ar' ? '5. تغذية النواقص الذكية' : '5. Smart Restocking'}
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg font-black mt-2 border border-emerald-500/30 shadow-inner">
-                      {language === 'ar' ? 'أتمتة POs كاملة 🟢' : 'Auto-PO Enabled 🟢'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 📋 Live Automation Logs Console */}
-                {logs.length > 0 && (
-                  <div className="mt-8 pt-6 border-t border-white/10 relative z-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-black text-teal-300 flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-                        {language === 'ar'
-                          ? 'سجل الأتمتة المباشر والعمليات الذكية المنفذة (Live Sync Ledger):'
-                          : 'Live Sync & Automation Ledger Console:'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setLogs([])}
-                        className="text-[10px] text-slate-400 hover:text-white transition-colors"
-                      >
-                        {language === 'ar' ? 'مسح سجل الأتمتة' : 'Clear Log'}
-                      </button>
-                    </div>
-                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4 font-mono text-[11px] text-teal-100 max-h-40 overflow-y-auto space-y-2 text-left shadow-inner" dir="ltr">
-                      {logs.map((log, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-slate-500">[{log.time}]</span>
-                          <span className={log.type === 'error' ? 'text-rose-400' : log.type === 'warn' ? 'text-amber-300' : 'text-emerald-400'}>
-                            {log.message}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 🌟 Package 5: Predictive AI Analytics & Dynamic KPI Dashboards 🌟 */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-2xl border border-white/10 mb-12 relative overflow-hidden group hover:border-white/20 transition-all duration-500 text-white">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-br-[4rem] pointer-events-none group-hover:scale-125 transition-transform duration-700"></div>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/10 pb-6">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-300 text-xs font-black uppercase tracking-widest mb-3 backdrop-blur-md">
-                      <span>📊</span> {language === 'ar' ? 'التحليلات التنبؤية ومؤشرات الأداء الذكية (Package 5)' : 'Predictive AI Analytics & Smart KPIs'}
-                    </div>
-                    <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
-                      {language === 'ar' ? 'تحليل سرعة الدوران، التنبؤ بالطلب، وسلوكيات الصرف' : 'Velocity Analysis, Demand Forecasting & Dispensing Behavior'}
-                    </h2>
-                    <p className="text-sm font-bold text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                      {language === 'ar'
-                        ? 'يعتمد الذكاء الاصطناعي على خوارزميات التنبؤ لتحليل سرعة نفاد المخزون (Velocity) وتقديم توصيات الشراء الاستباقية لتجنب النواقص الحادة.'
-                        : 'AI relies on forecasting algorithms to analyze stockout velocity and provide proactive purchasing recommendations to avoid max severe deficits.'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-950/40 p-2 rounded-2xl border border-white/10 shadow-inner">
-                    <span className="text-xs font-black px-4 py-2 bg-slate-800 text-indigo-300 rounded-xl shadow-sm flex items-center gap-2 border border-white/5">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-                      {language === 'ar' ? 'تحديث تلقائي فوري' : 'Live Auto-Refresh'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Card 1: Velocity & Stockout Risk AI */}
-                  <div className="bg-slate-950/40 border border-white/10 p-6 rounded-2xl flex flex-col justify-between shadow-xl backdrop-blur-md hover:border-white/20 transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="p-3 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-2xl text-xl shadow-inner">📈</span>
-                        <span className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 font-black text-[10px] rounded-xl flex items-center gap-1.5 animate-pulse shadow-inner">
-                          <span>⚠️</span> {language === 'ar' ? 'مخاطر نفاد وشيكة' : 'Stockout Risk'}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-black text-white mb-2">
-                        {language === 'ar' ? 'مؤشر سرعة الدوران (Inventory Velocity)' : 'Inventory Velocity Index'}
-                      </h3>
-                      <p className="text-xs font-bold text-slate-300 mb-4 leading-relaxed">
-                        {language === 'ar'
-                          ? 'تم رصد زيادة بنسبة 35% في معدل سحب أدوية الطوارئ والمضادات الحيوية خلال الـ 14 يوماً الماضية تزامناً مع التغيرات الموسمية.'
-                          : 'A 35% increase in emergency drug and antibiotic consumption velocity was detected over the last 14 days due to seasonal changes.'}
-                      </p>
-                      <div className="bg-slate-900/80 p-4 rounded-xl border border-white/10 space-y-3 shadow-inner">
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-slate-400">{language === 'ar' ? 'متوسط السحب اليومي:' : 'Avg Daily Consumption:'}</span>
-                          <span className="font-mono text-indigo-400 font-black">142 {language === 'ar' ? 'عبوة / يوم' : 'Units/Day'}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-slate-400">{language === 'ar' ? 'أيام التغطية المتبقية (Buffer):' : 'Remaining Buffer Days:'}</span>
-                          <span className="font-mono text-rose-400 font-black">18 {language === 'ar' ? 'يوماً فقط' : 'Days Only'}</span>
-                        </div>
-                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden shadow-inner">
-                          <div className="bg-gradient-to-r from-indigo-500 to-rose-500 h-full w-[35%] rounded-full"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-black text-slate-400">
-                      <span>💡 {language === 'ar' ? 'توصية الذكاء الاصطناعي:' : 'AI Recommendation:'}</span>
-                      <span className="text-indigo-400">{language === 'ar' ? 'زيادة مخزون الأمان بنسبة 25%' : 'Increase safety stock by 25%'}</span>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Clinic Consumption Behavior */}
-                  <div className="bg-slate-955/40 border border-white/10 p-6 rounded-2xl flex flex-col justify-between shadow-xl backdrop-blur-md hover:border-white/20 transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="p-3 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-2xl text-xl shadow-inner">🏥</span>
-                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-black text-[10px] rounded-xl shadow-inner">
-                          {language === 'ar' ? 'تحليل التوزيع الطبي' : 'Clinic Distribution'}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-black text-white mb-2">
-                        {language === 'ar' ? 'أنماط صرف العيادات والأطباء' : 'Clinic & Doctor Dispensing Patterns'}
-                      </h3>
-                      <p className="text-xs font-bold text-slate-300 mb-4 leading-relaxed">
-                        {language === 'ar'
-                          ? 'تحليل التوزيع المالي للجهات المستهلكة للأدوية والمستلزمات لمراقبة مراكز التكلفة ومنع الهدر الطبي.'
-                          : 'Financial distribution analysis of consuming entities to monitor cost centers and prevent medical waste.'}
-                      </p>
-                      <div className="space-y-3">
-                        <div className="bg-slate-900/80 p-3.5 rounded-xl border border-white/10 flex items-center justify-between text-xs font-bold shadow-inner">
-                          <span className="flex items-center gap-2.5 text-slate-200">
-                            <span className="w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span>
-                            {language === 'ar' ? 'عيادة الطوارئ بالموقع الرئيسي' : 'Main Site Emergency Clinic'}
-                          </span>
-                          <span className="font-mono text-indigo-400 font-black">45% (18,450 {language === 'ar' ? 'ش.ج' : 'ILS'})</span>
-                        </div>
-                        <div className="bg-slate-900/80 p-3.5 rounded-xl border border-white/10 flex items-center justify-between text-xs font-bold shadow-inner">
-                          <span className="flex items-center gap-2.5 text-slate-200">
-                            <span className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-                            {language === 'ar' ? 'عيادة موقع العاصمة الإدارية' : 'New Capital Site Clinic'}
-                          </span>
-                          <span className="font-mono text-emerald-400 font-black">35% (14,350 {language === 'ar' ? 'ش.ج' : 'ILS'})</span>
-                        </div>
-                        <div className="bg-slate-900/80 p-3.5 rounded-xl border border-white/10 flex items-center justify-between text-xs font-bold shadow-inner">
-                          <span className="flex items-center gap-2.5 text-slate-200">
-                            <span className="w-2 h-2 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
-                            {language === 'ar' ? 'صناديق الإسعافات (الورش والمركبات)' : 'First Aid Boxes (Workshops)'}
-                          </span>
-                          <span className="font-mono text-amber-400 font-black">20% (8,200 {language === 'ar' ? 'ش.ج' : 'ILS'})</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-black text-slate-400">
-                      <span>👨‍⚕️ {language === 'ar' ? 'الطبيب الأكثر صرفاً:' : 'Top Prescribing Doctor:'}</span>
-                      <span className="text-white font-black">{language === 'ar' ? 'د. أحمد رضوان (عيادة الطوارئ)' : 'Dr. Ahmed Radwan'}</span>
-                    </div>
-                  </div>
-
-                  {/* Card 3: Financial Interoperability, Claims & AI Accountant 360 */}
-                  <div className="bg-slate-955/40 border border-white/10 p-6 rounded-2xl flex flex-col justify-between shadow-xl backdrop-blur-md hover:border-white/20 transition-all relative overflow-hidden">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="p-3 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-2xl text-xl shadow-inner">💸</span>
-                        <span className="px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 font-black text-[10px] rounded-xl font-mono shadow-inner">
-                          {language === 'ar' ? 'التكامل المحاسبي المباشر' : 'GL Interoperability'}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
-                        <span>{language === 'ar' ? 'حالة القيود المحاسبية والمطالبات' : 'GL Postings & Insurance Claims Status'}</span>
-                      </h3>
-                      <p className="text-xs font-bold text-slate-300 mb-4 leading-relaxed">
-                        {language === 'ar'
-                          ? 'يتم ترحيل كل حركة صرف أو إعدام أدوية فوراً إلى حسابات الأستاذ العام (General Ledger) مع توليد مطالبات التأمين.'
-                          : 'Every dispensing or disposal transaction is instantly posted to General Ledger accounts with insurance claims generated.'}
-                      </p>
-                      <div className="bg-slate-900/80 p-4 rounded-xl border border-white/10 space-y-3 mb-4 shadow-inner">
-                        <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
-                          <span className="text-slate-400">{language === 'ar' ? 'قيود الأستاذ العام المرحّلة:' : 'Posted GL Entries:'}</span>
-                          <span className="font-mono text-teal-400 font-black">1,420 {language === 'ar' ? 'قيداً مزدوجاً' : 'Double Entries'}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
-                          <span className="text-slate-400">{language === 'ar' ? 'مطالبات التأمين المعلقة (TPA):' : 'Pending TPA Claims:'}</span>
-                          <span className="font-mono text-amber-400 font-black">45,000 {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-slate-400">{language === 'ar' ? 'قيمة التوالف المعدمة (Disposals):' : 'Disposed Losses:'}</span>
-                          <span className="font-mono text-rose-400 font-black">3,250 {language === 'ar' ? 'ش.ج' : 'ILS'}</span>
-                        </div>
-                      </div>
-
-                      {/* 🤖 AI Accountant 360 Diagnostics Section */}
-                      <div className="bg-black/60 text-white p-5 rounded-2xl border border-white/10 space-y-4 shadow-2xl backdrop-blur-md">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl animate-pulse">🤖</span>
-                            <div>
-                              <h4 className="text-xs font-black text-cyan-400">المحاسب الذكي 360 (AI Accountant 360)</h4>
-                              <p className="text-[10px] text-slate-400">فحص الشذوذ المالي والتوازن المحاسبي لدفاتر IFRS</p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={aiScanning}
-                            onClick={() => {
-                              setAiScanning(true);
-                              setTimeout(() => {
-                                setAiScanning(false);
-                                setAiAccountantScan(true);
-                              }, 1800);
-                            }}
-                            className={`px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border ${aiScanning ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-wait' : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/40 shadow-md shadow-cyan-500/10 active:scale-95'}`}
-                          >
-                            <span>{aiScanning ? '⏳' : '⚡'}</span> {aiScanning ? 'جاري الفحص...' : 'تشغيل التشخيص'}
-                          </button>
-                        </div>
-
-                        {aiScanning ? (
-                          <div className="py-6 text-center space-y-3 animate-pulse">
-                            <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                            <p className="text-xs text-slate-300 font-mono">AI Accountant is analyzing 1,420 GL double-entries for anomalies...</p>
-                          </div>
-                        ) : aiAccountantScan ? (
-                          <div className="space-y-3 text-xs animate-in fade-in duration-300">
-                            <div className="flex justify-between items-center bg-slate-950/80 p-3 rounded-xl border border-emerald-500/30 shadow-inner">
-                              <span className="text-slate-200 flex items-center gap-2 font-bold"><span>✔️</span> فحص التوازن المالي (Debits vs Credits):</span>
-                              <span className="text-emerald-400 font-mono font-black">100% Balanced</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-slate-950/80 p-3 rounded-xl border border-emerald-500/30 shadow-inner">
-                              <span className="text-slate-200 flex items-center gap-2 font-bold"><span>🛡️</span> رصد الشذوذ المالي (Anomaly Detection):</span>
-                              <span className="text-emerald-400 font-mono font-black">0 Orphan Claims</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-slate-950/80 p-3 rounded-xl border border-cyan-500/30 shadow-inner">
-                              <span className="text-slate-200 flex items-center gap-2 font-bold"><span>📈</span> مؤشر المخاطر التشغيلية (Risk Score):</span>
-                              <span className="text-cyan-400 font-mono font-black">0.02 (IFRS Ready)</span>
-                            </div>
-                            <div className="p-3.5 bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-[11px] text-cyan-200 leading-relaxed font-bold shadow-inner">
-                              💡 <span className="text-white font-black">توصية المحاسب الآلي:</span> كافة الحركات المسجلة مرتبطة بشكل سليم بأكواد موافقة TPA ورموز GS1 DataMatrix ولا توجد أي تسريبات مالية.
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="py-4 text-center text-slate-400 text-xs font-bold">
-                            انقر على "تشغيل التشخيص" لبدء الفحص المالي الشامل باستخدام الذكاء الاصطناعي.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-black text-slate-400">
-                      <span>🛡️ {language === 'ar' ? 'حالة المطابقة المحاسبية:' : 'Reconciliation Status:'}</span>
-                      <span className="text-emerald-400 font-black">{language === 'ar' ? 'متطابق 100% (IFRS)' : '100% Matched (IFRS)'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* STATS CARDS */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-                <div className="bg-slate-900/60 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-125 transition-transform duration-700 blur-xl"></div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-black text-teal-400 mb-1.5 uppercase tracking-wider">
-                        {language === 'ar' ? 'إجمالي الأصناف الدوائية' : 'Total Pharmaceutical Items'}
-                      </p>
-                      <h3 className="text-4xl font-black text-white font-mono">{totalDrugsCount}</h3>
-                    </div>
-                    <div className="w-16 h-16 bg-teal-500/20 border border-teal-500/30 text-teal-300 rounded-2xl flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
-                      💊
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/60 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-125 transition-transform duration-700 blur-xl"></div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-black text-rose-400 mb-1.5 uppercase tracking-wider">
-                        {language === 'ar' ? 'أدوية جدول ومراقبة (Controlled)' : 'Controlled Substances (Schedule)'}
-                      </p>
-                      <h3 className="text-4xl font-black text-white font-mono">{controlledCount}</h3>
-                    </div>
-                    <div className="w-16 h-16 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-2xl flex items-center justify-center text-3xl shadow-inner animate-pulse group-hover:scale-110 transition-transform">
-                      🔒
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/60 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-125 transition-transform duration-700 blur-xl"></div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-black text-cyan-400 mb-1.5 uppercase tracking-wider">
-                        {language === 'ar' ? 'أدوية ثلاجة وتبريد (2-8°C)' : 'Cold Chain Storage (2-8°C)'}
-                      </p>
-                      <h3 className="text-4xl font-black text-white font-mono">{coldChainCount}</h3>
-                    </div>
-                    <div className="w-16 h-16 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-2xl flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
-                      ❄️
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/60 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-125 transition-transform duration-700 blur-xl"></div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-black text-indigo-400 mb-1.5 uppercase tracking-wider">
-                        {language === 'ar' ? 'القيمة المالية للمخزون الدوائي' : 'Total Pharmacy Inventory Value'}
-                      </p>
-                      <h3 className="text-3xl font-black text-white font-mono">
-                        {totalInventoryValue.toLocaleString()} <span className="text-sm font-bold text-slate-400">{language === 'ar' ? 'ش.ج' : 'ILS'}</span>
-                      </h3>
-                    </div>
-                    <div className="w-16 h-16 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-2xl flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
-                      💰
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* FILTER & SEARCH BAR */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl p-6 rounded-[2.5rem] shadow-2xl border border-white/10 mb-8 flex flex-col lg:flex-row justify-between items-center gap-6 hover:border-white/20 transition-all duration-500">
-                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+              <div className="bg-white rounded-[2rem] p-4 flex flex-col xl:flex-row justify-between items-center gap-4 shadow-md mb-8">
+                <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
                   <button
                     onClick={() => setFilterCategory('ALL')}
-                    className={`px-6 py-3 rounded-2xl text-xs font-black transition-all duration-300 ${filterCategory === 'ALL' ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-slate-950 shadow-lg shadow-teal-500/20 border border-teal-300/40' : 'bg-slate-955/40 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${filterCategory === 'ALL' ? 'bg-[#0b0f19] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                   >
                     {language === 'ar' ? 'جميع الأصناف' : 'All Categories'}
                   </button>
                   <button
                     onClick={() => setFilterCategory('OTC')}
-                    className={`px-6 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 ${filterCategory === 'OTC' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-lg shadow-emerald-500/20 border border-emerald-300/40' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterCategory === 'OTC' ? 'bg-emerald-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                   >
-                    <span>💊</span> {language === 'ar' ? 'أدوية عامة (OTC)' : 'General (OTC)'}
+                    <span>💊</span> {language === 'ar' ? 'أدوية عامة' : 'General (OTC)'}
                   </button>
                   <button
                     onClick={() => setFilterCategory('CONTROLLED')}
-                    className={`px-6 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 ${filterCategory === 'CONTROLLED' ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/20 border border-rose-300/40' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterCategory === 'CONTROLLED' ? 'bg-rose-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                   >
-                    <span>🔒</span> {language === 'ar' ? 'أدوية جدول ومراقبة' : 'Controlled Drugs'}
+                    <span>🔒</span> {language === 'ar' ? 'أدوية مراقبة' : 'Controlled'}
                   </button>
                   <button
                     onClick={() => setFilterCategory('COLD_CHAIN')}
-                    className={`px-6 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 ${filterCategory === 'COLD_CHAIN' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/20 border border-cyan-300/40' : 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterCategory === 'COLD_CHAIN' ? 'bg-cyan-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                   >
-                    <span>❄️</span> {language === 'ar' ? 'أدوية ثلاجة (2-8°C)' : 'Cold Chain (2-8°C)'}
+                    <span>❄️</span> {language === 'ar' ? 'أدوية ثلاجة' : 'Cold Chain'}
                   </button>
                   <button
                     onClick={() => setFilterCategory('CONSUMABLE')}
-                    className={`px-6 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 ${filterCategory === 'CONSUMABLE' ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-300/40' : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 ${filterCategory === 'CONSUMABLE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                   >
-                    <span>📦</span> {language === 'ar' ? 'مستلزمات طبية' : 'Medical Supplies'}
+                    <span>📦</span> {language === 'ar' ? 'مستلزمات طبية' : 'Supplies'}
                   </button>
                 </div>
 
-                <div className="relative w-full lg:w-96">
-                  <input
-                    type="text"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-black/60 focus:border-teal-400 transition-all shadow-inner"
-                    placeholder={language === 'ar' ? 'بحث باسم الدواء، المادة الفعالة، أو الباتش...' : 'Search by drug name, active ingredient, or batch...'}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <span className="absolute left-4 top-3.5 text-slate-500 text-base">🔍</span>
+                <div className="flex items-center gap-4 w-full xl:w-auto justify-end">
+                  <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+                    💡 Tip: {language === 'ar' ? 'تتبع المخزون اللوجستي الموحد للمؤسسات.' : 'All movements are tracked via auditing logs.'}
+                  </span>
+                  <div className="relative w-full sm:w-80">
+                    <input
+                      type="text"
+                      className="w-full bg-slate-100 border border-slate-200 text-slate-700 placeholder-slate-400 rounded-full pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-slate-300"
+                      placeholder={language === 'ar' ? 'بحث بالاسم أو الباتش...' : 'Search by drug name or batch...'}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <span className="absolute left-3.5 top-2.5 text-slate-400 text-xs">🔍</span>
+                  </div>
                 </div>
               </div>
 
               {/* DRUGS TABLE */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 overflow-hidden relative mb-12 hover:border-white/20 transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-b from-teal-500/10 to-transparent pointer-events-none h-32"></div>
-
-                <div className="p-8 border-b border-white/10 flex justify-between items-center relative z-10 bg-slate-950/40">
-                  <h2 className="text-xl font-black text-white flex items-center gap-3">
+              <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden p-6 mb-12">
+                <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                  <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
                     <span>📋</span> {language === 'ar' ? 'سجل الأدوية والمستلزمات الطبية' : 'Medicines & Medical Supplies Registry'}
                   </h2>
-                  <span className="text-xs font-bold text-slate-400">
-                    {language === 'ar' ? 'يعرض الأرصدة الحية وظروف التخزين' : 'Displays live stock balances & storage conditions'}
+                  <span className="text-xs text-slate-500 font-bold">
+                    {language === 'ar' ? `النتائج: ${filteredItems.length} صنف` : `Results: ${filteredItems.length} items`}
                   </span>
                 </div>
 
-                <div className="overflow-x-auto relative z-10">
-                  <table className="w-full text-right border-collapse" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-slate-700">
                     <thead>
-                      <tr className={`bg-slate-950/80 text-slate-400 text-[11px] font-black uppercase tracking-widest border-b border-white/10 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                        <th className={`p-5 font-black ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>{language === 'ar' ? 'الاسم التجاري (Drug Name)' : 'Trade Name'}</th>
-                        <th className="p-5 font-black">{language === 'ar' ? 'المادة الفعالة (Active Substance)' : 'Active Substance'}</th>
-                        <th className="p-5 font-black">{language === 'ar' ? 'الشكل الدوائي' : 'Dosage Form'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'التصنيف الدوائي' : 'Category'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'ظروف التخزين' : 'Storage Temp'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد الأساسي' : 'Orig Qty'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Stock Qty'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'سعر الوحدة' : 'Unit Cost'}</th>
-                        <th className="p-5 font-black text-center">{language === 'ar' ? 'الباتش والصلاحية' : 'Batch & Expiry'}</th>
-                        <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إجراءات الصرف' : 'Actions'}</th>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الاسم التجاري' : 'Trade Name'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'المادة الفعالة' : 'Active Substance'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الشكل الدوائي' : 'Dosage Form'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'التصنيف' : 'Category'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'التخزين' : 'Storage Temp'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد الأساسي' : 'Orig Qty'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Stock Qty'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'سعر الوحدة' : 'Unit Cost'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الباتش والصلاحية' : 'Batch & Expiry'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-sm font-bold text-slate-200">
+                    <tbody className="divide-y divide-slate-100">
                       {isLoading ? (
                         [...Array(3)].map((_, i) => (
                           <tr key={i} className="animate-pulse">
                             <td colSpan="10" className="p-6">
-                              <div className="h-4 bg-white/10 rounded-full w-full"></div>
+                              <div className="h-4 bg-slate-100 rounded-full w-full"></div>
                             </td>
                           </tr>
                         ))
                       ) : filteredItems.length === 0 ? (
                         <tr>
-                          <td colSpan="10" className="py-16 text-center text-slate-500 font-bold">
-                            {language === 'ar' ? 'لا توجد أدوية مسجلة تطابق معايير البحث والفلترة' : 'No registered pharmaceuticals matched the search filters.'}
+                          <td colSpan="10" className="text-center py-12 text-slate-400 font-medium">
+                            {language === 'ar' ? 'لا توجد أدوية تطابق بحثك حالياً.' : 'No pharmaceuticals match your search.'}
                           </td>
                         </tr>
                       ) : (
-                        filteredItems.map(drug => {
+                        filteredItems.map((drug) => {
                           const isControlled = drug.pharma_category === 'CONTROLLED';
                           const isColdChain = drug.pharma_category === 'COLD_CHAIN';
                           const isLowStock = Number(drug.remaining_qty) <= Number(drug.min_stock_level || 20);
 
                           return (
-                            <tr key={drug.id} className={`hover:bg-white/[0.04] transition-colors ${isControlled ? 'bg-rose-500/[0.05]' : isColdChain ? 'bg-cyan-500/[0.05]' : ''}`}>
-                              <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
-                                <span className="block font-black text-white text-base">{drug.item_name}</span>
-                                <span className="text-[11px] text-slate-400 font-mono">
-                                  ID: {drug.id} | {language === 'ar' ? `المورد: ${drug.supplier || 'معتمد'}` : `Supplier: ${drug.supplier || 'Approved'}`}
-                                </span>
+                            <tr key={drug.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3.5 text-center">
+                                <div className="font-bold text-slate-900 text-sm">{drug.item_name}</div>
+                                <div className="text-[10px] text-slate-500">ID: {drug.id}</div>
                               </td>
-                              <td className="p-5 text-xs text-slate-300 font-bold max-w-xs truncate">{drug.active_substance}</td>
-                              <td className="p-5 text-xs text-slate-300">{drug.dosage_form}</td>
-                              <td className="p-5 text-center">
-                                <span className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black inline-flex items-center gap-2 border shadow-inner ${isControlled
-                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                                  : isColdChain
-                                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                                    : drug.pharma_category === 'CONSUMABLE'
-                                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                  }`}>
-                                  <span className={`w-2 h-2 rounded-full ${isControlled ? 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)]' : isColdChain ? 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`}></span>
+                              <td className="px-4 py-3.5 text-center text-xs text-slate-600 max-w-xs truncate">{drug.active_substance}</td>
+                              <td className="px-4 py-3.5 text-center text-xs text-slate-600">{drug.dosage_form || 'N/A'}</td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                  isControlled
+                                    ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                                    : isColdChain
+                                    ? 'bg-cyan-50 text-cyan-600 border border-cyan-100'
+                                    : 'bg-slate-50 text-slate-600 border border-slate-100'
+                                }`}>
                                   {drug.pharma_category}
                                 </span>
                               </td>
-                              <td className="p-5 text-center font-mono text-xs">
-                                <span className={`px-3 py-1 rounded-xl text-[11px] font-black border shadow-inner ${isColdChain ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-slate-800 text-slate-300 border-white/5'}`}>
-                                  {drug.storage_temp}
-                                </span>
+                              <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-slate-800">
+                                {drug.storage_temp || (isColdChain ? '2-8°C' : '20-25°C')}
                               </td>
-                              <td className="p-5 text-center font-mono font-black text-base">
-                                <span className="text-slate-300 font-bold bg-slate-800 px-3 py-1 rounded-xl text-xs border border-white/5 shadow-inner" title="الرصيد الأساسي (Original Qty)">
-                                  {Number(drug.quantity || drug.remaining_qty).toLocaleString()}
-                                </span>
+                              <td className="px-4 py-3.5 text-center text-xs font-mono text-slate-700">
+                                {Number(drug.quantity || drug.remaining_qty).toLocaleString()}
                               </td>
-                              <td className="p-5 text-center font-mono font-black text-base">
-                                <span className={`px-3 py-1 rounded-xl text-xs border shadow-inner ${isLowStock ? 'bg-rose-500/20 text-rose-300 border-rose-500/30 animate-pulse' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'}`} title="الرصيد المتاح (Remaining Qty)">
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`font-mono text-sm font-bold ${isLowStock ? 'text-rose-600 animate-pulse' : 'text-slate-900'}`}>
                                   {Number(drug.remaining_qty).toLocaleString()}
                                 </span>
                               </td>
-                              <td className="p-5 text-center font-mono text-slate-200 font-black">{Number(drug.unit_cost).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
-                              <td className="p-5 text-center font-mono text-xs">
-                                <span className="block font-black text-indigo-400">{drug.batch_no}</span>
-                                <span className="text-[10px] text-slate-400">Exp: {drug.expiry_date}</span>
+                              <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-slate-900">
+                                {Number(drug.unit_cost).toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ILS</span>
                               </td>
-                              <td className="p-5 pl-8 text-left">
-                                <div className="flex items-center justify-end gap-2.5">
+                              <td className="px-4 py-3.5 text-center">
+                                <span className="block font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-[10px] mb-1 truncate max-w-[100px] mx-auto">{drug.batch_no}</span>
+                                <span className="text-[10px] text-slate-500 font-bold">Exp: {drug.expiry_date}</span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
                                   <button
                                     onClick={() => handleOpenDispense(drug)}
-                                    className={`px-5 py-2.5 rounded-xl text-xs font-black shadow-lg flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all border ${isControlled
-                                      ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-rose-300/40 shadow-rose-500/20'
-                                      : isColdChain
-                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 border-cyan-300/40 shadow-cyan-500/20'
-                                        : 'bg-gradient-to-r from-teal-500 to-emerald-600 text-slate-950 border-teal-300/40 shadow-teal-500/20'
-                                      }`}
-                                    title={language === 'ar' ? 'صرف الدواء للعيادة أو المريض' : 'Dispense drug to clinic or patient'}
+                                    className="px-3 py-1.5 bg-[#0b0f19] hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all"
                                   >
-                                    <span>💊</span> {language === 'ar' ? 'صرف طبي' : 'Dispense'}
+                                    💊 {language === 'ar' ? 'صرف' : 'Dispense'}
                                   </button>
                                   <button
                                     onClick={() => handleOpenEdit(drug)}
-                                    className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 flex items-center justify-center transition-all hover:scale-[1.05] active:scale-95 shadow-md"
-                                    title="تعديل بيانات الدواء"
+                                    className="p-1.5 text-slate-500 hover:text-[#0b0f19] hover:bg-slate-100 rounded-lg transition-colors"
                                   >
                                     ✏️
                                   </button>
@@ -2747,7 +2189,6 @@ function PharmaInventory() {
 
           {activeTab === 'transfers' && <StockTransfers isSubcomponent={true} />}
           {activeTab === 'expiry' && <BatchExpiryMatrix isSubcomponent={true} />}
-          {activeTab === 'reconciliation' && <StockReconciliation isSubcomponent={true} />}
           {activeTab === 'reorder' && <SmartReorder isSubcomponent={true} />}
 
           {activeTab === 'sales' && (
