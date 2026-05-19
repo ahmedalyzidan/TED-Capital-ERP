@@ -296,7 +296,7 @@ function AdvancedStockControl({ isSubcomponent }) {
           <div className="flex justify-between items-center relative z-10">
             <div>
               <p className="text-xs font-black text-indigo-300 mb-2 uppercase tracking-widest">{language === 'ar' ? 'إجمالي التقييم المالي للمخزون (Stock Valuation)' : 'Total Stock Valuation (Live)'}</p>
-              <h3 className="text-4xl lg:text-5xl font-black font-mono text-white">{totalValuation.toLocaleString()} <span className="text-lg font-bold text-slate-400">{language === 'ar' ? 'ش.ج' : 'ILS'}</span></h3>
+              <h3 className="text-4xl lg:text-5xl font-black font-mono text-white">{totalValuation.toLocaleString()} <span className="text-lg font-bold text-slate-400">{language === 'ar' ? 'ج.م' : 'EGP'}</span></h3>
             </div>
             <div className="w-16 h-16 bg-white/10 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-md border border-white/10">
               💎
@@ -549,9 +549,9 @@ function AdvancedStockControl({ isSubcomponent }) {
                         </span>
                       </td>
                       <td className="p-5 text-center text-xs text-slate-500">{item.uom || item.unit || (language === 'ar' ? 'قطعة' : 'Unit')}</td>
-                      <td className="p-5 text-center font-mono text-slate-700 font-bold">{Number(item.unit_cost_display).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}</td>
+                      <td className="p-5 text-center font-mono text-slate-700 font-bold">{Number(item.unit_cost_display).toLocaleString()} {language === 'ar' ? 'ج.م' : 'EGP'}</td>
                       <td className="p-5 text-center font-mono font-black text-indigo-600 text-base">
-                        {Number(item.total_value).toLocaleString()} {language === 'ar' ? 'ش.ج' : 'ILS'}
+                        {Number(item.total_value).toLocaleString()} {language === 'ar' ? 'ج.م' : 'EGP'}
                       </td>
                       <td className="p-5 text-center">
                         <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black inline-flex items-center gap-1.5 border ${
@@ -656,7 +656,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'متوسط التكلفة / سعر الوحدة (ILS)' : 'Average Unit Cost (ILS)'} <span className="text-rose-500">*</span></label>
+                  <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'متوسط التكلفة / سعر الوحدة (ج.م)' : 'Average Unit Cost (EGP)'} <span className="text-rose-500">*</span></label>
                   <input 
                     type="number" 
                     required
