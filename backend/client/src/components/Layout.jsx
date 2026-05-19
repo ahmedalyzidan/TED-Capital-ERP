@@ -309,7 +309,7 @@ export default function Layout() {
 
   const isMtayem = (user?.username || '').toUpperCase() === 'MTAYEM';
   const usernameUpper = (user?.username || '').toUpperCase();
-  const isAdminOrAbzidan = usernameUpper === 'ADMIN' || usernameUpper === 'ABZIDAN';
+  const isAdminOrAbzidan = usernameUpper === 'ADMIN' || usernameUpper === 'ABZIDAN' || usernameUpper === 'AHZIDAN';
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات';
   const activeCompLower = activeCompany.toLowerCase();
@@ -319,6 +319,9 @@ export default function Layout() {
   const isTed = activeCompLower.includes('ted') || activeCompLower.includes('تيد');
 
   const getFilteredMenu = () => {
+    if (isAdminOrAbzidan) {
+      return menuGroups;
+    }
     const filterItem = (item) => {
       const basePath = item.path ? item.path.split('?')[0] : '';
       if (isPharma) {
@@ -499,7 +502,7 @@ export default function Layout() {
                         return allowedMtayemPaths.includes(childBasePath);
                       }));
                     }
-                    return !item.perm || hasPermission(item.perm);
+                    return isAdminOrAbzidan || !item.perm || hasPermission(item.perm);
                   })
                   .map(item => {
                     if (item.children) {
@@ -513,7 +516,7 @@ export default function Layout() {
                           const childBasePath = child.path ? child.path.split('?')[0] : '';
                           return allowedMtayemPaths.includes(childBasePath);
                         }
-                        return !child.perm || hasPermission(child.perm);
+                        return isAdminOrAbzidan || !child.perm || hasPermission(child.perm);
                       });
                       return { ...item, children: visibleChildren };
                     }
