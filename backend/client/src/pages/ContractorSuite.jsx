@@ -2400,7 +2400,7 @@ export default function ContractorSuite() {
                           )}
                         </div>
 
-                        {(discountRate > 0 || taxAmt > 0) && (
+                        {(discountAmt > 0 || taxAmt > 0) && (
                           <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-orange-500/20">
                             <span className="text-xs font-black text-white">🏆 الإجمالي النهائي بعد الخصم والضريبة:</span>
                             <span className="font-mono text-xl font-black text-orange-300 bg-orange-500/15 border border-orange-400/30 px-4 py-1.5 rounded-xl">
