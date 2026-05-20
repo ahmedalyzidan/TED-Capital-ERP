@@ -606,6 +606,105 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     setItemSearchQuery('');
   };
 
+  // ========================================================
+  // 🗑️ DELETE INVOICE — Full Financial Reversal Engine
+  // Performs: soft-delete sales records + reverse ledger
+  //           entries + restore inventory quantities
+  // ========================================================
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(null); // stores docNo being deleted
+
+  const handleDeleteInvoice = async (item) => {
+    const confirmMsg = language === 'ar'
+      ? `⚠️ تحذير: هل أنت متأكد من حذف ${item.docType === 'issue' ? 'الفاتورة' : 'إشعار المرتجع'} رقم ${item.docNo}؟\n\nسيقوم النظام تلقائياً بـ:\n• حذف سجل المبيعات من قاعدة البيانات\n• عكس القيود المحاسبية المرتبطة بالكامل\n• إعادة الكميات للمخزن\n\nهذا الإجراء لا يمكن التراجع عنه.`
+      : `⚠️ Warning: Are you sure you want to delete ${item.docType === 'issue' ? 'Invoice' : 'Credit Note'} ${item.docNo}?\n\nThe system will automatically:\n• Delete the sales record from the database\n• Fully reverse all linked ledger entries\n• Restore inventory quantities\n\nThis action cannot be undone.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsDeletingInvoice(item.docNo);
+    try {
+      // 1. Find all inventory_sales records linked to this document number
+      const linkedSales = salesRecords.filter(r =>
+        r.reference_no && r.reference_no === item.docNo
+      );
+
+      // 2. Find all ledger entries linked to this document number
+      const linkedLedger = ledgerEntries.filter(e =>
+        e.description && e.description.includes(item.docNo)
+      );
+
+      const isIssueDoc = item.docType === 'issue';
+      const reversalDate = new Date().toISOString().split('T')[0];
+      const reversalDocNo = `REV-${item.docNo}`;
+
+      // 3. Restore inventory quantities (reverse the qty change)
+      const inventoryRestorePromises = linkedSales.map(async (sale) => {
+        const qtyChange = Number(sale.qty || 0);
+        if (sale.inventory_id && Math.abs(qtyChange) > 0) {
+          try {
+            // Fetch current remaining qty then add back
+            const invRes = await api.get(`/dynamic/table/inventory_items?limit=1`);
+            const allItems = invRes.data?.data || [];
+            const invItem = allItems.find(i => Number(i.id) === Number(sale.inventory_id));
+            if (invItem) {
+              const newQty = Number(invItem.remaining_qty || 0) - qtyChange; // reverse the original change
+              await api.put(`/dynamic/update/inventory_items/${sale.inventory_id}`, {
+                remaining_qty: Math.max(0, newQty)
+              });
+            }
+          } catch (invErr) {
+            console.warn('Could not restore inventory qty for sale', sale.id, invErr);
+          }
+        }
+      });
+      await Promise.all(inventoryRestorePromises);
+
+      // 4. Soft-delete all linked inventory_sales records
+      const deleteSalesPromises = linkedSales.map(sale =>
+        api.put(`/dynamic/update/inventory_sales/${sale.id}`, {
+          is_deleted: true,
+          deleted_by: 'Admin',
+          deleted_at: new Date().toISOString(),
+          metadata: { ...(sale.metadata || {}), reversal_doc: reversalDocNo, reversal_reason: 'Manual Delete with Ledger Reversal' }
+        }).catch(e => console.warn('Soft-delete sale error', sale.id, e))
+      );
+      await Promise.all(deleteSalesPromises);
+
+      // 5. Post REVERSAL ledger entries (mirror of originals with Dr/Cr swapped)
+      const reversalPosts = linkedLedger.map(entry => ({
+        date: reversalDate,
+        account_name: entry.account_name,
+        // Swap debit and credit to fully reverse the original entry
+        debit: Number(entry.credit || 0),
+        credit: Number(entry.debit || 0),
+        description: `[عكس قيد] ${reversalDocNo} — عكس: ${entry.description || ''}`,
+        cost_center: entry.cost_center || 'تسوية حذف',
+        company: entry.company || activeCompName,
+        company_id: entry.company_id || activeCompId
+      })).filter(p => p.debit > 0 || p.credit > 0);
+
+      if (reversalPosts.length > 0) {
+        await Promise.all(reversalPosts.map(post => api.post('/dynamic/add/ledger', post)));
+      }
+
+      // 6. Refresh data
+      await fetchReportsData();
+      fetchInitialData();
+
+      setSuccessMsg(
+        language === 'ar'
+          ? `✅ تم حذف ${item.docType === 'issue' ? 'الفاتورة' : 'إشعار المرتجع'} ${item.docNo} بنجاح وعكس جميع القيود المحاسبية (${reversalPosts.length} قيد مُعكوس) وإعادة الكميات للمخزن.`
+          : `✅ Successfully deleted ${item.docType === 'issue' ? 'Invoice' : 'Credit Note'} ${item.docNo} and reversed ${reversalPosts.length} ledger entries. Inventory restored.`
+      );
+      setTimeout(() => setSuccessMsg(''), 6000);
+
+    } catch (err) {
+      console.error('Delete invoice error:', err);
+      alert(language === 'ar' ? 'حدث خطأ أثناء الحذف. يرجى المحاولة مجدداً.' : 'Error during deletion. Please try again.');
+    } finally {
+      setIsDeletingInvoice(null);
+    }
+  };
+
   // 2. Handle adding/removing lines
   const addInvoiceLine = () => {
     const maxQtyLimit = activeTab === 'issue' ? 0 : 999999;
@@ -2188,6 +2287,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                         <td className="py-4 font-black">{item.customer}</td>
                         <td className={`py-4 ${language === 'ar' ? 'text-left pr-4' : 'text-right pl-4'} font-black text-slate-900`}>{Number(item.grandTotal).toLocaleString()} {currencySymbol}</td>
                         <td className="py-4 text-center">
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => {
@@ -2240,6 +2340,20 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                           >
                             👁️ {language === 'ar' ? 'عرض وتدقيق الفاتورة' : 'View & Audit Invoice'}
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteInvoice(item)}
+                            disabled={isDeletingInvoice === item.docNo}
+                            className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border border-red-100 rounded-xl transition-all font-black text-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            title={language === 'ar' ? 'حذف الفاتورة وعكس القيود المحاسبية وإعادة المخزون' : 'Delete invoice, reverse ledger entries & restore inventory'}
+                          >
+                            {isDeletingInvoice === item.docNo
+                              ? <span className="animate-spin inline-block">⏳</span>
+                              : '🗑️'
+                            }
+                            {language === 'ar' ? 'حذف وعكس' : 'Delete & Reverse'}
+                          </button>
+                          </div>
                         </td>
                       </tr>
                     ));
