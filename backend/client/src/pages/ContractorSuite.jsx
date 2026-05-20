@@ -905,8 +905,7 @@ export default function ContractorSuite() {
       return;
     }
 
-    const discountRate = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
-    const discountAmt = totalClaimAmount * (discountRate / 100);
+    const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
     const taxRate = contractorValuationTax ? Number(contractorValuationTax) / 100 : 0;
     const afterDiscount = totalClaimAmount - discountAmt;
     const taxAmt = afterDiscount * taxRate;
@@ -925,7 +924,6 @@ export default function ContractorSuite() {
       lines: linesList,
       totalCurrent: totalClaimAmount,
       discount: discountAmt,
-      discountRate,
       taxRate: Number(contractorValuationTax || 0),
       totalAfterDiscount: afterDiscount,
       taxAmount: taxAmt,
@@ -2319,8 +2317,7 @@ export default function ContractorSuite() {
                 <div className="bg-[#0f172a] p-5 rounded-2xl border border-orange-500/20 space-y-4">
                   {(() => {
                     const gross = contractorValuationLines.reduce((s, l) => s + (Number(l.quantity) * Number(l.unitPrice)), 0);
-                    const discountRate = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
-                    const discountAmt = gross * (discountRate / 100);
+                    const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
                     const taxRate = contractorValuationTax ? Number(contractorValuationTax) / 100 : 0;
                     const afterDiscount = gross - discountAmt;
                     const taxAmt = afterDiscount * taxRate;
@@ -2360,24 +2357,24 @@ export default function ContractorSuite() {
                           <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</span>
                         </div>
 
-                        {/* Discount % */}
+                        {/* Discount — fixed amount */}
                         <div className="flex items-center gap-3 flex-wrap">
-                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">خصم % (اختياري):</label>
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">خصم مبلغ (ج.م) — اختياري:</label>
                           <input
-                            type="number" min="0" max="100" step="0.5"
+                            type="number" min="0" step="0.01"
                             value={contractorValuationDiscount}
                             onChange={e => setContractorValuationDiscount(e.target.value)}
-                            placeholder="0"
-                            className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-28"
+                            placeholder="0.00"
+                            className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-36"
                           />
-                          {discountRate > 0 && (
+                          {discountAmt > 0 && (
                             <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
-                              - {discountAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م ({discountRate}%)
+                              - {discountAmt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م
                             </span>
                           )}
                         </div>
 
-                        {discountRate > 0 && (
+                        {discountAmt > 0 && (
                           <div className="flex items-center justify-between flex-wrap gap-3">
                             <span className="text-xs font-bold text-slate-400">الإجمالي بعد الخصم:</span>
                             <span className="font-mono text-base font-black text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-xl">
@@ -2453,6 +2450,114 @@ export default function ContractorSuite() {
                     </div>
                   </div>
 
+                  {/* ════════════════════════════════════════
+                      مقارنة المقايسة بالمستخلصات لكل بند
+                  ════════════════════════════════════════ */}
+                  {currentBoqItems.length > 0 && (() => {
+                    // Per-item aggregation
+                    const itemStats = currentBoqItems.map(item => {
+                      const boqValue = item.quantity * item.price;
+
+                      // Total % billed to client for this item
+                      const clientBilledAmt = currentValuations
+                        .filter(v => !v.isContractor)
+                        .reduce((s, v) => {
+                          const it = v.items?.find(i => i.boqItemId === item.id);
+                          return s + (it ? it.currentAmount : 0);
+                        }, 0);
+                      const clientBilledPct = boqValue > 0 ? Math.min(100, (clientBilledAmt / boqValue) * 100) : 0;
+
+                      // Total contractor cost for this item (from contractor lines linked to this boqItemId)
+                      const contractorCost = currentValuations
+                        .filter(v => v.isContractor && v.lines)
+                        .reduce((s, v) => {
+                          return s + v.lines.filter(l => l.boqItemId === item.id).reduce((a, l) => a + (l.total || 0), 0);
+                        }, 0);
+
+                      const profit = clientBilledAmt - contractorCost;
+                      const margin = clientBilledAmt > 0 ? (profit / clientBilledAmt) * 100 : null;
+                      return { item, boqValue, clientBilledAmt, clientBilledPct, contractorCost, profit, margin };
+                    });
+
+                    const totalBoq = itemStats.reduce((s, r) => s + r.boqValue, 0);
+                    const totalBilled = itemStats.reduce((s, r) => s + r.clientBilledAmt, 0);
+                    const totalContractor = itemStats.reduce((s, r) => s + r.contractorCost, 0);
+                    const totalProfit = totalBilled - totalContractor;
+
+                    return (
+                      <div className="mb-4 bg-[#070a13] border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <h5 className="text-xs font-black text-white flex items-center gap-2">
+                          <span className="p-1.5 bg-purple-500/10 rounded-lg text-purple-400">📊</span>
+                          مقارنة المقايسة بالمستخلصات — لكل بند
+                        </h5>
+                        {/* Summary row */}
+                        <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-black">
+                          <div className="bg-slate-900/60 rounded-xl p-2.5">
+                            <div className="text-slate-400 mb-1">إجمالي المقايسة</div>
+                            <div className="font-mono text-white">{totalBoq.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                          </div>
+                          <div className="bg-cyan-500/10 rounded-xl p-2.5 border border-cyan-500/20">
+                            <div className="text-cyan-400 mb-1">مُستخلص للعميل</div>
+                            <div className="font-mono text-cyan-300">{totalBilled.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                            <div className="text-[9px] text-slate-400">{totalBoq > 0 ? ((totalBilled/totalBoq)*100).toFixed(1) : 0}%</div>
+                          </div>
+                          <div className="bg-orange-500/10 rounded-xl p-2.5 border border-orange-500/20">
+                            <div className="text-orange-400 mb-1">تكلفة مقاولين</div>
+                            <div className="font-mono text-orange-300">{totalContractor.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                          </div>
+                          <div className={`rounded-xl p-2.5 border ${totalProfit >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
+                            <div className={`mb-1 ${totalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{totalProfit >= 0 ? '📈 ربح' : '📉 خسارة'}</div>
+                            <div className={`font-mono font-black ${totalProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{totalProfit.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                          </div>
+                        </div>
+
+                        {/* Per-item table */}
+                        <div className="overflow-x-auto rounded-xl border border-slate-800">
+                          <table className="w-full text-right text-[10px]">
+                            <thead className="bg-slate-900/80 text-slate-400 font-bold">
+                              <tr>
+                                <th className="p-2.5">البند</th>
+                                <th className="p-2.5 text-center">قيمة المقايسة</th>
+                                <th className="p-2.5 text-center">مستخلص عميل</th>
+                                <th className="p-2.5 text-center">نسبة الإنجاز %</th>
+                                <th className="p-2.5 text-center">تكلفة مقاولين</th>
+                                <th className="p-2.5 text-center">الربح / الخسارة</th>
+                                <th className="p-2.5 text-center">هامش %</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {itemStats.map(({ item, boqValue, clientBilledAmt, clientBilledPct, contractorCost, profit, margin }) => (
+                                <tr key={item.id} className="hover:bg-white/[0.02]">
+                                  <td className="p-2.5">
+                                    <div className="font-bold text-slate-200">{item.item_name}</div>
+                                    <div className="text-[9px] text-slate-500">{item.category}</div>
+                                  </td>
+                                  <td className="p-2.5 text-center font-mono text-slate-300">{boqValue.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                                  <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{clientBilledAmt.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                                  <td className="p-2.5 text-center">
+                                    <div className="flex items-center gap-1.5 justify-center">
+                                      <div className="flex-1 bg-slate-800 rounded-full h-1.5 max-w-[50px]">
+                                        <div className="h-1.5 rounded-full bg-cyan-500" style={{ width: `${clientBilledPct}%` }} />
+                                      </div>
+                                      <span className="font-mono font-black text-cyan-400">{clientBilledPct.toFixed(1)}%</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2.5 text-center font-mono text-orange-400">{contractorCost.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                                  <td className="p-2.5 text-center font-mono font-black" style={{ color: profit >= 0 ? '#4ade80' : '#f87171' }}>
+                                    {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined,{maximumFractionDigits:0})}
+                                  </td>
+                                  <td className="p-2.5 text-center font-mono font-black" style={{ color: margin === null ? '#64748b' : margin >= 0 ? '#4ade80' : '#f87171' }}>
+                                    {margin === null ? '—' : `${margin.toFixed(1)}%`}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="space-y-4">
                     {currentValuations.map(val => (
                       <div key={val.id} className="p-5 bg-[#070a13] border border-slate-800 rounded-2xl flex flex-col gap-4 hover:border-cyan-600/30 transition-colors">
@@ -2461,11 +2566,18 @@ export default function ContractorSuite() {
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-black text-cyan-400">{val.claimNo}</span>
                               <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">فاتورة رقم: {val.invoiceNo}</span>
+                              {/* ✨ Badge: client or contractor */}
+                              {val.isContractor
+                                ? <span className="px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 text-[10px] font-black border border-orange-500/30">🏗️ مستخلص مقاول</span>
+                                : <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 text-[10px] font-black border border-cyan-500/30">💰 مستخلص عميل</span>
+                              }
                             </div>
-                            <h4 className="text-sm font-black text-white">مستخلص إنجاز بنود المقايسة - {activeProject?.name}</h4>
+                            <h4 className="text-sm font-black text-white">
+                              {val.isContractor ? 'مستخلص إنجاز أعمال مقاولين' : 'مستخلص إنجاز بنود المقايسة'} - {activeProject?.name}
+                            </h4>
                             <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold">
                               <span>📅 تاريخ الإصدار: {val.date}</span>
-                              <span>📊 عدد البنود المشمولة: {val.items?.filter(it => it.netPercent > 0).length || 0} بنود</span>
+                              <span>📊 عدد البنود المشمولة: {val.isContractor ? (val.lines?.length || 0) : (val.items?.filter(it => it.netPercent > 0).length || 0)} بنود</span>
                             </div>
                           </div>
 
@@ -2473,7 +2585,10 @@ export default function ContractorSuite() {
                             <div className="text-left">
                               <div className="text-[9px] text-slate-500 font-bold">قيمة المستخلص (بدون ضريبة)</div>
                               <div className="font-mono font-black text-slate-200 text-sm">{val.totalCurrent.toLocaleString()} ج.م</div>
-                              <div className="text-[9px] text-cyan-400 font-bold mt-0.5">شامل القيمة المضافة: {(val.totalCurrent * 1.14).toLocaleString()} ج.م</div>
+                              {/* VAT line: only if taxRate > 0 */}
+                              {val.taxRate > 0 && (
+                                <div className="text-[9px] text-cyan-400 font-bold mt-0.5">شامل القيمة المضافة ({val.taxRate}%): {val.totalFinal?.toLocaleString() || (val.totalCurrent * (1 + val.taxRate / 100)).toLocaleString()} ج.م</div>
+                              )}
                             </div>
 
                             <div className="flex gap-2 no-print">
@@ -2509,48 +2624,76 @@ export default function ContractorSuite() {
                               <span>📂</span> تفصيل بنود وكميات المستخلص {val.claimNo}:
                             </h5>
 
-                            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
-                              <table className="w-full text-right text-[10px]">
-                                <thead className="bg-[#070a13] text-slate-400 font-bold">
-                                  <tr>
-                                    <th className="p-2.5">بيان البند والتوصيف</th>
-                                    <th className="p-2.5 text-center">الوحدة</th>
-                                    <th className="p-2.5 text-center">الفئة</th>
-                                    <th className="p-2.5 text-center">الكمية السابقة</th>
-                                    <th className="p-2.5 text-center">الكمية التراكمية</th>
-                                    <th className="p-2.5 text-center">الكمية المنفذة للفترة</th>
-                                    <th className="p-2.5 text-center">قيمة الفترة</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                  {val.items?.map(it => {
-                                    const boqItem = boqItems.find(b => b.id === it.boqItemId);
-                                    if (!boqItem) return null;
-
-                                    // Fallback for older items that only had percentage
-                                    const totalQty = boqItem.quantity || 1;
-                                    const prevPercent = it.completionPercent - it.netPercent;
-                                    const prevQty = it.prevQty !== undefined ? it.prevQty : Number(((prevPercent / 100) * totalQty).toFixed(2));
-                                    const currQty = it.currQty !== undefined ? it.currQty : Number(((it.completionPercent / 100) * totalQty).toFixed(2));
-                                    const netQty = it.netQty !== undefined ? it.netQty : Number(((it.netPercent / 100) * totalQty).toFixed(2));
-
-                                    if (netQty <= 0) return null;
-
-                                    return (
-                                      <tr key={it.boqItemId} className="hover:bg-white/5 text-slate-300">
-                                        <td className="p-2.5 font-bold">{boqItem.item_name}</td>
-                                        <td className="p-2.5 text-center font-mono text-slate-400">{boqItem.unit}</td>
-                                        <td className="p-2.5 text-center font-mono">{boqItem.price.toLocaleString()}</td>
-                                        <td className="p-2.5 text-center font-mono text-amber-500/80">{prevQty}</td>
-                                        <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{currQty}</td>
-                                        <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">+{netQty}</td>
-                                        <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{(it.currentAmount).toLocaleString()} ج.م</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
+                            {val.isContractor && val.lines ? (
+                              /* Contractor valuation lines */
+                              <div className="overflow-x-auto rounded-xl border border-orange-500/20 bg-slate-950/20">
+                                <table className="w-full text-right text-[10px]">
+                                  <thead className="bg-[#070a13] text-slate-400 font-bold">
+                                    <tr>
+                                      <th className="p-2.5">البند المرتبط</th>
+                                      <th className="p-2.5">اسم المقاول</th>
+                                      <th className="p-2.5">وصف العمل</th>
+                                      <th className="p-2.5 text-center">الوحدة</th>
+                                      <th className="p-2.5 text-center">الكمية</th>
+                                      <th className="p-2.5 text-center">سعر الوحدة</th>
+                                      <th className="p-2.5 text-center">الإجمالي</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5">
+                                    {val.lines.map((ln, li) => {
+                                      const linkedBoq = boqItems.find(b => b.id === ln.boqItemId);
+                                      return (
+                                        <tr key={li} className="hover:bg-white/5 text-slate-300">
+                                          <td className="p-2.5 text-slate-400 text-[9px]">{linkedBoq ? `[${linkedBoq.category}] ${linkedBoq.item_name}` : 'غير مرتبط'}</td>
+                                          <td className="p-2.5 font-bold text-orange-400">{ln.contractorName || '—'}</td>
+                                          <td className="p-2.5 text-slate-400">{ln.description || '—'}</td>
+                                          <td className="p-2.5 text-center font-mono">{ln.unit}</td>
+                                          <td className="p-2.5 text-center font-mono">{ln.quantity}</td>
+                                          <td className="p-2.5 text-center font-mono">{Number(ln.unitPrice).toLocaleString()}</td>
+                                          <td className="p-2.5 text-center font-mono font-black text-emerald-400">{Number(ln.total).toLocaleString()} ج.م</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              /* Client valuation items */
+                              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+                                <table className="w-full text-right text-[10px]">
+                                  <thead className="bg-[#070a13] text-slate-400 font-bold">
+                                    <tr>
+                                      <th className="p-2.5">بيان البند والتوصيف</th>
+                                      <th className="p-2.5 text-center">الوحدة</th>
+                                      <th className="p-2.5 text-center">الفئة</th>
+                                      <th className="p-2.5 text-center">النسبة السابقة %</th>
+                                      <th className="p-2.5 text-center">النسبة التراكمية %</th>
+                                      <th className="p-2.5 text-center">إنجاز الفترة %</th>
+                                      <th className="p-2.5 text-center">قيمة الفترة</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5">
+                                    {val.items?.map(it => {
+                                      const boqItem = boqItems.find(b => b.id === it.boqItemId);
+                                      if (!boqItem) return null;
+                                      const prevPercent = it.completionPercent - it.netPercent;
+                                      if (it.netPercent <= 0) return null;
+                                      return (
+                                        <tr key={it.boqItemId} className="hover:bg-white/5 text-slate-300">
+                                          <td className="p-2.5 font-bold">{boqItem.item_name}<div className="text-[8px] text-slate-500">{boqItem.category}</div></td>
+                                          <td className="p-2.5 text-center font-mono text-slate-400">{boqItem.unit}</td>
+                                          <td className="p-2.5 text-center font-mono">{boqItem.price.toLocaleString()}</td>
+                                          <td className="p-2.5 text-center font-mono text-amber-500/80">{prevPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{it.completionPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">+{it.netPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{it.currentAmount.toLocaleString()} ج.م</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
