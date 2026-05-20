@@ -24,47 +24,47 @@ export default function ContractorSuite() {
 
   // Seed data for Villa E109
   const defaultBoqItems = [
-    { id: 1, projectId: 'villa-e109', category: "أعمال صحية وعزل", item_name: "أعمال تأسيس وتشطيب حمامات مواسير تغذيه BR ألمانى والصرف كيسيل والمحابس BR ألمانى", quantity: 4.0, unit: "بالمقطوعيه", price: 65000.0, total: 260000.0, notes: "البند يشمل خامات ومصنعيات وأعمال التشطيب مصنعيات فقط وقواعد تواليت ديورافيت معلقه وحوض بوحده معلقه وخلاطات ديورافيت" },
-    { id: 2, projectId: 'villa-e109', category: "أعمال صحية وعزل", item_name: "أعمال تأسيس وتشطيب مطبخ مواسير تغذيه BR ألمانى والصرف كيسيل والمحابس BR ألمانى", quantity: 1.0, unit: "بالمقطوعيه", price: 15000.0, total: 15000.0, notes: "" },
-    { id: 3, projectId: 'villa-e109', category: "أعمال صحية وعزل", item_name: "أعمال عزل لزوم أرضية الحمامات والمطبخ من النوع سيكا 107 شامل الركوب ورقبة الزجاجه مع عمل لياسه فوق العزل", quantity: 4.0, unit: "عدد", price: 3500.0, total: 14000.0, notes: "" },
-    { id: 4, projectId: 'villa-e109', category: "أعمال صحية وعزل", item_name: "أعمال توريد وتركيب شبكة تغذيه للحديقه المواسير كيسيل وتغذيه من المواسير ال BR الألماني", quantity: 1.0, unit: "بالمقطوعيه", price: 15000.0, total: 15000.0, notes: "" },
-    { id: 5, projectId: 'villa-e109', category: "أعمال صحية وعزل", item_name: "أعمال تأسيس شبكة صرف تكييف شامله البضاعه ( كيسيل )", quantity: 1.0, unit: "عدد", price: 15000.0, total: 15000.0, notes: "" },
-    { id: 6, projectId: 'villa-e109', category: "أعمال كهرباء", item_name: "أعمال تأسيس وتشطيب مفاتيح وبرايز وسحب أسلاك لجميع الغرف والحمامات والمطبخ لزوم الإناره والسويدى المعتمد ولوحة شنايدر", quantity: 1.0, unit: "بالمقطوعيه", price: 225000.0, total: 225000.0, notes: "البند يشمل وحدات الإضاءه والأسپوتات وبيوت النور و sound sys لكل الغرف و security alarm وكاميرات مراقبه" },
-    { id: 7, projectId: 'villa-e109', category: "أسقف جبس بورد", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أبيض من إنتاج Knauf لزوم الغرف والريسبشن (مسطح)", quantity: 208.0, unit: "م2", price: 350.0, total: 72800.0, notes: "" },
-    { id: 8, projectId: 'villa-e109', category: "أسقف جبس بورد", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أبيض من إنتاج Knauf لزوم الغرف والريسبشن (طولي)", quantity: 117.0, unit: "م", price: 330.0, total: 38610.0, notes: "" },
-    { id: 9, projectId: 'villa-e109', category: "أسقف جبس بورد", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أخضر من إنتاج Knauf لزوم الحمامات والمطبخ", quantity: 43.0, unit: "م2", price: 380.0, total: 16340.0, notes: "" },
-    { id: 10, projectId: 'villa-e109', category: "محارة ودهانات", item_name: "أعمال بياض محاره داخليه لزوم الحوائط والأسقف", quantity: 900.0, unit: "م2", price: 120.0, total: 108000.0, notes: "" },
-    { id: 11, projectId: 'villa-e109', category: "محارة ودهانات", item_name: "أعمال دهانات للأسقف والحوائط من وجه سيلر و 3 معجون ووجهين بلاستيك يوتن", quantity: 1214.0, unit: "م2", price: 200.0, total: 242800.0, notes: "" },
-    { id: 12, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب رخام بريشيا داينو لأرضية الريسبشن", quantity: 70.0, unit: "م2", price: 4700.0, total: 329000.0, notes: "" },
-    { id: 13, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب رخام بيتشينو وزرة لأرضية الريسبشن", quantity: 34.0, unit: "م", price: 800.0, total: 27200.0, notes: "" },
-    { id: 14, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام الماستر بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 28.0, unit: "م2", price: 1200.0, total: 33600.0, notes: "سعر توريد السيراميك 800جنيه" },
-    { id: 15, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام المعيشه والسطح بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 93.0, unit: "م2", price: 1200.0, total: 111600.0, notes: "سعر توريد السيراميك 800جنيه" },
-    { id: 16, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام الضيوف بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 45.5, unit: "م2", price: 1200.0, total: 54600.0, notes: "سعر توريد السيراميك 800جنيه" },
-    { id: 17, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب سيراميك لزوم أرضيات السطح الخارجي", quantity: 71.0, unit: "م2", price: 650.0, total: 46150.0, notes: "سعر توريد السيراميك 350جنيه" },
-    { id: 18, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط وأرضيات المطبخ بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 70.0, unit: "م2", price: 650.0, total: 45500.0, notes: "سعر توريد السيراميك 350جنيه" },
-    { id: 19, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "سيراميك أرضيه للغرف", quantity: 85.0, unit: "م2", price: 500.0, total: 42500.0, notes: "سعر توريد السيراميك 250جنيه" },
-    { id: 20, projectId: 'villa-e109', category: "أرضيات ورخام وسيراميك", item_name: "سيراميك أرضيه للتراس", quantity: 25.0, unit: "م2", price: 650.0, total: 16250.0, notes: "سعر توريد السيراميك 350جنيه" },
-    { id: 21, projectId: 'villa-e109', category: "أبواب وأخشاب وشيش حصيره", item_name: "توريد وتركيب أبواب داخليه من الخشب لزوم الغرف عظم سويدى مكبوس MDF ملزوق أرو مدهون أستر باللون المطلوب", quantity: 7.0, unit: "عدد", price: 16500.0, total: 115500.0, notes: "شامل الإكسسوار والكالون والأكره من النوع التركى" },
-    { id: 22, projectId: 'villa-e109', category: "أبواب وأخشاب وشيش حصيره", item_name: "توريد وتركيب شيش حصيره شركة النيل ومواتير آزا إيطالي", quantity: 22.5, unit: "م2", price: 5500.0, total: 123750.0, notes: "غرف النوم بدون الريسبشن" },
-    { id: 23, projectId: 'villa-e109', category: "تكييف وغاز وأنظمة أمان", item_name: "أعمال تجهيز كهرباء ومواسير نحاس لأجهزة التكييف", quantity: 1.0, unit: "مقطوعيه", price: 80000.0, total: 80000.0, notes: "شامل الصاج والجريلات" },
-    { id: 24, projectId: 'villa-e109', category: "تكييف وغاز وأنظمة أمان", item_name: "أعمال توريد وتركيب وحدات تكييف ماركة كاريير", quantity: 2.0, unit: "عدد", price: 170000.0, total: 340000.0, notes: "عدد 2 جهاز 5ح للريسبشن" },
-    { id: 25, projectId: 'villa-e109', category: "تكييف وغاز وأنظمة أمان", item_name: "أعمال توريد وتركيب غاز مركزي", quantity: 1.0, unit: "بالمقطوعيه", price: 95000.0, total: 95000.0, notes: "" },
-    { id: 26, projectId: 'villa-e109', category: "أعمال الحديقة وتعديلات إنشائية", item_name: "أعمال تكسير وتعديلات وإزالة ردش", quantity: 1.0, unit: "مقطوعيه", price: 15000.0, total: 15000.0, notes: "" },
-    { id: 27, projectId: 'villa-e109', category: "أعمال الحديقة وتعديلات إنشائية", item_name: "أعمال مباني إضافيه", quantity: 1.0, unit: "مقطوعيه", price: 12000.0, total: 12000.0, notes: "" },
-    { id: 28, projectId: 'villa-e109', category: "أعمال الحديقة وتعديلات إنشائية", item_name: "أعمال زراعة وتنسيق حدائق", quantity: 1.0, unit: "مقطوعيه", price: 75000.0, total: 75000.0, notes: "" }
+    { id: 1, projectId: 'villa-e109', category: "أعمال صحي", item_name: "أعمال تأسيس وتشطيب حمامات مواسير تغذيه BR ألمانى والصرف كيسيل والمحابس BR ألمانى", quantity: 4.0, unit: "مقطوعية", price: 65000.0, total: 260000.0, notes: "البند يشمل خامات ومصنعيات وأعمال التشطيب مصنعيات فقط وقواعد تواليت ديورافيت معلقه وحوض بوحده معلقه وخلاطات ديورافيت" },
+    { id: 2, projectId: 'villa-e109', category: "أعمال صحي", item_name: "أعمال تأسيس وتشطيب مطبخ مواسير تغذيه BR ألمانى والصرف كيسيل والمحابس BR ألمانى", quantity: 1.0, unit: "مقطوعية", price: 15000.0, total: 15000.0, notes: "" },
+    { id: 3, projectId: 'villa-e109', category: "أعمال صحي", item_name: "أعمال عزل لزوم أرضية الحمامات والمطبخ من النوع سيكا 107 شامل الركوب ورقبة الزجاجه مع عمل لياسه فوق العزل", quantity: 4.0, unit: "عدد", price: 3500.0, total: 14000.0, notes: "" },
+    { id: 4, projectId: 'villa-e109', category: "أعمال صحي", item_name: "أعمال توريد وتركيب شبكة تغذيه للحديقه المواسير كيسيل وتغذيه من المواسير ال BR الألماني", quantity: 1.0, unit: "مقطوعية", price: 15000.0, total: 15000.0, notes: "" },
+    { id: 5, projectId: 'villa-e109', category: "أعمال صحي", item_name: "أعمال تأسيس شبكة صرف تكييف شامله البضاعه ( كيسيل )", quantity: 1.0, unit: "عدد", price: 15000.0, total: 15000.0, notes: "" },
+    { id: 6, projectId: 'villa-e109', category: "أعمال كهرباء", item_name: "أعمال تأسيس وتشطيب مفاتيح وبرايز وسحب أسلاك لجميع الغرف والحمامات والمطبخ لزوم الإناره والسويدى المعتمد ولوحة شنايدر", quantity: 1.0, unit: "مقطوعية", price: 225000.0, total: 225000.0, notes: "البند يشمل وحدات الإضاءه والأسپوتات وبيوت النور و sound sys لكل الغرف و security alarm وكاميرات مراقبه" },
+    { id: 7, projectId: 'villa-e109', category: "أعمال جيبسوم بورد أبيض", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أبيض من إنتاج Knauf لزوم الغرف والريسبشن (مسطح)", quantity: 208.0, unit: "م٢", price: 350.0, total: 72800.0, notes: "" },
+    { id: 8, projectId: 'villa-e109', category: "أعمال جيبسوم بورد أبيض", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أبيض من إنتاج Knauf لزوم الغرف والريسبشن (طولي)", quantity: 117.0, unit: "م", price: 330.0, total: 38610.0, notes: "" },
+    { id: 9, projectId: 'villa-e109', category: "أعمال جيبسوم بورد أخضر ( MR )", item_name: "أعمال توريد وتركيب أسقف جيبسوم بورد أخضر من إنتاج Knauf لزوم الحمامات والمطبخ", quantity: 43.0, unit: "م٢", price: 380.0, total: 16340.0, notes: "" },
+    { id: 10, projectId: 'villa-e109', category: "أعمال بياض محاره", item_name: "أعمال بياض محاره داخليه لزوم الحوائط والأسقف", quantity: 900.0, unit: "م٢", price: 120.0, total: 108000.0, notes: "" },
+    { id: 11, projectId: 'villa-e109', category: "أعمال دهانات", item_name: "أعمال دهانات للأسقف والحوائط من وجه سيلر و 3 معجون ووجهين بلاستيك يوتن", quantity: 1214.0, unit: "م٢", price: 200.0, total: 242800.0, notes: "" },
+    { id: 12, projectId: 'villa-e109', category: "أعمال رخام أرضيات", item_name: "أعمال توريد وتركيب رخام بريشيا داينو لأرضية الريسبشن", quantity: 70.0, unit: "م٢", price: 4700.0, total: 329000.0, notes: "" },
+    { id: 13, projectId: 'villa-e109', category: "أعمال توريد وتركيب وزر رخام", item_name: "أعمال توريد وتركيب رخام بيتشينو وزرة لأرضية الريسبشن", quantity: 34.0, unit: "م", price: 800.0, total: 27200.0, notes: "" },
+    { id: 14, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام الماستر بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 28.0, unit: "م٢", price: 1200.0, total: 33600.0, notes: "سعر توريد السيراميك 800جنيه" },
+    { id: 15, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام المعيشه والسطح بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 93.0, unit: "م٢", price: 1200.0, total: 111600.0, notes: "سعر توريد السيراميك 800جنيه" },
+    { id: 16, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط حمام الضيوف بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 45.5, unit: "م٢", price: 1200.0, total: 54600.0, notes: "سعر توريد السيراميك 800جنيه" },
+    { id: 17, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "أعمال توريد وتركيب سيراميك لزوم أرضيات السطح الخارجي", quantity: 71.0, unit: "م٢", price: 650.0, total: 46150.0, notes: "سعر توريد السيراميك 350جنيه" },
+    { id: 18, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "أعمال توريد وتركيب سيراميك لزوم حوائط وأرضيات المطبخ بكامل الإرتفاع واللصق بمادة سيتوكس", quantity: 70.0, unit: "م٢", price: 650.0, total: 45500.0, notes: "سعر توريد السيراميك 350جنيه" },
+    { id: 19, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "سيراميك أرضيه للغرف", quantity: 85.0, unit: "م٢", price: 500.0, total: 42500.0, notes: "سعر توريد السيراميك 250جنيه" },
+    { id: 20, projectId: 'villa-e109', category: "أعمال سيراميك حوائط", item_name: "سيراميك أرضيه للتراس", quantity: 25.0, unit: "م٢", price: 650.0, total: 16250.0, notes: "سعر توريد السيراميك 350جنيه" },
+    { id: 21, projectId: 'villa-e109', category: "أعمال توريد وتركيب أبواب داخلية", item_name: "توريد وتركيب أبواب داخليه من الخشب لزوم الغرف عظم سويدى مكبوس MDF ملزوق أرو مدهون أستر باللون المطلوب", quantity: 7.0, unit: "عدد", price: 16500.0, total: 115500.0, notes: "شامل الإكسسوار والكالون والأكره من النوع التركى" },
+    { id: 22, projectId: 'villa-e109', category: "أعمال شيش حصره ( SHUTTER )", item_name: "توريد وتركيب شيش حصيره شركة النيل ومواتير آزا إيطالي", quantity: 22.5, unit: "م٢", price: 5500.0, total: 123750.0, notes: "غرف النوم بدون الريسبشن" },
+    { id: 23, projectId: 'villa-e109', category: "أعمال تأسيس تكييف", item_name: "أعمال تجهيز كهرباء ومواسير نحاس لأجهزة التكييف", quantity: 1.0, unit: "مقطوعية", price: 80000.0, total: 80000.0, notes: "شامل الصاج والجريلات" },
+    { id: 24, projectId: 'villa-e109', category: "أعمال توريد وتركيب تكييف - HVAC", item_name: "أعمال توريد وتركيب وحدات تكييف ماركة كاريير", quantity: 2.0, unit: "عدد", price: 170000.0, total: 340000.0, notes: "عدد 2 جهاز 5ح للريسبشن" },
+    { id: 25, projectId: 'villa-e109', category: "أعمال تأسيس تكييف", item_name: "أعمال توريد وتركيب غاز مركزي", quantity: 1.0, unit: "مقطوعية", price: 95000.0, total: 95000.0, notes: "" },
+    { id: 26, projectId: 'villa-e109', category: "أعمال تعديلات إنشائية", item_name: "أعمال تكسير وتعديلات وإزالة ردش", quantity: 1.0, unit: "مقطوعية", price: 15000.0, total: 15000.0, notes: "" },
+    { id: 27, projectId: 'villa-e109', category: "أعمال تعديلات إنشائية", item_name: "أعمال مباني إضافيه", quantity: 1.0, unit: "مقطوعية", price: 12000.0, total: 12000.0, notes: "" },
+    { id: 28, projectId: 'villa-e109', category: "أعمال لاند سكيب", item_name: "أعمال زراعة وتنسيق حدائق", quantity: 1.0, unit: "مقطوعية", price: 75000.0, total: 75000.0, notes: "" }
   ];
 
   const defaultExpenses = [
-    { id: 1, projectId: 'villa-e109', beneficiary: "م. أحمد سالم", category: "أعمال تصميم", unit: "مقطوعيه", qty: 1, rate: 17000, total: 17000, date: "2024-07-23", notes: "تصميم فيلا E109" },
-    { id: 2, projectId: 'villa-e109', beneficiary: "تكييفات كونسيلد 4 ح", category: "تكييف وغاز وأنظمة أمان", unit: "عدد", qty: 2, rate: 110000, total: 220000, date: "2024-06-03", notes: "تجهيز التكييف" },
-    { id: 3, projectId: 'villa-e109', beneficiary: "تكييفات اسبليت 2.25 ح", category: "تكييف وغاز وأنظمة أمان", unit: "عدد", qty: 5, rate: 36500, total: 182500, date: "2024-06-03", notes: "كاريير" },
-    { id: 4, projectId: 'villa-e109', beneficiary: "توريدات طوب ورمل وأسمنت", category: "أعمال الحديقة وتعديلات إنشائية", unit: "فاتورة", qty: 1, rate: 8400, total: 8400, date: "2024-02-05", notes: "دفعة أولى لتأسيس المباني" },
-    { id: 5, projectId: 'villa-e109', beneficiary: "توريدات أسمنت ورمل", category: "محارة ودهانات", unit: "فاتورة", qty: 1, rate: 8000, total: 8000, date: "2024-02-05", notes: "أعمال المحارة" },
-    { id: 6, projectId: 'villa-e109', beneficiary: "بورسلين حمامات وسيراميك المطبخ", category: "أرضيات ورخام وسيراميك", unit: "فاتورة", qty: 1, rate: 96200, total: 96200, date: "2024-03-05", notes: "معرض السلاب" },
-    { id: 7, projectId: 'villa-e109', beneficiary: "تركيب حنفية خارجيه", category: "أعمال صحية وعزل", unit: "مقطوعيه", qty: 1, rate: 500, total: 500, date: "2024-04-05", notes: "الحديقة الخلفية" },
+    { id: 1, projectId: 'villa-e109', beneficiary: "م. أحمد سالم", category: "أعمال تصميم", unit: "مقطوعية", qty: 1, rate: 17000, total: 17000, date: "2024-07-23", notes: "تصميم فيلا E109" },
+    { id: 2, projectId: 'villa-e109', beneficiary: "تكييفات كونسيلد 4 ح", category: "أعمال تأسيس تكييف", unit: "عدد", qty: 2, rate: 110000, total: 220000, date: "2024-06-03", notes: "تجهيز التكييف" },
+    { id: 3, projectId: 'villa-e109', beneficiary: "تكييفات اسبليت 2.25 ح", category: "أعمال تأسيس تكييف", unit: "عدد", qty: 5, rate: 36500, total: 182500, date: "2024-06-03", notes: "كاريير" },
+    { id: 4, projectId: 'villa-e109', beneficiary: "توريدات طوب ورمل وأسمنت", category: "أعمال تعديلات إنشائية", unit: "عدد", qty: 1, rate: 8400, total: 8400, date: "2024-02-05", notes: "دفعة أولى لتأسيس المباني" },
+    { id: 5, projectId: 'villa-e109', beneficiary: "توريدات أسمنت ورمل", category: "أعمال بياض محاره", unit: "عدد", qty: 1, rate: 8000, total: 8000, date: "2024-02-05", notes: "أعمال المحارة" },
+    { id: 6, projectId: 'villa-e109', beneficiary: "بورسلين حمامات وسيراميك المطبخ", category: "أعمال سيراميك حوائط", unit: "عدد", qty: 1, rate: 96200, total: 96200, date: "2024-03-05", notes: "معرض السلاب" },
+    { id: 7, projectId: 'villa-e109', beneficiary: "تركيب حنفية خارجيه", category: "أعمال صحي", unit: "مقطوعية", qty: 1, rate: 500, total: 500, date: "2024-04-05", notes: "الحديقة الخلفية" },
     { id: 8, projectId: 'villa-e109', beneficiary: "إكراميات أمن", category: "إكراميات ونثريات", unit: "عدد", qty: 1, rate: 300, total: 300, date: "2024-04-05", notes: "أمن البوابة" },
-    { id: 9, projectId: 'villa-e109', beneficiary: "فك ألوميتال", category: "أعمال الحديقة وتعديلات إنشائية", unit: "مقطوعيه", qty: 1, rate: 2800, total: 2800, date: "2024-07-05", notes: "تعديل المعيشة" },
-    { id: 10, projectId: 'villa-e109', beneficiary: "مستخلص مصنعيات بياض محاره", category: "محارة ودهانات", unit: "مستخلص", qty: 1, rate: 36895, total: 36895, date: "2024-08-15", notes: "مستخلص نهائي للمحار" }
+    { id: 9, projectId: 'villa-e109', beneficiary: "فك ألوميتال", category: "أعمال تعديلات إنشائية", unit: "مقطوعية", qty: 1, rate: 2800, total: 2800, date: "2024-07-05", notes: "تعديل المعيشة" },
+    { id: 10, projectId: 'villa-e109', beneficiary: "مستخلص مصنعيات بياض محاره", category: "أعمال بياض محاره", unit: "مستخلص", qty: 1, rate: 36895, total: 36895, date: "2024-08-15", notes: "مستخلص نهائي للمحار" }
   ];
 
   const defaultInstallments = [
@@ -109,6 +109,7 @@ export default function ContractorSuite() {
 
   // 📦 Database Inventory Sales/Expenses State
   const [dbExpenses, setDbExpenses] = useState([]);
+  const [rawSales, setRawSales] = useState([]);
 
   // Cost Center Mode State ('project' | 'company')
   const [costCenterMode, setCostCenterMode] = useState('project');
@@ -143,81 +144,83 @@ export default function ContractorSuite() {
   }, [valuations]);
 
   // Load orgUnits from Governance registry, projects and inventory sales from DB
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const [orgRes, projRes, salesRes] = await Promise.all([
-          api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
-          api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
-          api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } }))
-        ]);
+  const fetchAllData = async () => {
+    try {
+      const [orgRes, projRes, salesRes] = await Promise.all([
+        api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } }))
+      ]);
 
-        // 1. Set Org Units
-        setOrgUnits(orgRes.data?.data || []);
+      // 1. Set Org Units
+      setOrgUnits(orgRes.data?.data || []);
 
-        // 2. Set Projects (Merge database projects with localStorage projects)
-        const dbProjects = projRes.data?.data || [];
-        const mappedProjects = dbProjects.map(p => ({
-          id: String(p.id),
-          name: p.name,
-          clientName: p.client_name || p.client || 'عميل عام',
-          company: p.company || 'TED CAPITAL'
-        }));
+      // 2. Set Projects (Merge database projects with localStorage projects)
+      const dbProjects = projRes.data?.data || [];
+      const mappedProjects = dbProjects.map(p => ({
+        id: String(p.id),
+        name: p.name,
+        clientName: p.client_name || p.client || 'عميل عام',
+        company: p.company || 'TED CAPITAL'
+      }));
 
-        setProjects(prev => {
-          const merged = [...prev];
-          mappedProjects.forEach(mp => {
-            if (!merged.some(p => String(p.id) === String(mp.id))) {
-              merged.push(mp);
-            }
-          });
-          return merged;
-        });
-
-        // 3. Set DB inventory sales as expenses
-        const sales = salesRes.data?.data || [];
-        const mappedExpenses = sales
-          .filter(s => s.project_id)
-          .map(s => {
-            const qtyVal = Number(s.qty || 0);
-            const isReturn = qtyVal < 0;
-            return {
-              id: `db-sale-${s.id}`,
-              projectId: String(s.project_id),
-              beneficiary: isReturn ? 'مرتجع مواد فائضة للمستودع' : 'صرف مخزني مباشر - مستودع المواد',
-              category: 'مواد ومستلزمات',
-              unit: s.uom || 'وحدة',
-              qty: Math.abs(qtyVal),
-              rate: Number(s.buy_price || s.sell_price || 0),
-              total: Math.abs(qtyVal * Number(s.buy_price || s.sell_price || 0)),
-              date: s.date ? s.date.split('T')[0] : (s.sale_date ? s.sale_date.split('T')[0] : new Date().toISOString().split('T')[0]),
-              notes: isReturn
-                ? `مرتجع مواد فائضة من موقع المشروع للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`
-                : `صرف مخزني مباشر للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`,
-              allocationType: 'project'
-            };
-          });
-        setDbExpenses(mappedExpenses);
-
-        // ✅ Clean up old duplicate 'exp-stock-*' entries from localStorage.
-        // These were previously saved by DirectStockIssue but are now duplicates
-        // since we fetch directly from inventory_sales DB above.
-        try {
-          const savedExpStr = localStorage.getItem('contractor_expenses');
-          if (savedExpStr) {
-            const savedExp = JSON.parse(savedExpStr);
-            const cleanedExp = savedExp.filter(e => !String(e.id).startsWith('exp-stock-'));
-            if (cleanedExp.length !== savedExp.length) {
-              localStorage.setItem('contractor_expenses', JSON.stringify(cleanedExp));
-            }
+      setProjects(prev => {
+        const merged = [...prev];
+        mappedProjects.forEach(mp => {
+          if (!merged.some(p => String(p.id) === String(mp.id))) {
+            merged.push(mp);
           }
-        } catch (_) { /* ignore cleanup errors */ }
+        });
+        return merged;
+      });
 
-      } catch (err) {
-        console.error('Failed to fetch initial data:', err);
-      }
-    };
+      // 3. Set DB inventory sales as expenses
+      const sales = salesRes.data?.data || [];
+      setRawSales(sales);
 
+      const mappedExpenses = sales
+        .filter(s => s.project_id && !s.is_deleted && s.is_deleted !== 1 && s.is_deleted !== 'true')
+        .map(s => {
+          const qtyVal = Number(s.qty || 0);
+          const isReturn = qtyVal > 0;
+          return {
+            id: `db-sale-${s.id}`,
+            projectId: String(s.project_id),
+            beneficiary: isReturn ? 'مرتجع مواد فائضة للمستودع' : 'صرف مخزني مباشر - مستودع المواد',
+            category: 'مواد ومستلزمات',
+            unit: s.uom || 'وحدة',
+            qty: Math.abs(qtyVal),
+            rate: Number(s.buy_price || s.sell_price || 0),
+            total: Math.abs(qtyVal * Number(s.buy_price || s.sell_price || 0)),
+            date: s.date ? s.date.split('T')[0] : (s.sale_date ? s.sale_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+            notes: isReturn
+              ? `مرتجع مواد فائضة من موقع المشروع للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`
+              : `صرف مخزني مباشر للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`,
+            allocationType: 'project'
+          };
+        });
+      setDbExpenses(mappedExpenses);
+
+      // ✅ Clean up old duplicate 'exp-stock-*' entries from localStorage.
+      // These were previously saved by DirectStockIssue but are now duplicates
+      // since we fetch directly from inventory_sales DB above.
+      try {
+        const savedExpStr = localStorage.getItem('contractor_expenses');
+        if (savedExpStr) {
+          const savedExp = JSON.parse(savedExpStr);
+          const cleanedExp = savedExp.filter(e => !String(e.id).startsWith('exp-stock-'));
+          if (cleanedExp.length !== savedExp.length) {
+            localStorage.setItem('contractor_expenses', JSON.stringify(cleanedExp));
+          }
+        }
+      } catch (_) { /* ignore cleanup errors */ }
+
+    } catch (err) {
+      console.error('Failed to fetch initial data:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchAllData();
   }, []);
 
@@ -302,10 +305,10 @@ export default function ContractorSuite() {
   const [newProjectForm, setNewProjectForm] = useState({ name: '', clientName: '', company: 'TED CAPITAL' });
 
   const [showAddBoq, setShowAddBoq] = useState(false);
-  const [newBoq, setNewBoq] = useState({ category: 'أعمال صحية وعزل', item_name: '', quantity: 1, unit: 'م2', price: 0, notes: '' });
+  const [newBoq, setNewBoq] = useState({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
 
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [newExpense, setNewExpense] = useState({ beneficiary: '', category: 'أعمال صحية وعزل', unit: 'م2', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
+  const [newExpense, setNewExpense] = useState({ beneficiary: '', category: 'أعمال صحي', unit: 'م٢', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
 
   const [showAddInstallment, setShowAddInstallment] = useState(false);
   const [newInstallment, setNewInstallment] = useState({ amount: 0, date: new Date().toISOString().split('T')[0], notes: '', valuationId: '' });
@@ -350,16 +353,63 @@ export default function ContractorSuite() {
 
   // Categories list mapping
   const boqCategories = [
-    "أعمال صحية وعزل",
+    "أعمال صحي",
+    "أعمال عزل",
     "أعمال كهرباء",
-    "أسقف جبس بورد",
-    "محارة ودهانات",
-    "أرضيات ورخام وسيراميك",
-    "أبواب وأخشاب وشيش حصيره",
-    "تكييف وغاز وأنظمة أمان",
-    "أعمال الحديقة وتعديلات إنشائية",
+    "أعمال تأسيس تكييف",
+    "أعمال توريد وتركيب تكييف - HVAC",
+    "أعمال تركيب تكييف",
+    "أعمال بياض محاره",
+    "أعمال دهانات",
+    "أعمال دهانات MICRO CEMENT",
+    "أعمال دهانات إيبوكسي",
+    "أعمال دهانات أستر",
+    "أعمال توريد وتركيب أبواب داخلية",
+    "أعمال توريد وتركيب باب مصفح",
+    "أعمال ألوميتال",
+    "أعمال شيش حصره ( SHUTTER )",
+    "أعمال سيراميك حوائط",
+    "أعمال بورسلين أرضيات",
+    "أعمال بورسلين طاولات",
+    "أعمال رخام أرضيات",
+    "أعمال رخام حوائط",
+    "أعمال توريد وتركيب وزر رخام",
+    "أعمال جلي وتلميع رخام",
+    "أعمال رخام مطبخ",
+    "أعمال تركيب زوايا حوائط",
+    "أعمال جيبسوم بورد أبيض",
+    "أعمال جيبسوم بورد أخضر ( MR )",
+    "أعمال جيبسوم بورد أحمر ( FR )",
+    "أعمال أسقف بلاطات",
+    "أعمال تجاليد CEMENT BOARD",
+    "أعمال بانوهات",
+    "أعمال تجاليد خشبيه",
+    "أعمال لاند سكيب",
+    "أعمال شبكة رى",
+    "أعمال أنظمة أمان وكاميرات",
+    "أعمال موبيليا",
+    "أعمال تنجيد",
+    "أعمال تعديلات إنشائية",
+    "أعمال سقاله",
+    "أعمال نظافه",
     "أعمال تصميم",
-    "إكراميات ونثريات"
+    "إكراميات ونثريات",
+    "أعمال توريد أجهزة كهربائية",
+    "أعمال سيكا",
+    "عماله",
+    "أعمال مكافحة حريق",
+    "أعمال نقل",
+    "توريد وتركيب لوكرات واستندات",
+    "أعمال فيرفورجيه ومشغولات حديد",
+    "أعمال توريد كبائن سيكوريت",
+    "أعمال توريد وتركيب سيكوريت",
+    "أعمال توريد وتركيب أرضيات موكيت",
+    "أعمال توريد وتركيب أرضيات HDF",
+    "أعمال توريد وتركيب وزر خشبي",
+    "أعمال مصاعد",
+    "أعمال توريد وصب خرسانه",
+    "أعمال مباني",
+    "أعمال توريدات"
   ];
 
   // Dynamic system notifications helper (Toast)
@@ -477,7 +527,7 @@ export default function ContractorSuite() {
       total
     };
     setBoqItems([...boqItems, newItem]);
-    setNewBoq({ category: 'أعمال صحية وعزل', item_name: '', quantity: 1, unit: 'م2', price: 0, notes: '' });
+    setNewBoq({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
     setShowAddBoq(false);
     triggerNotification('📝 تم إضافة بند جديد للمقايسة وتحديث الميزانية بنجاح!');
   };
@@ -534,7 +584,7 @@ export default function ContractorSuite() {
       total
     };
     setExpenses([...expenses, newItem]);
-    setNewExpense({ beneficiary: '', category: 'أعمال صحية وعزل', unit: 'م2', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
+    setNewExpense({ beneficiary: '', category: 'أعمال صحي', unit: 'م٢', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
     setShowAddExpense(false);
     triggerNotification('💸 تم تسجيل مصروف جديد وتثبيت القيد المالي في النظام!');
   };
@@ -577,12 +627,93 @@ export default function ContractorSuite() {
     triggerNotification('✍️ تم تعديل المصروف وإعادة توزيع التكاليف الفعليه.');
   };
 
-  const handleDeleteExpense = (itemId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟ سيتم إرجاع المبلغ المصروف بالكامل للميزانية وعكس القيد المالي.')) return;
+  const handleDeleteExpense = async (itemId) => {
+    // 1. If it's a database-backed stock issue/return transaction
+    if (String(itemId).startsWith('db-sale-')) {
+      const dbId = parseInt(itemId.replace('db-sale-', ''));
+      const sale = rawSales.find(s => s.id === dbId);
+      if (!sale) {
+        alert('لم يتم العثور على سجل العملية في البيانات.');
+        return;
+      }
 
-    // Financial Impact Reversal
-    setExpenses(prev => prev.filter(item => item.id !== itemId));
-    triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية بنجاح! زاد صافي الربح بمقدار المبلغ المسترد.', 'warning');
+      const docNo = sale.reference_no;
+      const linkedSales = docNo ? rawSales.filter(s => s.reference_no === docNo) : [sale];
+      const docTypeLabel = Number(sale.qty || 0) < 0 ? 'صرف مخزني' : 'مرتجع مخزني';
+
+      const confirmMsg = `⚠️ تحذير: هل أنت متأكد من حذف حركة ${docTypeLabel} رقم ${docNo || 'N/A'} بالكامل؟\n\nسيقوم النظام تلقائياً بـ:\n• حذف السجل من قاعدة البيانات\n• عكس جميع القيود المحاسبية المرتبطة بالكامل\n• إعادة البضاعة والكميات للمستودع`;
+      if (!window.confirm(confirmMsg)) return;
+
+      try {
+        // Step A: Restore inventory quantities (reverse the original quantity change)
+        const invRes = await api.get('/dynamic/table/inventory_items?limit=1000').catch(() => ({ data: { data: [] } }));
+        const allItems = invRes.data?.data || [];
+
+        const inventoryRestorePromises = linkedSales.map(async (saleItem) => {
+          const qtyChange = Number(saleItem.qty || 0); // negative for issues, positive for returns
+          if (saleItem.inventory_id && Math.abs(qtyChange) > 0) {
+            const invItem = allItems.find(i => Number(i.id) === Number(saleItem.inventory_id));
+            if (invItem) {
+              const newQty = Number(invItem.remaining_qty || 0) - qtyChange; // reverse the change
+              await api.put(`/dynamic/update/inventory_items/${saleItem.inventory_id}`, {
+                remaining_qty: Math.max(0, newQty)
+              });
+            }
+          }
+        });
+        await Promise.all(inventoryRestorePromises);
+
+        // Step B: Soft-delete linked inventory_sales records
+        const deleteSalesPromises = linkedSales.map(saleItem =>
+          api.put(`/dynamic/update/inventory_sales/${saleItem.id}`, {
+            is_deleted: true,
+            deleted_by: 'Admin',
+            deleted_at: new Date().toISOString()
+          })
+        );
+        await Promise.all(deleteSalesPromises);
+
+        // Step C: Post REVERSAL ledger entries (swap Dr/Cr)
+        if (docNo) {
+          const ledgerRes = await api.get(`/dynamic/table/ledger?limit=1000&filter=${encodeURIComponent(docNo)}`);
+          const linkedLedger = ledgerRes.data?.data || [];
+
+          const reversalDate = new Date().toISOString().split('T')[0];
+          const reversalDocNo = `REV-${docNo}`;
+          const activeCompany = activeProject?.company || 'TED CAPITAL';
+          const activeCompanyId = activeCompany === 'PRIMEMED PHARMA' ? 4 : 1;
+
+          const reversalPosts = linkedLedger.map(entry => ({
+            date: reversalDate,
+            account_name: entry.account_name,
+            debit: Number(entry.credit || 0),
+            credit: Number(entry.debit || 0),
+            description: `[عكس قيد] ${reversalDocNo} — عكس: ${entry.description || ''}`,
+            cost_center: entry.cost_center || 'تسوية حذف',
+            company: entry.company || activeCompany,
+            company_id: entry.company_id || activeCompanyId
+          })).filter(p => p.debit > 0 || p.credit > 0);
+
+          if (reversalPosts.length > 0) {
+            await Promise.all(reversalPosts.map(post => api.post('/dynamic/add/ledger', post)));
+          }
+        }
+
+        // Step D: Reload all data to reflect deletion
+        await fetchAllData();
+        triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية والقيود وإعادة كميات المخزن بنجاح!', 'warning');
+
+      } catch (err) {
+        console.error('Failed to delete expense transaction:', err);
+        alert('حدث خطأ أثناء تنفيذ عملية الحذف والعكس.');
+      }
+
+    } else {
+      // 2. Otherwise delete local expense stored in localStorage
+      if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟ سيتم إرجاع المبلغ المصروف بالكامل للميزانية وعكس القيد المالي.')) return;
+      setExpenses(prev => prev.filter(item => item.id !== itemId));
+      triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية بنجاح! زاد صافي الربح بمقدار المبلغ المسترد.', 'warning');
+    }
   };
 
   // Client Installments CRUD
@@ -868,14 +999,18 @@ export default function ContractorSuite() {
   }, [currentExpenses, expenseSearch, expenseCategoryFilter]);
 
   const categoryGradients = {
-    "أعمال صحية وعزل": "from-cyan-500/20 to-blue-500/10 border-cyan-600/30 text-cyan-400 bg-cyan-500/5",
+    "أعمال صحي": "from-cyan-500/20 to-blue-500/10 border-cyan-600/30 text-cyan-400 bg-cyan-500/5",
+    "أعمال عزل": "from-cyan-600/20 to-blue-600/10 border-cyan-700/30 text-cyan-300 bg-cyan-600/5",
     "أعمال كهرباء": "from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-400 bg-amber-500/5",
-    "أسقف جبس بورد": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
-    "محارة ودهانات": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
-    "أرضيات ورخام وسيراميك": "from-pink-500/20 to-rose-500/10 border-pink-500/30 text-pink-400 bg-pink-500/5",
-    "أبواب وأخشاب وشيش حصيره": "from-yellow-500/20 to-amber-700/10 border-yellow-500/30 text-yellow-400 bg-yellow-500/5",
-    "تكييف وغاز وأنظمة أمان": "from-red-500/20 to-orange-600/10 border-red-500/30 text-red-400 bg-red-500/5",
-    "أعمال الحديقة وتعديلات إنشائية": "from-lime-500/20 to-emerald-600/10 border-lime-500/30 text-emerald-400 bg-lime-500/5",
+    "أعمال جيبسوم بورد أبيض": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
+    "أعمال جيبسوم بورد أخضر ( MR )": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
+    "أعمال جيبسوم بورد أحمر ( FR )": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
+    "أعمال أسقف بلاطات": "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400 bg-purple-500/5",
+    "أعمال بياض محاره": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
+    "أعمال دهانات": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
+    "أعمال دهانات MICRO CEMENT": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
+    "أعمال دهانات إيبوكسي": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
+    "أعمال دهانات أستر": "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
     "أعمال تصميم": "from-blue-500/20 to-indigo-600/10 border-blue-500/30 text-indigo-400 bg-blue-500/5",
     "إكراميات ونثريات": "from-slate-500/20 to-slate-600/10 border-slate-500/30 text-slate-400 bg-slate-500/5"
   };
@@ -1339,13 +1474,25 @@ export default function ContractorSuite() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] text-slate-400 font-bold">الوحدة</label>
-                    <input
-                      type="text"
-                      placeholder="مثال: م2، عدد، مقطوعية"
+                    <select
                       value={editingItemId ? editForm.unit : newBoq.unit}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, unit: e.target.value }) : setNewBoq({ ...newBoq, unit: e.target.value })}
-                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
-                    />
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
+                    >
+                      <option value="">اختر الوحدة...</option>
+                      <option value="مقطوعية">مقطوعية</option>
+                      <option value="م">م</option>
+                      <option value="م٢">م٢</option>
+                      <option value="م٣">م٣</option>
+                      <option value="عدد">عدد</option>
+                      <option value="يومية">يومية</option>
+                      {editingItemId && editForm.unit && !['مقطوعية', 'م', 'م٢', 'م2', 'م٣', 'م3', 'عدد', 'يومية'].includes(editForm.unit) && (
+                        <option value={editForm.unit}>{editForm.unit}</option>
+                      )}
+                      {!editingItemId && newBoq.unit && !['مقطوعية', 'م', 'م٢', 'م2', 'م٣', 'م3', 'عدد', 'يومية'].includes(newBoq.unit) && (
+                        <option value={newBoq.unit}>{newBoq.unit}</option>
+                      )}
+                    </select>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -1532,13 +1679,25 @@ export default function ContractorSuite() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] text-slate-400 font-bold">الوحدة</label>
-                    <input
-                      type="text"
-                      placeholder="مثال: م2، عدد، مقطوعية"
+                    <select
                       value={editingItemId ? editForm.unit : newExpense.unit}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, unit: e.target.value }) : setNewExpense({ ...newExpense, unit: e.target.value })}
-                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
-                    />
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
+                    >
+                      <option value="">اختر الوحدة...</option>
+                      <option value="مقطوعية">مقطوعية</option>
+                      <option value="م">م</option>
+                      <option value="م٢">م٢</option>
+                      <option value="م٣">م٣</option>
+                      <option value="عدد">عدد</option>
+                      <option value="يومية">يومية</option>
+                      {editingItemId && editForm.unit && !['مقطوعية', 'م', 'م٢', 'م2', 'م٣', 'م3', 'عدد', 'يومية'].includes(editForm.unit) && (
+                        <option value={editForm.unit}>{editForm.unit}</option>
+                      )}
+                      {!editingItemId && newExpense.unit && !['مقطوعية', 'م', 'م٢', 'م2', 'م٣', 'م3', 'عدد', 'يومية'].includes(newExpense.unit) && (
+                        <option value={newExpense.unit}>{newExpense.unit}</option>
+                      )}
+                    </select>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -1657,12 +1816,14 @@ export default function ContractorSuite() {
                         <td className="px-6 py-5 text-center font-mono font-black text-rose-400 text-sm print:text-black">-{item.total.toLocaleString()} جنيه</td>
                         <td className="px-6 py-5 text-left no-print">
                           <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => handleStartEditExpense(item)}
-                              className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-cyan-600 hover:bg-cyan-500 hover:text-slate-955 rounded-xl text-[9px] font-black transition-all"
-                            >
-                              تعديل ✏️
-                            </button>
+                            {!String(item.id).startsWith('db-sale-') && (
+                              <button
+                                onClick={() => handleStartEditExpense(item)}
+                                className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-cyan-600 hover:bg-cyan-500 hover:text-slate-955 rounded-xl text-[9px] font-black transition-all"
+                              >
+                                تعديل ✏️
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeleteExpense(item.id)}
                               className="px-3 py-1.5 bg-rose-955/30 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-xl text-[9px] font-black transition-all"
