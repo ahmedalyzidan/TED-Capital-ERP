@@ -760,6 +760,8 @@ const applySchemaFixes = async () => {
     await runQuery("Customers Referral", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS referral VARCHAR(255)`);
     await runQuery("Customers Since", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_since DATE DEFAULT CURRENT_DATE`);
     await runQuery("Customers Product", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS product VARCHAR(255)`);
+    await runQuery("Customers Company Name", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+    await runQuery("Customers Company ID", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id INTEGER`);
 
     await runQuery("Staff Salary", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS salary DECIMAL(15,2) DEFAULT 0`);
     await runQuery("Staff Company", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);

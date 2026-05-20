@@ -76,3 +76,6 @@
   2. The current behavior of this component.
   3. The intended new behavior and its potential impact on the system.
 - **Explicit Confirmation Required:** After displaying the warning, you MUST explicitly ask the user: *"Do you approve modifying this core logic/UI?"* and wait for the user to confirm (e.g., "Yes", "Proceed") BEFORE applying the code changes.
+
+## 11. ARABIC MODIFICATION SUMMARY (EXPLICIT MANDATE)
+- **Arabic Explanation Required:** With any file modification or code change, you MUST provide a detailed explanation in Arabic explaining exactly what was modified, why, and the resulting changes.

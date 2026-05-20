@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export default function DirectStockIssue() {
+export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '' }) {
   const { language } = useLanguage();
   const activeComp = localStorage.getItem('active_company') || '';
   const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
@@ -138,7 +138,19 @@ export default function DirectStockIssue() {
   const currencySymbol = isPharma 
     ? (language === 'ar' ? 'ش.ج' : 'ILS') 
     : (language === 'ar' ? 'ج.م' : 'EGP');
-  const [activeTab, setActiveTab] = useState('issue'); // 'issue', 'return', 'invoice_list', 'customer_statement'
+  const [activeTab, setActiveTab] = useState(defaultTab); // 'issue', 'return', 'invoice_list', 'customer_statement'
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
+
+  const cardBg = embedded ? 'bg-[#131b2e] border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800';
+  const headerText = embedded ? 'text-white' : 'text-slate-800';
+  const labelColor = embedded ? 'text-slate-400' : 'text-slate-550';
+  const inputBg = embedded ? 'bg-[#111827] border-slate-800 text-slate-100 placeholder-slate-550' : 'bg-slate-50 border-slate-200 text-slate-800';
+  let focusBorderClass = embedded ? 'focus:border-cyan-500 focus:bg-[#111827]' : 'focus:border-indigo-500 focus:bg-white';
   
   const [customers, setCustomers] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -176,8 +188,14 @@ export default function DirectStockIssue() {
   const [showVat, setShowVat] = useState(true); // VAT 14% Toggle
   
   // 🏗️ Linked Construction Project Integration States
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [contractorProjects, setContractorProjects] = useState([]);
+
+  useEffect(() => {
+    if (projectId) {
+      setSelectedProjectId(projectId);
+    }
+  }, [projectId]);
 
   // --- Quick Add Customer State & Handler ---
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -185,6 +203,7 @@ export default function DirectStockIssue() {
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerCompany, setNewCustomerCompany] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerCompanyId, setNewCustomerCompanyId] = useState('');
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [companies, setCompanies] = useState([]);
 
@@ -193,17 +212,16 @@ export default function DirectStockIssue() {
     if (!newCustomerName) return;
     setIsAddingCustomer(true);
 
-    // Resolve company name to match active ERP company filter while keeping user input
-    const resolvedCompany = newCustomerCompany 
-      ? `${newCustomerCompany} (${activeCompName})` 
-      : activeCompName;
+    const selectedComp = companies.find(c => Number(c.id) === Number(newCustomerCompanyId));
 
     try {
       const payload = {
         name: newCustomerName,
         phone: newCustomerPhone || '',
-        company_name: resolvedCompany,
+        company_name: selectedComp ? selectedComp.name : '',
         email: newCustomerEmail || '',
+        company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
+        company: selectedComp ? selectedComp.name : null,
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
@@ -222,6 +240,7 @@ export default function DirectStockIssue() {
       setNewCustomerPhone('');
       setNewCustomerCompany('');
       setNewCustomerEmail('');
+      setNewCustomerCompanyId('');
       setShowAddCustomerModal(false);
       setSuccessMsg(language === 'ar' ? `تمت إضافة العميل "${newCust.name}" واختياره بنجاح!` : `Customer "${newCust.name}" added & selected successfully!`);
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -232,8 +251,10 @@ export default function DirectStockIssue() {
         id: Date.now(),
         name: newCustomerName,
         phone: newCustomerPhone || '',
-        company_name: resolvedCompany,
-        email: newCustomerEmail || ''
+        company_name: selectedComp ? selectedComp.name : '',
+        email: newCustomerEmail || '',
+        company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
+        company: selectedComp ? selectedComp.name : null
       };
       setCustomers(prev => [fallbackCust, ...prev]);
       setSelectedCustomer(String(fallbackCust.id));
@@ -244,6 +265,7 @@ export default function DirectStockIssue() {
       setNewCustomerPhone('');
       setNewCustomerCompany('');
       setNewCustomerEmail('');
+      setNewCustomerCompanyId('');
       setShowAddCustomerModal(false);
       setSuccessMsg(language === 'ar' ? `تمت إضافة العميل "${fallbackCust.name}" واختياره محلياً بنجاح!` : `Customer "${fallbackCust.name}" added & selected locally!`);
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -1216,7 +1238,9 @@ export default function DirectStockIssue() {
         ? 'from-slate-900 via-slate-950 to-slate-900'
         : 'from-slate-900 via-emerald-950 to-slate-900';
 
-  const focusBorderClass = activeTab === 'issue' ? 'focus:border-indigo-500' : 'focus:border-amber-500';
+  focusBorderClass = embedded 
+    ? 'focus:border-cyan-500 focus:bg-[#111827]' 
+    : (activeTab === 'issue' ? 'focus:border-indigo-500' : 'focus:border-amber-500');
   const btnAccentClass = activeTab === 'issue' 
     ? 'bg-slate-900 hover:bg-indigo-600 shadow-indigo-600/30' 
     : 'bg-amber-800 hover:bg-amber-600 shadow-amber-600/30';
@@ -1316,84 +1340,149 @@ export default function DirectStockIssue() {
   );
 
   return (
-    <div className="space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`space-y-10 ${embedded ? 'embedded-erp text-slate-100' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {embedded && (
+        <style dangerouslySetInnerHTML={{__html: `
+          .embedded-erp .bg-white {
+            background-color: #131b2e !important;
+            border-color: #1e293b !important;
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp .text-slate-800,
+          .embedded-erp .text-slate-900 {
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp .border-slate-100,
+          .embedded-erp .border-slate-200 {
+            border-color: #1e293b !important;
+          }
+          .embedded-erp .bg-slate-50,
+          .embedded-erp .bg-slate-100,
+          .embedded-erp .bg-slate-250 {
+            background-color: #111827 !important;
+            border-color: #1e293b !important;
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp .text-slate-500,
+          .embedded-erp .text-slate-600 {
+            color: #94a3b8 !important;
+          }
+          .embedded-erp input,
+          .embedded-erp select,
+          .embedded-erp textarea {
+            background-color: #111827 !important;
+            border-color: #1e293b !important;
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp input::placeholder {
+            color: #4b5563 !important;
+          }
+          .embedded-erp .focus\\:bg-white:focus {
+            background-color: #111827 !important;
+            border-color: #06b6d4 !important;
+          }
+          .embedded-erp button.bg-slate-100:hover {
+            background-color: #1e293b !important;
+            color: #ffffff !important;
+          }
+          .embedded-erp table th {
+            background-color: #111827 !important;
+            color: #94a3b8 !important;
+            border-color: #1e293b !important;
+          }
+          .embedded-erp table td {
+            border-color: #1e293b !important;
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp .text-slate-900 {
+            color: #f1f5f9 !important;
+          }
+          .embedded-erp div.bg-slate-50 {
+            background-color: #111827 !important;
+          }
+        `}} />
+      )}
       
       {/* MODE SWITCHER TABS (4 Strategic Tabs) */}
-      <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl max-w-4xl border border-slate-200/60 shadow-inner gap-1.5 no-print">
-        <button
-          type="button"
-          onClick={() => handleModeSwitch('issue')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'issue' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleModeSwitch('return')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'return' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('invoice_list')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'invoice_list' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('customer_statement');
-            setCustomerSearchQuery('');
-            setSelectedStatementCustomer('');
-          }}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'customer_statement' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
-        </button>
-      </div>
+      {!embedded && (
+        <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl max-w-4xl border border-slate-200/60 shadow-inner gap-1.5 no-print">
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('issue')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'issue' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('return')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'return' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('invoice_list')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'invoice_list' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('customer_statement');
+              setCustomerSearchQuery('');
+              setSelectedStatementCustomer('');
+            }}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'customer_statement' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
+          </button>
+        </div>
+      )}
 
       {/* HEADER SECTION */}
-      <div className={`relative rounded-[2.5rem] bg-gradient-to-r ${headerGradient} p-8 lg:p-12 text-white shadow-2xl overflow-hidden transition-all duration-500 no-print`}>
-        <div className={`absolute top-0 right-0 w-80 h-80 ${activeTab === 'issue' ? 'bg-indigo-500/10' : activeTab === 'return' ? 'bg-amber-500/10' : 'bg-emerald-500/10'} rounded-full blur-3xl`}></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <span className={`px-4 py-1.5 border border-white/10 rounded-full text-xs font-bold tracking-wide uppercase transition-colors ${accentBadgeBg}`}>
-              {activeTab === 'issue' && (language === 'ar' ? '📦 إدارة المخزون والمبيعات المباشرة' : '📦 Stock Control & Direct Sales')}
-              {activeTab === 'return' && (language === 'ar' ? '🔄 إدارة مرتجعات الصرف والمبيعات' : '🔄 Direct Sales & Stock Returns')}
-              {activeTab === 'invoice_list' && (language === 'ar' ? '📊 أرشيف الفواتير المباشرة' : '📊 Direct Invoices Archive')}
-              {activeTab === 'customer_statement' && (language === 'ar' ? '📁 كشوفات الحساب والمديونيات' : '📁 Customer Ledger Statements')}
-            </span>
-            <h1 className="text-3xl lg:text-4xl font-black mt-4 tracking-tight">
-              {activeTab === 'issue' && (language === 'ar' ? '🚚 صرف مخزني ومبيعات مباشرة' : '🚚 Direct Stock Issue & Sales')}
-              {activeTab === 'return' && (language === 'ar' ? '🔄 مرتجع صرف ومبيعات مباشرة' : '🔄 Direct Stock Returns & Sales')}
-              {activeTab === 'invoice_list' && (language === 'ar' ? '📊 قائمة الفواتير المصدرة' : '📊 Exported Invoices Archive')}
-              {activeTab === 'customer_statement' && (language === 'ar' ? '📁 كشف حساب العميل المالي' : '📁 Customer Financial Statements')}
-            </h1>
-            <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium leading-relaxed">
-              {activeTab === 'issue' && (language === 'ar' 
-                ? 'إصدار مستندات صرف خامات وبضائع من المستودعات لعملاء مباشرين بدون التقيد بمشروع محدد. يقوم النظام تلقائياً بتوليد قيد مزدوج متكامل وتخفيض الكميات فوراً.' 
-                : 'Issue materials and goods from warehouses to direct customers without being restricted to a project. The system automatically creates a full double-entry ledger record and updates stock instantly.')}
-              {activeTab === 'return' && (language === 'ar' 
-                ? 'تسجيل مرتجعات بضائع وخامات مباشرة من العملاء وإعادتها للمستودع المحدد. يقوم النظام تلقائياً بزيادة الكميات وعكس القيد المزدوج المالي.' 
-                : 'Record direct returns of goods and materials from customers back to the designated warehouse. The system increases stock and fully reverses the financial double-entry.')}
-              {activeTab === 'invoice_list' && (language === 'ar' 
-                ? 'أرشيف ذكي لعرض وتدقيق وإعادة طباعة فواتير المبيعات الصادرة والإشعارات الدائنة لكل العملاء.' 
-                : 'Smart archive to view, audit, and reprint issued sales invoices and credit notes for all customers.')}
-              {activeTab === 'customer_statement' && (language === 'ar' 
-                ? 'كشف تفصيلي يجمع كل الحركات المالية والمديونيات وأرصدة العملاء التراكمية، متوافق مع معايير IFRS.' 
-                : 'Detailed ledger statement compiling all financial transactions, outstanding debts, and cumulative customer balances, compliant with IFRS standards.')}
-            </p>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md">
-            <span className="text-xs text-slate-400 block mb-1">{language === 'ar' ? 'الرصيد الكلي للأصناف النشطة' : 'Total Active Stock Balance'}</span>
-            <span className={`text-3xl font-black tracking-tighter ${activeTab === 'issue' ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {inventoryItems.reduce((sum, i) => sum + Number(i.remaining_qty || 0), 0).toLocaleString()} <span className="text-xs text-slate-300 font-medium">{language === 'ar' ? 'وحدة' : 'Units'}</span>
-            </span>
+      {!embedded && (
+        <div className={`relative rounded-[2.5rem] bg-gradient-to-r ${headerGradient} p-8 lg:p-12 text-white shadow-2xl overflow-hidden transition-all duration-500 no-print`}>
+          <div className={`absolute top-0 right-0 w-80 h-80 ${activeTab === 'issue' ? 'bg-indigo-500/10' : activeTab === 'return' ? 'bg-amber-500/10' : 'bg-emerald-500/10'} rounded-full blur-3xl`}></div>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <span className={`px-4 py-1.5 border border-white/10 rounded-full text-xs font-bold tracking-wide uppercase transition-colors ${accentBadgeBg}`}>
+                {activeTab === 'issue' && (language === 'ar' ? '📦 إدارة المخزون والمبيعات المباشرة' : '📦 Stock Control & Direct Sales')}
+                {activeTab === 'return' && (language === 'ar' ? '🔄 إدارة مرتجعات الصرف والمبيعات' : '🔄 Direct Sales & Stock Returns')}
+                {activeTab === 'invoice_list' && (language === 'ar' ? '📊 أرشيف الفواتير المباشرة' : '📊 Direct Invoices Archive')}
+                {activeTab === 'customer_statement' && (language === 'ar' ? '📁 كشوفات الحساب والمديونيات' : '📁 Customer Ledger Statements')}
+              </span>
+              <h1 className="text-3xl lg:text-4xl font-black mt-4 tracking-tight">
+                {activeTab === 'issue' && (language === 'ar' ? '🚚 صرف مخزني ومبيعات مباشرة' : '🚚 Direct Stock Issue & Sales')}
+                {activeTab === 'return' && (language === 'ar' ? '🔄 مرتجع صرف ومبيعات مباشرة' : '🔄 Direct Stock Returns & Sales')}
+                {activeTab === 'invoice_list' && (language === 'ar' ? '📊 قائمة الفواتير المصدرة' : '📊 Exported Invoices Archive')}
+                {activeTab === 'customer_statement' && (language === 'ar' ? '📁 كشف حساب العميل المالي' : '📁 Customer Financial Statements')}
+              </h1>
+              <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium leading-relaxed">
+                {activeTab === 'issue' && (language === 'ar' 
+                  ? 'إصدار مستندات صرف خامات وبضائع من المستودعات لعملاء مباشرين بدون التقيد بمشروع محدد. يقوم النظام تلقائياً بتوليد قيد مزدوج متكامل وتخفيض الكميات فوراً.' 
+                  : 'Issue materials and goods from warehouses to direct customers without being restricted to a project. The system automatically creates a full double-entry ledger record and updates stock instantly.')}
+                {activeTab === 'return' && (language === 'ar' 
+                  ? 'تسجيل مرتجعات بضائع وخامات مباشرة من العملاء وإعادتها للمستودع المحدد. يقوم النظام تلقائياً بزيادة الكميات وعكس القيد المزدوج المالي.' 
+                  : 'Record direct returns of goods and materials from customers back to the designated warehouse. The system increases stock and fully reverses the financial double-entry.')}
+                {activeTab === 'invoice_list' && (language === 'ar' 
+                  ? 'أرشيف ذكي لعرض وتدقيق وإعادة طباعة فواتير المبيعات الصادرة والإشعارات الدائنة لكل العملاء.' 
+                  : 'Smart archive to view, audit, and reprint issued sales invoices and credit notes for all customers.')}
+                {activeTab === 'customer_statement' && (language === 'ar' 
+                  ? 'كشف تفصيلي يجمع كل الحركات المالية والمديونيات وأرصدة العملاء التراكمية، متوافق مع معايير IFRS.' 
+                  : 'Detailed ledger statement compiling all financial transactions, outstanding debts, and cumulative customer balances, compliant with IFRS standards.')}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md">
+              <span className="text-xs text-slate-400 block mb-1">{language === 'ar' ? 'الرصيد الكلي للأصناف النشطة' : 'Total Active Stock Balance'}</span>
+              <span className={`text-3xl font-black tracking-tighter ${activeTab === 'issue' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {inventoryItems.reduce((sum, i) => sum + Number(i.remaining_qty || 0), 0).toLocaleString()} <span className="text-xs text-slate-300 font-medium">{language === 'ar' ? 'وحدة' : 'Units'}</span>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {successMsg && (
         <div className={`p-6 border font-black rounded-3xl text-sm animate-pulse no-print ${activeTab === 'issue' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
@@ -1422,7 +1511,20 @@ export default function DirectStockIssue() {
                     <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? 'العميل المستلم *' : 'Receiving Customer *') : (language === 'ar' ? 'العميل المرجع *' : 'Return Customer *')}</label>
                     <button
                       type="button"
-                      onClick={() => setShowAddCustomerModal(true)}
+                      onClick={() => {
+                        const activeComp = localStorage.getItem('active_company') || '';
+                        if (activeComp && companies.length > 0) {
+                          const matched = companies.find(c => c.name.toLowerCase().includes(activeComp.toLowerCase()) || activeComp.toLowerCase().includes(c.name.toLowerCase()));
+                          if (matched) {
+                            setNewCustomerCompanyId(matched.id);
+                          } else {
+                            setNewCustomerCompanyId('');
+                          }
+                        } else {
+                          setNewCustomerCompanyId('');
+                        }
+                        setShowAddCustomerModal(true);
+                      }}
                       className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-all flex items-center gap-1 active:scale-95 shadow-sm cursor-pointer"
                     >
                       <span>➕</span> {language === 'ar' ? 'إضافة عميل سريع' : 'Quick Add'}
@@ -3123,15 +3225,15 @@ export default function DirectStockIssue() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم الشركة' : 'Company Name'}</label>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
                     <select 
-                      value={newCustomerCompany}
-                      onChange={(e) => setNewCustomerCompany(e.target.value)}
+                      value={newCustomerCompanyId}
+                      onChange={(e) => setNewCustomerCompanyId(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
                     >
-                      <option value="">{language === 'ar' ? 'اختر الشركة...' : 'Select Company...'}</option>
+                      <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
                       {companies.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                        <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </div>

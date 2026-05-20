@@ -35,6 +35,8 @@ function PharmaInventory() {
   const [expiryDate, setExpiryDate] = useState('');
   const [supplier, setSupplier] = useState('');
   const [minLevel, setMinLevel] = useState('20');
+  const [companyId, setCompanyId] = useState('');
+  const [companies, setCompanies] = useState([]);
 
   // Dispense Drug Modal
   const [showDispenseModal, setShowDispenseModal] = useState(false);
@@ -388,8 +390,18 @@ function PharmaInventory() {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/dynamic/table/companies?limit=100');
+      setCompanies(res.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching companies', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchCompanies();
   }, []);
 
   // --- IoT Live Telemetry Simulation Effect ---
@@ -632,6 +644,16 @@ function PharmaInventory() {
     setExpiryDate('');
     setSupplier('');
     setMinLevel('20');
+    
+    // Auto-select company
+    const activeComp = localStorage.getItem('active_company') || '';
+    const matchedCompany = companies.find(c => 
+      c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+      activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+      c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+    );
+    setCompanyId(matchedCompany ? matchedCompany.id : '');
+
     setShowModal(true);
   };
 
@@ -649,6 +671,7 @@ function PharmaInventory() {
     setExpiryDate(drug.expiry_date || '');
     setSupplier(drug.supplier || '');
     setMinLevel(drug.min_stock_level || '20');
+    setCompanyId(drug.company_id || '');
     setShowModal(true);
   };
 
@@ -683,7 +706,7 @@ function PharmaInventory() {
         warehouse: 'مخزن الصيدليات والأدوية',
         category: 'PHARMA',
         uom: dosageForm.includes('أقراص') ? 'علبة' : dosageForm.includes('فيال') ? 'فيال' : 'عبوة',
-        company_id: activeCompId,
+        company_id: companyId ? Number(companyId) : activeCompId,
         metadata: {
           active_substance: activeSubstance,
           dosage_form: dosageForm,
@@ -1294,7 +1317,22 @@ function PharmaInventory() {
                     </div>
 
                     <form onSubmit={handleSaveDrug} className="p-8 space-y-6 overflow-y-auto">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-700">الشركة المالكة للصنف (Owning Company) <span className="text-rose-500">*</span></label>
+                          <select
+                            required
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-teal-500 transition-all"
+                            value={companyId}
+                            onChange={(e) => setCompanyId(e.target.value)}
+                          >
+                            <option value="">-- اختر الشركة --</option>
+                            {companies.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
                         <div className="space-y-2">
                           <label className="text-xs font-black text-slate-700">الاسم التجاري للدواء (Drug Name) <span className="text-rose-500">*</span></label>
                           <input

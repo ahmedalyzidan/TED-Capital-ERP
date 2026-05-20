@@ -29,9 +29,12 @@ export default function Clients() {
   // Client Modal State
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [clientForm, setClientForm] = useState({ name: '', company_name: '', phone: '', email: '', credit_limit: 0 });
+  const [companies, setCompanies] = useState([]);
+  const [companyId, setCompanyId] = useState('');
 
   useEffect(() => {
     fetchClients();
+    fetchCompanies();
   }, []);
 
   const fetchClients = async () => {
@@ -43,6 +46,15 @@ export default function Clients() {
       console.error("خطأ في جلب العملاء", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await api.get('/dynamic/table/companies?limit=100');
+      setCompanies(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
     }
   };
 
@@ -120,9 +132,18 @@ export default function Clients() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post('/add/customers', { ...clientForm, credit_limit: Number(clientForm.credit_limit) });
+      const selectedComp = companies.find(c => Number(c.id) === Number(companyId));
+      const payload = {
+        ...clientForm,
+        company_name: selectedComp ? selectedComp.name : '',
+        credit_limit: Number(clientForm.credit_limit),
+        company_id: companyId ? Number(companyId) : null,
+        company: selectedComp ? selectedComp.name : null
+      };
+      await api.post('/add/customers', payload);
       setIsClientModalOpen(false);
       setClientForm({ name: '', company_name: '', phone: '', email: '', credit_limit: 0 });
+      setCompanyId('');
       fetchClients();
     } catch (error) {
       alert("حدث خطأ أثناء حفظ العميل.");
@@ -482,7 +503,20 @@ export default function Clients() {
             </div>
 
             <button
-              onClick={() => setIsClientModalOpen(true)}
+              onClick={() => {
+                const activeComp = localStorage.getItem('active_company') || '';
+                if (activeComp && companies.length > 0) {
+                  const matched = companies.find(c => c.name.toLowerCase().includes(activeComp.toLowerCase()) || activeComp.toLowerCase().includes(c.name.toLowerCase()));
+                  if (matched) {
+                    setCompanyId(matched.id);
+                  } else {
+                    setCompanyId('');
+                  }
+                } else {
+                  setCompanyId('');
+                }
+                setIsClientModalOpen(true);
+              }}
               className="bg-violet-600 hover:bg-violet-700 text-white px-10 py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest transition-all shadow-2xl shadow-violet-600/30 active:scale-95 flex items-center gap-4 transform hover:-translate-y-1"
             >
               <span className="text-xl">+</span> {language === 'ar' ? 'إضافة شريك جديد' : 'Register New Entity'}
@@ -561,9 +595,16 @@ export default function Clients() {
                       </td>
                       <td className="px-10 py-7">
                         <p className="font-black text-slate-700 text-base font-sans tracking-tight">{c.company_name || (language === 'ar' ? 'عميل فردي' : 'Individual Client')}</p>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 italic flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Registered since {c.customer_since ? new Date(c.customer_since).getFullYear() : '---'}
-                        </p>
+                        <div className="flex flex-wrap gap-2 mt-2 items-center">
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] italic flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Registered since {c.customer_since ? new Date(c.customer_since).getFullYear() : '---'}
+                          </p>
+                          {c.company && (
+                            <span className="px-2.5 py-0.5 bg-cyan-50 text-cyan-700 border border-cyan-100 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                              🏢 {c.company}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-10 py-7 text-center">
                         <span className="font-mono font-black text-slate-900 text-base bg-slate-100 px-5 py-2 rounded-xl border border-slate-200 shadow-sm">{Number(c.credit_limit || 0).toLocaleString()}</span>
@@ -610,7 +651,18 @@ export default function Clients() {
                 </div>
                 <div className="col-span-1 md:col-span-2 space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
-                  <input type="text" name="company_name" value={clientForm.company_name} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-bold text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm" />
+                  <select
+                    value={companyId}
+                    onChange={(e) => setCompanyId(e.target.value)}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm"
+                  >
+                    <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'رقم التواصل المعتمد' : 'Primary Contact Phone'}</label>

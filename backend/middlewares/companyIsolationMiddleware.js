@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { resolveScope } = require('../utils/helpers');
 
 function getTableAndIdFromPath(path) {
     const parts = path.replace(/^\/|\/$/g, '').split('/');
@@ -102,70 +103,6 @@ async function checkCompanyAccess(record, allowedCompanies, allowedCompanyIds) {
 
     return true;
 }
-
-const resolveScope = (user) => {
-    if (!user) return null;
-    const username = (user.username || '').toUpperCase();
-    const selected = user.selectedCompany;
-    
-    // Define default scope for restricted users
-    let allowedNames = null;
-    let allowedIds = null;
-    
-    if (username === 'MTAYEM') {
-        allowedNames = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
-        allowedIds = [1, 4];
-    } else if (username === 'MSOBHI') {
-        allowedNames = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
-        allowedIds = [2];
-    }
-    
-    // If a specific company is selected, narrow down the scope
-    if (selected && !['all', 'كل الشركات', 'all companies'].includes(selected.toLowerCase())) {
-        const nameLower = selected.toLowerCase();
-        let resolvedId = null;
-        let resolvedName = null;
-        
-        if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
-            resolvedId = 2; resolvedName = 'Design Concept';
-        } else if (nameLower.includes('master') || nameLower.includes('ماستر')) {
-            resolvedId = 3; resolvedName = 'Master Builder';
-        } else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
-            resolvedId = 4; resolvedName = 'PRIMEMED PHARMA';
-        } else if (nameLower.includes('ted') || nameLower.includes('تيد')) {
-            resolvedId = 1; resolvedName = 'TED Capital';
-        }
-        
-        if (resolvedId && resolvedName) {
-            // If the user has restricted scope, verify they can select this company
-            if (allowedIds && !allowedIds.includes(resolvedId)) {
-                return { names: allowedNames, ids: allowedIds };
-            }
-            return { names: [resolvedName], ids: [resolvedId] };
-        }
-    }
-    
-    // If no specific company is selected, return their default scope (if any)
-    if (allowedIds) {
-        return { names: allowedNames, ids: allowedIds };
-    }
-    
-    if (user.linkedCompany) {
-        const nameLower = user.linkedCompany.toLowerCase();
-        let resolvedId = null;
-        let resolvedName = null;
-        if (nameLower.includes('design') || nameLower.includes('ديزاين')) { resolvedId = 2; resolvedName = 'Design Concept'; }
-        else if (nameLower.includes('master') || nameLower.includes('ماستر')) { resolvedId = 3; resolvedName = 'Master Builder'; }
-        else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { resolvedId = 4; resolvedName = 'PRIMEMED PHARMA'; }
-        else if (nameLower.includes('ted') || nameLower.includes('تيد')) { resolvedId = 1; resolvedName = 'TED Capital'; }
-        
-        if (resolvedId && resolvedName) {
-            return { names: [resolvedName], ids: [resolvedId] };
-        }
-    }
-    
-    return null; // Unrestricted (super admins who didn't select a company)
-};
 
 const enforceCompanyIsolation = async (req, res, next) => {
     // Skip if not authenticated or no user object

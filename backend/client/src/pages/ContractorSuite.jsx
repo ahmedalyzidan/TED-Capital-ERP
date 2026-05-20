@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import api from '../services/api';
+import DirectStockIssue from './DirectStockIssue';
 
 export default function ContractorSuite() {
   const { language } = useLanguage();
@@ -1031,12 +1032,14 @@ export default function ContractorSuite() {
 
         {/* --- PREMIUM RESPONSIVE NAVIGATION GRID --- */}
         <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
               { id: 'dashboard', label: 'لوحة القيادة', icon: '📊' },
               { id: 'boq', label: 'المقايسة والبنود', icon: '📝' },
               { id: 'expenses', label: 'المصروفات الفعلية', icon: '💸' },
               { id: 'client', label: 'دفعات العميل', icon: '💳' },
+              { id: 'direct_issue', label: 'صرف مخزني مباشر', icon: '🚚' },
+              { id: 'direct_returns', label: 'مرتجع مباشر', icon: '🔄' },
               { id: 'files', label: 'ملفات ومستندات', icon: '📁' }
             ].map(tab => (
               <button
@@ -2262,7 +2265,20 @@ export default function ContractorSuite() {
                 </div>
               )}
             </div>
+          </div>
+        )}
 
+        {/* 5.1 DIRECT STOCK ISSUE VIEW */}
+        {activeTab === 'direct_issue' && (
+          <div className="animate-in slide-in-from-bottom duration-500">
+            <DirectStockIssue defaultTab="issue" embedded={true} projectId={activeProjectId} />
+          </div>
+        )}
+
+        {/* 5.2 DIRECT RETURNS VIEW */}
+        {activeTab === 'direct_returns' && (
+          <div className="animate-in slide-in-from-bottom duration-500">
+            <DirectStockIssue defaultTab="return" embedded={true} projectId={activeProjectId} />
           </div>
         )}
 

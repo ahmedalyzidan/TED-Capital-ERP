@@ -8,7 +8,7 @@ export default function Corporate() {
   const { hasPermission } = useSecurity();
   const [activeTab, setActiveTab] = useState('structure');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState({ orgUnits: [], committees: [], tasks: [], staff: [] });
+  const [data, setData] = useState({ orgUnits: [], committees: [], tasks: [], companies: [], staff: [] });
   const [showModal, setShowModal] = useState(null);
   const [formData, setFormData] = useState({});
 
@@ -19,7 +19,8 @@ export default function Corporate() {
       tabs: {
         structure: "الهيكل التنظيمي",
         committees: "اللجان",
-        tasks: "المهام والتكليفات"
+        tasks: "المهام والتكليفات",
+        companies: "الشركات"
       },
       structure: {
         title: "وحدات الهيكل التنظيمي",
@@ -47,6 +48,18 @@ export default function Corporate() {
         status: "الحالة",
         deadline: "الموعد النهائي",
         progress: "الإنجاز"
+      },
+      companies: {
+        title: "الشركات المسجلة",
+        add: "إضافة شركة جديدة",
+        name: "اسم الشركة",
+        currency: "العملة الأساسية",
+        taxNumber: "الرقم الضريبي",
+        commercialReg: "السجل التجاري",
+        authCapital: "رأس المال المرخص",
+        issuedCapital: "رأس المال المصدر",
+        legalForm: "الشكل القانوني",
+        actions: "الإجراءات"
       }
     },
     en: {
@@ -55,7 +68,8 @@ export default function Corporate() {
       tabs: {
         structure: "Org Structure",
         committees: "Committees",
-        tasks: "Tasks & Assignments"
+        tasks: "Tasks & Assignments",
+        companies: "Companies"
       },
       structure: {
         title: "Organizational Units",
@@ -83,6 +97,18 @@ export default function Corporate() {
         status: "Status",
         deadline: "Deadline",
         progress: "Progress"
+      },
+      companies: {
+        title: "Registered Companies",
+        add: "Add New Company",
+        name: "Company Name",
+        currency: "Base Currency",
+        taxNumber: "Tax Number",
+        commercialReg: "Commercial Registry",
+        authCapital: "Authorized Capital",
+        issuedCapital: "Issued Capital",
+        legalForm: "Legal Form",
+        actions: "Actions"
       }
     }
   }[language === 'en' ? 'en' : 'ar'];
@@ -94,17 +120,19 @@ export default function Corporate() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [orgRes, comRes, taskRes, staffRes] = await Promise.all([
+      const [orgRes, comRes, taskRes, compRes, staffRes] = await Promise.all([
         api.get('/table/org_units'),
         api.get('/table/committees'),
         api.get('/table/tasks'),
+        api.get('/table/companies'),
         api.get('/dropdowns')
       ]);
       setData({
-        orgUnits: orgRes.data.data || [],
-        committees: comRes.data.data || [],
-        tasks: taskRes.data.data || [],
-        staff: staffRes.data.staff_dd || []
+        orgUnits: orgRes?.data?.data || [],
+        committees: comRes?.data?.data || [],
+        tasks: taskRes?.data?.data || [],
+        companies: compRes?.data?.data || [],
+        staff: staffRes?.data?.staff_dd || []
       });
     } catch (err) {
       console.error("Error fetching corporate data:", err);
@@ -179,12 +207,12 @@ export default function Corporate() {
           <div className="p-8 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center">
             <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
               <span className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                {activeTab === 'structure' ? '📊' : activeTab === 'committees' ? '👥' : '✅'}
+                {activeTab === 'structure' ? '📊' : activeTab === 'committees' ? '👥' : activeTab === 'tasks' ? '✅' : '🏢'}
               </span>
-              {activeTab === 'structure' ? t.structure.title : activeTab === 'committees' ? t.committees.title : t.tasks.title}
+              {activeTab === 'structure' ? t.structure.title : activeTab === 'committees' ? t.committees.title : activeTab === 'tasks' ? t.tasks.title : t.companies.title}
             </h3>
             <button onClick={() => setShowModal(`add-${activeTab === 'structure' ? 'org_units' : activeTab}`)} className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-slate-900/20 flex items-center gap-2 transform active:scale-95">
-              <span className="text-lg leading-none">+</span> {activeTab === 'structure' ? t.structure.add : activeTab === 'committees' ? t.committees.add : t.tasks.add}
+              <span className="text-lg leading-none">+</span> {activeTab === 'structure' ? t.structure.add : activeTab === 'committees' ? t.committees.add : activeTab === 'tasks' ? t.tasks.add : t.companies.add}
             </button>
           </div>
 
@@ -315,6 +343,40 @@ export default function Corporate() {
                   </tbody>
                 </table>
                )}
+
+              {activeTab === 'companies' && (
+                <table className="w-full text-right whitespace-nowrap">
+                  <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black">
+                      <th className="px-8 py-5">{t.companies?.name}</th>
+                      <th className="px-8 py-5">{t.companies?.currency}</th>
+                      <th className="px-8 py-5">{t.companies?.taxNumber}</th>
+                      <th className="px-8 py-5">{t.companies?.commercialReg}</th>
+                      <th className="px-8 py-5">{t.companies?.legalForm}</th>
+                      <th className="px-8 py-5 text-center">{t.companies?.actions}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {data.companies?.map(comp => (
+                      <tr key={comp.id} className="hover:bg-slate-50/50 transition-all group">
+                        <td className="px-8 py-6 font-black text-slate-900 text-sm">{comp.name}</td>
+                        <td className="px-8 py-6">
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100/50">{comp.base_currency}</span>
+                        </td>
+                        <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.tax_number || '---'}</td>
+                        <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.commercial_reg || '---'}</td>
+                        <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.legal_form || '---'}</td>
+                        <td className="px-8 py-6 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => { setFormData(comp); setShowModal('edit-companies'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="تعديل">✏️</button>
+                            <button onClick={() => handleDelete('companies', comp.id)} className="w-8 h-8 flex items-center justify-center bg-white text-rose-400 rounded-lg border border-slate-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="حذف">🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+               )}
             </div>
           )}
         </div>
@@ -416,6 +478,50 @@ export default function Corporate() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">الإنجاز المحقق %</label>
                       <input type="number" value={formData.progress_percent || 0} onChange={e => setFormData({ ...formData, progress_percent: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black font-mono text-center text-slate-900 text-xl outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" min="0" max="100" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {showModal.includes('companies') && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.name}</label>
+                    <input type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.currency}</label>
+                      <select value={formData.base_currency || 'EGP'} onChange={e => setFormData({ ...formData, base_currency: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none appearance-none cursor-pointer">
+                        <option value="EGP">EGP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="ILS">ILS</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.legalForm}</label>
+                      <input type="text" value={formData.legal_form || ''} onChange={e => setFormData({ ...formData, legal_form: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.taxNumber}</label>
+                      <input type="text" value={formData.tax_number || ''} onChange={e => setFormData({ ...formData, tax_number: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.commercialReg}</label>
+                      <input type="text" value={formData.commercial_reg || ''} onChange={e => setFormData({ ...formData, commercial_reg: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.authCapital}</label>
+                      <input type="number" value={formData.authorized_capital || 0} onChange={e => setFormData({ ...formData, authorized_capital: parseFloat(e.target.value) || 0 })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.issuedCapital}</label>
+                      <input type="number" value={formData.issued_capital || 0} onChange={e => setFormData({ ...formData, issued_capital: parseFloat(e.target.value) || 0 })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
                     </div>
                   </div>
                 </>

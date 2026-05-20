@@ -302,6 +302,16 @@ function AdvancedStockControl({ isSubcomponent }) {
     setUom('قطعة');
     setMinLevel('10');
     setVelocity('FAST');
+    
+    // Auto-select company
+    const activeComp = localStorage.getItem('active_company') || '';
+    const matchedCompany = companies.find(c => 
+      c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+      activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+      c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+    );
+    setCompanyId(matchedCompany ? matchedCompany.id : '');
+    
     setShowModal(true);
   };
 
@@ -379,7 +389,7 @@ function AdvancedStockControl({ isSubcomponent }) {
         min_stock_level: Number(minLevel),
         status: velocity, // Storing velocity in status column
         adjust_reason: adjustReason,
-        company_id: autoCompanyId
+        company_id: companyId ? Number(companyId) : autoCompanyId
       };
 
       if (modalMode === 'ADD') {
@@ -1147,7 +1157,22 @@ function AdvancedStockControl({ isSubcomponent }) {
             </div>
             
             <form onSubmit={handleSaveStock} className="p-8 space-y-6 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'الشركة المالكة للصنف (Owning Company)' : 'Owning Company'} <span className="text-rose-500">*</span></label>
+                  <select 
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    value={companyId}
+                    onChange={(e) => setCompanyId(e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'اسم الصنف (Item Name)' : 'Stock Item Name'} <span className="text-rose-500">*</span></label>
                   <input 

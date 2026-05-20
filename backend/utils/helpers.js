@@ -209,6 +209,149 @@ const validatePasswordStrength = (password) => {
     return null; // كلمة المرور قوية
 };
 
+const resolveScope = (user) => {
+    if (!user) return null;
+    const username = (user.username || '').toUpperCase();
+    const selected = user.selectedCompany;
+    
+    // Define default scope for restricted users
+    let allowedNames = null;
+    let allowedIds = null;
+    
+    if (username === 'MTAYEM') {
+        allowedNames = ['TED Capital', 'PRIMEMED PHARMA', 'TED CAPITAL', 'Primemed Pharma', 'TED Capital ERP'];
+        allowedIds = [1, 4];
+    } else if (username === 'MSOBHI') {
+        allowedNames = ['Design Concept', 'DESIGN CONCEPT', 'ديزاين كونسبت', 'ديزاين كونسيبت'];
+        allowedIds = [2];
+    }
+    
+    // If a specific company is selected, narrow down the scope
+    if (selected && !['all', 'كل الشركات', 'all companies'].includes(selected.toLowerCase())) {
+        const nameLower = selected.toLowerCase();
+        let resolvedId = null;
+        let resolvedName = null;
+        
+        if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
+            resolvedId = 2; resolvedName = 'Design Concept';
+        } else if (nameLower.includes('master') || nameLower.includes('ماستر')) {
+            resolvedId = 3; resolvedName = 'Master Builder';
+        } else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
+            resolvedId = 4; resolvedName = 'PRIMEMED PHARMA';
+        } else if (nameLower.includes('ted') || nameLower.includes('تيد')) {
+            resolvedId = 1; resolvedName = 'TED Capital';
+        }
+        
+        if (resolvedId && resolvedName) {
+            // If the user has restricted scope, verify they can select this company
+            if (allowedIds && !allowedIds.includes(resolvedId)) {
+                return { names: allowedNames, ids: allowedIds };
+            }
+            return { names: [resolvedName], ids: [resolvedId] };
+        }
+    }
+    
+    // If no specific company is selected, return their default scope (if any)
+    if (allowedIds) {
+        return { names: allowedNames, ids: allowedIds };
+    }
+    
+    if (user.linkedCompany) {
+        const nameLower = user.linkedCompany.toLowerCase();
+        let resolvedId = null;
+        let resolvedName = null;
+        if (nameLower.includes('design') || nameLower.includes('ديزاين')) { resolvedId = 2; resolvedName = 'Design Concept'; }
+        else if (nameLower.includes('master') || nameLower.includes('ماستر')) { resolvedId = 3; resolvedName = 'Master Builder'; }
+        else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { resolvedId = 4; resolvedName = 'PRIMEMED PHARMA'; }
+        else if (nameLower.includes('ted') || nameLower.includes('تيد')) { resolvedId = 1; resolvedName = 'TED Capital'; }
+        
+        if (resolvedId && resolvedName) {
+            return { names: [resolvedName], ids: [resolvedId] };
+        }
+    }
+    
+    return null; // Unrestricted (super admins who didn't select a company)
+};
+
+const buildCompanyFilter = (type, scope, prefix = "") => {
+    if (!scope || !scope.names || scope.names.length === 0 || !scope.ids || scope.ids.length === 0) {
+        return null;
+    }
+    const escapedNames = scope.names.map(n => n.replace(/'/g, "''"));
+    const namesSqlList = `(${escapedNames.map(n => `'${n}'`).join(', ')})`;
+    const idsSqlList = `(${scope.ids.join(', ')})`;
+
+    // Map table types to their respective company filters
+    if (type === 'projects') {
+        return `(${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList})`;
+    }
+    if (type === 'staff' || type === 'employees' || type === 'rfq') {
+        return `${prefix}company IN ${namesSqlList}`;
+    }
+    if (type === 'customers') {
+        return `(${prefix}company_id IN ${idsSqlList} OR ${prefix}company_id IS NULL OR ${prefix}company_name IN ${namesSqlList})`;
+    }
+    if (type === 'purchase_orders') {
+        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}supplier IN ${namesSqlList})`;
+    }
+    if (type === 'inventory_items' || type === 'inventory') {
+        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList})`;
+    }
+    if (type === 'inventory_sales') {
+        return `(${prefix}inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_name IN ${namesSqlList}))`;
+    }
+    if (type === 'ar_invoices') {
+        return `(${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR notes IN ${namesSqlList} OR source_module IN ${namesSqlList})`;
+    }
+    if (type === 'material_usage' || type === 'inventory_bookings') {
+        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'boq') {
+        return `project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+    }
+    if (type === 'subcontractor_items') {
+        return `boq_id IN (SELECT id FROM boq WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'ledger' || type === 'general_ledger') {
+        return `(cost_center IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR cost_center IN ${namesSqlList} OR company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+    }
+    if (type === 'subcontractors') {
+        return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList})`;
+    }
+    if (type === 'subcontractor_invoices' || type === 'partners' || type === 'tasks' || type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
+        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'chart_of_accounts') {
+        return `(company_entity IN ${namesSqlList} OR company_entity = 'All' OR company_id IN ${idsSqlList})`;
+    }
+    if (type === 'contracts') {
+        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'installments') {
+        return `contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'payment_receipts') {
+        return `installment_id IN (SELECT id FROM installments WHERE contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})))`;
+    }
+    if (type === 'expenses') {
+        return `(company_entity IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'payroll') {
+        return `(company_id IN ${idsSqlList} OR project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'leaves' || type === 'staff_advances') {
+        return `staff_id IN (SELECT id FROM staff WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+    }
+    if (type === 'intercompany_transactions') {
+        return `(source_company_id IN ${idsSqlList} OR target_company_id IN ${idsSqlList})`;
+    }
+    if (type === 'property_units') {
+        return `project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+    }
+    
+    return null;
+};
+
 module.exports = { 
     getPgExe, 
     getDbUrl, 
@@ -221,5 +364,7 @@ module.exports = {
     autoLedgerEntry, 
     syncProjectFinancials,
     calculateMovingAverage,
-    validatePasswordStrength 
-};
+    validatePasswordStrength,
+    resolveScope,
+    buildCompanyFilter
+};
