@@ -317,6 +317,15 @@ export default function ContractorSuite() {
   const [showAddValuation, setShowAddValuation] = useState(false);
   const [valuationDate, setValuationDate] = useState(new Date().toISOString().split('T')[0]);
   const [newValuationItems, setNewValuationItems] = useState({});
+  const [valuationDiscount, setValuationDiscount] = useState('');
+  const [valuationTax, setValuationTax] = useState('');
+
+  // 🏗️ Contractor-Side Progress Claims Wizard States
+  const [showAddContractorValuation, setShowAddContractorValuation] = useState(false);
+  const [contractorValuationDate, setContractorValuationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [contractorValuationItems, setContractorValuationItems] = useState({});
+  const [contractorValuationDiscount, setContractorValuationDiscount] = useState('');
+  const [contractorValuationTax, setContractorValuationTax] = useState('');
 
   // Inline editing states (CRUD updates)
   const [editingItemType, setEditingItemType] = useState(null); // 'boq' | 'expense' | 'installment'
@@ -750,47 +759,57 @@ export default function ContractorSuite() {
     currentBoqItems.forEach(item => {
       const prevPercent = getPrevCompletionPercent(item.id);
       const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
-      initItems[item.id] = prevQty; // prefill with current cumulative executed qty
+      initItems[item.id] = prevQty;
     });
     setNewValuationItems(initItems);
     setValuationDate(new Date().toISOString().split('T')[0]);
+    setValuationDiscount('');
+    setValuationTax('');
     setShowAddValuation(true);
+  };
+
+  const handleStartContractorValuation = () => {
+    const initItems = {};
+    currentBoqItems.forEach(item => {
+      const prevPercent = getPrevCompletionPercent(item.id);
+      const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
+      initItems[item.id] = prevQty;
+    });
+    setContractorValuationItems(initItems);
+    setContractorValuationDate(new Date().toISOString().split('T')[0]);
+    setContractorValuationDiscount('');
+    setContractorValuationTax('');
+    setShowAddContractorValuation(true);
   };
 
   const handleAddValuation = async (e) => {
     e.preventDefault();
 
-    // Calculate total current claim amount
     let totalClaimAmount = 0;
     const itemsList = [];
 
     currentBoqItems.forEach(item => {
       const prevPercent = getPrevCompletionPercent(item.id);
       const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
-
       const currQty = Number(newValuationItems[item.id] !== undefined ? newValuationItems[item.id] : prevQty);
       const currentPercent = item.quantity > 0 ? Math.min(100, Math.max(0, (currQty / item.quantity) * 100)) : 0;
       const netPercent = Math.max(0, currentPercent - prevPercent);
-
       const netQty = Math.max(0, currQty - prevQty);
       const netClaimValue = netQty * item.price;
-
       totalClaimAmount += netClaimValue;
-      itemsList.push({
-        boqItemId: item.id,
-        completionPercent: currentPercent,
-        netPercent,
-        currentAmount: netClaimValue,
-        prevQty,
-        currQty,
-        netQty
-      });
+      itemsList.push({ boqItemId: item.id, completionPercent: currentPercent, netPercent, currentAmount: netClaimValue, prevQty, currQty, netQty });
     });
 
     if (totalClaimAmount <= 0) {
       alert('إجمالي قيمة المستخلص الحالي يجب أن تكون أكبر من صفر. الرجاء زيادة الكمية المنفذة عن الكمية السابقة.');
       return;
     }
+
+    const discountAmt = valuationDiscount ? Number(valuationDiscount) : 0;
+    const taxRate = valuationTax ? Number(valuationTax) / 100 : 0;
+    const afterDiscount = totalClaimAmount - discountAmt;
+    const taxAmt = afterDiscount * taxRate;
+    const totalAfterAll = afterDiscount + taxAmt;
 
     const valuationId = `val-${Date.now()}`;
     const claimNo = `VAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
@@ -804,24 +823,25 @@ export default function ContractorSuite() {
       date: valuationDate,
       items: itemsList,
       totalCurrent: totalClaimAmount,
+      discount: discountAmt,
+      taxRate: Number(valuationTax || 0),
+      totalAfterDiscount: afterDiscount,
+      taxAmount: taxAmt,
+      totalFinal: totalAfterAll,
       status: 'issued'
     };
 
-    // Create balanced accounting entry in ledger via backend API
     try {
-      // 1. Dr. Accounts Receivable (Client Contract AR)
       await api.post('/dynamic/add/ledger', {
         date: valuationDate,
         account_name: 'عملاء عقود مقاولات - أرصدة مدينة',
-        debit: Number((totalClaimAmount * 1.14).toFixed(2)),
+        debit: Number((totalAfterAll).toFixed(2)),
         credit: 0,
         description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
         cost_center: activeProject?.name,
         company: activeProject?.company || 'TED CAPITAL',
         company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
       });
-
-      // 2. Cr. Construction Contract Revenue
       await api.post('/dynamic/add/ledger', {
         date: valuationDate,
         account_name: 'إيرادات عقود مقاولات وإنشاءات',
@@ -832,19 +852,18 @@ export default function ContractorSuite() {
         company: activeProject?.company || 'TED CAPITAL',
         company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
       });
-
-      // 3. Cr. VAT Payable (14% VAT)
-      await api.post('/dynamic/add/ledger', {
-        date: valuationDate,
-        account_name: 'ضريبة القيمة المضافة',
-        debit: 0,
-        credit: Number((totalClaimAmount * 0.14).toFixed(2)),
-        description: `ضريبة قيمة مضافة مستخلص رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
-        cost_center: activeProject?.name,
-        company: activeProject?.company || 'TED CAPITAL',
-        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-      });
-
+      if (taxAmt > 0) {
+        await api.post('/dynamic/add/ledger', {
+          date: valuationDate,
+          account_name: 'ضريبة القيمة المضافة',
+          debit: 0,
+          credit: Number(taxAmt.toFixed(2)),
+          description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+      }
       triggerNotification(`🎉 تم اعتماد مستخلص العميل ${claimNo} بنجاح وقيد الفاتورة والقيود المحاسبية التلقائية بالكامل!`);
     } catch (err) {
       console.error('Failed to post ledger entries for valuation:', err);
@@ -853,6 +872,99 @@ export default function ContractorSuite() {
 
     setValuations([...valuations, newValuation]);
     setShowAddValuation(false);
+  };
+
+  const handleAddContractorValuation = async (e) => {
+    e.preventDefault();
+
+    let totalClaimAmount = 0;
+    const itemsList = [];
+
+    currentBoqItems.forEach(item => {
+      const prevPercent = getPrevCompletionPercent(item.id);
+      const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
+      const currQty = Number(contractorValuationItems[item.id] !== undefined ? contractorValuationItems[item.id] : prevQty);
+      const currentPercent = item.quantity > 0 ? Math.min(100, Math.max(0, (currQty / item.quantity) * 100)) : 0;
+      const netPercent = Math.max(0, currentPercent - prevPercent);
+      const netQty = Math.max(0, currQty - prevQty);
+      const netClaimValue = netQty * item.price;
+      totalClaimAmount += netClaimValue;
+      itemsList.push({ boqItemId: item.id, completionPercent: currentPercent, netPercent, currentAmount: netClaimValue, prevQty, currQty, netQty });
+    });
+
+    if (totalClaimAmount <= 0) {
+      alert('إجمالي قيمة المستخلص الحالي يجب أن تكون أكبر من صفر. الرجاء زيادة الكمية المنفذة عن الكمية السابقة.');
+      return;
+    }
+
+    const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
+    const taxRate = contractorValuationTax ? Number(contractorValuationTax) / 100 : 0;
+    const afterDiscount = totalClaimAmount - discountAmt;
+    const taxAmt = afterDiscount * taxRate;
+    const totalAfterAll = afterDiscount + taxAmt;
+
+    const valuationId = `cval-${Date.now()}`;
+    const claimNo = `CVAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
+    const invoiceNo = `CINV-${claimNo}-${Date.now().toString().slice(-4)}`;
+
+    const newContractorVal = {
+      id: valuationId,
+      projectId: activeProjectId,
+      claimNo,
+      invoiceNo,
+      date: contractorValuationDate,
+      items: itemsList,
+      totalCurrent: totalClaimAmount,
+      discount: discountAmt,
+      taxRate: Number(contractorValuationTax || 0),
+      totalAfterDiscount: afterDiscount,
+      taxAmount: taxAmt,
+      totalFinal: totalAfterAll,
+      isContractor: true,
+      status: 'issued'
+    };
+
+    try {
+      await api.post('/dynamic/add/ledger', {
+        date: contractorValuationDate,
+        account_name: 'مقاولون من الباطن - أرصدة دائنة',
+        debit: 0,
+        credit: Number(totalAfterAll.toFixed(2)),
+        description: `مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
+        cost_center: activeProject?.name,
+        company: activeProject?.company || 'TED CAPITAL',
+        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+      });
+      await api.post('/dynamic/add/ledger', {
+        date: contractorValuationDate,
+        account_name: 'تكلفة أعمال مقاولين',
+        debit: Number(totalClaimAmount.toFixed(2)),
+        credit: 0,
+        description: `تكلفة مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
+        cost_center: activeProject?.name,
+        company: activeProject?.company || 'TED CAPITAL',
+        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+      });
+      if (taxAmt > 0) {
+        await api.post('/dynamic/add/ledger', {
+          date: contractorValuationDate,
+          account_name: 'ضريبة القيمة المضافة - مدخلات',
+          debit: Number(taxAmt.toFixed(2)),
+          credit: 0,
+          description: `ضريبة مستخلص مقاول رقم ${claimNo} (${contractorValuationTax}%) - للمشروع: ${activeProject?.name}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+      }
+      triggerNotification(`🏗️ تم إصدار مستخلص المقاول ${claimNo} بنجاح وقيد جميع القيود المحاسبية!`);
+    } catch (err) {
+      console.error('Failed to post contractor valuation ledger entries:', err);
+      triggerNotification(`تم إصدار مستخلص المقاول ${claimNo} محلياً بنجاح!`, 'warning');
+    }
+
+    setValuations([...valuations, newContractorVal]);
+    setShowAddContractorValuation(false);
   };
 
   const handleDeleteValuation = (valId) => {
@@ -1976,27 +2088,258 @@ export default function ContractorSuite() {
                   </table>
                 </div>
 
-                <div className="flex justify-between items-center bg-[#0f172a] p-5 rounded-2xl border border-slate-800">
-                  <div className="text-xs font-bold text-slate-350">
-                    إجمالي صافي قيمة المستخلص المالي المقدر:
-                    <span className="font-mono text-lg font-black text-emerald-400 mr-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">
-                      {currentBoqItems.reduce((acc, curr) => {
-                        const prevPercent = getPrevCompletionPercent(curr.id);
-                        const prevQty = Number(((prevPercent / 100) * curr.quantity).toFixed(2));
-                        const currQty = Number(newValuationItems[curr.id] !== undefined ? newValuationItems[curr.id] : prevQty);
-                        const netQty = Math.max(0, currQty - prevQty);
-                        return acc + (netQty * curr.price);
-                      }, 0).toLocaleString()}
-                    </span> ج.م (خاضع لضريبة القيمة المضافة 14% للتوريد والتركيب)
-                  </div>
+                {/* ───── Summary + Optional Discount & Tax ───── */}
+                <div className="bg-[#0f172a] p-5 rounded-2xl border border-slate-800 space-y-4">
+                  {/* Gross Total */}
+                  {(() => {
+                    const gross = currentBoqItems.reduce((acc, curr) => {
+                      const prevPercent = getPrevCompletionPercent(curr.id);
+                      const prevQty = Number(((prevPercent / 100) * curr.quantity).toFixed(2));
+                      const currQty = Number(newValuationItems[curr.id] !== undefined ? newValuationItems[curr.id] : prevQty);
+                      const netQty = Math.max(0, currQty - prevQty);
+                      return acc + (netQty * curr.price);
+                    }, 0);
+                    const discountAmt = valuationDiscount ? Number(valuationDiscount) : 0;
+                    const taxRate = valuationTax ? Number(valuationTax) / 100 : 0;
+                    const afterDiscount = gross - discountAmt;
+                    const taxAmt = afterDiscount * taxRate;
+                    const totalFinal = afterDiscount + taxAmt;
+                    return (
+                      <>
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <span className="text-xs font-bold text-slate-400">إجمالي صافي قيمة المستخلص المالي المقدر:</span>
+                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString()} ج.م</span>
+                        </div>
 
-                  <div className="flex gap-3">
+                        {/* Optional Discount */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">خصم (اختياري) ج.م:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={valuationDiscount}
+                            onChange={e => setValuationDiscount(e.target.value)}
+                            placeholder="0"
+                            className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-40"
+                          />
+                          {discountAmt > 0 && (
+                            <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">- {discountAmt.toLocaleString()} ج.م</span>
+                          )}
+                        </div>
+
+                        {/* After Discount */}
+                        {discountAmt > 0 && (
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <span className="text-xs font-bold text-slate-400">الإجمالي بعد الخصم:</span>
+                            <span className="font-mono text-base font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-xl">{afterDiscount.toLocaleString()} ج.م</span>
+                          </div>
+                        )}
+
+                        {/* Optional Tax */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">ضريبة % (اختيارية):</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            value={valuationTax}
+                            onChange={e => setValuationTax(e.target.value)}
+                            placeholder="مثال: 14"
+                            className="bg-[#111827] border border-slate-700 focus:border-purple-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-40"
+                          />
+                          {taxAmt > 0 && (
+                            <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-xl">+ {taxAmt.toLocaleString()} ج.م ضريبة</span>
+                          )}
+                        </div>
+
+                        {/* Final Total */}
+                        {(discountAmt > 0 || taxAmt > 0) && (
+                          <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-slate-700">
+                            <span className="text-xs font-black text-white">🏆 الإجمالي النهائي بعد الخصم والضريبة:</span>
+                            <span className="font-mono text-xl font-black text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 px-4 py-1.5 rounded-xl">{totalFinal.toLocaleString()} ج.م</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  <div className="flex justify-end gap-3 pt-2">
                     <button type="button" onClick={() => setShowAddValuation(false)} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
                     <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 transition-all">اعتماد وتوليد الفاتورة 🏗️</button>
                   </div>
                 </div>
               </form>
             )}
+
+            {/* ═══════════════════════════════════════════════════════════════
+                 🏗️ CONTRACTOR VALUATION WIZARD — إنشاء مستخلص للمقاول
+            ════════════════════════════════════════════════════════════════ */}
+            {showAddContractorValuation && (
+              <form onSubmit={handleAddContractorValuation} className="bg-[#131b2e] border border-orange-500/30 p-8 rounded-[2rem] space-y-6 no-print animate-in slide-in-from-top duration-300 shadow-2xl">
+                <div className="flex justify-between items-center pb-3 border-b border-orange-500/20">
+                  <h4 className="text-sm font-black text-orange-400 flex items-center gap-2">
+                    <span className="p-1.5 bg-orange-500/10 rounded-lg text-orange-400">🏗️</span>
+                    إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة) للمقاول
+                  </h4>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-slate-400 font-bold">تاريخ المستخلص:</label>
+                    <input
+                      type="date"
+                      value={contractorValuationDate}
+                      onChange={e => setContractorValuationDate(e.target.value)}
+                      className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-[#111827] text-slate-400 font-bold">
+                      <tr>
+                        <th className="p-4">البند والتوصيف</th>
+                        <th className="p-4 text-center">الكمية الكلية</th>
+                        <th className="p-4 text-center">الفئة</th>
+                        <th className="p-4 text-center">القيمة الكلية</th>
+                        <th className="p-4 text-center">الكمية المنفذة السابقة</th>
+                        <th className="p-4 text-center">الكمية التراكمية الحالية</th>
+                        <th className="p-4 text-center">النسبة الحالية (%)</th>
+                        <th className="p-4 text-center">كمية الفترة الحالية</th>
+                        <th className="p-4 text-center">نسبة الفترة الحالية</th>
+                        <th className="p-4 text-center">قيمة المستخلص الحالي</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 bg-slate-950/20">
+                      {currentBoqItems.map(item => {
+                        const prevPercent = getPrevCompletionPercent(item.id);
+                        const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
+                        const currQtyVal = contractorValuationItems[item.id] !== undefined ? contractorValuationItems[item.id] : prevQty;
+                        const currQty = Number(currQtyVal);
+                        const currentPercent = item.quantity > 0 ? Math.min(100, Math.max(0, (currQty / item.quantity) * 100)) : 0;
+                        const netPercent = Math.max(0, currentPercent - prevPercent);
+                        const netQty = Math.max(0, currQty - prevQty);
+                        const netClaimVal = netQty * item.price;
+                        return (
+                          <tr key={item.id} className="hover:bg-orange-500/[0.02] transition-colors">
+                            <td className="p-4 font-black text-slate-200">
+                              <div>{item.item_name}</div>
+                              <span className="text-[9px] text-slate-500 font-bold mt-1 block">{item.category}</span>
+                            </td>
+                            <td className="p-4 text-center font-mono text-slate-450">{item.quantity} {item.unit}</td>
+                            <td className="p-4 text-center font-mono text-orange-400">{item.price.toLocaleString()}</td>
+                            <td className="p-4 text-center font-mono text-slate-400">{(item.quantity * item.price).toLocaleString()}</td>
+                            <td className="p-4 text-center font-mono font-black text-amber-400">
+                              {prevQty} <span className="text-[9px] text-slate-500 font-bold">({prevPercent.toFixed(1)}%)</span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <input
+                                type="number"
+                                min={prevQty}
+                                max={item.quantity}
+                                step="0.01"
+                                value={currQtyVal}
+                                onChange={e => setContractorValuationItems({ ...contractorValuationItems, [item.id]: e.target.value })}
+                                className="bg-[#111827] border border-slate-800 focus:border-orange-500 rounded-xl p-1.5 text-center text-xs text-white font-mono w-20 focus:outline-none"
+                                required
+                              />
+                            </td>
+                            <td className="p-4 text-center font-mono font-bold text-slate-300">{currentPercent.toFixed(1)}%</td>
+                            <td className="p-4 text-center font-mono font-black text-orange-400">+{netQty.toFixed(2)}</td>
+                            <td className="p-4 text-center font-mono font-black text-orange-400">+{netPercent.toFixed(1)}%</td>
+                            <td className="p-4 text-center font-mono font-black text-emerald-400">{netClaimVal.toLocaleString()} ج.م</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ───── Contractor Summary + Optional Discount & Tax ───── */}
+                <div className="bg-[#0f172a] p-5 rounded-2xl border border-orange-500/20 space-y-4">
+                  {(() => {
+                    const gross = currentBoqItems.reduce((acc, curr) => {
+                      const prevPercent = getPrevCompletionPercent(curr.id);
+                      const prevQty = Number(((prevPercent / 100) * curr.quantity).toFixed(2));
+                      const currQty = Number(contractorValuationItems[curr.id] !== undefined ? contractorValuationItems[curr.id] : prevQty);
+                      const netQty = Math.max(0, currQty - prevQty);
+                      return acc + (netQty * curr.price);
+                    }, 0);
+                    const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
+                    const taxRate = contractorValuationTax ? Number(contractorValuationTax) / 100 : 0;
+                    const afterDiscount = gross - discountAmt;
+                    const taxAmt = afterDiscount * taxRate;
+                    const totalFinal = afterDiscount + taxAmt;
+                    return (
+                      <>
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <span className="text-xs font-bold text-slate-400">إجمالي صافي قيمة المستخلص المالي المقدر:</span>
+                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString()} ج.م</span>
+                        </div>
+
+                        {/* Optional Discount */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">خصم (اختياري) ج.م:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={contractorValuationDiscount}
+                            onChange={e => setContractorValuationDiscount(e.target.value)}
+                            placeholder="0"
+                            className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-40"
+                          />
+                          {discountAmt > 0 && (
+                            <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">- {discountAmt.toLocaleString()} ج.م</span>
+                          )}
+                        </div>
+
+                        {/* After Discount */}
+                        {discountAmt > 0 && (
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <span className="text-xs font-bold text-slate-400">الإجمالي بعد الخصم:</span>
+                            <span className="font-mono text-base font-black text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-xl">{afterDiscount.toLocaleString()} ج.م</span>
+                          </div>
+                        )}
+
+                        {/* Optional Tax */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">ضريبة % (اختيارية):</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            value={contractorValuationTax}
+                            onChange={e => setContractorValuationTax(e.target.value)}
+                            placeholder="مثال: 14"
+                            className="bg-[#111827] border border-slate-700 focus:border-purple-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-40"
+                          />
+                          {taxAmt > 0 && (
+                            <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-xl">+ {taxAmt.toLocaleString()} ج.م ضريبة</span>
+                          )}
+                        </div>
+
+                        {/* Final Total */}
+                        {(discountAmt > 0 || taxAmt > 0) && (
+                          <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-orange-500/20">
+                            <span className="text-xs font-black text-white">🏆 الإجمالي النهائي بعد الخصم والضريبة:</span>
+                            <span className="font-mono text-xl font-black text-orange-300 bg-orange-500/15 border border-orange-400/30 px-4 py-1.5 rounded-xl">{totalFinal.toLocaleString()} ج.م</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button type="button" onClick={() => setShowAddContractorValuation(false)} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                    <button type="submit" className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 rounded-xl text-xs font-black text-white transition-all">اعتماد مستخلص المقاول 🏗️</button>
+                  </div>
+                </div>
+              </form>
+            )}
+
 
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2010,12 +2353,20 @@ export default function ContractorSuite() {
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">المستخلصات الدورية الصادرة للعميل بناءً على نسب إنجاز البنود على أرض الواقع</p>
                     </div>
-                    <button
-                      onClick={handleStartNewValuation}
-                      className="px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-black transition-all active:scale-95 no-print"
-                    >
-                      + إصدار مستخلص جديد 🏗️
-                    </button>
+                    <div className="flex gap-2 flex-wrap justify-end">
+                      <button
+                        onClick={handleStartNewValuation}
+                        className="px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-black transition-all active:scale-95 no-print"
+                      >
+                        + مستخلص للعميل 🏗️
+                      </button>
+                      <button
+                        onClick={handleStartContractorValuation}
+                        className="px-5 py-2.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 rounded-xl text-xs font-black transition-all active:scale-95 no-print"
+                      >
+                        + مستخلص للمقاول 🏗️
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
