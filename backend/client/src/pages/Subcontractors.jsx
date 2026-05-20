@@ -71,6 +71,21 @@ export default function Subcontractors() {
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
   const [selectedPrintInvoice, setSelectedPrintInvoice] = useState(null);
+
+  // --- Subcontractor Payment States ---
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    subcontractor_id: '',
+    project_name: '',
+    invoice_id: '',
+    amount_paid: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    payment_method: 'InstaPay',
+    reference_no: '',
+    notes: '',
+    source_account: 'نقدية بالبنوك والصندوق'
+  });
   const [subcontractorIntelligence, setSubcontractorIntelligence] = useState({ contracts: [], boqs: [], stats: {} });
   const [claimForm, setClaimForm] = useState({
     subcontractor_id: '',
@@ -459,6 +474,41 @@ export default function Subcontractors() {
     }
   };
 
+  const openPaymentModal = (invoice) => {
+    setPaymentForm({
+      subcontractor_id: invoice.subcontractor_id,
+      project_name: invoice.project_name || invoice.project_id || 'General',
+      invoice_id: invoice.id,
+      amount_paid: invoice.net_amount || invoice.amount || '',
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_method: 'InstaPay',
+      reference_no: '',
+      notes: language === 'ar' 
+        ? `صرف مستخلص جاري رقم ${invoice.id} للمقاول` 
+        : `Disbursement for claim #${invoice.id}`,
+      source_account: 'نقدية بالبنوك والصندوق'
+    });
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!paymentForm.subcontractor_id || !paymentForm.amount_paid || Number(paymentForm.amount_paid) <= 0) {
+      alert(language === 'ar' ? "يرجى إدخال مبلغ الصرف بشكل صحيح." : "Please enter a valid disbursement amount.");
+      return;
+    }
+    setIsSubmittingPayment(true);
+    try {
+      await api.post('/subcontractors/record_payment', paymentForm);
+      alert(language === 'ar' ? "تم تسجيل عملية الصرف بنجاح وترحيلها للحسابات!" : "Disbursement recorded and ledger posted successfully!");
+      setIsPaymentModalOpen(false);
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || "Error recording payment");
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
 
   // BOQ Item creation inside global tab
   const handleBoqSubmit = async (e) => {
@@ -872,6 +922,14 @@ export default function Subcontractors() {
                                 >
                                   🖨️ {language === 'ar' ? 'طباعة' : 'Print'}
                                 </button>
+                                {isApproved && inv.status !== 'Paid' && (
+                                  <button
+                                    onClick={() => openPaymentModal(inv)}
+                                    className="w-full py-2 bg-emerald-600 text-white rounded-lg text-[9px] font-bold uppercase hover:bg-emerald-700 transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95 text-center"
+                                  >
+                                    💸 {language === 'ar' ? 'صرف' : 'Disburse'}
+                                  </button>
+                                )}
                                 {!isApproved && (
                                   <button onClick={() => approveInvoice(inv.id)} className="w-full py-2 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-blue-650 transition-all shadow-sm active:scale-95 text-center">
                                     {cur.invoicesTab.approveBtn}
@@ -879,7 +937,7 @@ export default function Subcontractors() {
                                 )}
                                 <button
                                   onClick={() => deleteInvoice(inv.id)}
-                                  className="w-full py-2 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-bold uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95"
+                                  className="w-full py-2 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-bold uppercase hover:bg-rose-650 hover:text-white transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95"
                                 >
                                   🗑️ {language === 'ar' ? 'حذف' : 'Delete'}
                                 </button>
@@ -900,7 +958,6 @@ export default function Subcontractors() {
           )}
         </div>
       </div>
-    </div>
 
     {/* Register Subcontractor Modal */}
     {isSubModalOpen && (
@@ -1703,6 +1760,169 @@ export default function Subcontractors() {
           }
         }
       `}} />
+
+  {isPaymentModalOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsPaymentModalOpen(false)}></div>
+      <form onSubmit={handlePaymentSubmit} className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-slate-200 animate-in zoom-in-95 duration-300 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl shadow-sm text-xl">💸</span>
+            <h2 className="text-xl font-black text-slate-900">
+              {language === 'ar' ? 'صرف مستخلص للمقاول الباطن' : 'Disburse Subcontractor Payment'}
+            </h2>
+          </div>
+          <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+        </div>
+
+        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+          {/* Info Cards */}
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                {language === 'ar' ? 'المقاول' : 'Subcontractor'}
+              </span>
+              <span className="font-bold text-slate-900 text-sm">
+                {subcontractors.find(s => s.id === paymentForm.subcontractor_id)?.name || (language === 'ar' ? 'مقاول غير معروف' : 'Unknown Subcontractor')}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                {language === 'ar' ? 'المشروع' : 'Project'}
+              </span>
+              <span className="font-bold text-slate-900 text-sm">
+                {paymentForm.project_name}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                {language === 'ar' ? 'رقم المستخلص' : 'Claim ID'}
+              </span>
+              <span className="font-bold text-blue-600 text-sm font-mono">
+                INV-#{paymentForm.invoice_id}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                {language === 'ar' ? 'صافي القيمة المستحقة' : 'Net Amount Due'}
+              </span>
+              <span className="font-black text-emerald-650 text-sm font-mono">
+                {Number(invoices.find(i => i.id === paymentForm.invoice_id)?.net_amount || 0).toLocaleString()} LCY
+              </span>
+            </div>
+          </div>
+
+          {/* Inputs */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                  {language === 'ar' ? 'مبلغ الصرف الفعلي *' : 'Amount Paid *'}
+                </label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  value={paymentForm.amount_paid} 
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount_paid: e.target.value })} 
+                  required 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                  {language === 'ar' ? 'تاريخ الصرف *' : 'Payment Date *'}
+                </label>
+                <input 
+                  type="date" 
+                  value={paymentForm.payment_date} 
+                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} 
+                  required 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono" 
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                  {language === 'ar' ? 'طريقة الدفع *' : 'Payment Method *'}
+                </label>
+                <select
+                  value={paymentForm.payment_method}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
+                  required
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                >
+                  <option value="Cash">{language === 'ar' ? 'نقدي (Cash)' : 'Cash'}</option>
+                  <option value="Bank Transfer">{language === 'ar' ? 'تحويل بنكي' : 'Bank Transfer'}</option>
+                  <option value="InstaPay">{language === 'ar' ? 'إنيستاباي (InstaPay)' : 'InstaPay'}</option>
+                  <option value="Cheque">{language === 'ar' ? 'شيك (Cheque)' : 'Cheque'}</option>
+                  <option value="Wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'Digital Wallet'}</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                  {language === 'ar' ? 'حساب الصرف المالي *' : 'Financial Source Account *'}
+                </label>
+                <select
+                  value={paymentForm.source_account}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, source_account: e.target.value })}
+                  required
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                >
+                  <option value="نقدية بالبنوك والصندوق">{language === 'ar' ? 'نقدية بالبنوك والصندوق (الرئيسي)' : 'Cash & Bank (Main)'}</option>
+                  <option value="الخزينة الرئيسية">{language === 'ar' ? 'الخزينة الرئيسية' : 'Main Safe'}</option>
+                  <option value="حساب بنك مصر">{language === 'ar' ? 'حساب بنك مصر' : 'Banque Misr Account'}</option>
+                  <option value="حساب البنك الأهلي المصري">{language === 'ar' ? 'حساب البنك الأهلي المصري' : 'NBE Bank Account'}</option>
+                  <option value="محفظة فودافون كاش">{language === 'ar' ? 'محفظة فودافون كاش' : 'Vodafone Cash'}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                {language === 'ar' ? 'رقم المعاملة / مرجع الدفع' : 'Transaction Ref No.'}
+              </label>
+              <input 
+                type="text" 
+                value={paymentForm.reference_no} 
+                onChange={(e) => setPaymentForm({ ...paymentForm, reference_no: e.target.value })} 
+                placeholder={language === 'ar' ? 'مثال: TXN987654321 أو رقم الشيك' : 'e.g. TXN987654321 or Cheque number'}
+                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                {language === 'ar' ? 'ملاحظات الصرف والبيان' : 'Payment Notes'}
+              </label>
+              <textarea 
+                value={paymentForm.notes} 
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} 
+                rows="2"
+                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none" 
+              />
+            </div>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={isSubmittingPayment} 
+          className="w-full py-5 bg-emerald-600 text-white rounded-[2rem] font-black text-sm hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/10 flex items-center justify-center gap-3 active:scale-[0.98] mt-6"
+        >
+          {isSubmittingPayment ? (
+            <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : (
+            <>
+              <span>💸</span>
+              {language === 'ar' ? 'ترحيل قيد الصرف وتأكيد السداد' : 'Post Payment & Confirm Payout'}
+            </>
+          )}
+        </button>
+      </form>
+    </div>
+  )}
 
   {
     selectedSubId && (

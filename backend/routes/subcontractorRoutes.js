@@ -247,4 +247,107 @@ router.delete('/delete_invoice/:id', async (req, res) => {
     }
 });
 
+// --- Record Subcontractor Payment & Post Accounting Entries ---
+router.post('/record_payment', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const {
+            subcontractor_id,
+            project_name,
+            invoice_id,
+            amount_paid,
+            payment_date,
+            payment_method,
+            reference_no,
+            notes,
+            source_account
+        } = req.body;
+
+        const username = req.user ? req.user.username : 'System';
+
+        // 1. Fetch Subcontractor Info
+        const subRes = await client.query("SELECT name, company_id FROM subcontractors WHERE id = $1", [subcontractor_id]);
+        if (subRes.rows.length === 0) throw new Error("Subcontractor entity not found.");
+        const sub = subRes.rows[0];
+
+        // 2. Fetch Invoice Info (if provided)
+        let invoice = null;
+        if (invoice_id) {
+            const invRes = await client.query("SELECT * FROM subcontractor_invoices WHERE id = $1", [invoice_id]);
+            if (invRes.rows.length > 0) {
+                invoice = invRes.rows[0];
+            }
+        }
+
+        const resolvedProject = project_name || (invoice ? invoice.project_name : 'General');
+        const companyId = sub.company_id || (invoice ? invoice.company_id : 1);
+
+        // 3. Log to subcontractor_statements table to keep history
+        const insertStatementQuery = `
+            INSERT INTO subcontractor_statements (
+                sub_name, type, amount, details, created_at, is_deleted, metadata
+            ) VALUES ($1, $2, $3, $4, NOW(), false, $5) RETURNING id
+        `;
+        const details = notes || `صرف دفعة للمقاول ${sub.name} مقابل مستخلص رقم ${invoice_id || 'عام'}`;
+        const metadata = {
+            invoice_id: invoice_id || null,
+            payment_method: payment_method || 'Cash',
+            reference_no: reference_no || null,
+            source_account: source_account || 'نقدية بالبنوك والصندوق',
+            project_name: resolvedProject
+        };
+        const statementRes = await client.query(insertStatementQuery, [
+            sub.name,
+            'صرف مستخلص',
+            parseFloat(amount_paid),
+            details,
+            JSON.stringify(metadata)
+        ]);
+        const statementId = statementRes.rows[0].id;
+
+        // 4. Update Invoice Status if fully paid
+        if (invoice_id) {
+            await client.query("UPDATE subcontractor_invoices SET status = 'Paid' WHERE id = $1", [invoice_id]);
+        }
+
+        // 5. Post to Ledger
+        const AccountingService = require('../services/accountingService');
+        const desc = `صرف دفعة للمقاول ${sub.name} | ${details}`;
+        
+        // Debit: Accounts Payable (مقاولي الباطن)
+        // Credit: Cash/Bank Account (source_account or default 'نقدية بالبنوك والصندوق')
+        await AccountingService.recordDoubleEntry(client, {
+            debitAccount: 'مقاولي الباطن',
+            creditAccount: source_account || 'نقدية بالبنوك والصندوق',
+            amount: parseFloat(amount_paid),
+            costCenter: resolvedProject,
+            description: desc,
+            username: username,
+            referenceNo: reference_no || `PMT-${statementId}`,
+            companyId: companyId
+        });
+
+        // 6. Log Advanced Audit
+        await logAdvancedAudit(
+            client,
+            username,
+            'subcontractor_statements',
+            statementId,
+            'RECORD_PAYMENT',
+            `Recorded payment of ${amount_paid} LCY to subcontractor '${sub.name}' for statement #${invoice_id || 'General'}`,
+            null,
+            req.body
+        );
+
+        await client.query('COMMIT');
+        res.json({ success: true, statementId });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;

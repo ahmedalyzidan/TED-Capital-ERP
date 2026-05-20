@@ -188,8 +188,8 @@ export default function ContractorSuite() {
               category: 'مواد ومستلزمات',
               unit: s.uom || 'وحدة',
               qty: Math.abs(qtyVal),
-              rate: Number(s.sell_price || s.buy_price || 0),
-              total: Math.abs(qtyVal * Number(s.sell_price || s.buy_price || 0)),
+              rate: Number(s.buy_price || s.sell_price || 0),
+              total: Math.abs(qtyVal * Number(s.buy_price || s.sell_price || 0)),
               date: s.date ? s.date.split('T')[0] : (s.sale_date ? s.sale_date.split('T')[0] : new Date().toISOString().split('T')[0]),
               notes: isReturn
                 ? `مرتجع مواد فائضة من موقع المشروع للصنف: ${s.item_name} (باتش: ${s.batch_no || 'N/A'}) | مستند رقم: ${s.reference_no || s.sale_no || 'N/A'}`
@@ -198,6 +198,20 @@ export default function ContractorSuite() {
             };
           });
         setDbExpenses(mappedExpenses);
+
+        // ✅ Clean up old duplicate 'exp-stock-*' entries from localStorage.
+        // These were previously saved by DirectStockIssue but are now duplicates
+        // since we fetch directly from inventory_sales DB above.
+        try {
+          const savedExpStr = localStorage.getItem('contractor_expenses');
+          if (savedExpStr) {
+            const savedExp = JSON.parse(savedExpStr);
+            const cleanedExp = savedExp.filter(e => !String(e.id).startsWith('exp-stock-'));
+            if (cleanedExp.length !== savedExp.length) {
+              localStorage.setItem('contractor_expenses', JSON.stringify(cleanedExp));
+            }
+          }
+        } catch (_) { /* ignore cleanup errors */ }
 
       } catch (err) {
         console.error('Failed to fetch initial data:', err);

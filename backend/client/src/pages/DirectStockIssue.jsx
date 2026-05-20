@@ -635,8 +635,8 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
             updatedLine.max_qty = activeTab === 'issue' ? Number(selectedItem.remaining_qty || 0) : 999999;
             updatedLine.buy_price = Number(selectedItem.unit_cost || selectedItem.buy_price || selectedItem.avg_cost || 0);
             
-            // Mark up sale price (default markup of 20% on purchase price)
-            updatedLine.unit_price = Number(updatedLine.buy_price * 1.2).toFixed(2);
+            // Use buy_price as default unit_price (no automatic markup — user can adjust manually)
+            updatedLine.unit_price = Number(updatedLine.buy_price).toFixed(2);
             updatedLine.qty = 1;
           }
         }
@@ -1135,39 +1135,11 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       });
       setShowInvoiceModal(true);
 
-      // D. Save to contractor_expenses in localStorage if project is linked
-      if (selectedProjectId) {
-        const savedExpensesStr = localStorage.getItem('contractor_expenses');
-        const currentSavedExpenses = savedExpensesStr ? JSON.parse(savedExpensesStr) : [
-          { id: 1, projectId: 'villa-e109', beneficiary: "م. أحمد سالم", category: "أعمال تصميم", unit: "مقطوعيه", qty: 1, rate: 17000, total: 17000, date: "2024-07-23", notes: "تصميم فيلا E109" }
-        ];
-        
-        invoiceLines.forEach((line, idx) => {
-          const qtyVal = activeTab === 'issue' ? Number(line.qty) : -Number(line.qty);
-          const rateVal = Number(line.buy_price || line.unit_price || 0);
-          const totalVal = qtyVal * rateVal;
-          
-          const newExp = {
-            id: `exp-stock-${Date.now()}-${idx}`,
-            projectId: selectedProjectId,
-            beneficiary: activeTab === 'issue' ? 'صرف مخزني مباشر - مستودع المواد' : 'مرتجع مواد فائضة للمستودع',
-            category: 'مواد ومستلزمات',
-            unit: line.uom || 'وحدة',
-            qty: qtyVal,
-            rate: rateVal,
-            total: totalVal,
-            date: invoiceDate,
-            notes: activeTab === 'issue' 
-              ? `صرف مخزني مباشر للصنف: ${line.item_name} (باتش: ${line.batch_no || 'N/A'}) | مستند رقم: ${documentNo}`
-              : `مرتجع مواد فائضة من موقع المشروع للصنف: ${line.item_name} (باتش: ${line.batch_no || 'N/A'}) | مستند رقم: ${documentNo}`,
-            allocationType: 'project'
-          };
-          
-          currentSavedExpenses.push(newExp);
-        });
-        
-        localStorage.setItem('contractor_expenses', JSON.stringify(currentSavedExpenses));
-      }
+      // D. NOTE: contractor_expenses are NOT saved to localStorage here.
+      // ContractorSuite.jsx reads inventory_sales directly from the database (dbExpenses),
+      // so saving here would create duplicate entries (one sale + one return) in the Expenses screen.
+      // The inventory_sales record was already posted to DB in step A above with project_id,
+      // and ContractorSuite will pick it up automatically on next render.
 
       const opMsg = activeTab === 'issue' 
         ? (isBooking ? 'تم بنجاح حجز الأصناف وتوليد وثيقة الحجز المؤقت في المستودع والميزانية!' : 'تم بنجاح صرف الكميات وتوليد فاتورة المبيعات وإصدار القيود المحاسبية التلقائية بالكامل!')
