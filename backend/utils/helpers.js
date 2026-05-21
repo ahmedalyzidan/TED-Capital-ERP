@@ -318,7 +318,10 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
     if (type === 'subcontractors') {
         return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList})`;
     }
-    if (type === 'subcontractor_invoices' || type === 'partners' || type === 'tasks' || type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
+    if (type === 'subcontractor_invoices') {
+        return `(project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 'partners' || type === 'tasks' || type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
         return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'chart_of_accounts') {

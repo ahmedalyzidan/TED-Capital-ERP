@@ -2973,7 +2973,7 @@ export default function ContractorSuite() {
                                 </select>
                                 <button
                                   type="button"
-                                  onClick={() => setShowQuickAddSub(true)}
+                                  onClick={() => { setQuickAddSubCompany(activeProject?.company || 'TED CAPITAL'); setShowQuickAddSub(true); }}
                                   className="p-1 bg-orange-500/10 border border-orange-500/30 text-orange-450 hover:bg-orange-500/20 rounded-lg text-xs font-black transition-all"
                                   title="إضافة مقاول جديد"
                                 >
