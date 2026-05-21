@@ -1109,7 +1109,7 @@ router.post('/add/:type', async (req, res) => {
                 const title = type === 'inventory' ? 'إضافة مخزون جديد' : (type === 'projects' ? 'مشروع جديد' : 'سجل جديد');
                 const itemName = data.name || data.item_name || newId;
                 await client.query(
-                    "INSERT INTO notifications (type, title, message, link) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO notifications (category, title, message, action_link) VALUES ($1, $2, $3, $4)",
                     [`NEW_${type.toUpperCase()}`, title, `تم إضافة ${itemName} بواسطة ${req.user.username}`, `/${type}/${newId}`]
                 );
             }
@@ -1715,7 +1715,7 @@ router.delete('/delete/:type/:id', async (req, res) => {
             // تنبيه بالحذف
             if (['inventory', 'projects'].includes(type)) {
                 await client.query(
-                    "INSERT INTO notifications (type, title, message) VALUES ($1, $2, $3)",
+                    "INSERT INTO notifications (category, title, message) VALUES ($1, $2, $3)",
                     [`DELETED_${type.toUpperCase()}`, 'حذف سجل', `تم حذف ${deletedItemName} من ${type} بواسطة ${req.user.username}`]
                 );
             }
