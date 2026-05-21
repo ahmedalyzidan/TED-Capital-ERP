@@ -477,6 +477,13 @@ export default function ContractorSuite() {
   const [contractorValuationTaxMethod, setContractorValuationTaxMethod] = useState('period'); // 'period' | 'cumulative' | 'waived'
   const [subcontractorsList, setSubcontractorsList] = useState([]);
   const [contractorValuationLinkedClientValId, setContractorValuationLinkedClientValId] = useState('');
+  const [contractorValuationPrevPaid, setContractorValuationPrevPaid] = useState('');
+
+  // Quick Add Subcontractor States
+  const [showQuickAddSub, setShowQuickAddSub] = useState(false);
+  const [quickAddSubName, setQuickAddSubName] = useState('');
+  const [quickAddSubPhone, setQuickAddSubPhone] = useState('');
+  const [quickAddSubCompany, setQuickAddSubCompany] = useState('');
 
   // Inline editing states (CRUD updates)
   const [editingItemType, setEditingItemType] = useState(null); // 'boq' | 'expense' | 'installment'
@@ -498,6 +505,19 @@ export default function ContractorSuite() {
     if (name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.gif') || name.endsWith('.webp') || name.endsWith('.svg') || type.startsWith('image/')) return '🖼️';
     if (name.endsWith('.zip') || name.endsWith('.rar') || name.endsWith('.tar') || name.endsWith('.gz') || name.endsWith('.7z') || type.includes('zip') || type.includes('compressed')) return '📦';
     return '📝';
+  };
+
+  // Helper to dynamically style contractor notes
+  const getNoteStyle = (note) => {
+    if (!note) return {};
+    const text = note.toLowerCase();
+    if (text.includes('إداري') || text.includes('المبني') || text.includes('المبنى') || text.includes('اداري')) {
+      return { backgroundColor: '#fdf6e2', borderColor: '#ffeeba', color: '#856404' };
+    }
+    if (text.includes('واجهة') || text.includes('واجهات') || text.includes('خارجي') || text.includes('خارجى')) {
+      return { backgroundColor: '#e2f0fd', borderColor: '#b8daff', color: '#1b4a72' };
+    }
+    return {};
   };
 
   // Search & Filter
@@ -1102,12 +1122,64 @@ export default function ContractorSuite() {
   };
 
   // 📦 Contractor Valuation Line Helpers
-  const newContractorLine = () => ({ id: Date.now() + Math.random(), boqItemId: '', contractorName: '', description: '', quantity: 1, unit: 'م٢', unitPrice: 0 });
+  const newContractorLine = () => ({
+    id: Date.now() + Math.random(),
+    boqItemId: '',
+    contractorName: '',
+    description: '',
+    quantity: 0,
+    unit: 'م٢',
+    unitPrice: 0,
+    prevQty: 0,
+    percentage: 100,
+    notes: ''
+  });
 
   const addContractorLine = () => setContractorValuationLines(prev => [...prev, newContractorLine()]);
 
-  const updateContractorLine = (lineId, field, value) =>
-    setContractorValuationLines(prev => prev.map(l => l.id === lineId ? { ...l, [field]: value } : l));
+  const updateContractorLine = (lineId, field, value) => {
+    setContractorValuationLines(prev => prev.map(l => {
+      if (l.id === lineId) {
+        let updated = { ...l, [field]: value };
+        
+        // Auto-fill from BOQ item
+        if (field === 'boqItemId' && value) {
+          const selectedItem = currentBoqItems.find(item => String(item.id) === String(value));
+          if (selectedItem) {
+            updated.unit = selectedItem.unit || 'م٢';
+            updated.unitPrice = selectedItem.price || 0;
+            updated.description = selectedItem.item_name || '';
+          }
+        }
+        
+        // Auto-calculate previous quantity
+        if (field === 'boqItemId' || field === 'contractorName') {
+          const targetBoqId = field === 'boqItemId' ? value : l.boqItemId;
+          const targetContractor = field === 'contractorName' ? value : l.contractorName;
+          
+          if (targetBoqId && targetContractor) {
+            let autoPrevQty = 0;
+            valuations.forEach(val => {
+              if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+                val.lines?.forEach(prevLn => {
+                  if (
+                    String(prevLn.boqItemId) === String(targetBoqId) &&
+                    (prevLn.contractorName || '').trim().toLowerCase() === targetContractor.trim().toLowerCase()
+                  ) {
+                    autoPrevQty += Number(prevLn.quantity || 0);
+                  }
+                });
+              }
+            });
+            updated.prevQty = autoPrevQty;
+          }
+        }
+        
+        return updated;
+      }
+      return l;
+    }));
+  };
 
   const removeContractorLine = (lineId) =>
     setContractorValuationLines(prev => prev.filter(l => l.id !== lineId));
@@ -1119,7 +1191,40 @@ export default function ContractorSuite() {
     setContractorValuationTax('');
     setContractorValuationLinkedClientValId('');
     setContractorValuationTaxMethod('period');
+    setContractorValuationPrevPaid('');
     setShowAddContractorValuation(true);
+  };
+
+  const handleQuickAddSub = async (e) => {
+    if (e) e.preventDefault();
+    if (!quickAddSubName.trim()) {
+      alert('الرجاء إدخال اسم المقاول');
+      return;
+    }
+    try {
+      const parsedProjId = parseInt(activeProjectId, 10);
+      const payload = {
+        name: quickAddSubName.trim(),
+        phone: quickAddSubPhone.trim(),
+        company: quickAddSubCompany.trim() || activeProject?.company || 'TED CAPITAL',
+        project_name: activeProject?.name || null,
+        project_id: isNaN(parsedProjId) ? null : parsedProjId
+      };
+      await api.post('/add/subcontractors', payload);
+      triggerNotification('🎉 تم تسجيل المقاول الجديد بنجاح!');
+      // refresh subcontractorsList
+      const subsRes = await api.get('/dynamic/table/subcontractors?limit=1000').catch(() => ({ data: { data: [] } }));
+      const list = subsRes.data?.data || [];
+      setSubcontractorsList(list);
+      // clean up states
+      setQuickAddSubName('');
+      setQuickAddSubPhone('');
+      setQuickAddSubCompany('');
+      setShowQuickAddSub(false);
+    } catch (err) {
+      console.error('Failed to add subcontractor:', err);
+      alert(err.response?.data?.error || 'حدث خطأ أثناء إضافة المقاول');
+    }
   };
 
   const handleAddValuation = async (e) => {
@@ -1244,65 +1349,48 @@ export default function ContractorSuite() {
       return;
     }
 
-    let totalClaimAmount = 0;
+    let cumulativeGross = 0;
     const linesList = contractorValuationLines.map(line => {
-      const total = Number(line.quantity) * Number(line.unitPrice);
-      totalClaimAmount += total;
-
-      // Calculate prevQty and cumulativeQty
-      let prevQty = 0;
-      valuations.forEach(val => {
-        if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
-          val.lines?.forEach(prevLn => {
-            if (
-              String(prevLn.boqItemId) === String(line.boqItemId) &&
-              prevLn.contractorName?.trim().toLowerCase() === line.contractorName?.trim().toLowerCase()
-            ) {
-              prevQty += Number(prevLn.quantity || 0);
-            }
-          });
-        }
-      });
-
-      const cumulativeQty = prevQty + Number(line.quantity || 0);
+      const prevQty = Number(line.prevQty || 0);
+      const currQty = Number(line.quantity || 0);
+      const cumQty = prevQty + currQty;
+      const pct = Number(line.percentage !== undefined ? line.percentage : 100);
+      const total = cumQty * Number(line.unitPrice || 0) * (pct / 100);
+      cumulativeGross += total;
 
       return {
         ...line,
-        quantity: Number(line.quantity),
-        unitPrice: Number(line.unitPrice),
+        quantity: currQty,
         prevQty,
-        cumulativeQty,
+        cumulativeQty: cumQty,
+        percentage: pct,
         total
       };
     });
 
-    if (totalClaimAmount <= 0) {
+    if (cumulativeGross <= 0) {
       alert('إجمالي قيمة المستخلص يجب أن تكون أكبر من صفر. تأكد من إدخال الكميات والأسعار بشكل صحيح.');
       return;
     }
 
     const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
-    const afterDiscount = totalClaimAmount - discountAmt;
+    const uniqueContractorName = linesList[0]?.contractorName || '';
+    const calculatedPrevPaid = uniqueContractorName 
+      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, linesList).previousSpent 
+      : 0;
+    const prevPaidVal = contractorValuationPrevPaid !== '' ? Number(contractorValuationPrevPaid) : calculatedPrevPaid;
 
+    const netDue = (cumulativeGross - discountAmt) - prevPaidVal;
+    
     let taxAmt = 0;
     const taxRatePercent = contractorValuationTax ? Number(contractorValuationTax) : 0;
     if (contractorValuationTaxMethod === 'period') {
-      taxAmt = afterDiscount * (taxRatePercent / 100);
-    } else if (contractorValuationTaxMethod === 'cumulative') {
-      let cumulativeGross = 0;
-      linesList.forEach(ln => {
-        cumulativeGross += (ln.cumulativeQty || 0) * ln.unitPrice;
-      });
-      const prevTaxPaid = valuations
-        .filter(v => v.isContractor && String(v.projectId) === String(activeProjectId))
-        .reduce((sum, v) => sum + Number(v.taxAmount || 0), 0);
-      const cumulativeTax = cumulativeGross * (taxRatePercent / 100);
-      taxAmt = Math.max(0, cumulativeTax - prevTaxPaid);
+      taxAmt = netDue * (taxRatePercent / 100);
     } else {
       taxAmt = 0;
     }
 
-    const totalAfterAll = afterDiscount + taxAmt;
+    const totalAfterAll = netDue + taxAmt;
 
     const valuationId = `cval-${Date.now()}`;
     const claimNo = `CVAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
@@ -1315,11 +1403,13 @@ export default function ContractorSuite() {
       invoiceNo,
       date: contractorValuationDate,
       lines: linesList,
-      totalCurrent: totalClaimAmount,
+      totalCurrent: netDue, // This is the net period gross before tax
+      cumulativeGross: cumulativeGross,
       discount: discountAmt,
+      prevPaid: prevPaidVal,
       taxRate: taxRatePercent,
       taxMethod: contractorValuationTaxMethod,
-      totalAfterDiscount: afterDiscount,
+      totalAfterDiscount: netDue,
       taxAmount: taxAmt,
       totalFinal: totalAfterAll,
       isContractor: true,
@@ -1347,7 +1437,7 @@ export default function ContractorSuite() {
       await api.post('/dynamic/add/ledger', {
         date: contractorValuationDate,
         account_name: 'تكلفة أعمال مقاولين',
-        debit: Number(totalClaimAmount.toFixed(2)),
+        debit: Number(netDue.toFixed(2)),
         credit: 0,
         description: `تكلفة مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
         cost_center: activeProject?.name,
@@ -2824,30 +2914,36 @@ export default function ContractorSuite() {
 
                 {/* ═══ Dynamic Contractor Lines Table ═══ */}
                 <div className="overflow-x-auto rounded-2xl border border-orange-500/20">
-                  <table className="w-full text-right text-xs min-w-[900px]">
+                  <table className="w-full text-right text-xs min-w-[1000px]">
                     <thead className="bg-[#111827] text-slate-400 font-bold">
                       <tr>
-                        <th className="p-3 text-right">البند المرتبط (BOQ)</th>
-                        <th className="p-3 text-right">اسم المقاول</th>
-                        <th className="p-3 text-right">وصف العمل</th>
-                        <th className="p-3 text-center w-16">الوحدة</th>
-                        <th className="p-3 text-center w-20">الكمية</th>
-                        <th className="p-3 text-center w-28">سعر الوحدة ج.م</th>
-                        <th className="p-3 text-center w-28">الإجمالي ج.م</th>
-                        <th className="p-3 text-center w-10"></th>
+                        <th className="p-2 text-right text-[10px]">البند المرتبط (BOQ)</th>
+                        <th className="p-2 text-right text-[10px] w-36">اسم المقاول</th>
+                        <th className="p-2 text-center text-[10px] w-24">الوحدة</th>
+                        <th className="p-2 text-center text-[10px] w-16">السابق</th>
+                        <th className="p-2 text-center text-[10px] w-16">الحالي</th>
+                        <th className="p-2 text-center text-[10px] w-20">سعر الفئة</th>
+                        <th className="p-2 text-center text-[10px] w-16">النسبة %</th>
+                        <th className="p-2 text-right text-[10px] w-32">ملاحظات</th>
+                        <th className="p-2 text-center text-[10px] w-24">الإجمالي</th>
+                        <th className="p-2 text-center text-[10px] w-8"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {contractorValuationLines.map((line, idx) => {
-                        const lineTotal = Number(line.quantity) * Number(line.unitPrice);
+                        const prevQty = Number(line.prevQty || 0);
+                        const currQty = Number(line.quantity || 0);
+                        const cumQty = prevQty + currQty;
+                        const pct = Number(line.percentage !== undefined ? line.percentage : 100);
+                        const lineTotal = cumQty * Number(line.unitPrice || 0) * (pct / 100);
                         return (
                           <tr key={line.id} className="bg-slate-950/20 hover:bg-orange-500/[0.03] transition-colors">
                             {/* BOQ Item Selector */}
-                            <td className="p-2">
+                            <td className="p-1.5">
                               <select
                                 value={line.boqItemId}
                                 onChange={e => updateContractorLine(line.id, 'boqItemId', e.target.value)}
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1.5 text-[10px] text-white w-full focus:outline-none"
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-[10px] text-white w-full focus:outline-none"
                               >
                                 <option value="">— اختر البند —</option>
                                 {currentBoqItems.map(item => (
@@ -2857,69 +2953,107 @@ export default function ContractorSuite() {
                                 ))}
                               </select>
                             </td>
-                            {/* Contractor Name */}
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={line.contractorName}
-                                onChange={e => updateContractorLine(line.id, 'contractorName', e.target.value)}
-                                placeholder="اسم المقاول..."
-                                list="subcontractors-datalist"
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-3 py-1.5 text-xs text-white w-full focus:outline-none"
-                              />
-                            </td>
-                            {/* Description */}
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={line.description}
-                                onChange={e => updateContractorLine(line.id, 'description', e.target.value)}
-                                placeholder="وصف نطاق العمل..."
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-3 py-1.5 text-xs text-white w-full focus:outline-none"
-                              />
+                             {/* Contractor Name */}
+                            <td className="p-1.5">
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={line.contractorName}
+                                  onChange={e => updateContractorLine(line.id, 'contractorName', e.target.value)}
+                                  className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-xs text-white w-full focus:outline-none"
+                                >
+                                  <option value="">— اختر المقاول —</option>
+                                  {subcontractorsList.map((sub, sIdx) => {
+                                    const subName = sub.name || sub.contractor_name || '';
+                                    return (
+                                      <option key={sIdx} value={subName}>
+                                        {subName}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowQuickAddSub(true)}
+                                  className="p-1 bg-orange-500/10 border border-orange-500/30 text-orange-450 hover:bg-orange-500/20 rounded-lg text-xs font-black transition-all"
+                                  title="إضافة مقاول جديد"
+                                >
+                                  +
+                                </button>
+                              </div>
                             </td>
                             {/* Unit */}
-                            <td className="p-2">
-                              <select
+                            <td className="p-1.5">
+                              <input
+                                type="text"
                                 value={line.unit}
                                 onChange={e => updateContractorLine(line.id, 'unit', e.target.value)}
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1.5 text-xs text-white w-full focus:outline-none"
-                              >
-                                {['م٢','م٣','م.ط','كجم','طن','عدد','بالمقطوعية','نقطة','طقم','يومية','ساعة'].map(u => (
-                                  <option key={u} value={u}>{u}</option>
-                                ))}
-                              </select>
+                                placeholder="م٢"
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-xs text-white text-center w-full focus:outline-none"
+                              />
                             </td>
-                            {/* Quantity */}
-                            <td className="p-2">
+                            {/* Previous Qty */}
+                            <td className="p-1.5">
                               <input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={line.quantity}
+                                value={line.prevQty || 0}
+                                onChange={e => updateContractorLine(line.id, 'prevQty', e.target.value)}
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-1 py-1 text-xs text-white font-mono text-center w-full focus:outline-none"
+                              />
+                            </td>
+                            {/* Current Qty */}
+                            <td className="p-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={line.quantity || 0}
                                 onChange={e => updateContractorLine(line.id, 'quantity', e.target.value)}
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1.5 text-xs text-white font-mono text-center w-full focus:outline-none"
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-1 py-1 text-xs text-white font-mono text-center w-full focus:outline-none"
                                 required
                               />
                             </td>
                             {/* Unit Price */}
-                            <td className="p-2">
+                            <td className="p-1.5">
                               <input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={line.unitPrice}
+                                value={line.unitPrice || 0}
                                 onChange={e => updateContractorLine(line.id, 'unitPrice', e.target.value)}
-                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1.5 text-xs text-white font-mono text-center w-full focus:outline-none"
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-1 py-1 text-xs text-white font-mono text-center w-full focus:outline-none"
                                 required
                               />
                             </td>
+                            {/* Percentage */}
+                            <td className="p-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={line.percentage !== undefined ? line.percentage : 100}
+                                onChange={e => updateContractorLine(line.id, 'percentage', e.target.value)}
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-1 py-1 text-xs text-white font-mono text-center w-full focus:outline-none"
+                              />
+                            </td>
+                            {/* Notes */}
+                            <td className="p-1.5">
+                              <input
+                                type="text"
+                                value={line.notes || ''}
+                                onChange={e => updateContractorLine(line.id, 'notes', e.target.value)}
+                                placeholder="ملاحظات..."
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-xs text-white w-full focus:outline-none"
+                              />
+                            </td>
                             {/* Line Total */}
-                            <td className="p-2 text-center font-mono font-black text-emerald-400">
-                              {lineTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            <td className="p-1.5 text-center font-mono font-black text-emerald-400">
+                              {lineTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </td>
                             {/* Delete */}
-                            <td className="p-2 text-center">
+                            <td className="p-1.5 text-center">
                               <button
                                 type="button"
                                 onClick={() => removeContractorLine(line.id)}
@@ -2946,44 +3080,41 @@ export default function ContractorSuite() {
                 {/* ───── Summary + Discount % & Tax ───── */}
                 <div className="bg-[#0f172a] p-5 rounded-2xl border border-orange-500/20 space-y-4">
                   {(() => {
-                    const gross = contractorValuationLines.reduce((s, l) => s + (Number(l.quantity) * Number(l.unitPrice)), 0);
+                    const gross = contractorValuationLines.reduce((s, l) => {
+                      const prevQty = Number(l.prevQty || 0);
+                      const currQty = Number(l.quantity || 0);
+                      const cumQty = prevQty + currQty;
+                      const pct = Number(l.percentage !== undefined ? l.percentage : 100);
+                      return s + (cumQty * Number(l.unitPrice || 0) * (pct / 100));
+                    }, 0);
                     const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
                     const afterDiscount = gross - discountAmt;
+
+                    const uniqueContractorName = contractorValuationLines[0]?.contractorName || '';
+                    const calculatedPrevPaid = uniqueContractorName 
+                      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, contractorValuationLines).previousSpent 
+                      : 0;
+                    const prevPaidVal = contractorValuationPrevPaid !== '' ? Number(contractorValuationPrevPaid) : calculatedPrevPaid;
+                    const netDue = afterDiscount - prevPaidVal;
+
                     const taxRatePercent = contractorValuationTax ? Number(contractorValuationTax) : 0;
                     let taxAmt = 0;
                     if (contractorValuationTaxMethod === 'period') {
-                      taxAmt = afterDiscount * (taxRatePercent / 100);
+                      taxAmt = netDue * (taxRatePercent / 100);
                     } else if (contractorValuationTaxMethod === 'cumulative') {
-                      let cumulativeGross = 0;
-                      contractorValuationLines.forEach(ln => {
-                        let prevQty = 0;
-                        valuations.forEach(val => {
-                          if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
-                            val.lines?.forEach(prevLn => {
-                              if (
-                                String(prevLn.boqItemId) === String(ln.boqItemId) &&
-                                prevLn.contractorName?.trim().toLowerCase() === ln.contractorName?.trim().toLowerCase()
-                              ) {
-                                prevQty += Number(prevLn.quantity || 0);
-                              }
-                            });
-                          }
-                        });
-                        const cumulativeQty = prevQty + Number(ln.quantity || 0);
-                        cumulativeGross += cumulativeQty * Number(ln.unitPrice || 0);
-                      });
                       const prevTaxPaid = valuations
                         .filter(v => v.isContractor && String(v.projectId) === String(activeProjectId))
                         .reduce((sum, v) => sum + Number(v.taxAmount || 0), 0);
-                      const cumulativeTax = cumulativeGross * (taxRatePercent / 100);
+                      const cumulativeTax = gross * (taxRatePercent / 100);
                       taxAmt = Math.max(0, cumulativeTax - prevTaxPaid);
                     } else {
                       taxAmt = 0;
                     }
-                    const totalFinal = afterDiscount + taxAmt;
+                    const totalFinal = netDue + taxAmt;
+
                     const clientGross = currentValuations.filter(v => !v.isContractor).reduce((s, v) => s + (v.totalCurrent || 0), 0);
                     const allContractorCost = currentValuations.filter(v => v.isContractor).reduce((s, v) => s + (v.totalCurrent || 0), 0);
-                    const totalContractorWithNew = allContractorCost + gross;
+                    const totalContractorWithNew = allContractorCost + netDue;
                     const profitEstimate = clientGross - totalContractorWithNew;
 
                     return (
@@ -2998,7 +3129,7 @@ export default function ContractorSuite() {
                             <div className="text-center border-x border-slate-700">
                               <div className="text-[10px] text-orange-400 font-bold mb-1">🏗️ إجمالي تكلفة مقاولين</div>
                               <div className="font-mono font-black text-orange-300 text-sm">{totalContractorWithNew.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</div>
-                              <div className="text-[9px] text-slate-500 mt-0.5">({allContractorCost.toLocaleString(undefined,{maximumFractionDigits:0})} سابق + {gross.toLocaleString(undefined,{maximumFractionDigits:0})} حالي)</div>
+                              <div className="text-[9px] text-slate-500 mt-0.5">({allContractorCost.toLocaleString(undefined,{maximumFractionDigits:0})} سابق + {netDue.toLocaleString(undefined,{maximumFractionDigits:0})} حالي للفترة)</div>
                             </div>
                             <div className="text-center">
                               <div className="text-[10px] font-bold mb-1" style={{ color: profitEstimate >= 0 ? '#4ade80' : '#f87171' }}>
@@ -3012,7 +3143,7 @@ export default function ContractorSuite() {
                         )}
 
                         <div className="flex items-center justify-between flex-wrap gap-3">
-                          <span className="text-xs font-bold text-slate-400">إجمالي قيمة المستخلص:</span>
+                          <span className="text-xs font-bold text-slate-400">إجمالي قيمة المستخلص التراكمي:</span>
                           <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</span>
                         </div>
 
@@ -3042,6 +3173,23 @@ export default function ContractorSuite() {
                           </div>
                         )}
 
+                        {/* Previously Paid override input */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <label className="text-xs text-slate-400 font-bold whitespace-nowrap">ما سبق صرفه (ج.م) — تعديل أو ترك تلقائي:</label>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={contractorValuationPrevPaid}
+                            onChange={e => setContractorValuationPrevPaid(e.target.value)}
+                            placeholder={calculatedPrevPaid.toFixed(2)}
+                            className="bg-[#111827] border border-slate-700 focus:border-cyan-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-44"
+                          />
+                          {prevPaidVal > 0 && (
+                            <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-xl">
+                              سابق: {prevPaidVal.toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م
+                            </span>
+                          )}
+                        </div>
+
                         {/* Tax % */}
                         <div className="flex items-center gap-3 flex-wrap">
                           <label className="text-xs text-slate-400 font-bold whitespace-nowrap">ضريبة % (اختيارية):</label>
@@ -3068,14 +3216,12 @@ export default function ContractorSuite() {
                           )}
                         </div>
 
-                        {(discountAmt > 0 || taxAmt > 0) && (
-                          <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-orange-500/20">
-                            <span className="text-xs font-black text-white">🏆 الإجمالي النهائي بعد الخصم والضريبة:</span>
-                            <span className="font-mono text-xl font-black text-orange-300 bg-orange-500/15 border border-orange-400/30 px-4 py-1.5 rounded-xl">
-                              {totalFinal.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-orange-500/20">
+                          <span className="text-xs font-black text-white">🏆 الأجمالى المتبقى المستحق للفترة (شامل الضريبة):</span>
+                          <span className="font-mono text-xl font-black text-orange-300 bg-orange-500/15 border border-orange-400/30 px-4 py-1.5 rounded-xl">
+                            {totalFinal.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م
+                          </span>
+                        </div>
                       </>
                     );
                   })()}
@@ -3320,53 +3466,47 @@ export default function ContractorSuite() {
                                   <table className="w-full text-right text-[10px]">
                                     <thead className="bg-[#070a13] text-slate-400 font-bold border-b border-slate-800">
                                       <tr>
-                                        <th rowSpan="2" className="p-2.5 text-right align-middle">البند المرتبط</th>
-                                        <th rowSpan="2" className="p-2.5 text-right align-middle">اسم المقاول</th>
-                                        <th rowSpan="2" className="p-2.5 text-right align-middle">وصف العمل</th>
-                                        <th rowSpan="2" className="p-2.5 text-center align-middle">الوحدة</th>
-                                        <th rowSpan="2" className="p-2.5 text-center align-middle">سعر الوحدة</th>
-                                        <th colSpan="2" className="p-2.5 text-center border-b border-slate-800">السابق</th>
-                                        <th colSpan="2" className="p-2.5 text-center border-b border-slate-800">الحالي (الفترة)</th>
-                                        <th colSpan="2" className="p-2.5 text-center border-b border-slate-800">التراكمي</th>
-                                      </tr>
-                                      <tr>
-                                        <th className="p-2 border-r border-slate-800 text-center">الكمية</th>
-                                        <th className="p-2 text-center">القيمة</th>
-                                        <th className="p-2 border-r border-slate-800 text-center">الكمية</th>
-                                        <th className="p-2 text-center">القيمة</th>
-                                        <th className="p-2 border-r border-slate-800 text-center">الكمية</th>
-                                        <th className="p-2 text-center">القيمة</th>
+                                        <th className="p-2.5 text-center">م</th>
+                                        <th className="p-2.5 text-right">البند المرتبط</th>
+                                        <th className="p-2.5 text-right">اسم المقاول</th>
+                                        <th className="p-2.5 text-center w-24">الوحدة</th>
+                                        <th className="p-2.5 text-center">الكمية السابقة</th>
+                                        <th className="p-2.5 text-center">الكمية الحالية</th>
+                                        <th className="p-2.5 text-center">سعر الفئة</th>
+                                        <th className="p-2.5 text-center">النسبة %</th>
+                                        <th className="p-2.5 text-center">الإجمالي جنيه</th>
+                                        <th className="p-2.5 text-right">ملاحظات</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                       {val.lines.map((ln, li) => {
                                         const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId));
                                         const prevQty = Number(ln.prevQty || 0);
-                                        const prevVal = prevQty * Number(ln.unitPrice || 0);
                                         const currQty = Number(ln.quantity || 0);
-                                        const currVal = currQty * Number(ln.unitPrice || 0);
-                                        const cumQty = Number(ln.cumulativeQty || (prevQty + currQty));
-                                        const cumVal = cumQty * Number(ln.unitPrice || 0);
+                                        const pct = Number(ln.percentage !== undefined ? ln.percentage : 100);
+                                        const lineTotal = (prevQty + currQty) * Number(ln.unitPrice || 0) * (pct / 100);
+                                        const noteText = ln.notes || ln.description || ln.note || '';
 
                                         return (
                                           <tr key={li} className="hover:bg-white/5 text-slate-300">
+                                            <td className="p-2.5 text-center font-mono">{li + 1}</td>
                                             <td className="p-2.5 text-slate-400 text-[9px]">{linkedBoq ? `[${linkedBoq.category}] ${linkedBoq.item_name}` : 'غير مرتبط'}</td>
                                             <td className="p-2.5 font-bold text-orange-400">{ln.contractorName || '—'}</td>
-                                            <td className="p-2.5 text-slate-400">{ln.description || '—'}</td>
-                                            <td className="p-2.5 text-center font-mono">{ln.unit}</td>
+                                            <td className="p-2.5 text-center font-mono w-24">{ln.unit}</td>
+                                            <td className="p-2.5 text-center font-mono text-slate-500">{prevQty.toLocaleString()}</td>
+                                            <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">+{currQty.toLocaleString()}</td>
                                             <td className="p-2.5 text-center font-mono">{(ln.unitPrice || 0).toLocaleString()}</td>
-                                            
-                                            {/* Previous */}
-                                            <td className="p-2.5 text-center font-mono text-slate-500 border-r border-white/5">{prevQty.toLocaleString()}</td>
-                                            <td className="p-2.5 text-center font-mono text-slate-500">{prevVal.toLocaleString()} ج.م</td>
-                                            
-                                            {/* Current Period */}
-                                            <td className="p-2.5 text-center font-mono text-cyan-400 font-bold border-r border-white/5">+{currQty.toLocaleString()}</td>
-                                            <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{currVal.toLocaleString()} ج.م</td>
-                                            
-                                            {/* Cumulative */}
-                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-black border-r border-white/5">{cumQty.toLocaleString()}</td>
-                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{cumVal.toLocaleString()} ج.م</td>
+                                            <td className="p-2.5 text-center font-mono">{pct}%</td>
+                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">{lineTotal.toLocaleString()} ج.م</td>
+                                            <td 
+                                              className="p-2.5 text-right font-bold transition-all border border-slate-800/30"
+                                              style={{
+                                                ...getNoteStyle(noteText),
+                                                ...(noteText ? { borderStyle: 'solid', borderWidth: '1px' } : {})
+                                              }}
+                                            >
+                                              {noteText || '—'}
+                                            </td>
                                           </tr>
                                         );
                                       })}
@@ -3793,6 +3933,78 @@ export default function ContractorSuite() {
         )}
 
       </div>
+
+      {/* 5.3 QUICK ADD SUBCONTRACTOR MODAL */}
+      {showQuickAddSub && (
+        <div className="fixed inset-0 bg-[#070a13]/85 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] no-print animate-in fade-in duration-300">
+          <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl flex flex-col relative">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h3 className="text-sm font-black text-cyan-400 flex items-center gap-2">
+                <span className="text-base">🏗️</span> إضافة مقاول جديد سريع
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowQuickAddSub(false)}
+                className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-400 font-bold transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAddSub} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-400 font-bold block">اسم المقاول *</label>
+                <input
+                  type="text"
+                  required
+                  value={quickAddSubName}
+                  onChange={(e) => setQuickAddSubName(e.target.value)}
+                  placeholder="مثال: شركة المقاولات الحديثة"
+                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-400 font-bold block">رقم الهاتف</label>
+                <input
+                  type="text"
+                  value={quickAddSubPhone}
+                  onChange={(e) => setQuickAddSubPhone(e.target.value)}
+                  placeholder="مثال: 01000000000"
+                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-400 font-bold block">الشركة التابع لها</label>
+                <input
+                  type="text"
+                  value={quickAddSubCompany}
+                  onChange={(e) => setQuickAddSubCompany(e.target.value)}
+                  placeholder="مثال: TED CAPITAL (اختياري)"
+                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddSub(false)}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold transition-all"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-95 transition-all"
+                >
+                  إضافة وحفظ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 6. PRINT PREVIEW MODAL */}
       {selectedPrintValuation && (
