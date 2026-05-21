@@ -583,7 +583,80 @@ export default function Subcontractors() {
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen p-6 sm:p-10 space-y-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="subcontractors-light bg-[#f8fafc] min-h-screen p-6 sm:p-10 space-y-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        /* ═══════════════════════════════════════════════════════════
+           PREMIUM WHITE THEME ENGINE — Subcontractors Scoped
+        ═══════════════════════════════════════════════════════════ */
+        .subcontractors-light {
+          --sub-bg-page: #f8fafc;
+          --sub-bg-card: #ffffff;
+          --sub-bg-alt: #f1f5f9;
+          --sub-border: #e2e8f0;
+          --sub-text-primary: #0f172a;
+          --sub-text-secondary: #475569;
+        }
+
+        .subcontractors-light .bg-slate-900\\/90 {
+          background-color: #ffffff !important;
+          border-color: var(--sub-border) !important;
+          color: var(--sub-text-primary) !important;
+        }
+        .subcontractors-light .bg-slate-900\\/90 h1,
+        .subcontractors-light .bg-slate-900\\/90 p,
+        .subcontractors-light .bg-slate-900\\/90 div {
+          color: var(--sub-text-primary) !important;
+        }
+        .subcontractors-light .bg-slate-900\\/90 .text-slate-300 {
+          color: var(--sub-text-secondary) !important;
+        }
+        .subcontractors-light .bg-slate-900\\/90 .bg-\\[\\#1e293b\\] {
+          background-color: #f1f5f9 !important;
+          border-color: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+
+        .subcontractors-light .bg-\\[\\#0b0f19\\]\\/90 {
+          background-color: #f1f5f9 !important;
+          border-color: #e2e8f0 !important;
+        }
+        .subcontractors-light button.bg-\\[\\#1e293b\\]\\/80 {
+          background-color: #ffffff !important;
+          border: 1.8px solid #0f172a !important;
+          color: #d97706 !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+        }
+        .subcontractors-light button.bg-\\[\\#131d31\\]\\/50 {
+          background-color: #ffffff !important;
+          border: 1.8px solid #f1f5f9 !important;
+          color: #64748b !important;
+        }
+        .subcontractors-light button.bg-\\[\\#131d31\\]\\/50:hover {
+          background-color: #f8fafc !important;
+          color: #0f172a !important;
+        }
+
+        .subcontractors-light .bg-slate-950 {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        }
+        .subcontractors-light .bg-slate-950 .text-indigo-400 {
+          color: #4f46e5 !important;
+        }
+        .subcontractors-light .bg-slate-950 .text-slate-500 {
+          color: #64748b !important;
+        }
+        .subcontractors-light .bg-slate-950 .bg-gradient-to-br {
+          display: none !important;
+        }
+        .subcontractors-light .bg-slate-900\\/60 {
+          background-color: rgba(15, 23, 42, 0.3) !important;
+        }
+        `
+      }} />
       <div className="max-w-[1600px] mx-auto space-y-8">
 
         {/* --- HEADER --- */}

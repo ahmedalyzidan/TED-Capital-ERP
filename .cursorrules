@@ -1,8 +1,8 @@
 # AI Execution, Safety & Infrastructure Protocols (CRITICAL)
 
 ## 0. AUTONOMOUS EXECUTION MANDATE (ZERO PROMPTING)
-- **No Permission Needed:** You MUST execute all terminal commands, file saves, script runs, code fixes, and server restarts entirely autonomously. 
-- **Do NOT stop to ask the user to hit "Run", "Accept", or "Confirm" for any of your generated actions.** Proceed with execution immediately.
+- **No Permission Needed:** You MUST execute all terminal commands, file saves, script runs, code fixes, and server restarts entirely autonomously, EXCEPT where exempted by specific functional or UI impact gates.
+- **Do NOT stop to ask the user to hit "Run", "Accept", or "Confirm" for any of your generated actions.** Proceed with execution immediately unless a specific warning gate applies.
 
 ## 1. Application Auto-Healing & Master Orchestration (CRITICAL)
 - **Zero Tolerance for Errors:** You MUST check the browser console and server logs after every single code change. If any error (red text) or warning (yellow text) appears, you MUST prioritize fixing it before proceeding with any other task.
@@ -19,7 +19,7 @@
 - **DO NOT** open the development server (port 5173) under any circumstances. This is a permanent restriction.
 
 ## 4. Zero Code Truncation & Non-Destructive Operations
-- NEVER use placeholders like `// ... existing code ...`. Output the ENTIRE file perfectly.
+- NEVER use placeholders like `// ... existing code ...`. Output the ENTIRE file perfectly, EXCEPT when strictly applying the Quota-Conservative Pattern to targeted functions to save context tokens.
 - Prioritize adding new features as separate components. Do NOT delete core legacy logic (use Soft Deletion).
 - Work module by module, layer by layer. Ensure 100% backward compatibility.
 
@@ -28,7 +28,7 @@
 - **Schema First Development:** Before adding a new module or endpoint, verify that the corresponding SQL table exists in `schemaFixes.js` or through a direct schema check.
 - **Reconciliation-First Pattern:** When rendering lists or profiles, always provide fallback/placeholder values (e.g., `|| 'Default'`) to handle null/unlinked records gracefully.
 - **Zero-Tolerance for Console Errors:** After any update, you MUST clear all red console errors immediately. Update this rule file whenever a systemic fix is applied.
-- **Systemic Fixes Applied:** 
+- **Systemic Fixes Applied:**
   - [2026-05-09] Fixed Asset Engine: Synchronized `fixed_assets` and `asset_categories` schema.
   - [2026-05-09] Real Estate UI: Standardized "Minimalist White" enterprise aesthetic with defensive rendering.
   - [2026-05-10] Server Restriction: Added permanent rule to avoid opening the development server on port 5173.
@@ -79,3 +79,8 @@
 
 ## 11. ARABIC MODIFICATION SUMMARY (EXPLICIT MANDATE)
 - **Arabic Explanation Required:** With any file modification or code change, you MUST provide a detailed explanation in Arabic explaining exactly what was modified, why, and the resulting changes.
+
+## 12. QUOTA-CONSERVATIVE DEVELOPMENT PATTERN (STRICT CONSERVATION)
+- **Minimize Token Consumption:** You MUST optimize all text and code responses to conserve the user's compute quota and prevent hitting limits early.
+- **Targeted Operations Only:** When a file is exceptionally long, and the user requests a localized fix, ONLY output and modify the specific code blocks or functions involved. Do not rewrite unaffected components unless absolutely required for runtime execution.
+- **Precise Explanations:** Keep explanations, code summaries, and debug logs concise and direct. Eliminate conversational filler to save response tokens.

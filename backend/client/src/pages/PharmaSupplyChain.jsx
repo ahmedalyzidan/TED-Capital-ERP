@@ -706,7 +706,143 @@ export default function PharmaSupplyChain() {
    };
 
    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 pb-20 animate-fade-in font-sans" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="pharma-supply-light min-h-screen bg-slate-950 text-slate-100 pb-20 animate-fade-in font-sans" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+         <style dangerouslySetInnerHTML={{
+            __html: `
+            /* ═══════════════════════════════════════════════════════════
+               PREMIUM WHITE THEME ENGINE — PharmaSupplyChain Scoped
+            ═══════════════════════════════════════════════════════════ */
+            .pharma-supply-light {
+               --ph-bg-page: #f8fafc;
+               --ph-bg-card: #ffffff;
+               --ph-bg-alt: #f1f5f9;
+               --ph-border: #e2e8f0;
+               --ph-text-primary: #0f172a;
+               --ph-text-secondary: #475569;
+            }
+
+            /* Root background */
+            .pharma-supply-light.min-h-screen {
+               background-color: var(--ph-bg-page) !important;
+               color: var(--ph-text-primary) !important;
+            }
+
+            /* Headers & Card Backings */
+            .pharma-supply-light .bg-\\[\\#161e2f\\],
+            .pharma-supply-light .bg-slate-950,
+            .pharma-supply-light .bg-slate-900,
+            .pharma-supply-light .bg-slate-950\\/50,
+            .pharma-supply-light .bg-\\[\\#131b2e\\] {
+               background-color: var(--ph-bg-card) !important;
+               border-color: var(--ph-border) !important;
+               color: var(--ph-text-primary) !important;
+            }
+
+            /* Tab Navigation Pill Bar Container */
+            .pharma-supply-light .bg-\\[\\#070a13\\] {
+               background-color: var(--ph-bg-alt) !important;
+               border-color: var(--ph-border) !important;
+            }
+
+            /* Inactive switcher buttons */
+            .pharma-supply-light .bg-\\[\\#070a13\\] button.text-slate-400 {
+               background-color: #ffffff !important;
+               border: 1.8px solid var(--ph-bg-alt) !important;
+               color: var(--ph-text-secondary) !important;
+               margin: 2px !important;
+            }
+            .pharma-supply-light .bg-\\[\\#070a13\\] button.text-slate-400:hover {
+               color: var(--ph-text-primary) !important;
+               background-color: #f8fafc !important;
+            }
+
+            /* Active switcher buttons */
+            .pharma-supply-light .bg-\\[\\#070a13\\] button.bg-slate-800 {
+               background-color: #ffffff !important;
+               border: 1.8px solid #0f172a !important;
+               color: #06b6d4 !important;
+               box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+               margin: 2px !important;
+            }
+
+            /* Text Elements */
+            .pharma-supply-light .text-white,
+            .pharma-supply-light .text-slate-100,
+            .pharma-supply-light .text-slate-200 {
+               color: var(--ph-text-primary) !important;
+            }
+            .pharma-supply-light .text-slate-300,
+            .pharma-supply-light .text-slate-400 {
+               color: var(--ph-text-secondary) !important;
+            }
+            .pharma-supply-light .border-slate-800,
+            .pharma-supply-light .border-slate-700 {
+               border-color: var(--ph-border) !important;
+            }
+
+            /* Tables */
+            .pharma-supply-light table {
+               background-color: var(--ph-bg-card) !important;
+            }
+            .pharma-supply-light tr.bg-\\[\\#070a13\\] {
+               background-color: var(--ph-bg-alt) !important;
+               border-color: var(--ph-border) !important;
+            }
+            .pharma-supply-light tr.bg-\\[\\#070a13\\] th {
+               color: var(--ph-text-secondary) !important;
+               border-color: var(--ph-border) !important;
+            }
+            .pharma-supply-light td {
+               border-color: var(--ph-border) !important;
+               color: #334155 !important;
+            }
+            .pharma-supply-light tbody tr:hover {
+               background-color: #f8fafc !important;
+            }
+
+            /* Inputs & Forms */
+            .pharma-supply-light input,
+            .pharma-supply-light select,
+            .pharma-supply-light textarea {
+               background-color: #ffffff !important;
+               border-color: var(--ph-border) !important;
+               color: var(--ph-text-primary) !important;
+            }
+            .pharma-supply-light input::placeholder {
+               color: #94a3b8 !important;
+            }
+            .pharma-supply-light input:focus,
+            .pharma-supply-light select:focus,
+            .pharma-supply-light textarea:focus {
+               border-color: #06b6d4 !important;
+               box-shadow: 0 0 0 3px rgba(6,182,212,0.1) !important;
+            }
+
+            /* Modals (Fixed position modals) */
+            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] {
+               background-color: rgba(15, 23, 42, 0.4) !important;
+               backdrop-blur: 12px !important;
+            }
+            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] > div {
+               background-color: #ffffff !important;
+               border: 1px solid var(--ph-border) !important;
+               color: var(--ph-text-primary) !important;
+               border-radius: 2.5rem !important;
+               box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+            }
+            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] div.bg-\\[\\#070a13\\] {
+               background-color: #ffffff !important;
+               border-color: var(--ph-border) !important;
+            }
+            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] h3 {
+               color: var(--ph-text-primary) !important;
+            }
+            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] select option {
+               background-color: #ffffff !important;
+               color: var(--ph-text-primary) !important;
+            }
+            `
+         }} />
          {/* Premium Header */}
          <div className="bg-[#161e2f] border-b border-slate-800 sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
             <div className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-8">

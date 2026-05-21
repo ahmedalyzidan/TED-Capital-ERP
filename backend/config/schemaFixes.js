@@ -1110,6 +1110,12 @@ const applySchemaFixes = async () => {
         `, curr);
     }
 
+    // --- Subcontractor & Client Valuation Link ---
+    await runQuery("Subcontractor Invoices Client Valuation Link", `
+        ALTER TABLE subcontractor_invoices 
+        ADD COLUMN IF NOT EXISTS client_valuation_id INTEGER
+    `);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

@@ -20,6 +20,51 @@ router.get('/global/stats', SubcontractorController.getGlobalStats);
 router.get('/analytics/dashboard', SubcontractorController.getSubcontractorAnalytics);
 router.get('/intelligence/:id', SubcontractorController.getSubcontractorIntelligence);
 
+// --- Subcontractor Financial Summary (ما تم صرفه سابقاً) ---
+router.get('/:id/financial_summary', async (req, res) => {
+    try {
+        const subId = req.params.id;
+
+        // Fetch Subcontractor Info
+        const subRes = await pool.query("SELECT name FROM subcontractors WHERE id = $1", [subId]);
+        if (subRes.rows.length === 0) {
+            return res.status(404).json({ error: "المقاول غير موجود." });
+        }
+        const subcontractorName = subRes.rows[0].name;
+
+        // 1. Total Invoiced Amount (approved or paid progressive claims)
+        const invoicesRes = await pool.query(
+            `SELECT COALESCE(SUM(net_amount), 0) as total_invoiced 
+             FROM subcontractor_invoices 
+             WHERE subcontractor_id = $1 AND status IN ('Approved', 'Paid', 'اعتماد مالي', 'اعتماد فني') AND is_deleted = false`,
+            [subId]
+        );
+        const totalInvoiced = parseFloat(invoicesRes.rows[0].total_invoiced);
+
+        // 2. Total Disbursed Amount (ما تم صرفه سابقاً)
+        const statementsRes = await pool.query(
+            `SELECT COALESCE(SUM(amount), 0) as total_disbursed 
+             FROM subcontractor_statements 
+             WHERE sub_name = $1 AND type = 'صرف مستخلص' AND is_deleted = false`,
+            [subcontractorName]
+        );
+        const totalDisbursed = parseFloat(statementsRes.rows[0].total_disbursed);
+
+        // 3. Remaining Balance (الرصيد المتبقي المستحق)
+        const remainingBalance = totalInvoiced - totalDisbursed;
+
+        res.json({
+            success: true,
+            subcontractor_name: subcontractorName,
+            total_invoiced: totalInvoiced,
+            total_disbursed: totalDisbursed,
+            remaining_balance: remainingBalance
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Operations & Transaction Posting ---
 router.post('/contract', SubcontractorController.createContract);
 router.post('/progress_claim', SubcontractorController.submitProgressClaim);

@@ -287,7 +287,79 @@ function SmartReorder({ isSubcomponent }) {
   const totalDeficitCost = deficitItems.reduce((sum, i) => sum + i.estimated_total_cost, 0);
 
   return (
-    <div className={isSubcomponent ? "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white py-4" : "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white p-8 lg:p-12 max-w-[1600px] mx-auto"} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`smart-reorder-light ${isSubcomponent ? "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white py-4" : "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white p-8 lg:p-12 max-w-[1600px] mx-auto"}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        /* ═══════════════════════════════════════════════════════════
+           PREMIUM WHITE THEME ENGINE — SmartReorder Scoped
+        ═══════════════════════════════════════════════════════════ */
+        .smart-reorder-light {
+          --sr-bg-page: #f8fafc;
+          --sr-bg-card: #ffffff;
+          --sr-bg-alt: #f1f5f9;
+          --sr-border: #e2e8f0;
+          --sr-text-primary: #0f172a;
+          --sr-text-secondary: #475569;
+        }
+
+        /* Header Card Override */
+        .smart-reorder-light .bg-slate-900\\/60 {
+          background-color: #ffffff !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text-primary) !important;
+        }
+        .smart-reorder-light .bg-slate-900\\/60 h1,
+        .smart-reorder-light .bg-slate-900\\/60 p {
+          color: var(--sr-text-primary) !important;
+        }
+        .smart-reorder-light .bg-slate-900\\/60 .text-slate-300 {
+          color: var(--sr-text-secondary) !important;
+        }
+        .smart-reorder-light .bg-slate-900\\/60 .bg-rose-500\\/20 {
+          background-color: rgba(244, 63, 94, 0.08) !important;
+          color: #e11d48 !important;
+          border-color: rgba(244, 63, 94, 0.15) !important;
+        }
+
+        /* PO log card container bg-[#0b0f19] */
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] {
+          background-color: var(--sr-bg-alt) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text-primary) !important;
+        }
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] h3,
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] p,
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] span {
+          color: var(--sr-text-primary) !important;
+        }
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] .bg-slate-950 {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #334155 !important;
+        }
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] button {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border: 1.8px solid #cbd5e1 !important;
+        }
+        .smart-reorder-light .bg-\\[\\#0b0f19\\] button:hover {
+          background-color: #f8fafc !important;
+        }
+
+        /* Reorder level settings modal / other dark cards */
+        .smart-reorder-light .bg-slate-950\\/50 {
+          background-color: #ffffff !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text-primary) !important;
+        }
+
+        /* Fix modal overlay colors */
+        .smart-reorder-light .fixed.inset-0.bg-slate-950\\/80 {
+          background-color: rgba(15, 23, 42, 0.4) !important;
+          backdrop-blur: 12px !important;
+        }
+        `
+      }} />
       {/* HEADER & COMPLIANCE ACTIONS */}
       <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">

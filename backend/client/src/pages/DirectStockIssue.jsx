@@ -1411,65 +1411,143 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   );
 
   return (
-    <div className={`space-y-10 ${embedded ? 'embedded-erp text-slate-100' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      {embedded && (
+    <div className={`direct-stock-light space-y-10 ${embedded ? 'embedded-erp text-slate-100' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {embedded ? (
         <style dangerouslySetInnerHTML={{__html: `
           .embedded-erp .bg-white {
-            background-color: #131b2e !important;
-            border-color: #1e293b !important;
-            color: #f1f5f9 !important;
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
           }
           .embedded-erp .text-slate-800,
           .embedded-erp .text-slate-900 {
-            color: #f1f5f9 !important;
+            color: #1e293b !important;
           }
           .embedded-erp .border-slate-100,
           .embedded-erp .border-slate-200 {
-            border-color: #1e293b !important;
+            border-color: #e2e8f0 !important;
           }
           .embedded-erp .bg-slate-50,
           .embedded-erp .bg-slate-100,
           .embedded-erp .bg-slate-250 {
-            background-color: #111827 !important;
-            border-color: #1e293b !important;
-            color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
           }
           .embedded-erp .text-slate-500,
           .embedded-erp .text-slate-600 {
-            color: #94a3b8 !important;
+            color: #64748b !important;
           }
           .embedded-erp input,
           .embedded-erp select,
           .embedded-erp textarea {
-            background-color: #111827 !important;
-            border-color: #1e293b !important;
-            color: #f1f5f9 !important;
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
           }
           .embedded-erp input::placeholder {
-            color: #4b5563 !important;
+            color: #94a3b8 !important;
           }
           .embedded-erp .focus\\:bg-white:focus {
-            background-color: #111827 !important;
+            background-color: #ffffff !important;
             border-color: #06b6d4 !important;
           }
           .embedded-erp button.bg-slate-100:hover {
-            background-color: #1e293b !important;
-            color: #ffffff !important;
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
           }
           .embedded-erp table th {
-            background-color: #111827 !important;
-            color: #94a3b8 !important;
-            border-color: #1e293b !important;
+            background-color: #f8fafc !important;
+            color: #475569 !important;
+            border-color: #e2e8f0 !important;
           }
           .embedded-erp table td {
-            border-color: #1e293b !important;
-            color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+            color: #334155 !important;
           }
           .embedded-erp .text-slate-900 {
-            color: #f1f5f9 !important;
+            color: #1e293b !important;
           }
           .embedded-erp div.bg-slate-50 {
-            background-color: #111827 !important;
+            background-color: #f8fafc !important;
+          }
+        `}} />
+      ) : (
+        <style dangerouslySetInnerHTML={{__html: `
+          .direct-stock-light {
+            --ds-bg-page: #f8fafc;
+            --ds-bg-card: #ffffff;
+            --ds-bg-alt: #f1f5f9;
+            --ds-border: #e2e8f0;
+            --ds-text-primary: #0f172a;
+            --ds-text-secondary: #475569;
+          }
+
+          /* Tab switcher container */
+          .direct-stock-light .bg-slate-100 {
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+          }
+
+          /* Inactive switcher buttons */
+          .direct-stock-light button.text-slate-600 {
+            background-color: #ffffff !important;
+            border: 1.8px solid #f1f5f9 !important;
+            color: #64748b !important;
+            margin: 2px !important;
+          }
+          .direct-stock-light button.text-slate-600:hover {
+            color: #0f172a !important;
+            background-color: #f8fafc !important;
+          }
+
+          /* Active switcher buttons */
+          .direct-stock-light button.bg-indigo-600 {
+            background-color: #ffffff !important;
+            border: 1.8px solid #0f172a !important;
+            color: #4f46e5 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin: 2px !important;
+          }
+          .direct-stock-light button.bg-amber-600 {
+            background-color: #ffffff !important;
+            border: 1.8px solid #0f172a !important;
+            color: #d97706 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin: 2px !important;
+          }
+          .direct-stock-light button.bg-slate-900 {
+            background-color: #ffffff !important;
+            border: 1.8px solid #0f172a !important;
+            color: #0f172a !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin: 2px !important;
+          }
+          .direct-stock-light button.bg-emerald-600 {
+            background-color: #ffffff !important;
+            border: 1.8px solid #0f172a !important;
+            color: #059669 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin: 2px !important;
+          }
+
+          /* Header card overrides (remove bg-gradient) */
+          .direct-stock-light .bg-gradient-to-r {
+            background-color: #ffffff !important;
+            background-image: none !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
+          }
+          .direct-stock-light .bg-gradient-to-r h1,
+          .direct-stock-light .bg-gradient-to-r p,
+          .direct-stock-light .bg-gradient-to-r div,
+          .direct-stock-light .bg-gradient-to-r span {
+            color: #0f172a !important;
+          }
+          .direct-stock-light .bg-gradient-to-r .text-indigo-200,
+          .direct-stock-light .bg-gradient-to-r .text-amber-200,
+          .direct-stock-light .bg-gradient-to-r .text-emerald-200 {
+            color: #475569 !important;
           }
         `}} />
       )}

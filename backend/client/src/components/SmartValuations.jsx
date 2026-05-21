@@ -33,6 +33,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
   // Subcontractor Invoice Form State
   const [subForm, setSubForm] = useState({
     subcontractor_id: '',
+    client_valuation_id: '',
     date: new Date().toISOString().split('T')[0],
     gross_amount: 0,
     retention_deduction: 0,
@@ -42,6 +43,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
     description: '',
     notes: ''
   });
+  const [subFinancialSummary, setSubFinancialSummary] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -245,6 +247,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
   const handleOpenSubValModal = () => {
     setSubForm({
       subcontractor_id: '',
+      client_valuation_id: '',
       date: new Date().toISOString().split('T')[0],
       gross_amount: 0,
       retention_deduction: 0,
@@ -254,15 +257,22 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
       description: '',
       notes: ''
     });
+    setSubFinancialSummary(null);
     setIsNewSubValModalOpen(true);
   };
 
   const handleSubcontractorChange = async (subId) => {
     setSubForm(prev => ({ ...prev, subcontractor_id: subId }));
+    setSubFinancialSummary(null);
+    if (!subId) return;
     try {
-      // Get subcontractor items & contracts
-      const itemsRes = await api.get(`/projects/subcontractor_items/${subId}`);
+      // Get subcontractor items & contracts, and financial summary
+      const [itemsRes, summaryRes] = await Promise.all([
+        api.get(`/projects/subcontractor_items/${subId}`),
+        api.get(`/subcontractors/${subId}/financial_summary`)
+      ]);
       setSubcontractorItems(itemsRes.data || []);
+      setSubFinancialSummary(summaryRes.data || null);
     } catch (e) {
       console.error(e);
     }
@@ -297,6 +307,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
         description: subForm.description || `مستخلص أعمال المقاول ${sub?.name || ''}`,
         date: subForm.date,
         project_id: parseInt(projectId),
+        client_valuation_id: subForm.client_valuation_id ? parseInt(subForm.client_valuation_id) : null,
         status: 'Approved' // Subcontractor bills are marked approved upon review
       };
 
@@ -450,7 +461,17 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                   <div className="flex gap-4 items-center">
                     <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center font-black text-lg">🔧</div>
                     <div>
-                      <h4 className="font-black text-slate-800">{invoice.subcontractor_name || 'مقاول غير معروف'}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-slate-800">{invoice.subcontractor_name || 'مقاول غير معروف'}</h4>
+                        {(() => {
+                          const linkedVal = valuations.find(v => v.id === invoice.client_valuation_id);
+                          return linkedVal ? (
+                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-[9px] font-black">
+                              مربوط بمستخلص عميل: {linkedVal.valuation_no}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
                       <p className="text-slate-400 text-xs mt-1">{invoice.description || 'مستخلص أعمال بياض وتشطيبات'} - {invoice.date ? new Date(invoice.date).toLocaleDateString('ar-EG') : 'غير محدد'}</p>
                     </div>
                   </div>
@@ -661,6 +682,41 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                 >
                   <option value="">-- اختر مقاول الباطن من القائمة * --</option>
                   {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name} ({s.trade || 'تشطيبات'})</option>)}
+                </select>
+              </div>
+
+              {/* Financial summary of the subcontractor */}
+              {subFinancialSummary && (
+                <div className="grid grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center font-mono">
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400">إجمالي معتمد سابقاً</span>
+                    <span className="font-black text-slate-700 text-xs">{Number(subFinancialSummary.total_invoiced || 0).toLocaleString()} ج.م</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400">ما تم صرفه سابقاً</span>
+                    <span className="font-black text-emerald-600 text-xs">{Number(subFinancialSummary.total_disbursed || 0).toLocaleString()} ج.م</span>
+                  </div>
+                  <div className="border-r border-slate-200 pr-2">
+                    <span className="block text-[9px] font-bold text-slate-400">الرصيد المتبقي المستحق</span>
+                    <span className="font-black text-rose-600 text-xs">{Number(subFinancialSummary.remaining_balance || 0).toLocaleString()} ج.م</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Dropdown to link with Client Valuation */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 mb-1">ربط بمستخلص العميل</label>
+                <select 
+                  value={subForm.client_valuation_id || ''} 
+                  onChange={e => setSubForm({...subForm, client_valuation_id: e.target.value})} 
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs font-bold"
+                >
+                  <option value="">-- اختياري: ربط بمستخلص عميل --</option>
+                  {valuations.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.valuation_no} ({new Date(v.valuation_date).toLocaleDateString('ar-EG')}) - صافي: {Number(v.net_amount).toLocaleString()} ج.م
+                    </option>
+                  ))}
                 </select>
               </div>
 
