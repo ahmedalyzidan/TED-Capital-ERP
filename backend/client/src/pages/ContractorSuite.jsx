@@ -478,7 +478,7 @@ export default function ContractorSuite() {
   const [contractorValuationTax, setContractorValuationTax] = useState('');
   const [contractorValuationTaxMethod, setContractorValuationTaxMethod] = useState('period'); // 'period' | 'cumulative' | 'waived'
   const [subcontractorsList, setSubcontractorsList] = useState([]);
-  const [contractorValuationLinkedClientValId, setContractorValuationLinkedColorId] = useState(''); // Keep variable name consistent if needed, but wait: the original is contractorValuationLinkedClientValId. Let's make sure it matches.
+  const [contractorValuationLinkedClientValId, setContractorValuationLinkedClientValId] = useState(''); // Keep variable name consistent if needed, but wait: the original is contractorValuationLinkedClientValId. Let's make sure it matches.
   const [contractorValuationPrevPaid, setContractorValuationPrevPaid] = useState('');
   const [contractorValuationContractorName, setContractorValuationContractorName] = useState('');
 
@@ -1199,7 +1199,7 @@ export default function ContractorSuite() {
     setContractorValuationDate(new Date().toISOString().split('T')[0]);
     setContractorValuationDiscount('');
     setContractorValuationTax('');
-    setContractorValuationLinkedColorId('');
+    setContractorValuationLinkedClientValId('');
     setContractorValuationTaxMethod('period');
     setContractorValuationPrevPaid('');
     setShowAddContractorValuation(true);
@@ -3009,8 +3009,8 @@ export default function ContractorSuite() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-400 font-bold">مستخلص العميل المرتبط:</label>
                       <select
-                        value={contractorValuationLinkedColorId}
-                        onChange={e => setContractorValuationLinkedColorId(e.target.value)}
+                        value={contractorValuationLinkedClientValId}
+                        onChange={e => setContractorValuationLinkedClientValId(e.target.value)}
                         className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500 transition-all"
                       >
                         <option value="">— غير مرتبط —</option>
