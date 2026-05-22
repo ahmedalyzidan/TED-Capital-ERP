@@ -316,7 +316,7 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `(cost_center IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR cost_center IN ${namesSqlList} OR company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
     }
     if (type === 'subcontractors') {
-        return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList})`;
+        return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'subcontractor_invoices') {
         return `(project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;

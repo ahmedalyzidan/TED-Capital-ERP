@@ -1,86 +1,49 @@
-# AI Execution, Safety & Infrastructure Protocols (CRITICAL)
+# AI Execution, Safety & Token-Optimized Protocols (CRITICAL)
 
-## 0. AUTONOMOUS EXECUTION MANDATE (ZERO PROMPTING)
-- **No Permission Needed:** You MUST execute all terminal commands, file saves, script runs, code fixes, and server restarts entirely autonomously, EXCEPT where exempted by specific functional or UI impact gates.
-- **Do NOT stop to ask the user to hit "Run", "Accept", or "Confirm" for any of your generated actions.** Proceed with execution immediately unless a specific warning gate applies.
+## 0. AUTONOMOUS EXECUTION & HEALING
+- **No Permission Needed:** Execute commands, code fixes, and server restarts autonomously, EXCEPT for Rule 7 gates. Do NOT ask for "Run" or "Accept" confirmations.
+- **Zero Error Tolerance:** Check browser/server logs after every change. Fix red/yellow errors autonomously immediately.
+- **Manual Orchestrator:** Do NOT run `orchestrator.py` in the background. When the user runs it manually and reports an error, autonomously apply fixes.
 
-## 1. Application Auto-Healing & Master Orchestration (CRITICAL)
-- **Zero Tolerance for Errors:** You MUST check the browser console and server logs after every single code change. If any error (red text) or warning (yellow text) appears, you MUST prioritize fixing it before proceeding with any other task.
-- **Manual Orchestrator Validation:** Do NOT run `python orchestrator.py` autonomously in the background to prevent Windows file-locking. The user will manually execute it when testing is required.
-- **Autonomous Healing:** When the user manually runs tests or the Orchestrator, and it reports a [CRITICAL] or [ERROR] status, you MUST autonomously analyze the output, apply the code fixes directly, and prepare for the next manual test run.
-- **Rules Evolution:** Whenever you apply a systemic fix, you MUST autonomously update this `.cursorrules` file with a new defensive rule.
+## 1. STRICT TOKEN CONSERVATION & SNIPPET-ONLY OUTPUT (CRITICAL)
+- **Zero Full-File Output:** NEVER output entire files unless explicitly requested by the user. 
+- **Snippet Focus:** ONLY output the specific functions, methods, or code blocks being modified. Use placeholders (`// ... existing code ...`) for unchanged parts to aggressively save output tokens.
+- **Concise Responses:** Keep all text explanations, code summaries, and debug logs extremely brief and direct.
 
-## 2. GitHub Workflow (STRICTLY MANUAL)
-- DO NOT execute any `git add`, `git commit`, or `git push` commands automatically.
-- **ONLY** when the user explicitly requests to upload or push files to Git, you must verify/set the remote origin using: `git remote add origin https://github.com/ahmedalyzidan/TED-Capital-ERP`, and then proceed with the commit and push workflow.
+## 2. WORKSPACE & ENVIRONMENT RESTRICTIONS
+- **Manual Git Only:** NO automatic `git` commands. Only commit/push when requested, using origin `https://github.com/ahmedalyzidan/TED-Capital-ERP`.
+- **Workspace:** Path is `C:\Users\Ahmed Zidan\ERP\backend\Ted ERP\backend`. 
+- **Dev Environment:** 
+  - Backend uses `npm start`. Frontend uses `npm run dev` (NEVER open port 5173 manually).
+  - AI Proxy runs `qwen2.5-coder:32b` via LiteLLM on Port `4040`.
 
-## 3. Workspace Configuration
-- Operate strictly within: `C:\Users\Ahmed Zidan\ERP\backend\Ted ERP\backend`
-- **DO NOT** open the development server (port 5173) under any circumstances. This is a permanent restriction.
+## 3. DEFENSIVE UI & SCHEMA INTEGRITY
+- **Defensive Rendering:** MUST use optional chaining (`?.`) and fallbacks (`|| 'Default'`) in frontend components to prevent runtime crashes.
+- **Schema First:** Verify SQL tables in `schemaFixes.js` before adding modules. 
+- **Zero Console Errors:** Clear all red console errors immediately after any UI/Backend update.
 
-## 4. Zero Code Truncation & Non-Destructive Operations
-- NEVER use placeholders like `// ... existing code ...`. Output the ENTIRE file perfectly, EXCEPT when strictly applying the Quota-Conservative Pattern to targeted functions to save context tokens.
-- Prioritize adding new features as separate components. Do NOT delete core legacy logic (use Soft Deletion).
-- Work module by module, layer by layer. Ensure 100% backward compatibility.
+## 4. GATED CLOUD DEPLOYMENT (STRICT)
+- **Zero Autonomous Cloud Action:** Follow this manual gate strictly. All changes remain local until Phase 2.
+  1. **Local:** Code and verify locally.
+  2. **Staging Gate:** Ask: *"Verified locally. Push to Staging?"* -> If Yes: push to Git & run `bash deploy-staging.sh`.
+  3. **Prod Gate:** Ask: *"Staging updated. Deploy to Production?"* -> If Yes: run `bash update-erp.sh`.
+- Output state: *"Workflow Status: [LOCAL/STAGING/PRODUCTION] - Awaiting Approval."*
 
-## 5. Defensive UI & Schema Integrity Protocol (NEW)
-- **Optional Chaining Mandatory:** All frontend components fetching data from the API MUST use optional chaining (`?.`) for nested properties (e.g., `data.profile?.name`) to prevent runtime crashes during state hydration.
-- **Schema First Development:** Before adding a new module or endpoint, verify that the corresponding SQL table exists in `schemaFixes.js` or through a direct schema check.
-- **Reconciliation-First Pattern:** When rendering lists or profiles, always provide fallback/placeholder values (e.g., `|| 'Default'`) to handle null/unlinked records gracefully.
-- **Zero-Tolerance for Console Errors:** After any update, you MUST clear all red console errors immediately. Update this rule file whenever a systemic fix is applied.
-- **Systemic Fixes Applied:**
-  - [2026-05-09] Fixed Asset Engine: Synchronized `fixed_assets` and `asset_categories` schema.
-  - [2026-05-09] Real Estate UI: Standardized "Minimalist White" enterprise aesthetic with defensive rendering.
-  - [2026-05-10] Server Restriction: Added permanent rule to avoid opening the development server on port 5173.
-  - [2026-05-11] Analytical Cockpit: Stabilized SQL intelligence engine (valuation/trends) and implemented elite drill-down UI with viewport-fixed positioning and background scroll-lock.
-  - [2026-05-14] Production Deployment: Successfully deployed the modernized ERP system to the production cloud server (46.224.144.166). Verified financial and ledger integrity.
+## 5. CONTEXT & TESTING PROTOCOL
+- **Context:** Rely on `project_context.txt` (user will manually update it).
+- **Financial Logic:** Do not push financial changes without manual `pytest -m finance` success confirmation from the user.
+- **Startup:** Prioritize using `start_erp_dev.bat` for initializing services cleanly.
 
-## 6. Gated Cloud Deployment Protocol (STRICTLY ENFORCED)
-- **Zero Autonomous Cloud Action:** You MUST NOT push to GitHub or execute remote scripts without explicit, step-by-step confirmation.
-- **Mandatory Gated Workflow:**
-  1. **Phase 1: Local Implementation:** Complete all coding and verification on the local server. ALL changes must be saved locally.
-  2. **Phase 2: Staging Gate:** After local verification, you MUST ask the user: *"All changes are verified locally. Would you like to push to the Staging/Test server now?"*
-  3. **Phase 3: Staging Deployment:** ONLY after the user says "Yes" or "Proceed", push to GitHub and run `bash deploy-staging.sh` on the server.
-  4. **Phase 4: Production Gate:** After staging verification, you MUST ask the user: *"Staging is updated. Would you like to deploy to the Production server now?"*
-  5. **Phase 5: Production Deployment:** ONLY after a second explicit confirmation, run `bash update-erp.sh` on the server.
-- **Storage Rule:** All modifications must remain in the local workspace until the Staging Gate (Phase 2) is cleared.
-- **Status Announcement:** Explicitly output: *"Workflow Status: [LOCAL/STAGING/PRODUCTION] - Awaiting User Gate Approval."*
+## 6. PRODUCTION INFRASTRUCTURE & SCHEMA (READ-ONLY)
+- **Server Specs:** IP: `46.224.144.166` | User: `root` | Pass: `Zid@n2026` | Dir: `/root`.
+- **Prod Deploy Script:** `git fetch origin && git reset --hard origin/main && bash deploy.sh`.
+- **Read-Only Sync:** DO NOT autonomously modify the live database (`INSERT/UPDATE/DROP`). Use `information_schema` for structure comparison only.
+- **Migrations:** For live schema diffs, generate safe `ALTER/CREATE` scripts locally in `/migrations` and ask for permission before applying live.
 
-## 7. Context Synchronization & Testing Protocol (CRITICAL)
-- **No Background Loops:** You are strictly forbidden from running `orchestrator.py` in a continuous background loop. 
-- **Context Synchronization:** Rely on `project_context.txt` for architectural context, but expect the user to update it manually via scripts rather than continuous polling.
-- **Continuous Validation & Reporting:** Do not commit or push any financial logic changes unless explicit confirmation is provided that the `pytest -m finance` tests have passed successfully (run manually by the user).
-- **Auto-Startup Execution:** Prioritize using the `start_erp_dev.bat` script to initialize the local environment, ensuring backend and frontend services start cleanly without background interference.
+## 7. FUNCTIONAL & UI IMPACT WARNING (EXPLICIT GATE)
+- **Halt on Core Changes:** If modifying core backend logic or changing established UI layouts, you MUST halt and output an `[IMPACT WARNING]`.
+- **Warning Format:** Briefly state 1. Target component, 2. Current behavior, 3. Intended behavior.
+- **Require Confirmation:** Ask *"Do you approve modifying this core logic/UI?"* and wait for a "Yes" before proceeding.
 
-## 8. Production Server Infrastructure (CONFIRMED)
-- **Primary IP:** `46.224.144.166`
-- **SSH User:** `root`
-- **Password:** `Zid@n2026` (Note: SSH Password Authentication is currently active).
-- **Project Root:** `/root`
-- **Deployment Script:** `git fetch origin && git reset --hard origin/main && bash deploy.sh` (Hard Reset Mandated).
-- **Gated Protocol Status:** Phase 5 (Production Deployment) Completed Successfully on 2026-05-14.
-- **SSH Key Authorization:** Key `ahmedalyzidan2013@gmail.com` is present in the account settings but requires manual authorization in `/root/.ssh/authorized_keys` if Password Authentication is ever disabled.
-
-## 9. Production Schema Integrity & Synchronization (STRICTLY READ-ONLY)
-- **Zero Data Modification Mandate:** When instructed to compare local and live databases, you MUST NOT execute any `INSERT`, `UPDATE`, `DELETE`, `DROP`, or data migration commands on the production database.
-- **Structural Comparison Only:** To verify schema synchronization, you must exclusively use read-only queries against `information_schema.tables` and `information_schema.columns` to compare table names, column names, data types, and constraints between the local and production environments.
-- **No Autonomous Live Alterations:** If a schema discrepancy is found (e.g., a missing column or new table in the local environment that is not in production), DO NOT autonomously apply the change to the live server. 
-- **Migration Script Generation:** Instead, you must generate a safe `ALTER TABLE` or `CREATE TABLE` SQL migration script locally, save it as a new file in a `migrations/` folder, and explicitly ask the user for permission before applying it to the production database.
-- **Reporting Format:** Output the results clearly as a "Schema Diff Report" showing [MISSING IN LIVE], [DATATYPE MISMATCH], or [SYNCED].
-
-## 10. FUNCTIONAL & UI IMPACT WARNING (EXPLICIT GATE)
-- **Exception to Autonomous Execution:** While Section 0 mandates autonomous execution for general tasks, any modification that alters the existing core behavior of a backend function/method, or changes the established layout/functionality of a UI screen, is EXEMPT from automatic execution.
-- **Impact Warning Mandatory:** Before generating or applying code for such changes, you MUST halt execution and output a highly visible `[IMPACT WARNING]`.
-- **Warning Content:** The warning must clearly explain: 
-  1. Which specific function or UI component is being targeted.
-  2. The current behavior of this component.
-  3. The intended new behavior and its potential impact on the system.
-- **Explicit Confirmation Required:** After displaying the warning, you MUST explicitly ask the user: *"Do you approve modifying this core logic/UI?"* and wait for the user to confirm (e.g., "Yes", "Proceed") BEFORE applying the code changes.
-
-## 11. ARABIC MODIFICATION SUMMARY (EXPLICIT MANDATE)
-- **Arabic Explanation Required:** With any file modification or code change, you MUST provide a detailed explanation in Arabic explaining exactly what was modified, why, and the resulting changes.
-
-## 12. QUOTA-CONSERVATIVE DEVELOPMENT PATTERN (STRICT CONSERVATION)
-- **Minimize Token Consumption:** You MUST optimize all text and code responses to conserve the user's compute quota and prevent hitting limits early.
-- **Targeted Operations Only:** When a file is exceptionally long, and the user requests a localized fix, ONLY output and modify the specific code blocks or functions involved. Do not rewrite unaffected components unless absolutely required for runtime execution.
-- **Precise Explanations:** Keep explanations, code summaries, and debug logs concise and direct. Eliminate conversational filler to save response tokens.
+## 8. BRIEF ARABIC SUMMARY
+- **Token-Saving Translation:** With any file modification, provide a VERY BRIEF, single-sentence summary in Arabic explaining what was changed and why, without unnecessary elaboration.

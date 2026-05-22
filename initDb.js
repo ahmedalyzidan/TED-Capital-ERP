@@ -43,7 +43,8 @@ async function initializeDatabase() {
             `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_name VARCHAR(255), ADD COLUMN IF NOT EXISTS legal_id VARCHAR(100), ADD COLUMN IF NOT EXISTS customer_type VARCHAR(100), ADD COLUMN IF NOT EXISTS referral VARCHAR(100), ADD COLUMN IF NOT EXISTS customer_since DATE, ADD COLUMN IF NOT EXISTS product VARCHAR(255), ADD COLUMN IF NOT EXISTS credit_limit NUMERIC DEFAULT 0, ADD COLUMN IF NOT EXISTS credit_balance NUMERIC DEFAULT 0`,
             `ALTER TABLE projects ADD COLUMN IF NOT EXISTS company VARCHAR(255), ADD COLUMN IF NOT EXISTS budget_fcy NUMERIC DEFAULT 0, ADD COLUMN IF NOT EXISTS fx_rate NUMERIC DEFAULT 1, ADD COLUMN IF NOT EXISTS management_pct NUMERIC DEFAULT 0, ADD COLUMN IF NOT EXISTS partners_pct NUMERIC DEFAULT 100`,
             `ALTER TABLE staff ADD COLUMN IF NOT EXISTS company VARCHAR(255)`,
-            `ALTER TABLE rfq ADD COLUMN IF NOT EXISTS company VARCHAR(255)`
+            `ALTER TABLE rfq ADD COLUMN IF NOT EXISTS company VARCHAR(255)`,
+            `ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS email VARCHAR(255)`
         ];
         for (let query of entityAlters) await client.query(query);
 

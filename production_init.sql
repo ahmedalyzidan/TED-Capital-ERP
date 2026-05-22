@@ -410,6 +410,7 @@ CREATE TABLE IF NOT EXISTS subcontractors (
     name VARCHAR(255) NOT NULL,
     contact_person VARCHAR(255),
     phone VARCHAR(50),
+    email VARCHAR(255),
     status VARCHAR(50) DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
