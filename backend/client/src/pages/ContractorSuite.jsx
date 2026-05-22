@@ -608,7 +608,8 @@ export default function ContractorSuite() {
     "أعمال مصاعد",
     "أعمال توريد وصب خرسانه",
     "أعمال مباني",
-    "أعمال توريدات"
+    "أعمال توريدات",
+    "مصروفات أخرى"
   ];
 
   // Dynamic system notifications helper (Toast)

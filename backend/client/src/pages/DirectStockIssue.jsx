@@ -59,7 +59,8 @@ const boqCategories = [
   "أعمال مصاعد",
   "أعمال توريد وصب خرسانه",
   "أعمال مباني",
-  "أعمال توريدات"
+  "أعمال توريدات",
+  "مصروفات أخرى"
 ];
 
 export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '' }) {
