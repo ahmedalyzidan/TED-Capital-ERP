@@ -150,7 +150,25 @@ async function autoLedgerEntry(client, debitAccountId, creditAccountId, amount, 
 async function syncProjectFinancials(projectId, client) {
     if (!projectId) return;
     try {
-        const projRes = await client.query("SELECT budget, expected_profit_percent, actual_profit_percent FROM projects WHERE id = $1", [projectId]);
+        let numericId = projectId;
+        let projectName = projectId;
+        if (isNaN(projectId) || String(projectId).trim() === '') {
+            const projLookup = await client.query("SELECT id, name FROM projects WHERE name = $1 LIMIT 1", [projectId]);
+            if (projLookup.rows.length > 0) {
+                numericId = projLookup.rows[0].id;
+                projectName = projLookup.rows[0].name;
+            } else {
+                return;
+            }
+        } else {
+            const projLookup = await client.query("SELECT name FROM projects WHERE id = $1 LIMIT 1", [projectId]);
+            if (projLookup.rows.length > 0) {
+                projectName = projLookup.rows[0].name;
+            } else {
+                return;
+            }
+        }
+        const projRes = await client.query("SELECT budget, expected_profit_percent, actual_profit_percent FROM projects WHERE id = $1", [numericId]);
         if (projRes.rows.length > 0) {
             const budget = Number(projRes.rows[0].budget) || 0; 
             const expPct = Number(projRes.rows[0].expected_profit_percent) || 0;
@@ -159,14 +177,17 @@ async function syncProjectFinancials(projectId, client) {
             const expAmt = budget * (expPct / 100);
             const actAmt = budget * (actPct / 100);
             
-            // تحديث جدول الشركاء بناءً على الـ ID بدلاً من الاسم لضمان الدقة
+            // تحديث جدول الشركاء بناءً على اسم المشروع ليتوافق مع قاعدة البيانات
+            // ملاحظة: تم تعطيل هذا الاستعلام لأن الأعمدة expected_return و actual_profit غير موجودة في قاعدة البيانات، وحسابات أرباح الشركاء تتم ديناميكيًا في التقارير.
+            /*
             await client.query(
                 `UPDATE partners 
                  SET expected_return = ROUND(CAST((share_percent / 100.0) * $1 AS NUMERIC), 2), 
                      actual_profit = ROUND(CAST((share_percent / 100.0) * $2 AS NUMERIC), 2) 
-                 WHERE project_id = $3`, 
-                [expAmt, actAmt, projectId]
+                 WHERE project_name = $3`, 
+                [expAmt, actAmt, projectName]
             );
+            */
         }
     } catch(err) { console.error("Sync Error:", err.message); }
 }

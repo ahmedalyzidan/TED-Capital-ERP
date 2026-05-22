@@ -490,6 +490,7 @@ export default function ContractorSuite() {
   const [quickAddSubCompanyId, setQuickAddSubCompanyId] = useState('');
   const [companies, setCompanies] = useState([]);
   const [isAddingSub, setIsAddingSub] = useState(false);
+  const [quickAddLineId, setQuickAddLineId] = useState(null);
 
   // Inline editing states (CRUD updates)
   const [editingItemType, setEditingItemType] = useState(null); // 'boq' | 'expense' | 'installment'
@@ -1231,6 +1232,12 @@ export default function ContractorSuite() {
       const subsRes = await api.get('/dynamic/table/subcontractors?limit=1000').catch(() => ({ data: { data: [] } }));
       const list = subsRes.data?.data || [];
       setSubcontractorsList(list);
+
+      if (quickAddLineId) {
+        updateContractorLine(quickAddLineId, 'contractorName', payload.name);
+        setQuickAddLineId(null);
+      }
+
       // clean up states
       setQuickAddSubName('');
       setQuickAddSubPhone('');
@@ -3000,12 +3007,13 @@ export default function ContractorSuite() {
                                     setQuickAddSubEmail('');
                                     setQuickAddSubName('');
                                     setQuickAddSubPhone('');
+                                    setQuickAddLineId(line.id);
                                     setShowQuickAddSub(true);
                                   }}
-                                  className="p-1 bg-orange-500/10 border border-orange-500/30 text-orange-450 hover:bg-orange-500/20 rounded-lg text-xs font-black transition-all"
+                                  className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-all flex items-center gap-1 active:scale-95 shadow-sm cursor-pointer whitespace-nowrap"
                                   title="إضافة مقاول جديد"
                                 >
-                                  +
+                                  <span className="text-indigo-650 font-black">+</span> Quick Add
                                 </button>
                               </div>
                             </td>
