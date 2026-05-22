@@ -3789,11 +3789,17 @@ export default function ContractorSuite() {
                         className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                       >
                         <option value="">-- تحصيل دفعة عامة (غير مرتبطة بمستخلص) --</option>
-                        {currentValuations.map(val => (
-                          <option key={val.id} value={val.id}>
-                            {val.claimNo} (غير مسدد: {((val.totalCurrent * 1.14) - currentInstallments.filter(i => i.valuationId === val.id).reduce((acc, curr) => acc + curr.amount, 0)).toLocaleString()} ج.م)
-                          </option>
-                        ))}
+                        {currentValuations.map(val => {
+                          const valTotal = val.totalFinal !== undefined ? val.totalFinal : (val.taxRate > 0 ? val.totalCurrent * (1 + val.taxRate / 100) : val.totalCurrent);
+                          const paidAmount = currentInstallments.filter(i => i.valuationId === val.id).reduce((acc, curr) => acc + curr.amount, 0);
+                          const unpaidAmount = valTotal - paidAmount;
+                          return (
+                            <option key={val.id} value={val.id}>
+                              {val.claimNo} (غير مسدد: {unpaidAmount.toLocaleString()} ج.م)
+                            </option>
+                          );
+                        })}
+
                       </select>
                     </div>
 
