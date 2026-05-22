@@ -526,6 +526,25 @@ router.get('/table/:type', async (req, res) => {
             prefix = "s.";
             queryStr = `SELECT s.*, (SELECT COUNT(*) FROM subcontractor_invoices WHERE subcontractor_id = s.id) AS issued_invoices FROM subcontractors s`;
             countStr = `SELECT COUNT(*) FROM subcontractors s`;
+        } else if (type === 'subcontractor_invoices') {
+            prefix = "si.";
+            queryStr = `SELECT si.*, 
+                COALESCE((
+                  SELECT SUM(ss.amount) 
+                  FROM subcontractor_statements ss 
+                  WHERE ss.is_deleted = false 
+                    AND ss.type = 'صرف مستخلص' 
+                    AND (CASE WHEN ss.metadata->>'invoice_id' ~ '^[0-9]+$' THEN (ss.metadata->>'invoice_id')::integer ELSE NULL END) = si.id
+                ), 0) AS total_paid,
+                (si.net_amount - COALESCE((
+                  SELECT SUM(ss.amount) 
+                  FROM subcontractor_statements ss 
+                  WHERE ss.is_deleted = false 
+                    AND ss.type = 'صرف مستخلص' 
+                    AND (CASE WHEN ss.metadata->>'invoice_id' ~ '^[0-9]+$' THEN (ss.metadata->>'invoice_id')::integer ELSE NULL END) = si.id
+                ), 0)) AS remaining_amount
+              FROM subcontractor_invoices si`;
+            countStr = `SELECT COUNT(*) FROM subcontractor_invoices si`;
         } else if (type === 'subcontractor_items') {
             prefix = "si.";
             queryStr = `SELECT si.*, b.project_name FROM subcontractor_items si LEFT JOIN boq b ON si.boq_id = b.id`;
@@ -692,6 +711,7 @@ router.get('/table/:type', async (req, res) => {
             else if (type === 'client_consumptions') { conditions.push(`cc.client_id = $${params.length + 1}`); params.push(filter); }
             else if (type === 'client_refunds') { conditions.push(`cr.client_id = $${params.length + 1}`); params.push(filter); }
             else if (type === 'partner_deposits' || type === 'partner_withdrawals') { conditions.push(`partner_id = $${params.length + 1}`); params.push(filter); }
+            else if (type === 'subcontractor_invoices') { conditions.push(`${prefix}project_id = $${params.length + 1}`); params.push(parseInt(filter) || 0); }
         }
 
         if (search) {

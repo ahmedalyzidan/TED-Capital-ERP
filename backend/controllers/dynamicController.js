@@ -79,6 +79,25 @@ class DynamicController {
                 prefix = "s.";
                 queryStr = `SELECT s.*, (SELECT COUNT(*) FROM subcontractor_invoices WHERE subcontractor_id = s.id) AS issued_invoices FROM subcontractors s`;
                 countStr = `SELECT COUNT(*) FROM subcontractors s`;
+            } else if (type === 'subcontractor_invoices') {
+                prefix = "si.";
+                queryStr = `SELECT si.*, 
+                    COALESCE((
+                      SELECT SUM(ss.amount) 
+                      FROM subcontractor_statements ss 
+                      WHERE ss.is_deleted = false 
+                        AND ss.type = 'صرف مستخلص' 
+                        AND (CASE WHEN ss.metadata->>'invoice_id' ~ '^[0-9]+$' THEN (ss.metadata->>'invoice_id')::integer ELSE NULL END) = si.id
+                    ), 0) AS total_paid,
+                    (si.net_amount - COALESCE((
+                      SELECT SUM(ss.amount) 
+                      FROM subcontractor_statements ss 
+                      WHERE ss.is_deleted = false 
+                        AND ss.type = 'صرف مستخلص' 
+                        AND (CASE WHEN ss.metadata->>'invoice_id' ~ '^[0-9]+$' THEN (ss.metadata->>'invoice_id')::integer ELSE NULL END) = si.id
+                    ), 0)) AS remaining_amount
+                  FROM subcontractor_invoices si`;
+                countStr = `SELECT COUNT(*) FROM subcontractor_invoices si`;
             } else if (type === 'installments') {
                 prefix = "i.";
                 queryStr = `SELECT i.*, cu.name AS customer_name, pu.project_name,
@@ -145,6 +164,9 @@ class DynamicController {
                         conditions.push(`cost_center = $${params.length + 1}`);
                     }
                     params.push(filter);
+                } else if (type === 'subcontractor_invoices') {
+                    conditions.push(`${prefix}project_id = $${params.length + 1}`);
+                    params.push(parseInt(filter) || 0);
                 }
             }
             if (search) {
@@ -692,6 +714,25 @@ class DynamicController {
                 await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`COL-${id}`, oldData.reference_no]);
             } else if (type === 'subcontractor_statements') {
                 await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`PMT-${id}`, oldData.reference_no]);
+                const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});
+                const invoiceId = meta.invoice_id;
+                if (invoiceId) {
+                    const paidRes = await client.query(`
+                        SELECT COALESCE(SUM(amount), 0) AS total_paid
+                        FROM subcontractor_statements
+                        WHERE is_deleted = false
+                          AND type = 'صرف مستخلص'
+                          AND (CASE WHEN metadata->>'invoice_id' ~ '^[0-9]+$' THEN (metadata->>'invoice_id')::integer ELSE NULL END) = $1
+                    `, [invoiceId]);
+                    const totalPaid = parseFloat(paidRes.rows[0].total_paid || 0);
+
+                    const invRes = await client.query("SELECT net_amount FROM subcontractor_invoices WHERE id = $1", [invoiceId]);
+                    if (invRes.rows.length > 0) {
+                        const netAmount = parseFloat(invRes.rows[0].net_amount || 0);
+                        const newStatus = totalPaid >= netAmount ? 'Paid' : 'Approved';
+                        await client.query("UPDATE subcontractor_invoices SET status = $1 WHERE id = $2", [newStatus, invoiceId]);
+                    }
+                }
             }
 
             if (type === 'shipment_expenses' || type === 'shipment_items') {

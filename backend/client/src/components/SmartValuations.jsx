@@ -482,8 +482,15 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                       <span className="font-black text-slate-700">{Number(invoice.gross_amount || 0).toLocaleString()} ج.م</span>
                     </div>
                     <div className="text-left font-mono border-r border-slate-100 pr-6">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">الصافي بعد الخصومات</p>
-                      <span className="font-black text-rose-600">{Number(invoice.net_amount || 0).toLocaleString()} ج.م</span>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">المتبقي غير المسدد</p>
+                      <span className="font-black text-rose-600">
+                        {Number(invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.net_amount || 0)).toLocaleString()} ج.م
+                      </span>
+                      {invoice.remaining_amount !== undefined && (
+                        <div className="text-[9px] text-slate-400 font-normal mt-0.5">
+                          تم صرف {Number(invoice.total_paid || 0).toLocaleString()} من {Number(invoice.net_amount || 0).toLocaleString()}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 mr-4 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-black shadow-sm">

@@ -951,7 +951,20 @@ export default function Subcontractor360({ subId, onClose, language }) {
                                           <div>{language === 'ar' ? `الضمان: -${Number(inv.retention_deduction || 0).toLocaleString()}` : `Retention: -${Number(inv.retention_deduction || 0).toLocaleString()}`}</div>
                                           <div>{language === 'ar' ? `استرداد دفعة: -${Number(inv.dp_recovery || 0).toLocaleString()}` : `Adv Recovery: -${Number(inv.dp_recovery || 0).toLocaleString()}`}</div>
                                        </td>
-                                       <td className="px-8 py-4 font-black text-emerald-600 text-xs">{Number(inv.net_amount || inv.amount || 0).toLocaleString()} LCY</td>
+                                       <td className="px-8 py-4 text-emerald-600 text-xs">
+                                          <div className="flex flex-col">
+                                             <span className="font-black">
+                                                {Number(inv.remaining_amount !== undefined ? inv.remaining_amount : (inv.net_amount || inv.amount || 0)).toLocaleString()} LCY
+                                             </span>
+                                             {inv.remaining_amount !== undefined && (
+                                                <span className="text-[9px] text-slate-400 font-normal mt-0.5">
+                                                   {language === 'ar' 
+                                                      ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString()} من أصل ${Number(inv.net_amount || 0).toLocaleString()}` 
+                                                      : `Paid: ${Number(inv.total_paid || 0).toLocaleString()} of ${Number(inv.net_amount || 0).toLocaleString()}`}
+                                                </span>
+                                             )}
+                                          </div>
+                                       </td>
                                        <td className="px-8 py-4">
                                           <span className="px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100">
                                              {inv.status || 'Approved'}

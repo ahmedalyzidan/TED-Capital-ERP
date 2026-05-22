@@ -362,8 +362,18 @@ router.post('/record_payment', async (req, res) => {
         const statementId = statementRes.rows[0].id;
 
         // 4. Update Invoice Status if fully paid
-        if (invoice_id) {
-            await client.query("UPDATE subcontractor_invoices SET status = 'Paid' WHERE id = $1", [invoice_id]);
+        if (invoice_id && invoice) {
+            const paidRes = await client.query(`
+                SELECT COALESCE(SUM(amount), 0) AS total_paid
+                FROM subcontractor_statements
+                WHERE is_deleted = false
+                  AND type = 'صرف مستخلص'
+                  AND (CASE WHEN metadata->>'invoice_id' ~ '^[0-9]+$' THEN (metadata->>'invoice_id')::integer ELSE NULL END) = $1
+            `, [invoice_id]);
+            const totalPaid = parseFloat(paidRes.rows[0].total_paid || 0);
+            const netAmount = parseFloat(invoice.net_amount || 0);
+            const newStatus = totalPaid >= netAmount ? 'Paid' : 'Approved';
+            await client.query("UPDATE subcontractor_invoices SET status = $1 WHERE id = $2", [newStatus, invoice_id]);
         }
 
         // 5. Post to Ledger

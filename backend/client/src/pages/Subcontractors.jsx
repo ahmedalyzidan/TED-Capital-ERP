@@ -526,7 +526,7 @@ export default function Subcontractors() {
       subcontractor_id: invoice.subcontractor_id,
       project_name: invoice.project_name || invoice.project_id || 'General',
       invoice_id: invoice.id,
-      amount_paid: invoice.net_amount || invoice.amount || '',
+      amount_paid: invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.net_amount || invoice.amount || ''),
       payment_date: new Date().toISOString().split('T')[0],
       payment_method: 'InstaPay',
       reference_no: '',
@@ -1028,7 +1028,18 @@ export default function Subcontractors() {
                             {Number(inv.curr_qty || 0).toLocaleString()}
                           </td>
                           <td className={`px-8 py-4 ${language === 'ar' ? 'text-left' : 'text-right'} font-bold text-emerald-650 text-base`}>
-                            {Number(inv.net_amount || inv.amount || 0).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
+                            <div className="flex flex-col">
+                              <span>
+                                {Number(inv.remaining_amount !== undefined ? inv.remaining_amount : (inv.net_amount || inv.amount || 0)).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
+                              </span>
+                              {inv.remaining_amount !== undefined && (
+                                <span className="text-[10px] text-slate-450 font-normal mt-0.5">
+                                  {language === 'ar' 
+                                    ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString()} من أصل ${Number(inv.net_amount || 0).toLocaleString()}` 
+                                    : `Paid: ${Number(inv.total_paid || 0).toLocaleString()} of ${Number(inv.net_amount || 0).toLocaleString()}`}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">

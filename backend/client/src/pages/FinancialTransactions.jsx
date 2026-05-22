@@ -733,15 +733,29 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                 <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'مستخلص المقاول (اختياري)' : 'Subcontractor Invoice (Optional)'}</label>
                 <select
                   value={payForm.invoice_id}
-                  onChange={(e) => setPayForm({ ...payForm, invoice_id: e.target.value })}
+                  onChange={(e) => {
+                    const invId = e.target.value;
+                    const selectedInv = filteredSubInvoices.find(inv => String(inv.id) === String(invId));
+                    setPayForm(prev => ({
+                      ...prev,
+                      invoice_id: invId,
+                      amount_paid: selectedInv ? String(selectedInv.remaining_amount !== undefined ? selectedInv.remaining_amount : selectedInv.net_amount) : '',
+                      project_name: selectedInv && selectedInv.project_name ? selectedInv.project_name : prev.project_name
+                    }));
+                  }}
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-655 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- غير مرتبط بمستخلص مقاول --' : '-- Not Linked to Sub Invoice --'}</option>
-                  {filteredSubInvoices.map(inv => (
-                    <option key={inv.id} value={inv.id}>
-                      {ar ? `مستخلص #${inv.id} - مشروع: ${inv.project_name || 'عام'} - بقيمة ${parseFloat(inv.net_amount || 0).toLocaleString()} جنيه` : `Invoice #${inv.id} - ${inv.net_amount} EGP`}
-                    </option>
-                  ))}
+                  {filteredSubInvoices.map(inv => {
+                    const remaining = inv.remaining_amount !== undefined ? inv.remaining_amount : inv.net_amount;
+                    return (
+                      <option key={inv.id} value={inv.id}>
+                        {ar 
+                          ? `مستخلص #${inv.id} - مشروع: ${inv.project_name || 'عام'} - المتبقي: ${parseFloat(remaining).toLocaleString()} جنيه (من أصل ${parseFloat(inv.net_amount || 0).toLocaleString()})` 
+                          : `Invoice #${inv.id} - Bal: ${parseFloat(remaining).toLocaleString()} EGP (of ${parseFloat(inv.net_amount || 0).toLocaleString()})`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
