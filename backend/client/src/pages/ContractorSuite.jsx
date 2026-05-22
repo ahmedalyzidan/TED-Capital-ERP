@@ -1211,11 +1211,17 @@ export default function ContractorSuite() {
     try {
       const parsedProjId = parseInt(activeProjectId, 10);
       const selectedComp = companies.find(c => Number(c.id) === Number(quickAddSubCompanyId));
+      let resolvedCompanyId = selectedComp ? selectedComp.id : null;
+      if (!resolvedCompanyId && activeProject?.company) {
+        const matched = companies.find(c => c.name.toLowerCase() === activeProject.company.toLowerCase());
+        if (matched) resolvedCompanyId = matched.id;
+      }
       const payload = {
         name: quickAddSubName.trim(),
         phone: quickAddSubPhone.trim(),
         email: quickAddSubEmail.trim(),
         company: selectedComp ? selectedComp.name : (quickAddSubCompany.trim() || activeProject?.company || 'TED CAPITAL'),
+        company_id: resolvedCompanyId,
         project_name: activeProject?.name || null,
         project_id: isNaN(parsedProjId) ? null : parsedProjId
       };

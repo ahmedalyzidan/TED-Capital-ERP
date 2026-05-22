@@ -289,7 +289,16 @@ export default function Subcontractors() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.put(`/update/subcontractors/${editSubForm.id}`, editSubForm);
+      const selectedProj = projects.find(p => Number(p.id) === Number(editSubForm.project_id));
+      let resolvedCompanyId = null;
+      if (selectedProj && selectedProj.company_id) {
+        resolvedCompanyId = selectedProj.company_id;
+      } else if (editSubForm.company) {
+        const pMatch = projects.find(p => p.company && p.company.toLowerCase() === editSubForm.company.toLowerCase());
+        if (pMatch && pMatch.company_id) resolvedCompanyId = pMatch.company_id;
+      }
+      const payload = { ...editSubForm, company_id: resolvedCompanyId };
+      await api.put(`/update/subcontractors/${editSubForm.id}`, payload);
       alert(language === 'ar' ? "تم تحديث بيانات المقاول بنجاح!" : "Subcontractor updated successfully!");
       setIsEditSubModalOpen(false);
       fetchData();
@@ -315,7 +324,16 @@ export default function Subcontractors() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post('/add/subcontractors', subForm);
+      const selectedProj = projects.find(p => Number(p.id) === Number(subForm.project_id));
+      let resolvedCompanyId = null;
+      if (selectedProj && selectedProj.company_id) {
+        resolvedCompanyId = selectedProj.company_id;
+      } else if (subForm.company) {
+        const pMatch = projects.find(p => p.company && p.company.toLowerCase() === subForm.company.toLowerCase());
+        if (pMatch && pMatch.company_id) resolvedCompanyId = pMatch.company_id;
+      }
+      const payload = { ...subForm, company_id: resolvedCompanyId };
+      await api.post('/add/subcontractors', payload);
       alert(cur.alerts.success);
       setIsSubModalOpen(false);
       setSubForm({ name: '', phone: '', project_id: '', company: '', tax_id: '', license_number: '', insurance_expiry: '' });
