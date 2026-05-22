@@ -1,5 +1,4 @@
 const pool = require('../config/db');
-const { logAdvancedAudit } = require('../utils/helpers');
 
 /**
  * محرك القيود المحاسبية الآلي (Automated Accounting Engine)
@@ -158,7 +157,8 @@ class AccountingService {
 
         // 🌟 تسجيل التدقيق المتقدم (Advanced Forensic Audit)
         try {
-            await logAdvancedAudit(
+            const { logAdvancedAudit: dynamicLogAdvancedAudit } = require('../utils/helpers');
+            await dynamicLogAdvancedAudit(
                 client,
                 username || 'System',
                 'ledger',

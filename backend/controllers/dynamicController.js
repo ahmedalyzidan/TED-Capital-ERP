@@ -119,6 +119,19 @@ class DynamicController {
                     FROM chart_of_accounts c
                 `;
                 countStr = `SELECT COUNT(*) FROM chart_of_accounts c`;
+            } else if (type === 'client_payment_history') {
+                prefix = "cph.";
+                queryStr = `SELECT cph.*, c.name AS client_name, p.name AS project_name
+                            FROM client_payment_history cph
+                            LEFT JOIN customers c ON cph.client_id = c.id
+                            LEFT JOIN projects p ON cph.project_id = p.id`;
+                countStr = `SELECT COUNT(*) FROM client_payment_history cph`;
+            } else if (type === 'subcontractor_statements') {
+                prefix = "ss.";
+                queryStr = `SELECT ss.*, s.id AS subcontractor_id
+                            FROM subcontractor_statements ss
+                            LEFT JOIN subcontractors s ON ss.sub_name = s.name`;
+                countStr = `SELECT COUNT(*) FROM subcontractor_statements ss`;
             }
 
             let conditions = [`${prefix || ''}is_deleted = FALSE`]; let params = [];
@@ -136,7 +149,13 @@ class DynamicController {
             }
             if (search) {
                 const searchIdx = params.length + 1;
-                conditions.push(`(CAST(${prefix}id AS TEXT) ILIKE $${searchIdx})`);
+                if (type === 'client_payment_history') {
+                    conditions.push(`(CAST(cph.id AS TEXT) ILIKE $${searchIdx} OR cph.notes ILIKE $${searchIdx} OR c.name ILIKE $${searchIdx})`);
+                } else if (type === 'subcontractor_statements') {
+                    conditions.push(`(CAST(ss.id AS TEXT) ILIKE $${searchIdx} OR ss.details ILIKE $${searchIdx} OR ss.sub_name ILIKE $${searchIdx})`);
+                } else {
+                    conditions.push(`(CAST(${prefix}id AS TEXT) ILIKE $${searchIdx})`);
+                }
                 params.push(`%${search}%`);
             }
 
@@ -668,9 +687,58 @@ class DynamicController {
             await client.query(`UPDATE ${type} SET is_deleted = TRUE, deleted_by = $1, deleted_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user.username, id]);
             await logAdvancedAudit(client, req.user.username, type, id, 'SOFT_DELETE', 'Record marked as deleted', oldData, null);
 
+            // Reversal of Accounting ledger entries
+            if (type === 'client_payment_history') {
+                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`COL-${id}`, oldData.reference_no]);
+            } else if (type === 'subcontractor_statements') {
+                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`PMT-${id}`, oldData.reference_no]);
+            }
+
             if (type === 'shipment_expenses' || type === 'shipment_items') {
                 if (oldData.shipment_id) {
                     await recalculateCBMProration(client, oldData.shipment_id, req.user?.username);
+                }
+            }
+
+            // Trigger Project Financial Sync
+            let projectIdToSync = null;
+            if (type === 'client_payment_history' && oldData.project_id) {
+                projectIdToSync = oldData.project_id;
+            } else if (type === 'subcontractor_statements') {
+                const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});
+                const pName = meta.project_name;
+                if (pName) {
+                    const pRes = await client.query("SELECT id FROM projects WHERE name = $1 LIMIT 1", [pName]);
+                    if (pRes.rows.length > 0) {
+                        projectIdToSync = pRes.rows[0].id;
+                    }
+                }
+            }
+
+            if (projectIdToSync) {
+                const projRes = await client.query("SELECT name, budget FROM projects WHERE id = $1::integer", [projectIdToSync]);
+                if (projRes.rows.length > 0) {
+                    const { name: projectName, budget } = projRes.rows[0];
+                    const ledgerRes = await client.query(`
+                        SELECT 
+                            COALESCE(SUM(CASE WHEN c.account_type = 'Revenue' THEN (CAST(l.credit AS NUMERIC) - CAST(l.debit AS NUMERIC)) ELSE 0 END), 0) as total_revenue,
+                            COALESCE(SUM(CASE WHEN c.account_type = 'Expense' THEN (CAST(l.debit AS NUMERIC) - CAST(l.credit AS NUMERIC)) ELSE 0 END), 0) as total_expenses
+                        FROM ledger l
+                        JOIN chart_of_accounts c ON l.account_name = c.account_name
+                        WHERE l.cost_center = $1::text AND l.is_deleted = false
+                    `, [projectName]);
+                    const { total_revenue, total_expenses } = ledgerRes.rows[0];
+                    const actualProfit = (parseFloat(total_revenue) || 0) - (parseFloat(total_expenses) || 0);
+                    const numBudget = parseFloat(budget) || 0;
+
+                    await client.query(`
+                        UPDATE projects 
+                        SET actual_profit = $1::numeric, 
+                            actual_profit_percent = CASE WHEN $2::numeric > 0 THEN ($1::numeric / $2::numeric * 100) ELSE 0 END
+                        WHERE id = $3::integer
+                    `, [actualProfit, numBudget, projectIdToSync]);
+
+                    await logAudit(req.user?.username || 'System', 'SYNC_FINANCIALS', 'projects', projectIdToSync, `تمت إعادة مزامنة البيانات المالية للمشروع: ${projectName} بعد حذف الحركة`);
                 }
             }
 

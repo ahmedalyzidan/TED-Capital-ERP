@@ -185,6 +185,158 @@ class ProjectController {
             client.release();
         }
     }
+
+    /**
+     * تسجيل تحصيل دفعة من عميل مع ترحيل قيد اليومية ومزامنة المشروع
+     */
+    async recordCollection(req, res) {
+        const {
+            project_id,
+            client_id,
+            amount,
+            payment_date,
+            payment_method,
+            reference_no,
+            notes,
+            valuation_id,
+            source_account
+        } = req.body;
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const username = req.user?.username || 'System';
+
+            let customerId = client_id || null;
+            let clientName = 'عميل عام';
+            let resolvedCompany = 'TED Capital';
+            let resolvedCompanyId = 1;
+            let costCenter = 'General';
+            let project = null;
+
+            if (project_id) {
+                // 1. جلب بيانات المشروع
+                const projRes = await client.query("SELECT id, name, client_name, company, company_id, budget FROM projects WHERE id = $1::integer", [project_id]);
+                if (projRes.rows.length === 0) throw new Error("المشروع غير موجود");
+                project = projRes.rows[0];
+                clientName = project.client_name || 'عميل عام';
+                resolvedCompany = project.company || 'TED Capital';
+                resolvedCompanyId = project.company_id || 1;
+                costCenter = project.name;
+
+                // البحث عن معرّف العميل المطابق لاسم عميل المشروع إن لم يرسل صراحة
+                if (!customerId && project.client_name) {
+                    const custRes = await client.query("SELECT id FROM customers WHERE name ILIKE $1 LIMIT 1", [project.client_name]);
+                    if (custRes.rows.length > 0) {
+                        customerId = custRes.rows[0].id;
+                    }
+                }
+            } else {
+                // تحصيل عام بدون مشروع
+                if (!customerId) throw new Error("يجب تحديد العميل عند التحصيل العام");
+                const custRes = await client.query("SELECT id, name, company, company_id FROM customers WHERE id = $1", [customerId]);
+                if (custRes.rows.length === 0) throw new Error("العميل غير موجود");
+                const customer = custRes.rows[0];
+                clientName = customer.name;
+                resolvedCompany = customer.company || 'TED Capital';
+                resolvedCompanyId = customer.company_id || 1;
+                costCenter = 'General';
+            }
+
+            // 3. إدراج الحركة في جدول تاريخ مدفوعات العملاء (client_payment_history)
+            const insertQuery = `
+                INSERT INTO client_payment_history (
+                    client_id, amount_paid, payment_date, payment_method, reference_no, notes, project_id, metadata
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+            `;
+            const details = notes || (project_id ? `تحصيل دفعة لمشروع: ${project.name}` : `تحصيل دفعة عامة من العميل: ${clientName}`);
+            const metadata = {
+                project_id: project_id || null,
+                project_name: project ? project.name : 'عام',
+                valuation_id: valuation_id || null,
+                payment_method: payment_method || 'نقدًا',
+                reference_no: reference_no || null,
+                source_account: source_account || 'صندوق نقدية - تيد كابيتال'
+            };
+
+            const payRes = await client.query(insertQuery, [
+                customerId,
+                parseFloat(amount),
+                payment_date || new Date(),
+                payment_method || 'نقدًا',
+                reference_no || null,
+                details,
+                project_id || null,
+                JSON.stringify(metadata)
+            ]);
+            const paymentId = payRes.rows[0].id;
+
+            // 4. قيد اليومية المزدوج (Double-Entry Posting)
+            // مدين: حساب الصندوق/البنك (source_account أو الافتراضي 'صندوق نقدية - تيد كابيتال')
+            // دائن: حساب العملاء ('1120')
+            await AccountingService.recordDoubleEntry(client, {
+                debitAccount: source_account || 'صندوق نقدية - تيد كابيتال',
+                creditAccount: '1120',
+                amount: parseFloat(amount),
+                costCenter: costCenter,
+                description: `تحصيل دفعة من العميل: ${clientName} | ${details}`,
+                username: username,
+                referenceNo: reference_no || `COL-${paymentId}`,
+                companyId: resolvedCompanyId,
+                company: resolvedCompany
+            });
+
+            // 4.5 تحديث حالة الفاتورة/المستخلص إذا تم ربطه
+            if (valuation_id) {
+                await client.query("UPDATE ar_invoices SET status = 'Paid' WHERE id = $1", [valuation_id]);
+            }
+
+            // 5. تسجيل العملية في سجل التدقيق
+            await logAudit(username, 'CLIENT_COLLECTION', 'client_payment_history', paymentId, `تم تسجيل تحصيل دفعة بقيمة ${amount} للعميل ${clientName}`);
+
+            await client.query('COMMIT');
+
+            // 6. مزامنة البيانات المالية للمشروع آلياً (فقط إذا كانت الدفعة لمشروع محدد)
+            if (project_id && project) {
+                const syncClient = await pool.connect();
+                try {
+                    const ledgerRes = await syncClient.query(`
+                        SELECT 
+                            COALESCE(SUM(CASE WHEN c.account_type = 'Revenue' THEN (CAST(l.credit AS NUMERIC) - CAST(l.debit AS NUMERIC)) ELSE 0 END), 0) as total_revenue,
+                            COALESCE(SUM(CASE WHEN c.account_type = 'Expense' THEN (CAST(l.debit AS NUMERIC) - CAST(l.credit AS NUMERIC)) ELSE 0 END), 0) as total_expenses
+                        FROM ledger l
+                        JOIN chart_of_accounts c ON l.account_name = c.account_name
+                        WHERE l.cost_center = $1::text AND l.is_deleted = false
+                    `, [project.name]);
+
+                    const { total_revenue, total_expenses } = ledgerRes.rows[0];
+                    const actualProfit = (parseFloat(total_revenue) || 0) - (parseFloat(total_expenses) || 0);
+                    const numBudget = parseFloat(project.budget) || 0;
+
+                    await syncClient.query(`
+                        UPDATE projects 
+                        SET actual_profit = $1::numeric, 
+                            actual_profit_percent = CASE WHEN $2::numeric > 0 THEN ($1::numeric / $2::numeric * 100) ELSE 0 END
+                        WHERE id = $3::integer
+                    `, [actualProfit, numBudget, project.id]);
+
+                    await logAudit(username, 'SYNC_FINANCIALS', 'projects', project.id, `تمت مزامنة البيانات المالية للمشروع: ${project.name}`);
+                } catch (syncErr) {
+                    console.error("❌ Auto Sync Project Error during Collection Posting:", syncErr.message);
+                } finally {
+                    syncClient.release();
+                }
+            }
+
+            res.json({ success: true, paymentId });
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("❌ Record Collection Error:", err.message);
+            res.status(500).json({ error: err.message });
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = new ProjectController();

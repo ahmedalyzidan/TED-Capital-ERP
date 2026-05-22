@@ -10,6 +10,7 @@ router.get('/subcontractor_items/:sub_id', projectController.getSubcontractorIte
 router.get('/boq_subcontractors/:boq_id', projectController.getBOQSubcontractors);
 router.get('/boq_invoices/:boq_id', projectController.getBOQInvoices);
 router.post('/distribute-profit/:project_id', projectController.distributeProfit);
+router.post('/record_collection', projectController.recordCollection);
 router.get('/sync/:id', projectController.syncProject);
 
 module.exports = router;

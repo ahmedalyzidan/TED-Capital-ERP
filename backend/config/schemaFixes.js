@@ -1136,6 +1136,12 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS client_valuation_id INTEGER
     `);
 
+    // --- Client Payment History Project Link ---
+    await runQuery("Client Payment History Project Link", `
+        ALTER TABLE client_payment_history 
+        ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
+    `);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

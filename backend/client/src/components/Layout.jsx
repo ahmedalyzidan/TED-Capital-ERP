@@ -71,6 +71,7 @@ export default function Layout() {
         supplyChain: "سلاسل الإمداد 🚛",
         invoices: "المستخلصات",
         subcontractors: "المقاولين",
+        transactions: "التحصيلات والمدفوعات 💸",
         hr: "الموارد البشرية",
         corporate: "الحوكمة",
         hcm: "بوابتي",
@@ -133,6 +134,7 @@ export default function Layout() {
         supplyChain: "Supply Chain 🚛",
         invoices: "Certificates",
         subcontractors: "Subcontractors",
+        transactions: "Collections & Payments 💸",
         hr: "HR",
         corporate: "Governance",
         hcm: "My Portal",
@@ -278,6 +280,7 @@ export default function Layout() {
             { path: '/inter-company', icon: '🏢', label: t.menu.interCompany, perm: 'FIN_VIEW_LEDGER' },
             { path: '/expenses', icon: '💸', label: t.menu.expenses, perm: 'FIN_VIEW_LEDGER' },
             { path: '/invoices', icon: '🧾', label: t.menu.invoices, perm: 'FIN_POST_ENTRY' },
+            { path: '/finance/transactions', icon: '💸', label: t.menu.transactions, perm: 'FIN_VIEW_LEDGER' },
           ]
         },
         {
