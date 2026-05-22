@@ -146,7 +146,7 @@ export default function ContractorSuite() {
   // Load orgUnits from Governance registry, projects and inventory sales from DB
   const fetchAllData = async () => {
     try {
-      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes] = await Promise.all([
+      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes] = await Promise.all([
         api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } })),
@@ -154,13 +154,15 @@ export default function ContractorSuite() {
         api.get('/dynamic/table/subcontractor_statements?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/subcontractor_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/subcontractor_items?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/ledger?limit=2000').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/ledger?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/companies?limit=100').catch(() => ({ data: { data: [] } }))
       ]);
 
       // 1. Set Org Units
       setOrgUnits(orgRes.data?.data || []);
       const subsList = subcontractorsRes.data?.data || [];
       setSubcontractorsList(subsList);
+      setCompanies(compRes.data?.data || []);
 
       // 2. Set Projects (Merge database projects with localStorage projects)
       const dbProjects = projRes.data?.data || [];
@@ -484,6 +486,10 @@ export default function ContractorSuite() {
   const [quickAddSubName, setQuickAddSubName] = useState('');
   const [quickAddSubPhone, setQuickAddSubPhone] = useState('');
   const [quickAddSubCompany, setQuickAddSubCompany] = useState('');
+  const [quickAddSubEmail, setQuickAddSubEmail] = useState('');
+  const [quickAddSubCompanyId, setQuickAddSubCompanyId] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [isAddingSub, setIsAddingSub] = useState(false);
 
   // Inline editing states (CRUD updates)
   const [editingItemType, setEditingItemType] = useState(null); // 'boq' | 'expense' | 'installment'
@@ -1201,12 +1207,15 @@ export default function ContractorSuite() {
       alert('الرجاء إدخال اسم المقاول');
       return;
     }
+    setIsAddingSub(true);
     try {
       const parsedProjId = parseInt(activeProjectId, 10);
+      const selectedComp = companies.find(c => Number(c.id) === Number(quickAddSubCompanyId));
       const payload = {
         name: quickAddSubName.trim(),
         phone: quickAddSubPhone.trim(),
-        company: quickAddSubCompany.trim() || activeProject?.company || 'TED CAPITAL',
+        email: quickAddSubEmail.trim(),
+        company: selectedComp ? selectedComp.name : (quickAddSubCompany.trim() || activeProject?.company || 'TED CAPITAL'),
         project_name: activeProject?.name || null,
         project_id: isNaN(parsedProjId) ? null : parsedProjId
       };
@@ -1219,11 +1228,15 @@ export default function ContractorSuite() {
       // clean up states
       setQuickAddSubName('');
       setQuickAddSubPhone('');
+      setQuickAddSubEmail('');
+      setQuickAddSubCompanyId('');
       setQuickAddSubCompany('');
       setShowQuickAddSub(false);
     } catch (err) {
       console.error('Failed to add subcontractor:', err);
       alert(err.response?.data?.error || 'حدث خطأ أثناء إضافة المقاول');
+    } finally {
+      setIsAddingSub(false);
     }
   };
 
@@ -2973,7 +2986,16 @@ export default function ContractorSuite() {
                                 </select>
                                 <button
                                   type="button"
-                                  onClick={() => { setQuickAddSubCompany(activeProject?.company || 'TED CAPITAL'); setShowQuickAddSub(true); }}
+                                  onClick={() => {
+                                    const projComp = activeProject?.company || 'TED CAPITAL';
+                                    const matched = companies.find(c => c.name.toLowerCase() === projComp.toLowerCase());
+                                    setQuickAddSubCompanyId(matched ? String(matched.id) : '');
+                                    setQuickAddSubCompany(projComp);
+                                    setQuickAddSubEmail('');
+                                    setQuickAddSubName('');
+                                    setQuickAddSubPhone('');
+                                    setShowQuickAddSub(true);
+                                  }}
                                   className="p-1 bg-orange-500/10 border border-orange-500/30 text-orange-450 hover:bg-orange-500/20 rounded-lg text-xs font-black transition-all"
                                   title="إضافة مقاول جديد"
                                 >
@@ -3936,69 +3958,97 @@ export default function ContractorSuite() {
 
       {/* 5.3 QUICK ADD SUBCONTRACTOR MODAL */}
       {showQuickAddSub && (
-        <div className="fixed inset-0 bg-[#070a13]/85 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] no-print animate-in fade-in duration-300">
-          <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl flex flex-col relative">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-black text-cyan-400 flex items-center gap-2">
-                <span className="text-base">🏗️</span> إضافة مقاول جديد سريع
-              </h3>
-              <button
-                type="button"
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white flex justify-between items-center shadow-md">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-white/10 rounded-2xl text-2xl backdrop-blur-md border border-white/20 shadow-inner">🏗️</span>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{language === 'ar' ? 'إضافة مقاول جديد سريعاً' : 'Quick Add New Subcontractor'}</h3>
+                  <p className="text-xs text-emerald-100 font-bold">{language === 'ar' ? 'أدخل بيانات المقاول لإضافته واختياره فوراً' : 'Enter details to instantly add & select subcontractor'}</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
                 onClick={() => setShowQuickAddSub(false)}
-                className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-400 font-bold transition-all"
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleQuickAddSub} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs text-slate-400 font-bold block">اسم المقاول *</label>
-                <input
-                  type="text"
-                  required
-                  value={quickAddSubName}
-                  onChange={(e) => setQuickAddSubName(e.target.value)}
-                  placeholder="مثال: شركة المقاولات الحديثة"
-                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
-                />
+            {/* Modal Form */}
+            <form onSubmit={handleQuickAddSub} className="p-8 space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المقاول / الشركة بالكامل *' : 'Full Subcontractor / Company Name *'}</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder={language === 'ar' ? 'مثال: شركة المقاولات الحديثة أو البشير' : 'e.g. Modern Contracting or Al-Basheer'}
+                      value={quickAddSubName}
+                      onChange={(e) => setQuickAddSubName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</label>
+                    <input 
+                      type="tel" 
+                      placeholder={language === 'ar' ? 'الهاتف' : 'Phone'}
+                      value={quickAddSubPhone}
+                      onChange={(e) => setQuickAddSubPhone(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
+                    <select 
+                      value={quickAddSubCompanyId}
+                      onChange={(e) => setQuickAddSubCompanyId(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
+                      {companies.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                  <input 
+                    type="email" 
+                    placeholder={language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                    value={quickAddSubEmail}
+                    onChange={(e) => setQuickAddSubEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs text-slate-400 font-bold block">رقم الهاتف</label>
-                <input
-                  type="text"
-                  value={quickAddSubPhone}
-                  onChange={(e) => setQuickAddSubPhone(e.target.value)}
-                  placeholder="مثال: 01000000000"
-                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs text-slate-400 font-bold block">الشركة التابع لها</label>
-                <input
-                  type="text"
-                  value={quickAddSubCompany}
-                  onChange={(e) => setQuickAddSubCompany(e.target.value)}
-                  placeholder="مثال: TED CAPITAL (اختياري)"
-                  className="w-full bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              {/* Modal Footer Controls */}
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => setShowQuickAddSub(false)}
-                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold transition-all"
+                  className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-xs transition-all active:scale-95 cursor-pointer"
                 >
-                  إلغاء
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-95 transition-all"
+                  disabled={isAddingSub}
+                  className={`px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${isAddingSub ? 'opacity-50 cursor-wait' : ''}`}
                 >
-                  إضافة وحفظ
+                  <span>{isAddingSub ? '⏳' : '💾'}</span> {isAddingSub ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ واختيار' : 'Save & Select')}
                 </button>
               </div>
             </form>
