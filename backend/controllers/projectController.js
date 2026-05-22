@@ -1,5 +1,5 @@
 const pool = require('../config/db');
-const { logAudit } = require('../utils/helpers');
+const { logAudit, syncProjectFinancials } = require('../utils/helpers');
 const AccountingService = require('../services/accountingService');
 
 class ProjectController {
@@ -143,36 +143,18 @@ class ProjectController {
         try {
             await client.query('BEGIN');
             
-            // 1. جلب بيانات المشروع
-            // إضافة Casting صريح لتفادي مشاكل الأنواع في PostgreSQL
-            const projRes = await client.query("SELECT name, budget FROM projects WHERE id = $1::integer", [id]);
+            // جلب بيانات المشروع للتأكد من وجوده
+            const projRes = await client.query("SELECT name FROM projects WHERE id = $1::integer", [id]);
             if (projRes.rows.length === 0) throw new Error("المشروع غير موجود");
-            const { name: projectName, budget } = projRes.rows[0];
+            const { name: projectName } = projRes.rows[0];
 
-            // 2. حساب الإجماليات من دفتر اليومية (Ledger)
-            const ledgerRes = await client.query(`
-                SELECT 
-                    COALESCE(SUM(CASE WHEN c.account_type = 'Revenue' THEN (CAST(l.credit AS NUMERIC) - CAST(l.debit AS NUMERIC)) ELSE 0 END), 0) as total_revenue,
-                    COALESCE(SUM(CASE WHEN c.account_type = 'Expense' THEN (CAST(l.debit AS NUMERIC) - CAST(l.credit AS NUMERIC)) ELSE 0 END), 0) as total_expenses
-                FROM ledger l
-                JOIN chart_of_accounts c ON l.account_name = c.account_name
-                WHERE l.cost_center = $1::text
-            `, [projectName]);
+            // مزامنة البيانات المالية باستخدام الدالة الموحدة
+            const syncResult = await syncProjectFinancials(id, client);
+            if (!syncResult) throw new Error("فشلت عملية مزامنة البيانات المالية للمشروع");
 
-            const { total_revenue, total_expenses } = ledgerRes.rows[0];
-            const actualProfit = (parseFloat(total_revenue) || 0) - (parseFloat(total_expenses) || 0);
-            const numBudget = parseFloat(budget) || 0;
+            const { actualProfit, total_revenue, total_expenses } = syncResult;
 
-            // 3. تحديث جدول المشاريع
-            // حل مشكلة "inconsistent types deduced for parameter $1" عن طريق التحديد الصريح للنوع
-            await client.query(`
-                UPDATE projects 
-                SET actual_profit = $1::numeric, 
-                    actual_profit_percent = CASE WHEN $2::numeric > 0 THEN ($1::numeric / $2::numeric * 100) ELSE 0 END
-                WHERE id = $3::integer
-            `, [actualProfit, numBudget, id]);
-
-            // 4. تسجيل العملية في سجل التدقيق
+            // تسجيل العملية في سجل التدقيق
             await logAudit(req.user?.username || 'System', 'SYNC_FINANCIALS', 'projects', id, `تمت مزامنة البيانات المالية للمشروع: ${projectName}`);
 
             await client.query('COMMIT');
@@ -300,26 +282,7 @@ class ProjectController {
             if (project_id && project) {
                 const syncClient = await pool.connect();
                 try {
-                    const ledgerRes = await syncClient.query(`
-                        SELECT 
-                            COALESCE(SUM(CASE WHEN c.account_type = 'Revenue' THEN (CAST(l.credit AS NUMERIC) - CAST(l.debit AS NUMERIC)) ELSE 0 END), 0) as total_revenue,
-                            COALESCE(SUM(CASE WHEN c.account_type = 'Expense' THEN (CAST(l.debit AS NUMERIC) - CAST(l.credit AS NUMERIC)) ELSE 0 END), 0) as total_expenses
-                        FROM ledger l
-                        JOIN chart_of_accounts c ON l.account_name = c.account_name
-                        WHERE l.cost_center = $1::text AND l.is_deleted = false
-                    `, [project.name]);
-
-                    const { total_revenue, total_expenses } = ledgerRes.rows[0];
-                    const actualProfit = (parseFloat(total_revenue) || 0) - (parseFloat(total_expenses) || 0);
-                    const numBudget = parseFloat(project.budget) || 0;
-
-                    await syncClient.query(`
-                        UPDATE projects 
-                        SET actual_profit = $1::numeric, 
-                            actual_profit_percent = CASE WHEN $2::numeric > 0 THEN ($1::numeric / $2::numeric * 100) ELSE 0 END
-                        WHERE id = $3::integer
-                    `, [actualProfit, numBudget, project.id]);
-
+                    await syncProjectFinancials(project.id, syncClient);
                     await logAudit(username, 'SYNC_FINANCIALS', 'projects', project.id, `تمت مزامنة البيانات المالية للمشروع: ${project.name}`);
                 } catch (syncErr) {
                     console.error("❌ Auto Sync Project Error during Collection Posting:", syncErr.message);

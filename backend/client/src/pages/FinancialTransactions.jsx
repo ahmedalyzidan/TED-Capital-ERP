@@ -15,6 +15,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
   const [projects, setProjects] = useState([]);
   const [clientInvoices, setClientInvoices] = useState([]);
   const [subInvoices, setSubInvoices] = useState([]);
+  const [coaAccounts, setCoaAccounts] = useState([]);
   
   // History Logs
   const [collectionsLog, setCollectionsLog] = useState([]);
@@ -54,12 +55,13 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
   const fetchMasterData = async () => {
     try {
       setLoading(true);
-      const [resClients, resSubs, resProjs, resClientInvs, resSubInvs] = await Promise.all([
+      const [resClients, resSubs, resProjs, resClientInvs, resSubInvs, resCoa] = await Promise.all([
         api.get('/dynamic/table/customers?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/subcontractors?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/projects?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/ar_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/subcontractor_invoices?limit=2000').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/subcontractor_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/chart_of_accounts?limit=1000').catch(() => ({ data: { data: [] } }))
       ]);
 
       setClients(resClients.data?.data || []);
@@ -67,6 +69,13 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       setProjects(resProjs.data?.data || []);
       setClientInvoices(resClientInvs.data?.data || []);
       setSubInvoices(resSubInvs.data?.data || []);
+
+      const allCoa = resCoa.data?.data || [];
+      const filteredCoa = allCoa.filter(acc => {
+        const code = acc.account_code || '';
+        return (code.startsWith('110') || code.startsWith('111')) && code !== '1100' && code !== '1110';
+      });
+      setCoaAccounts(filteredCoa);
     } catch (err) {
       triggerAlert('danger', ar ? 'خطأ في جلب البيانات الأساسية' : 'Error fetching metadata');
     } finally {
@@ -439,7 +448,26 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                 <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المشروع (اختياري)' : 'Project (Optional)'}</label>
                 <select
                   value={colForm.project_id}
-                  onChange={(e) => setColForm({ ...colForm, project_id: e.target.value, valuation_id: '' })}
+                  onChange={(e) => {
+                    const projId = e.target.value;
+                    const selectedProj = projects.find(p => String(p.id) === String(projId));
+                    let defaultSource = colForm.source_account;
+                    if (selectedProj && selectedProj.company) {
+                      const matchingAcc = coaAccounts.find(acc => 
+                        acc.company_entity === selectedProj.company && 
+                        acc.account_code.startsWith('110')
+                      );
+                      if (matchingAcc) {
+                        defaultSource = matchingAcc.account_name;
+                      }
+                    }
+                    setColForm(prev => ({
+                      ...prev,
+                      project_id: projId,
+                      source_account: defaultSource,
+                      valuation_id: ''
+                    }));
+                  }}
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- دفعة عامة (بدون مشروع) --' : '-- General Payment (No Project) --'}</option>
@@ -517,14 +545,20 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
               </div>
 
               <div>
-                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب المودع فيه' : 'Source Account'}</label>
-                <input
-                  type="text"
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب المودع فيه' : 'Source Account'} *</label>
+                <select
                   value={colForm.source_account}
                   onChange={(e) => setColForm({ ...colForm, source_account: e.target.value })}
-                  placeholder={ar ? 'مثال: نقدية بالصندوق أو بنك مصر' : 'e.g. Cash in Hand or Bank Account'}
-                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
-                />
+                  required
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-850", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
+                >
+                  <option value="">{ar ? '-- اختر حساب التحصيل --' : '-- Select Source Account --'}</option>
+                  {coaAccounts.map(acc => (
+                    <option key={acc.id} value={acc.account_name}>
+                      {acc.account_name} ({acc.account_code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -667,7 +701,25 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                 <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المشروع (اختياري)' : 'Project Name (Optional)'}</label>
                 <select
                   value={payForm.project_name}
-                  onChange={(e) => setPayForm({ ...payForm, project_name: e.target.value })}
+                  onChange={(e) => {
+                    const projName = e.target.value;
+                    const selectedProj = projects.find(p => String(p.name).toLowerCase().trim() === String(projName).toLowerCase().trim());
+                    let defaultSource = payForm.source_account;
+                    if (selectedProj && selectedProj.company) {
+                      const matchingAcc = coaAccounts.find(acc => 
+                        acc.company_entity === selectedProj.company && 
+                        acc.account_code.startsWith('110')
+                      );
+                      if (matchingAcc) {
+                        defaultSource = matchingAcc.account_name;
+                      }
+                    }
+                    setPayForm(prev => ({
+                      ...prev,
+                      project_name: projName,
+                      source_account: defaultSource
+                    }));
+                  }}
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- سداد عام (بدون مشروع محدد) --' : '-- General Payment (No Project) --'}</option>
@@ -744,14 +796,20 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
               </div>
 
               <div>
-                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب الدائن / مصدر الصرف' : 'Source Account'}</label>
-                <input
-                  type="text"
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب الدائن / مصدر الصرف' : 'Source Account'} *</label>
+                <select
                   value={payForm.source_account}
                   onChange={(e) => setPayForm({ ...payForm, source_account: e.target.value })}
-                  placeholder={ar ? 'مثال: نقدية بالبنوك والصندوق' : 'e.g. Cash or Bank Account'}
-                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
-                />
+                  required
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-855", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
+                >
+                  <option value="">{ar ? '-- اختر حساب الصرف --' : '-- Select Source Account --'}</option>
+                  {coaAccounts.map(acc => (
+                    <option key={acc.id} value={acc.account_name}>
+                      {acc.account_name} ({acc.account_code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

@@ -86,6 +86,7 @@ export default function Subcontractors() {
     notes: '',
     source_account: 'نقدية بالبنوك والصندوق'
   });
+  const [coaAccounts, setCoaAccounts] = useState([]);
   const [subcontractorIntelligence, setSubcontractorIntelligence] = useState({ contracts: [], boqs: [], stats: {} });
   const [claimForm, setClaimForm] = useState({
     subcontractor_id: '',
@@ -249,8 +250,17 @@ export default function Subcontractors() {
         setInvoices(res.data.data || []);
       }
 
-      const projRes = await api.get('/dynamic/table/projects?limit=500');
+      const [projRes, coaRes] = await Promise.all([
+        api.get('/dynamic/table/projects?limit=500'),
+        api.get('/dynamic/table/chart_of_accounts?limit=1000').catch(() => ({ data: { data: [] } }))
+      ]);
       setProjects(projRes.data.data || []);
+      const allCoa = coaRes.data?.data || [];
+      const filteredCoa = allCoa.filter(acc => {
+        const code = acc.account_code || '';
+        return (code.startsWith('110') || code.startsWith('111')) && code !== '1100' && code !== '1110';
+      });
+      setCoaAccounts(filteredCoa);
     } catch (error) { console.error(error); }
     finally { setLoading(false); }
   };
@@ -493,6 +503,25 @@ export default function Subcontractors() {
   };
 
   const openPaymentModal = (invoice) => {
+    const projName = invoice.project_name || invoice.project_id || '';
+    const proj = projects.find(p => String(p.name).toLowerCase().trim() === String(projName).toLowerCase().trim() || String(p.id) === String(projName));
+    
+    let defaultSource = 'نقدية بالبنوك والصندوق';
+    if (proj && proj.company) {
+      const matchingAcc = coaAccounts.find(acc => 
+        acc.company_entity === proj.company && 
+        acc.account_code.startsWith('110')
+      );
+      if (matchingAcc) {
+        defaultSource = matchingAcc.account_name;
+      } else {
+        const matchingAny = coaAccounts.find(acc => acc.company_entity === proj.company);
+        if (matchingAny) {
+          defaultSource = matchingAny.account_name;
+        }
+      }
+    }
+
     setPaymentForm({
       subcontractor_id: invoice.subcontractor_id,
       project_name: invoice.project_name || invoice.project_id || 'General',
@@ -504,7 +533,7 @@ export default function Subcontractors() {
       notes: language === 'ar' 
         ? `صرف مستخلص جاري رقم ${invoice.id} للمقاول` 
         : `Disbursement for claim #${invoice.id}`,
-      source_account: 'نقدية بالبنوك والصندوق'
+      source_account: defaultSource
     });
     setIsPaymentModalOpen(true);
   };
@@ -1961,11 +1990,12 @@ export default function Subcontractors() {
                   required
                   className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
                 >
-                  <option value="نقدية بالبنوك والصندوق">{language === 'ar' ? 'نقدية بالبنوك والصندوق (الرئيسي)' : 'Cash & Bank (Main)'}</option>
-                  <option value="الخزينة الرئيسية">{language === 'ar' ? 'الخزينة الرئيسية' : 'Main Safe'}</option>
-                  <option value="حساب بنك مصر">{language === 'ar' ? 'حساب بنك مصر' : 'Banque Misr Account'}</option>
-                  <option value="حساب البنك الأهلي المصري">{language === 'ar' ? 'حساب البنك الأهلي المصري' : 'NBE Bank Account'}</option>
-                  <option value="محفظة فودافون كاش">{language === 'ar' ? 'محفظة فودافون كاش' : 'Vodafone Cash'}</option>
+                  <option value="">{language === 'ar' ? '-- اختر حساب الصرف --' : '-- Select Source Account --'}</option>
+                  {coaAccounts.map(acc => (
+                    <option key={acc.id} value={acc.account_name}>
+                      {acc.account_name} ({acc.account_code})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

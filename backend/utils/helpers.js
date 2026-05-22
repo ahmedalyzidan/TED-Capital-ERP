@@ -148,7 +148,7 @@ async function autoLedgerEntry(client, debitAccountId, creditAccountId, amount, 
 // --- مزامنة أرباح الشركاء والمشاريع ---
 // =====================================================================
 async function syncProjectFinancials(projectId, client) {
-    if (!projectId) return;
+    if (!projectId) return null;
     try {
         let numericId = projectId;
         let projectName = projectId;
@@ -158,38 +158,46 @@ async function syncProjectFinancials(projectId, client) {
                 numericId = projLookup.rows[0].id;
                 projectName = projLookup.rows[0].name;
             } else {
-                return;
+                return null;
             }
         } else {
             const projLookup = await client.query("SELECT name FROM projects WHERE id = $1 LIMIT 1", [projectId]);
             if (projLookup.rows.length > 0) {
                 projectName = projLookup.rows[0].name;
             } else {
-                return;
+                return null;
             }
         }
-        const projRes = await client.query("SELECT budget, expected_profit_percent, actual_profit_percent FROM projects WHERE id = $1", [numericId]);
-        if (projRes.rows.length > 0) {
-            const budget = Number(projRes.rows[0].budget) || 0; 
-            const expPct = Number(projRes.rows[0].expected_profit_percent) || 0;
-            const actPct = Number(projRes.rows[0].actual_profit_percent) || 0;
-            
-            const expAmt = budget * (expPct / 100);
-            const actAmt = budget * (actPct / 100);
-            
-            // تحديث جدول الشركاء بناءً على اسم المشروع ليتوافق مع قاعدة البيانات
-            // ملاحظة: تم تعطيل هذا الاستعلام لأن الأعمدة expected_return و actual_profit غير موجودة في قاعدة البيانات، وحسابات أرباح الشركاء تتم ديناميكيًا في التقارير.
-            /*
-            await client.query(
-                `UPDATE partners 
-                 SET expected_return = ROUND(CAST((share_percent / 100.0) * $1 AS NUMERIC), 2), 
-                     actual_profit = ROUND(CAST((share_percent / 100.0) * $2 AS NUMERIC), 2) 
-                 WHERE project_name = $3`, 
-                [expAmt, actAmt, projectName]
-            );
-            */
-        }
-    } catch(err) { console.error("Sync Error:", err.message); }
+
+        // 1. حساب الإجماليات من دفتر اليومية (Ledger) باستثناء المحذوف
+        const ledgerRes = await client.query(`
+            SELECT 
+                COALESCE(SUM(CASE WHEN c.account_type = 'Revenue' THEN (CAST(l.credit AS NUMERIC) - CAST(l.debit AS NUMERIC)) ELSE 0 END), 0) as total_revenue,
+                COALESCE(SUM(CASE WHEN c.account_type = 'Expense' THEN (CAST(l.debit AS NUMERIC) - CAST(l.credit AS NUMERIC)) ELSE 0 END), 0) as total_expenses
+            FROM ledger l
+            JOIN chart_of_accounts c ON l.account_name = c.account_name
+            WHERE l.cost_center = $1::text AND l.is_deleted = false
+        `, [projectName]);
+
+        const { total_revenue, total_expenses } = ledgerRes.rows[0];
+        const actualProfit = (parseFloat(total_revenue) || 0) - (parseFloat(total_expenses) || 0);
+
+        // 2. جلب ميزانية المشروع وحساب نسبة الربح الفعلي
+        const projRes = await client.query("SELECT budget FROM projects WHERE id = $1", [numericId]);
+        const budget = projRes.rows.length > 0 ? (Number(projRes.rows[0].budget) || 0) : 0;
+
+        await client.query(`
+            UPDATE projects 
+            SET actual_profit = $1::numeric, 
+                actual_profit_percent = CASE WHEN $2::numeric > 0 THEN ($1::numeric / $2::numeric * 100) ELSE 0 END
+            WHERE id = $3::integer
+        `, [actualProfit, budget, numericId]);
+
+        return { actualProfit, total_revenue, total_expenses };
+    } catch(err) {
+        console.error("Sync Project Financials Error:", err.message);
+        return null;
+    }
 }
 
 // =====================================================================

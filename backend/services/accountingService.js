@@ -12,6 +12,13 @@ class AccountingService {
    */
   static async logEntry(client, accountIdentifier, costCenter, debit, credit, description, username, referenceNo = null, clientId = null, sourceModule = null, reqContext = null, isContra = false, originalEntryId = null, companyId = null, company = null) {
     try {
+        // Intercept generic unmapped cash account name and map to a default that auto-routes
+        if (accountIdentifier === 'نقدية بالبنوك والصندوق' || 
+            (typeof accountIdentifier === 'string' && 
+             (accountIdentifier.includes('نقدية بالبنوك') || accountIdentifier.includes('البنوك والصندوق')))) {
+            accountIdentifier = 'صندوق نقدية - تيد كابيتال';
+        }
+
         let accName = accountIdentifier;
         let origAcc = null;
         

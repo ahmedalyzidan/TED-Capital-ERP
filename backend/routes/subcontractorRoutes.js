@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken } = require('../middlewares/auth');
-const { logAdvancedAudit } = require('../utils/helpers');
+const { logAdvancedAudit, syncProjectFinancials } = require('../utils/helpers');
 const SubcontractorController = require('../controllers/subcontractorController');
 
 // محاكاة مؤقتة للمحركات لحين استكمالها بالكامل
@@ -236,6 +236,11 @@ router.post('/approve_invoice/:id', async (req, res) => {
         await client.query("UPDATE subcontractor_invoices SET status = $1 WHERE id = $2", [newStatus, invoiceId]);
         await logAdvancedAudit(client, username, 'subcontractor_invoices', invoiceId, 'Approval Workflow', `Status changed to ${newStatus}`, invoice, { ...invoice, status: newStatus });
 
+        // مزامنة البيانات المالية للمشروع فور اعتماد الفاتورة
+        if (projectName && projectName !== 'General') {
+            await syncProjectFinancials(projectName, client);
+        }
+
         await client.query('COMMIT');
         
         if (workflowResult.isFinalApproval) {
@@ -281,6 +286,11 @@ router.delete('/delete_invoice/:id', async (req, res) => {
         // 3. Mark invoice as deleted (Soft Deletion)
         await client.query("UPDATE subcontractor_invoices SET is_deleted = true, status = 'Deleted' WHERE id = $1", [invoiceId]);
         await logAdvancedAudit(client, username, 'subcontractor_invoices', invoiceId, 'DELETE_INVOICE', `Deleted invoice #${invoiceId} and reversed accounting/BOQ impacts`, invoice, null);
+
+        // مزامنة البيانات المالية للمشروع فور حذف الفاتورة وعكس القيود
+        if (invoice.project_name && invoice.project_name !== 'General') {
+            await syncProjectFinancials(invoice.project_name, client);
+        }
 
         await client.query('COMMIT');
         res.json({ success: true, message: 'تم حذف الفاتورة وعكس القيود المحاسبية بنجاح.' });
@@ -339,7 +349,7 @@ router.post('/record_payment', async (req, res) => {
             invoice_id: invoice_id || null,
             payment_method: payment_method || 'Cash',
             reference_no: reference_no || null,
-            source_account: source_account || 'نقدية بالبنوك والصندوق',
+            source_account: source_account || 'صندوق نقدية - تيد كابيتال',
             project_name: resolvedProject
         };
         const statementRes = await client.query(insertStatementQuery, [
@@ -361,10 +371,10 @@ router.post('/record_payment', async (req, res) => {
         const desc = `صرف دفعة للمقاول ${sub.name} | ${details}`;
         
         // Debit: Accounts Payable (مقاولي الباطن)
-        // Credit: Cash/Bank Account (source_account or default 'نقدية بالبنوك والصندوق')
+        // Credit: Cash/Bank Account (source_account or default 'صندوق نقدية - تيد كابيتال')
         await AccountingService.recordDoubleEntry(client, {
             debitAccount: 'مقاولي الباطن',
-            creditAccount: source_account || 'نقدية بالبنوك والصندوق',
+            creditAccount: source_account || 'صندوق نقدية - تيد كابيتال',
             amount: parseFloat(amount_paid),
             costCenter: resolvedProject,
             description: desc,
@@ -384,6 +394,11 @@ router.post('/record_payment', async (req, res) => {
             null,
             req.body
         );
+
+        // مزامنة البيانات المالية للمشروع فور تسجيل الدفع
+        if (resolvedProject && resolvedProject !== 'General') {
+            await syncProjectFinancials(resolvedProject, client);
+        }
 
         await client.query('COMMIT');
         res.json({ success: true, statementId });

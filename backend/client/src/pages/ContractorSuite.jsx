@@ -1434,7 +1434,7 @@ export default function ContractorSuite() {
       try {
         await api.post('/dynamic/add/ledger', {
           date: valuationDate,
-          account_name: 'عملاء عقود مقاولات - أرصدة مدينة',
+          account_name: 'عملاء (حسابات مدينة - AR)',
           debit: Number((totalAfterAll).toFixed(2)),
           credit: 0,
           description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
@@ -1444,7 +1444,7 @@ export default function ContractorSuite() {
         });
         await api.post('/dynamic/add/ledger', {
           date: valuationDate,
-          account_name: 'إيرادات عقود مقاولات وإنشاءات',
+          account_name: 'إيرادات مستخلصات وخدمات',
           debit: 0,
           credit: Number(totalClaimAmount.toFixed(2)),
           description: `إيرادات مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
@@ -1455,7 +1455,7 @@ export default function ContractorSuite() {
         if (taxAmt > 0) {
           await api.post('/dynamic/add/ledger', {
             date: valuationDate,
-            account_name: 'ضريبة القيمة المضافة',
+            account_name: 'ضريبة القيمة المضافة (VAT 14%)',
             debit: 0,
             credit: Number(taxAmt.toFixed(2)),
             description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
@@ -1575,7 +1575,7 @@ export default function ContractorSuite() {
 
         await api.post('/dynamic/add/ledger', {
           date: contractorValuationDate,
-          account_name: 'مقاولون من الباطن - أرصدة دائنة',
+          account_name: 'مقاولي الباطن',
           debit: 0,
           credit: Number(totalAfterAll.toFixed(2)),
           description: `مستخلص مقاول رقم ${claimNo} - ${Object.keys(contractorGroups).join(' / ')} - للمشروع: ${activeProject?.name}`,
@@ -1585,7 +1585,7 @@ export default function ContractorSuite() {
         });
         await api.post('/dynamic/add/ledger', {
           date: contractorValuationDate,
-          account_name: 'تكلفة أعمال مقاولين',
+          account_name: 'تكلفة مقاولي الباطن',
           debit: Number(netDue.toFixed(2)),
           credit: 0,
           description: `تكلفة مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
@@ -1596,7 +1596,7 @@ export default function ContractorSuite() {
         if (taxAmt > 0) {
           await api.post('/dynamic/add/ledger', {
             date: contractorValuationDate,
-            account_name: 'ضريبة القيمة المضافة - مدخلات',
+            account_name: 'ضريبة القيمة المضافة (VAT 14%)',
             debit: Number(taxAmt.toFixed(2)),
             credit: 0,
             description: `ضريبة مستخلص مقاول رقم ${claimNo} (${contractorValuationTax}%) - للمشروع: ${activeProject?.name}`,
