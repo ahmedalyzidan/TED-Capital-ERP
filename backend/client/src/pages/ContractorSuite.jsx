@@ -500,6 +500,7 @@ export default function ContractorSuite() {
   const [companies, setCompanies] = useState([]);
   const [isAddingSub, setIsAddingSub] = useState(false);
   const [quickAddLineId, setQuickAddLineId] = useState(null);
+  const [editingValuationId, setEditingValuationId] = useState(null);
 
   // Inline editing states (CRUD updates)
   const [editingItemType, setEditingItemType] = useState(null); // 'boq' | 'expense' | 'installment'
@@ -660,10 +661,10 @@ export default function ContractorSuite() {
   const getPrevCompletionPercent = (boqItemId, currentValuationId = null) => {
     let total = 0;
     valuations.forEach(val => {
-      if (val.projectId === activeProjectId && val.id !== currentValuationId) {
+      if (val.projectId === activeProjectId && val.id !== currentValuationId && val.id !== editingValuationId) {
         const item = val.items?.find(it => String(it.boqItemId) === String(boqItemId));
         if (item) {
-          total += Number(item.completionPercent || 0);
+          total += Number(item.netPercent !== undefined ? item.netPercent : item.completionPercent || 0);
         }
       }
     });
@@ -684,7 +685,7 @@ export default function ContractorSuite() {
     // If refDate is specified, filter valuations up to refDate
     if (refDate) {
       contractorVals = contractorVals.filter(v => {
-        if (v.id === currentValuationId) return false;
+        if (v.id === currentValuationId || v.id === editingValuationId) return false;
         return (v.date || '') <= refDate;
       });
     }
@@ -1133,6 +1134,7 @@ export default function ContractorSuite() {
 
   // 🏗️ Progress Claim / Valuation Billing Actions
   const handleStartNewValuation = () => {
+    setEditingValuationId(null);
     const initItems = {};
     currentBoqItems.forEach(item => {
       const prevPercent = getPrevCompletionPercent(item.id);
@@ -1186,7 +1188,7 @@ export default function ContractorSuite() {
           if (targetBoqId && targetContractor) {
             let autoPrevQty = 0;
             valuations.forEach(val => {
-              if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+              if (val.isContractor && String(val.projectId) === String(activeProjectId) && val.id !== editingValuationId) {
                 val.lines?.forEach(prevLn => {
                   if (
                     String(prevLn.boqItemId) === String(targetBoqId) &&
@@ -1211,6 +1213,7 @@ export default function ContractorSuite() {
     setContractorValuationLines(prev => prev.filter(l => l.id !== lineId));
 
   const handleStartContractorValuation = () => {
+    setEditingValuationId(null);
     setContractorValuationContractorName('');
     setContractorValuationLines([newContractorLine('')]);
     setContractorValuationDate(new Date().toISOString().split('T')[0]);
@@ -1219,6 +1222,42 @@ export default function ContractorSuite() {
     setContractorValuationLinkedClientValId('');
     setContractorValuationTaxMethod('period');
     setContractorValuationPrevPaid('');
+    setShowAddContractorValuation(true);
+  };
+
+  const handleStartEditValuation = (val) => {
+    if (String(val.id).startsWith('db-sub-inv-')) {
+      alert('لا يمكن تعديل هذا المستخلص المجلوب من قاعدة البيانات مباشرة.');
+      return;
+    }
+    setEditingValuationId(val.id);
+    setValuationDate(val.date);
+    setValuationDiscount(val.discountRate !== undefined ? val.discountRate : '');
+    setValuationTax(val.taxRate !== undefined ? val.taxRate : '');
+    setValuationTaxMethod(val.taxMethod || 'period');
+    
+    const itemsMapping = {};
+    val.items?.forEach(item => {
+      itemsMapping[item.boqItemId] = item.currPercent !== undefined ? item.currPercent : item.completionPercent;
+    });
+    setNewValuationItems(itemsMapping);
+    setShowAddValuation(true);
+  };
+
+  const handleStartEditContractorValuation = (val) => {
+    if (String(val.id).startsWith('db-sub-inv-')) {
+      alert('لا يمكن تعديل هذا المستخلص المجلوب من قاعدة البيانات مباشرة.');
+      return;
+    }
+    setEditingValuationId(val.id);
+    setContractorValuationDate(val.date);
+    setContractorValuationContractorName(val.lines?.[0]?.contractorName || '');
+    setContractorValuationDiscount(val.discount !== undefined ? val.discount : '');
+    setContractorValuationTax(val.taxRate !== undefined ? val.taxRate : '');
+    setContractorValuationTaxMethod(val.taxMethod || 'period');
+    setContractorValuationLinkedClientValId(val.linkedClientValuationId || '');
+    setContractorValuationPrevPaid(val.prevPaid !== undefined ? val.prevPaid : '');
+    setContractorValuationLines(val.lines || []);
     setShowAddContractorValuation(true);
   };
 
@@ -1264,7 +1303,7 @@ export default function ContractorSuite() {
           if (l.boqItemId && newSub) {
             let autoPrevQty = 0;
             valuations.forEach(val => {
-              if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+              if (val.isContractor && String(val.projectId) === String(activeProjectId) && val.id !== editingValuationId) {
                 val.lines?.forEach(prevLn => {
                   if (
                     String(prevLn.boqItemId) === String(l.boqItemId) &&
@@ -1335,7 +1374,7 @@ export default function ContractorSuite() {
         }
       });
       const prevTaxPaid = valuations
-        .filter(v => !v.isContractor && String(v.projectId) === String(activeProjectId))
+        .filter(v => !v.isContractor && String(v.projectId) === String(activeProjectId) && v.id !== editingValuationId)
         .reduce((sum, v) => sum + Number(v.taxAmount || 0), 0);
       const cumulativeTax = cumulativeGross * (taxRatePercent / 100);
       taxAmt = Math.max(0, cumulativeTax - prevTaxPaid);
@@ -1345,9 +1384,10 @@ export default function ContractorSuite() {
 
     const totalAfterAll = afterDiscount + taxAmt;
 
-    const valuationId = `val-${Date.now()}`;
-    const claimNo = `VAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
-    const invoiceNo = `INV-${claimNo}-${Date.now().toString().slice(-4)}`;
+    const existingVal = editingValuationId ? valuations.find(v => v.id === editingValuationId) : null;
+    const valuationId = existingVal ? existingVal.id : `val-${Date.now()}`;
+    const claimNo = existingVal ? existingVal.claimNo : `VAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
+    const invoiceNo = existingVal ? existingVal.invoiceNo : `INV-${claimNo}-${Date.now().toString().slice(-4)}`;
 
     const newValuation = {
       id: valuationId,
@@ -1367,46 +1407,55 @@ export default function ContractorSuite() {
       status: 'issued'
     };
 
-    try {
-      await api.post('/dynamic/add/ledger', {
-        date: valuationDate,
-        account_name: 'عملاء عقود مقاولات - أرصدة مدينة',
-        debit: Number((totalAfterAll).toFixed(2)),
-        credit: 0,
-        description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
-        cost_center: activeProject?.name,
-        company: activeProject?.company || 'TED CAPITAL',
-        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-      });
-      await api.post('/dynamic/add/ledger', {
-        date: valuationDate,
-        account_name: 'إيرادات عقود مقاولات وإنشاءات',
-        debit: 0,
-        credit: Number(totalClaimAmount.toFixed(2)),
-        description: `إيرادات مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
-        cost_center: activeProject?.name,
-        company: activeProject?.company || 'TED CAPITAL',
-        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-      });
-      if (taxAmt > 0) {
+    if (!editingValuationId) {
+      try {
         await api.post('/dynamic/add/ledger', {
           date: valuationDate,
-          account_name: 'ضريبة القيمة المضافة',
-          debit: 0,
-          credit: Number(taxAmt.toFixed(2)),
-          description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
+          account_name: 'عملاء عقود مقاولات - أرصدة مدينة',
+          debit: Number((totalAfterAll).toFixed(2)),
+          credit: 0,
+          description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
           cost_center: activeProject?.name,
           company: activeProject?.company || 'TED CAPITAL',
           company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
         });
+        await api.post('/dynamic/add/ledger', {
+          date: valuationDate,
+          account_name: 'إيرادات عقود مقاولات وإنشاءات',
+          debit: 0,
+          credit: Number(totalClaimAmount.toFixed(2)),
+          description: `إيرادات مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+        if (taxAmt > 0) {
+          await api.post('/dynamic/add/ledger', {
+            date: valuationDate,
+            account_name: 'ضريبة القيمة المضافة',
+            debit: 0,
+            credit: Number(taxAmt.toFixed(2)),
+            description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
+            cost_center: activeProject?.name,
+            company: activeProject?.company || 'TED CAPITAL',
+            company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+          });
+        }
+        triggerNotification(`🎉 تم اعتماد مستخلص العميل ${claimNo} بنجاح وقيد الفاتورة والقيود المحاسبية التلقائية بالكامل!`);
+      } catch (err) {
+        console.error('Failed to post ledger entries for valuation:', err);
+        triggerNotification(`تم إصدار المستخلص ${claimNo} محلياً بنجاح!`, 'warning');
       }
-      triggerNotification(`🎉 تم اعتماد مستخلص العميل ${claimNo} بنجاح وقيد الفاتورة والقيود المحاسبية التلقائية بالكامل!`);
-    } catch (err) {
-      console.error('Failed to post ledger entries for valuation:', err);
-      triggerNotification(`تم إصدار المستخلص ${claimNo} محلياً بنجاح!`, 'warning');
+    } else {
+      triggerNotification(`🎉 تم تعديل مستخلص العميل ${claimNo} بنجاح!`);
     }
 
-    setValuations([...valuations, newValuation]);
+    if (editingValuationId) {
+      setValuations(prev => prev.map(v => v.id === editingValuationId ? newValuation : v));
+      setEditingValuationId(null);
+    } else {
+      setValuations([...valuations, newValuation]);
+    }
     setShowAddValuation(false);
   };
 
@@ -1467,9 +1516,10 @@ export default function ContractorSuite() {
 
     const totalAfterAll = netDue + taxAmt;
 
-    const valuationId = `cval-${Date.now()}`;
-    const claimNo = `CVAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
-    const invoiceNo = `CINV-${claimNo}-${Date.now().toString().slice(-4)}`;
+    const existingVal = editingValuationId ? valuations.find(v => v.id === editingValuationId) : null;
+    const valuationId = existingVal ? existingVal.id : `cval-${Date.now()}`;
+    const claimNo = existingVal ? existingVal.claimNo : `CVAL-${activeProject?.name.slice(0, 3).replace(/\s+/g, '').toUpperCase()}-${currentValuations.length + 1}`;
+    const invoiceNo = existingVal ? existingVal.invoiceNo : `CINV-${claimNo}-${Date.now().toString().slice(-4)}`;
 
     const newContractorVal = {
       id: valuationId,
@@ -1492,52 +1542,61 @@ export default function ContractorSuite() {
       status: 'issued'
     };
 
-    try {
-      const contractorGroups = {};
-      linesList.forEach(l => {
-        const key = l.contractorName || 'مقاول غير محدد';
-        contractorGroups[key] = (contractorGroups[key] || 0) + l.total;
-      });
+    if (!editingValuationId) {
+      try {
+        const contractorGroups = {};
+        linesList.forEach(l => {
+          const key = l.contractorName || 'مقاول غير محدد';
+          contractorGroups[key] = (contractorGroups[key] || 0) + l.total;
+        });
 
-      await api.post('/dynamic/add/ledger', {
-        date: contractorValuationDate,
-        account_name: 'مقاولون من الباطن - أرصدة دائنة',
-        debit: 0,
-        credit: Number(totalAfterAll.toFixed(2)),
-        description: `مستخلص مقاول رقم ${claimNo} - ${Object.keys(contractorGroups).join(' / ')} - للمشروع: ${activeProject?.name}`,
-        cost_center: activeProject?.name,
-        company: activeProject?.company || 'TED CAPITAL',
-        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-      });
-      await api.post('/dynamic/add/ledger', {
-        date: contractorValuationDate,
-        account_name: 'تكلفة أعمال مقاولين',
-        debit: Number(netDue.toFixed(2)),
-        credit: 0,
-        description: `تكلفة مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
-        cost_center: activeProject?.name,
-        company: activeProject?.company || 'TED CAPITAL',
-        company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-      });
-      if (taxAmt > 0) {
         await api.post('/dynamic/add/ledger', {
           date: contractorValuationDate,
-          account_name: 'ضريبة القيمة المضافة - مدخلات',
-          debit: Number(taxAmt.toFixed(2)),
-          credit: 0,
-          description: `ضريبة مستخلص مقاول رقم ${claimNo} (${contractorValuationTax}%) - للمشروع: ${activeProject?.name}`,
+          account_name: 'مقاولون من الباطن - أرصدة دائنة',
+          debit: 0,
+          credit: Number(totalAfterAll.toFixed(2)),
+          description: `مستخلص مقاول رقم ${claimNo} - ${Object.keys(contractorGroups).join(' / ')} - للمشروع: ${activeProject?.name}`,
           cost_center: activeProject?.name,
           company: activeProject?.company || 'TED CAPITAL',
           company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
         });
+        await api.post('/dynamic/add/ledger', {
+          date: contractorValuationDate,
+          account_name: 'تكلفة أعمال مقاولين',
+          debit: Number(netDue.toFixed(2)),
+          credit: 0,
+          description: `تكلفة مستخلص مقاول رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+        if (taxAmt > 0) {
+          await api.post('/dynamic/add/ledger', {
+            date: contractorValuationDate,
+            account_name: 'ضريبة القيمة المضافة - مدخلات',
+            debit: Number(taxAmt.toFixed(2)),
+            credit: 0,
+            description: `ضريبة مستخلص مقاول رقم ${claimNo} (${contractorValuationTax}%) - للمشروع: ${activeProject?.name}`,
+            cost_center: activeProject?.name,
+            company: activeProject?.company || 'TED CAPITAL',
+            company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+          });
+        }
+        triggerNotification(`🏗️ تم إصدار مستخلص المقاول ${claimNo} بنجاح وقيد جميع القيود المحاسبية!`);
+      } catch (err) {
+        console.error('Failed to post contractor valuation ledger entries:', err);
+        triggerNotification(`تم إصدار مستخلص المقاول ${claimNo} محلياً بنجاح!`, 'warning');
       }
-      triggerNotification(`🏗️ تم إصدار مستخلص المقاول ${claimNo} بنجاح وقيد جميع القيود المحاسبية!`);
-    } catch (err) {
-      console.error('Failed to post contractor valuation ledger entries:', err);
-      triggerNotification(`تم إصدار مستخلص المقاول ${claimNo} محلياً بنجاح!`, 'warning');
+    } else {
+      triggerNotification(`🏗️ تم تعديل مستخلص المقاول ${claimNo} بنجاح!`);
     }
 
-    setValuations([...valuations, newContractorVal]);
+    if (editingValuationId) {
+      setValuations(prev => prev.map(v => v.id === editingValuationId ? newContractorVal : v));
+      setEditingValuationId(null);
+    } else {
+      setValuations([...valuations, newContractorVal]);
+    }
     setShowAddContractorValuation(false);
   };
 
@@ -2767,7 +2826,7 @@ export default function ContractorSuite() {
               <form onSubmit={handleAddValuation} className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] space-y-6 no-print animate-in slide-in-from-top duration-300 shadow-2xl">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-800">
                   <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
-                    <span className="p-1.5 bg-cyan-500/10 rounded-lg text-cyan-400">🏗️</span> إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة)
+                    <span className="p-1.5 bg-cyan-500/10 rounded-lg text-cyan-400">🏗️</span> {editingValuationId ? 'تعديل مستخلص إنجاز أعمال تراكمي للعميل' : 'إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة)'}
                   </h4>
                   <div className="flex items-center gap-3">
                     <label className="text-xs text-slate-400 font-bold">تاريخ المستخلص:</label>
@@ -2945,8 +3004,8 @@ export default function ContractorSuite() {
                   })()}
 
                   <div className="flex justify-end gap-3 pt-2">
-                    <button type="button" onClick={() => setShowAddValuation(false)} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
-                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 transition-all">اعتماد وتوليد الفاتورة 🏗️</button>
+                    <button type="button" onClick={() => { setShowAddValuation(false); setEditingValuationId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-950 transition-all">{editingValuationId ? 'حفظ التعديلات 💾' : 'اعتماد وتوليد الفاتورة 🏗️'}</button>
                   </div>
                 </div>
               </form>
@@ -2960,7 +3019,7 @@ export default function ContractorSuite() {
                 <div className="flex justify-between items-center pb-3 border-b border-orange-500/20">
                   <h4 className="text-sm font-black text-orange-400 flex items-center gap-2">
                     <span className="p-1.5 bg-orange-500/10 rounded-lg text-orange-400">🏗️</span>
-                    إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة) للمقاول
+                    {editingValuationId ? 'تعديل مستخلص إنجاز أعمال تراكمي للمقاول' : 'إنشاء مستخلص إنجاز أعمال تراكمي جديد (حسب الكميات المنفذة) للمقاول'}
                   </h4>
                   <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
@@ -2976,7 +3035,7 @@ export default function ContractorSuite() {
                               if (l.boqItemId && newSub) {
                                 let autoPrevQty = 0;
                                 valuations.forEach(val => {
-                                  if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+                                  if (val.isContractor && String(val.projectId) === String(activeProjectId) && val.id !== editingValuationId) {
                                     val.lines?.forEach(prevLn => {
                                       if (
                                         String(prevLn.boqItemId) === String(l.boqItemId) &&
@@ -3348,8 +3407,8 @@ export default function ContractorSuite() {
                   })()}
 
                   <div className="flex justify-end gap-3 pt-2">
-                    <button type="button" onClick={() => setShowAddContractorValuation(false)} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
-                    <button type="submit" className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 rounded-xl text-xs font-black text-white transition-all">اعتماد مستخلص المقاول 🏗️</button>
+                    <button type="button" onClick={() => { setShowAddContractorValuation(false); setEditingValuationId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
+                    <button type="submit" className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 rounded-xl text-xs font-black text-white transition-all">{editingValuationId ? 'حفظ تعديل مستخلص المقاول 💾' : 'اعتماد مستخلص المقاول 🏗️'}</button>
                   </div>
                 </div>
                 <datalist id="subcontractors-datalist">
@@ -3556,6 +3615,13 @@ export default function ContractorSuite() {
                                   }`}
                               >
                                 {expandedValuationId === val.id ? 'إغلاق التفاصيل 📂' : 'عرض التفاصيل 📋'}
+                              </button>
+                              <button
+                                onClick={() => val.isContractor ? handleStartEditContractorValuation(val) : handleStartEditValuation(val)}
+                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg text-[10px] font-bold flex items-center gap-1"
+                                title="تعديل المستخلص"
+                              >
+                                ✏️ تعديل
                               </button>
                               <button
                                 onClick={() => setSelectedPrintValuation(val)}
