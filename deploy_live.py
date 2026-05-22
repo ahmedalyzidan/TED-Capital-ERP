@@ -3,7 +3,7 @@ import sys
 
 hostname = '46.224.144.166'
 username = 'root'
-password = 'Zidan2026!'
+password = 'Zid@n2026'
 
 commands = [
     'cd /root/TED-Capital-ERP && bash update-erp.sh'

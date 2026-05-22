@@ -732,6 +732,25 @@ const applySchemaFixes = async () => {
         WHERE (l.company_id IS NULL OR l.company IS NULL OR l.company = '') AND (UPPER(l.company) = UPPER(c.name) OR l.cost_center IN (SELECT name FROM projects WHERE company_id = c.id))
     `);
 
+    await runQuery("Backfill Subcontractors Company ID from Project", `
+        UPDATE subcontractors s
+        SET company_id = p.company_id, company = p.company
+        FROM projects p
+        WHERE (s.company_id IS NULL OR s.company IS NULL OR s.company = '') 
+          AND s.project_id = p.id 
+          AND p.company_id IS NOT NULL
+    `);
+
+    await runQuery("Backfill Subcontractors Company ID from Company Name", `
+        UPDATE subcontractors s
+        SET company_id = c.id
+        FROM companies c
+        WHERE s.company_id IS NULL 
+          AND s.company IS NOT NULL 
+          AND s.company <> ''
+          AND (UPPER(s.company) = UPPER(c.name) OR s.company ILIKE '%' || c.name || '%')
+    `);
+
     await runQuery("Committees Table", `CREATE TABLE IF NOT EXISTS committees (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
