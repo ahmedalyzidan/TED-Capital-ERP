@@ -870,6 +870,7 @@ const applySchemaFixes = async () => {
     // Global Subcontractor Matrix Expansion
     await runQuery("Subcontractors Global Expansion", `
         ALTER TABLE subcontractors 
+        ADD COLUMN IF NOT EXISTS email VARCHAR(255),
         ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
         ADD COLUMN IF NOT EXISTS company VARCHAR(255),
         ADD COLUMN IF NOT EXISTS tax_id VARCHAR(50),
