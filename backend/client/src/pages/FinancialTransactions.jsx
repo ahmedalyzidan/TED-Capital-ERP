@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export default function FinancialTransactions() {
+export default function FinancialTransactions({ embedded = false, projectId = '' }) {
   const { language } = useLanguage();
   const ar = language === 'ar';
 
@@ -92,6 +92,50 @@ export default function FinancialTransactions() {
     fetchMasterData();
     fetchLogs();
   }, []);
+
+  // Theme helper
+  const getThemeClass = (lightClass, darkClass) => {
+    return embedded ? darkClass : lightClass;
+  };
+
+  // Auto-scoping and selection when embedded in a project
+  useEffect(() => {
+    if (embedded && projectId && projects.length > 0) {
+      const foundProj = projects.find(p => String(p.id) === String(projectId));
+      if (foundProj) {
+        // Find matching client
+        const clientNameStr = foundProj.clientName || foundProj.client_name || '';
+        if (clientNameStr) {
+          const foundClient = clients.find(c => c.name && c.name.toLowerCase().trim() === clientNameStr.toLowerCase().trim());
+          if (foundClient) {
+            setColForm(prev => ({
+              ...prev,
+              project_id: String(foundProj.id),
+              client_id: String(foundClient.id)
+            }));
+          } else {
+            setColForm(prev => ({
+              ...prev,
+              project_id: String(foundProj.id),
+              client_id: ''
+            }));
+          }
+        } else {
+          setColForm(prev => ({
+            ...prev,
+            project_id: String(foundProj.id),
+            client_id: ''
+          }));
+        }
+
+        // Prefill project_name in payForm
+        setPayForm(prev => ({
+          ...prev,
+          project_name: foundProj.name
+        }));
+      }
+    }
+  }, [embedded, projectId, projects, clients]);
 
   const triggerAlert = (type, msg) => {
     setAlert({ type, msg });
@@ -225,8 +269,19 @@ export default function FinancialTransactions() {
     ? subInvoices.filter(inv => inv.subcontractor_id === parseInt(payForm.subcontractor_id) && inv.status !== 'Paid')
     : subInvoices.filter(inv => inv.status !== 'Paid');
 
-  // Filter logs by search
+  // Filter logs by search and active project if embedded
   const filteredCollections = collectionsLog.filter(c => {
+    if (embedded && projectId) {
+      const isNum = !isNaN(parseInt(projectId));
+      if (isNum) {
+        if (Number(c.project_id) !== Number(projectId)) return false;
+      } else {
+        const foundProj = projects.find(p => String(p.id) === String(projectId));
+        const pName = foundProj ? foundProj.name : '';
+        const matchName = (c.project_name || '').toLowerCase().trim() === pName.toLowerCase().trim();
+        if (!matchName) return false;
+      }
+    }
     const q = searchQuery.toLowerCase();
     return (
       (c.client_name || '').toLowerCase().includes(q) ||
@@ -238,8 +293,15 @@ export default function FinancialTransactions() {
   });
 
   const filteredPayments = paymentsLog.filter(p => {
-    const q = searchQuery.toLowerCase();
     const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {});
+    if (embedded && projectId) {
+      const foundProj = projects.find(p => String(p.id) === String(projectId));
+      const activeProjName = foundProj ? foundProj.name : '';
+      if (!activeProjName || (meta.project_name || '').toLowerCase().trim() !== activeProjName.toLowerCase().trim()) {
+        return false;
+      }
+    }
+    const q = searchQuery.toLowerCase();
     return (
       (p.sub_name || '').toLowerCase().includes(q) ||
       (meta.project_name || '').toLowerCase().includes(q) ||
@@ -249,32 +311,36 @@ export default function FinancialTransactions() {
     );
   });
 
-  // Calculate totals
-  const totalCollections = collectionsLog.reduce((sum, item) => sum + parseFloat(item.amount_paid || 0), 0);
-  const totalPayments = paymentsLog.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+  // Calculate totals (dynamic based on view scope)
+  const displayCollections = (embedded && projectId) ? filteredCollections : collectionsLog;
+  const displayPayments = (embedded && projectId) ? filteredPayments : paymentsLog;
+  const totalCollections = displayCollections.reduce((sum, item) => sum + parseFloat(item.amount_paid || 0), 0);
+  const totalPayments = displayPayments.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
 
   return (
-    <div className="container-fluid p-6 max-w-7xl mx-auto space-y-6" style={{ direction: 'rtl' }}>
+    <div className={getThemeClass("container-fluid p-6 max-w-7xl mx-auto space-y-6", "container-fluid p-0 max-w-7xl mx-auto space-y-6")} style={{ direction: 'rtl' }}>
       
       {/* Premium Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gradient-to-r from-emerald-800 to-cyan-900 text-white p-6 rounded-2xl shadow-xl space-y-4 md:space-y-0 transition duration-300">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight mb-1">
-            {ar ? 'التحصيلات والمدفوعات المالية' : 'Collections & Subcontractor Payments'}
-          </h1>
-          <p className="text-emerald-100 text-xs">
-            {ar ? 'إدارة تحصيل دفعات العملاء وسداد مقاولي الباطن مع ربط مرن بالمشاريع والمستخلصات وتوليد القيود الآلية' : 'Manage general and linked transactions cleanly'}
-          </p>
+      {!embedded && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gradient-to-r from-emerald-800 to-cyan-900 text-white p-6 rounded-2xl shadow-xl space-y-4 md:space-y-0 transition duration-300">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-1">
+              {ar ? 'التحصيلات والمدفوعات المالية' : 'Collections & Subcontractor Payments'}
+            </h1>
+            <p className="text-emerald-100 text-xs">
+              {ar ? 'إدارة تحصيل دفعات العملاء وسداد مقاولي الباطن مع ربط مرن بالمشاريع والمستخلصات وتوليد القيود الآلية' : 'Manage general and linked transactions cleanly'}
+            </p>
+          </div>
+          <div className="flex space-x-2 space-x-reverse">
+            <button 
+              onClick={() => { fetchMasterData(); fetchLogs(); }}
+              className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center transition duration-200"
+            >
+              🔄 {ar ? 'تحديث البيانات' : 'Refresh Data'}
+            </button>
+          </div>
         </div>
-        <div className="flex space-x-2 space-x-reverse">
-          <button 
-            onClick={() => { fetchMasterData(); fetchLogs(); }}
-            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center transition duration-200"
-          >
-            🔄 {ar ? 'تحديث البيانات' : 'Refresh Data'}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Alert Banner */}
       {alert.msg && (
@@ -289,37 +355,37 @@ export default function FinancialTransactions() {
 
       {/* Stats Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse">
+        <div className={getThemeClass("bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse", "bg-[#131b2e] p-5 rounded-2xl border border-slate-800/60 shadow-sm flex items-center space-x-4 space-x-reverse")}>
           <div className="p-3 bg-emerald-100 text-emerald-800 rounded-xl text-xl">📥</div>
           <div>
-            <p className="text-gray-400 text-xs font-semibold">{ar ? 'إجمالي التحصيلات (العملاء)' : 'Total Client Collections'}</p>
-            <h3 className="text-xl font-bold text-gray-800 mt-1">{totalCollections.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'إجمالي التحصيلات (العملاء)' : 'Total Client Collections'}</p>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalCollections.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse">
+        <div className={getThemeClass("bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse", "bg-[#131b2e] p-5 rounded-2xl border border-slate-800/60 shadow-sm flex items-center space-x-4 space-x-reverse")}>
           <div className="p-3 bg-cyan-100 text-cyan-800 rounded-xl text-xl">📤</div>
           <div>
-            <p className="text-gray-400 text-xs font-semibold">{ar ? 'إجمالي المدفوعات (المقاولين)' : 'Total Payments to Subs'}</p>
-            <h3 className="text-xl font-bold text-gray-800 mt-1">{totalPayments.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'إجمالي المدفوعات (المقاولين)' : 'Total Payments to Subs'}</p>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalPayments.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse md:col-span-2 lg:col-span-1">
+        <div className={getThemeClass("bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse md:col-span-2 lg:col-span-1", "bg-[#131b2e] p-5 rounded-2xl border border-slate-800/60 shadow-sm flex items-center space-x-4 space-x-reverse md:col-span-2 lg:col-span-1")}>
           <div className="p-3 bg-indigo-100 text-indigo-800 rounded-xl text-xl">⚖️</div>
           <div>
-            <p className="text-gray-400 text-xs font-semibold">{ar ? 'صافي التدفق النقدي الداخلي' : 'Net Inflow Balance'}</p>
-            <h3 className="text-xl font-bold text-gray-800 mt-1">{(totalCollections - totalPayments).toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'صافي التدفق النقدي الداخلي' : 'Net Inflow Balance'}</p>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{(totalCollections - totalPayments).toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex border-b border-gray-200 bg-white p-1.5 rounded-xl">
+      <div className={getThemeClass("flex border-b border-gray-200 bg-white p-1.5 rounded-xl", "flex border-b border-slate-800 bg-[#131b2e] p-1.5 rounded-xl")}>
         <button
           onClick={() => setActiveTab('collections')}
           className={`flex-1 py-3 text-center rounded-lg text-xs font-bold transition-all duration-200 ${
             activeTab === 'collections'
               ? 'bg-gradient-to-r from-emerald-800 to-cyan-900 text-white shadow'
-              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              : getThemeClass('text-gray-500 hover:text-gray-800 hover:bg-gray-50', 'text-slate-400 hover:text-slate-200 hover:bg-[#090d16]')
           }`}
         >
           📥 {ar ? 'تحصيل دفعات العملاء' : 'Client Collections'}
@@ -329,7 +395,7 @@ export default function FinancialTransactions() {
           className={`flex-1 py-3 text-center rounded-lg text-xs font-bold transition-all duration-200 ${
             activeTab === 'payments'
               ? 'bg-gradient-to-r from-emerald-800 to-cyan-900 text-white shadow'
-              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              : getThemeClass('text-gray-500 hover:text-gray-800 hover:bg-gray-50', 'text-slate-400 hover:text-slate-200 hover:bg-[#090d16]')
           }`}
         >
           📤 {ar ? 'سداد مستحقات المقاولين' : 'Subcontractor Payments'}
@@ -341,19 +407,26 @@ export default function FinancialTransactions() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Collection Form (1/3 width) */}
-          <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-            <h2 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center">
+          <div className={getThemeClass("lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4", "lg:col-span-1 bg-[#131b2e] p-6 rounded-2xl border border-slate-800/60 shadow-sm space-y-4")}>
+            <h2 className={getThemeClass("text-sm font-bold text-gray-800 border-b pb-2 flex items-center", "text-sm font-bold text-cyan-400 border-b border-slate-800 pb-2 flex items-center")}>
               💰 {ar ? 'سجل تحصيل دفعة جديدة' : 'Record Client Collection'}
             </h2>
+
+            {embedded && projectId && !projects.some(p => String(p.id) === String(projectId) && !isNaN(parseInt(p.id))) && (
+              <div className="p-3 rounded-xl text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 leading-relaxed font-semibold">
+                ⚠️ {ar ? 'تنبيه: هذا المشروع محلي (Seed) وغير مسجل بقاعدة البيانات. لتتمكن من تسجيل القيود والتحصيلات، يرجى اختيار أو تأسيس مشروع مسجل.' : 'Note: This project is local (seed) and not registered in the database yet.'}
+              </div>
+            )}
+
             <form onSubmit={handleCollectionSubmit} className="space-y-3.5">
               
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'العميل' : 'Client'} *</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'العميل' : 'Client'} *</label>
                 <select
                   value={colForm.client_id}
                   onChange={(e) => setColForm({ ...colForm, client_id: e.target.value, project_id: '', valuation_id: '' })}
                   required
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- اختر العميل --' : '-- Select Client --'}</option>
                   {clients.map(c => (
@@ -363,11 +436,11 @@ export default function FinancialTransactions() {
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المشروع (اختياري)' : 'Project (Optional)'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المشروع (اختياري)' : 'Project (Optional)'}</label>
                 <select
                   value={colForm.project_id}
                   onChange={(e) => setColForm({ ...colForm, project_id: e.target.value, valuation_id: '' })}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- دفعة عامة (بدون مشروع) --' : '-- General Payment (No Project) --'}</option>
                   {filteredProjects.map(p => (
@@ -377,11 +450,11 @@ export default function FinancialTransactions() {
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المستخلص / الفاتورة (اختياري)' : 'Valuation / Invoice (Optional)'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المستخلص / الفاتورة (اختياري)' : 'Valuation / Invoice (Optional)'}</label>
                 <select
                   value={colForm.valuation_id}
                   onChange={(e) => setColForm({ ...colForm, valuation_id: e.target.value })}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- غير مرتبطة بمستخلص --' : '-- Not Linked to a Valuation --'}</option>
                   {filteredClientInvoices.map(inv => (
@@ -394,7 +467,7 @@ export default function FinancialTransactions() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المبلغ المحصل' : 'Amount'} *</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المبلغ المحصل' : 'Amount'} *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -402,28 +475,28 @@ export default function FinancialTransactions() {
                     onChange={(e) => setColForm({ ...colForm, amount: e.target.value })}
                     required
                     placeholder="0.00"
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'تاريخ الاستلام' : 'Date'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'تاريخ الاستلام' : 'Date'}</label>
                   <input
                     type="date"
                     value={colForm.payment_date}
                     onChange={(e) => setColForm({ ...colForm, payment_date: e.target.value })}
                     required
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'طريقة الدفع' : 'Payment Method'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'طريقة الدفع' : 'Payment Method'}</label>
                   <select
                     value={colForm.payment_method}
                     onChange={(e) => setColForm({ ...colForm, payment_method: e.target.value })}
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   >
                     <option value="نقداً">{ar ? 'نقداً' : 'Cash'}</option>
                     <option value="بنك">{ar ? 'بنك' : 'Bank'}</option>
@@ -432,36 +505,36 @@ export default function FinancialTransactions() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'الرقم المرجعي' : 'Ref No'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الرقم المرجعي' : 'Ref No'}</label>
                   <input
                     type="text"
                     value={colForm.reference_no}
                     onChange={(e) => setColForm({ ...colForm, reference_no: e.target.value })}
                     placeholder={ar ? 'رقم الشيك أو التحويل' : 'Check / Transfer No.'}
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'الحساب المودع فيه' : 'Source Account'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب المودع فيه' : 'Source Account'}</label>
                 <input
                   type="text"
                   value={colForm.source_account}
                   onChange={(e) => setColForm({ ...colForm, source_account: e.target.value })}
                   placeholder={ar ? 'مثال: نقدية بالصندوق أو بنك مصر' : 'e.g. Cash in Hand or Bank Account'}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 />
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'ملاحظات / البيان الهندسي' : 'Notes'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'ملاحظات / البيان الهندسي' : 'Notes'}</label>
                 <textarea
                   value={colForm.notes}
                   onChange={(e) => setColForm({ ...colForm, notes: e.target.value })}
                   placeholder={ar ? 'أدخل تفاصيل إضافية أو وصف الدفعة...' : 'Enter details here...'}
                   rows="2"
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 />
               </div>
 
@@ -476,9 +549,9 @@ export default function FinancialTransactions() {
           </div>
 
           {/* Collection Logs (2/3 width) */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b pb-2">
-              <h2 className="text-sm font-bold text-gray-800 flex items-center">
+          <div className={getThemeClass("lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4", "lg:col-span-2 bg-[#131b2e] p-6 rounded-2xl border border-slate-800/60 shadow-sm space-y-4")}>
+            <div className={getThemeClass("flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b pb-2", "flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b border-slate-800 pb-2")}>
+              <h2 className={getThemeClass("text-sm font-bold text-gray-800 flex items-center", "text-sm font-bold text-cyan-400 flex items-center")}>
                 📋 {ar ? 'سجل تحصيلات دفعات العملاء' : 'Customer Collections History Log'}
               </h2>
               <input
@@ -486,14 +559,17 @@ export default function FinancialTransactions() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={ar ? 'بحث باسم العميل أو المشروع...' : 'Search by client or project...'}
-                className="text-xs px-3 py-1.5 border rounded-lg focus:outline-none focus:border-emerald-600 w-full sm:w-64 bg-gray-50/50"
+                className={getThemeClass(
+                  "text-xs px-3 py-1.5 border rounded-lg focus:outline-none focus:border-emerald-600 w-full sm:w-64 bg-gray-50/50 text-gray-850",
+                  "text-xs px-3 py-1.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 w-full sm:w-64 bg-[#090d16] text-slate-200"
+                )}
               />
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200">
+                  <tr className={getThemeClass("bg-gray-50 text-gray-500 font-bold border-b border-gray-200", "bg-[#090d16] text-slate-400 font-bold border-b border-slate-800")}>
                     <th className="p-3 text-center">ID</th>
                     <th className="p-3">{ar ? 'العميل' : 'Client'}</th>
                     <th className="p-3">{ar ? 'المشروع' : 'Project'}</th>
@@ -506,7 +582,7 @@ export default function FinancialTransactions() {
                     <th className="p-3 text-center">{ar ? 'إجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className={getThemeClass("divide-y divide-gray-100", "divide-y divide-slate-800/60")}>
                   {filteredCollections.length === 0 ? (
                     <tr>
                       <td colSpan="10" className="p-6 text-center text-gray-400">
@@ -517,32 +593,35 @@ export default function FinancialTransactions() {
                     filteredCollections.map(c => {
                       const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
                       return (
-                        <tr key={c.id} className="hover:bg-gray-50/80 transition duration-150">
-                          <td className="p-3 text-center text-gray-400 font-mono">#{c.id}</td>
-                          <td className="p-3 font-semibold text-gray-700">{c.client_name || ar ? 'عميل عام' : 'General Client'}</td>
-                          <td className="p-3 text-emerald-800 font-medium">{c.project_name || meta.project_name || ar ? 'دفعة عامة' : 'General'}</td>
-                          <td className="p-3 text-cyan-800 font-medium">
+                        <tr key={c.id} className={getThemeClass("hover:bg-gray-50/80 transition duration-150", "hover:bg-slate-800/30 transition duration-150 text-slate-300 border-b border-slate-800/40")}>
+                          <td className="p-3 text-center text-gray-450 font-mono">#{c.id}</td>
+                          <td className={getThemeClass("p-3 font-semibold text-gray-700", "p-3 font-semibold text-slate-200")}>{c.client_name || (ar ? 'عميل عام' : 'General Client')}</td>
+                          <td className={getThemeClass("p-3 text-emerald-800 font-medium", "p-3 text-emerald-400 font-medium")}>{c.project_name || meta.project_name || (ar ? 'دفعة عامة' : 'General')}</td>
+                          <td className="p-3 font-medium">
                             {meta.valuation_id ? (
-                              <span className="bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full text-[10px]">
+                              <span className={getThemeClass("bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full text-[10px]", "bg-cyan-950/40 text-cyan-400 border border-cyan-800/30 px-2 py-0.5 rounded-full text-[10px]")}>
                                 {ar ? 'مستخلص' : 'Valuation'} #{meta.valuation_id}
                               </span>
                             ) : (
-                              <span className="text-gray-400 font-mono">-</span>
+                              <span className={getThemeClass("text-gray-400 font-mono", "text-slate-500 font-mono")}>-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center font-bold text-emerald-700">
+                          <td className={getThemeClass("p-3 text-center font-bold text-emerald-700", "p-3 text-center font-bold text-emerald-400")}>
                             {parseFloat(c.amount_paid).toLocaleString()}
                           </td>
-                          <td className="p-3 text-center text-gray-500 font-mono">
+                          <td className={getThemeClass("p-3 text-center text-gray-500 font-mono", "p-3 text-center text-slate-400 font-mono")}>
                             {new Date(c.payment_date).toLocaleDateString('ar-EG')}
                           </td>
-                          <td className="p-3 text-center text-gray-600">{c.payment_method}</td>
-                          <td className="p-3 text-center font-mono text-gray-500">{c.reference_no || '-'}</td>
-                          <td className="p-3 text-gray-600 max-w-[150px] truncate" title={c.notes}>{c.notes || '-'}</td>
+                          <td className={getThemeClass("p-3 text-center text-gray-600", "p-3 text-center text-slate-300")}>{c.payment_method}</td>
+                          <td className={getThemeClass("p-3 text-center font-mono text-gray-500", "p-3 text-center font-mono text-slate-450")}>{c.reference_no || '-'}</td>
+                          <td className={getThemeClass("p-3 text-gray-600 max-w-[150px] truncate", "p-3 text-slate-350 max-w-[150px] truncate")} title={c.notes}>{c.notes || '-'}</td>
                           <td className="p-3 text-center">
                             <button
                               onClick={() => handleDeleteRecord('client_payment_history', c.id)}
-                              className="text-rose-600 hover:text-rose-900 hover:bg-rose-50 px-2 py-1 rounded text-[10px] font-semibold transition"
+                              className={getThemeClass(
+                                "text-rose-600 hover:text-rose-900 hover:bg-rose-50 px-2 py-1 rounded text-[10px] font-semibold transition",
+                                "text-rose-455 hover:text-rose-300 hover:bg-rose-500/10 px-2 py-1 rounded text-[10px] font-semibold transition"
+                              )}
                             >
                               {ar ? 'عكس القيد' : 'Reverse'}
                             </button>
@@ -563,19 +642,19 @@ export default function FinancialTransactions() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Payment Form (1/3 width) */}
-          <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-            <h2 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center">
+          <div className={getThemeClass("lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4", "lg:col-span-1 bg-[#131b2e] p-6 rounded-2xl border border-slate-800/60 shadow-sm space-y-4")}>
+            <h2 className={getThemeClass("text-sm font-bold text-gray-800 border-b pb-2 flex items-center", "text-sm font-bold text-cyan-400 border-b border-slate-800 pb-2 flex items-center")}>
               👷 {ar ? 'سجل سداد دفعة للمقاول' : 'Record Subcontractor Payment'}
             </h2>
             <form onSubmit={handlePaymentSubmit} className="space-y-3.5">
               
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المقاول' : 'Subcontractor'} *</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المقاول' : 'Subcontractor'} *</label>
                 <select
                   value={payForm.subcontractor_id}
                   onChange={(e) => setPayForm({ ...payForm, subcontractor_id: e.target.value, invoice_id: '' })}
                   required
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- اختر المقاول --' : '-- Select Subcontractor --'}</option>
                   {subcontractors.map(s => (
@@ -585,11 +664,11 @@ export default function FinancialTransactions() {
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المشروع (اختياري)' : 'Project Name (Optional)'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المشروع (اختياري)' : 'Project Name (Optional)'}</label>
                 <select
                   value={payForm.project_name}
                   onChange={(e) => setPayForm({ ...payForm, project_name: e.target.value })}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- سداد عام (بدون مشروع محدد) --' : '-- General Payment (No Project) --'}</option>
                   {projects.map(p => (
@@ -599,11 +678,11 @@ export default function FinancialTransactions() {
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'مستخلص المقاول (اختياري)' : 'Subcontractor Invoice (Optional)'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'مستخلص المقاول (اختياري)' : 'Subcontractor Invoice (Optional)'}</label>
                 <select
                   value={payForm.invoice_id}
                   onChange={(e) => setPayForm({ ...payForm, invoice_id: e.target.value })}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-655 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- غير مرتبط بمستخلص مقاول --' : '-- Not Linked to Sub Invoice --'}</option>
                   {filteredSubInvoices.map(inv => (
@@ -616,7 +695,7 @@ export default function FinancialTransactions() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'المبلغ المدفوع' : 'Amount'} *</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'المبلغ المدفوع' : 'Amount'} *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -624,28 +703,28 @@ export default function FinancialTransactions() {
                     onChange={(e) => setPayForm({ ...payForm, amount_paid: e.target.value })}
                     required
                     placeholder="0.00"
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'تاريخ السداد' : 'Date'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'تاريخ السداد' : 'Date'}</label>
                   <input
                     type="date"
                     value={payForm.payment_date}
                     onChange={(e) => setPayForm({ ...payForm, payment_date: e.target.value })}
                     required
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'طريقة السداد' : 'Payment Method'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'طريقة السداد' : 'Payment Method'}</label>
                   <select
                     value={payForm.payment_method}
                     onChange={(e) => setPayForm({ ...payForm, payment_method: e.target.value })}
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   >
                     <option value="Cash">{ar ? 'نقداً' : 'Cash'}</option>
                     <option value="Bank Transfer">{ar ? 'تحويل بنكي' : 'Bank Transfer'}</option>
@@ -653,36 +732,36 @@ export default function FinancialTransactions() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'الرقم المرجعي' : 'Ref No'}</label>
+                  <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الرقم المرجعي' : 'Ref No'}</label>
                   <input
                     type="text"
                     value={payForm.reference_no}
                     onChange={(e) => setPayForm({ ...payForm, reference_no: e.target.value })}
                     placeholder={ar ? 'رقم الشيك أو التحويل' : 'Check / Transfer No.'}
-                    className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                    className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'الحساب الدائن / مصدر الصرف' : 'Source Account'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'الحساب الدائن / مصدر الصرف' : 'Source Account'}</label>
                 <input
                   type="text"
                   value={payForm.source_account}
                   onChange={(e) => setPayForm({ ...payForm, source_account: e.target.value })}
                   placeholder={ar ? 'مثال: نقدية بالبنوك والصندوق' : 'e.g. Cash or Bank Account'}
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 />
               </div>
 
               <div>
-                <label className="block text-gray-500 text-xs font-bold mb-1.5">{ar ? 'ملاحظات / تفاصيل المعاملة' : 'Notes'}</label>
+                <label className={getThemeClass("block text-gray-500 text-xs font-bold mb-1.5", "block text-slate-400 text-xs font-bold mb-1.5")}>{ar ? 'ملاحظات / تفاصيل المعاملة' : 'Notes'}</label>
                 <textarea
                   value={payForm.notes}
                   onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })}
                   placeholder={ar ? 'أدخل تفاصيل إضافية أو رقم الدفعة...' : 'Enter details here...'}
                   rows="2"
-                  className="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-600 bg-gray-50/50"
+                  className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 />
               </div>
 
@@ -697,9 +776,9 @@ export default function FinancialTransactions() {
           </div>
 
           {/* Payment Logs (2/3 width) */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b pb-2">
-              <h2 className="text-sm font-bold text-gray-800 flex items-center">
+          <div className={getThemeClass("lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4", "lg:col-span-2 bg-[#131b2e] p-6 rounded-2xl border border-slate-800/60 shadow-sm space-y-4")}>
+            <div className={getThemeClass("flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b pb-2", "flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 border-b border-slate-800 pb-2")}>
+              <h2 className={getThemeClass("text-sm font-bold text-gray-800 flex items-center", "text-sm font-bold text-cyan-400 flex items-center")}>
                 📋 {ar ? 'سجل مدفوعات مقاولي الباطن' : 'Subcontractor Payments history Ledger'}
               </h2>
               <input
@@ -707,14 +786,17 @@ export default function FinancialTransactions() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={ar ? 'بحث باسم المقاول أو التفاصيل...' : 'Search by contractor or details...'}
-                className="text-xs px-3 py-1.5 border rounded-lg focus:outline-none focus:border-cyan-600 w-full sm:w-64 bg-gray-50/50"
+                className={getThemeClass(
+                  "text-xs px-3 py-1.5 border rounded-lg focus:outline-none focus:border-cyan-600 w-full sm:w-64 bg-gray-50/50 text-gray-850",
+                  "text-xs px-3 py-1.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 w-full sm:w-64 bg-[#090d16] text-slate-200"
+                )}
               />
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200">
+                  <tr className={getThemeClass("bg-gray-50 text-gray-500 font-bold border-b border-gray-200", "bg-[#090d16] text-slate-400 font-bold border-b border-slate-800")}>
                     <th className="p-3 text-center">ID</th>
                     <th className="p-3">{ar ? 'المقاول' : 'Subcontractor'}</th>
                     <th className="p-3">{ar ? 'المشروع' : 'Project'}</th>
@@ -727,7 +809,7 @@ export default function FinancialTransactions() {
                     <th className="p-3 text-center">{ar ? 'إجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className={getThemeClass("divide-y divide-gray-100", "divide-y divide-slate-800/60")}>
                   {filteredPayments.length === 0 ? (
                     <tr>
                       <td colSpan="10" className="p-6 text-center text-gray-400">
@@ -738,32 +820,35 @@ export default function FinancialTransactions() {
                     filteredPayments.map(p => {
                       const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {});
                       return (
-                        <tr key={p.id} className="hover:bg-gray-50/80 transition duration-150">
-                          <td className="p-3 text-center text-gray-400 font-mono">#{p.id}</td>
-                          <td className="p-3 font-semibold text-gray-700">{p.sub_name || ar ? 'مقاول عام' : 'Subcontractor'}</td>
-                          <td className="p-3 text-emerald-800 font-medium">{meta.project_name || ar ? 'سداد عام' : 'General'}</td>
-                          <td className="p-3 text-cyan-800 font-medium">
+                        <tr key={p.id} className={getThemeClass("hover:bg-gray-50/80 transition duration-150", "hover:bg-slate-800/30 transition duration-150 text-slate-300 border-b border-slate-800/40")}>
+                          <td className="p-3 text-center text-gray-450 font-mono">#{p.id}</td>
+                          <td className={getThemeClass("p-3 font-semibold text-gray-700", "p-3 font-semibold text-slate-200")}>{p.sub_name || (ar ? 'مقاول عام' : 'Subcontractor')}</td>
+                          <td className={getThemeClass("p-3 text-emerald-800 font-medium", "p-3 text-emerald-400 font-medium")}>{meta.project_name || (ar ? 'سداد عام' : 'General')}</td>
+                          <td className="p-3 font-medium">
                             {meta.invoice_id ? (
-                              <span className="bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full text-[10px]">
+                              <span className={getThemeClass("bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full text-[10px]", "bg-cyan-950/40 text-cyan-400 border border-cyan-800/30 px-2 py-0.5 rounded-full text-[10px]")}>
                                 {ar ? 'مستخلص' : 'Valuation'} #{meta.invoice_id}
                               </span>
                             ) : (
-                              <span className="text-gray-400 font-mono">-</span>
+                              <span className={getThemeClass("text-gray-400 font-mono", "text-slate-500 font-mono")}>-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center font-bold text-rose-700">
+                          <td className={getThemeClass("p-3 text-center font-bold text-rose-700", "p-3 text-center font-bold text-rose-400")}>
                             {parseFloat(p.amount).toLocaleString()}
                           </td>
-                          <td className="p-3 text-center text-gray-500 font-mono">
+                          <td className={getThemeClass("p-3 text-center text-gray-500 font-mono", "p-3 text-center text-slate-400 font-mono")}>
                             {new Date(p.created_at || p.payment_date).toLocaleDateString('ar-EG')}
                           </td>
-                          <td className="p-3 text-center text-gray-600">{meta.payment_method || p.type}</td>
-                          <td className="p-3 text-center font-mono text-gray-500">{meta.reference_no || '-'}</td>
-                          <td className="p-3 text-gray-600 max-w-[150px] truncate" title={p.details}>{p.details || '-'}</td>
+                          <td className={getThemeClass("p-3 text-center text-gray-600", "p-3 text-center text-slate-300")}>{meta.payment_method || p.type}</td>
+                          <td className={getThemeClass("p-3 text-center font-mono text-gray-500", "p-3 text-center font-mono text-slate-455")}>{meta.reference_no || '-'}</td>
+                          <td className={getThemeClass("p-3 text-gray-600 max-w-[150px] truncate", "p-3 text-slate-350 max-w-[150px] truncate")} title={p.details}>{p.details || '-'}</td>
                           <td className="p-3 text-center">
                             <button
                               onClick={() => handleDeleteRecord('subcontractor_statements', p.id)}
-                              className="text-rose-600 hover:text-rose-900 hover:bg-rose-50 px-2 py-1 rounded text-[10px] font-semibold transition"
+                              className={getThemeClass(
+                                "text-rose-600 hover:text-rose-900 hover:bg-rose-50 px-2 py-1 rounded text-[10px] font-semibold transition",
+                                "text-rose-455 hover:text-rose-300 hover:bg-rose-500/10 px-2 py-1 rounded text-[10px] font-semibold transition"
+                              )}
                             >
                               {ar ? 'إلغاء المعاملة' : 'Reverse'}
                             </button>

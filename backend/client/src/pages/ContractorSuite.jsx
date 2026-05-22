@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import api from '../services/api';
 import DirectStockIssue from './DirectStockIssue';
+import FinancialTransactions from './FinancialTransactions';
 
 export default function ContractorSuite() {
   const { language } = useLanguage();
@@ -2151,8 +2152,8 @@ export default function ContractorSuite() {
               { id: 'boq', label: 'المقايسة والبنود', icon: '📝' },
               { id: 'expenses', label: 'المصروفات الفعلية', icon: '💸' },
               { id: 'client', label: 'دفعات العميل', icon: '💳' },
-              { id: 'direct_issue', label: 'صرف مخزني مباشر', icon: '🚚' },
-              { id: 'direct_returns', label: 'مرتجع مباشر', icon: '🔄' },
+              { id: 'warehouses', label: 'المخازن', icon: '📦' },
+              { id: 'transactions', label: 'التحصيلات والمدفوعات', icon: '💸' },
               { id: 'files', label: 'ملفات ومستندات', icon: '📁' }
             ].map(tab => (
               <button
@@ -4190,17 +4191,17 @@ export default function ContractorSuite() {
           </div>
         )}
 
-        {/* 5.1 DIRECT STOCK ISSUE VIEW */}
-        {activeTab === 'direct_issue' && (
+        {/* 5.1 WAREHOUSES VIEW */}
+        {activeTab === 'warehouses' && (
           <div className="animate-in slide-in-from-bottom duration-500">
             <DirectStockIssue defaultTab="issue" embedded={true} projectId={activeProjectId} />
           </div>
         )}
 
-        {/* 5.2 DIRECT RETURNS VIEW */}
-        {activeTab === 'direct_returns' && (
+        {/* 5.2 FINANCIAL TRANSACTIONS VIEW */}
+        {activeTab === 'transactions' && (
           <div className="animate-in slide-in-from-bottom duration-500">
-            <DirectStockIssue defaultTab="return" embedded={true} projectId={activeProjectId} />
+            <FinancialTransactions embedded={true} projectId={activeProjectId} />
           </div>
         )}
 

@@ -1621,42 +1621,60 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       )}
       
       {/* MODE SWITCHER TABS (4 Strategic Tabs) */}
-      {!embedded && (
-        <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl max-w-4xl border border-slate-200/60 shadow-inner gap-1.5 no-print">
-          <button
-            type="button"
-            onClick={() => handleModeSwitch('issue')}
-            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'issue' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleModeSwitch('return')}
-            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'return' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('invoice_list')}
-            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'invoice_list' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('customer_statement');
-              setCustomerSearchQuery('');
-              setSelectedStatementCustomer('');
-            }}
-            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'customer_statement' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
-          </button>
-        </div>
-      )}
+      <div className={`flex flex-wrap p-1.5 rounded-2xl max-w-4xl border shadow-inner gap-1.5 no-print ${
+        embedded 
+          ? 'bg-[#1b2336] border-slate-800' 
+          : 'bg-slate-100 border-slate-200/60'
+      }`}>
+        <button
+          type="button"
+          onClick={() => handleModeSwitch('issue')}
+          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+            activeTab === 'issue' 
+              ? (embedded ? 'bg-[#1e293b] border border-cyan-500/30 text-cyan-400 shadow-md' : 'bg-indigo-600 text-white shadow-md') 
+              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+          }`}
+        >
+          <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeSwitch('return')}
+          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+            activeTab === 'return' 
+              ? (embedded ? 'bg-[#1e293b] border border-amber-500/30 text-amber-400 shadow-md' : 'bg-amber-600 text-white shadow-md') 
+              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+          }`}
+        >
+          <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('invoice_list')}
+          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+            activeTab === 'invoice_list' 
+              ? (embedded ? 'bg-[#1e293b] border border-slate-700/30 text-slate-200 shadow-md' : 'bg-slate-900 text-white shadow-md') 
+              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+          }`}
+        >
+          <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('customer_statement');
+            setCustomerSearchQuery('');
+            setSelectedStatementCustomer('');
+          }}
+          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+            activeTab === 'customer_statement' 
+              ? (embedded ? 'bg-[#1e293b] border border-emerald-500/30 text-emerald-400 shadow-md' : 'bg-emerald-600 text-white shadow-md') 
+              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+          }`}
+        >
+          <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
+        </button>
+      </div>
 
       {/* HEADER SECTION */}
       {!embedded && (
