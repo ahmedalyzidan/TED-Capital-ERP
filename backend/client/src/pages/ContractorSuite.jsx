@@ -12,8 +12,8 @@ export default function ContractorSuite() {
     const saved = localStorage.getItem('contractor_projects');
     if (saved) return JSON.parse(saved);
     return [
-      { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
-      { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA' }
+      { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL', projectManager: 'المهندس أحمد', startDate: '2026-01-01' },
+      { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA', projectManager: 'المهندس كريم', startDate: '2026-02-15' }
     ];
   });
 
@@ -170,7 +170,9 @@ export default function ContractorSuite() {
         id: String(p.id),
         name: p.name,
         clientName: p.client_name || p.client || 'عميل عام',
-        company: p.company || 'TED CAPITAL'
+        company: p.company || 'TED CAPITAL',
+        projectManager: p.project_manager || p.manager || '',
+        startDate: p.start_date ? p.start_date.split('T')[0] : ''
       }));
 
       const allCombinedProjects = [...projects];
@@ -195,7 +197,7 @@ export default function ContractorSuite() {
             id: `db-sale-${s.id}`,
             projectId: String(s.project_id),
             beneficiary: isReturn ? 'مرتجع مواد فائضة للمستودع' : 'صرف مخزني مباشر - مستودع المواد',
-            category: 'مواد ومستلزمات',
+            category: s.metadata?.engineering_classification || 'مواد ومستلزمات',
             unit: s.uom || 'وحدة',
             qty: Math.abs(qtyVal),
             rate: Number(s.buy_price || s.sell_price || 0),
@@ -451,7 +453,7 @@ export default function ContractorSuite() {
 
   // Modals & form display states
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProjectForm, setNewProjectForm] = useState({ name: '', clientName: '', company: 'TED CAPITAL' });
+  const [newProjectForm, setNewProjectForm] = useState({ name: '', clientName: '', company: 'TED CAPITAL', projectManager: '', startDate: '' });
 
   const [showAddBoq, setShowAddBoq] = useState(false);
   const [newBoq, setNewBoq] = useState({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
@@ -758,21 +760,40 @@ export default function ContractorSuite() {
   // --- 4. CRUD OPERATIONS (WITH AUTOMATIC REVERSAL IMPLEMENTED) ---
 
   // Projects CRUD
-  const handleCreateProject = (e) => {
+  const handleCreateProject = async (e) => {
     e.preventDefault();
     if (!newProjectForm.name) return;
-    const newId = `project-${Date.now()}`;
-    const newProj = {
-      id: newId,
-      name: newProjectForm.name,
-      clientName: newProjectForm.clientName || 'عميل عام',
-      company: newProjectForm.company || 'TED CAPITAL'
-    };
-    setProjects([...projects, newProj]);
-    setActiveProjectId(newId);
-    setNewProjectForm({ name: '', clientName: '', company: 'TED CAPITAL' });
-    setShowAddProject(false);
-    triggerNotification(`تم إنشاء مشروع جديد: ${newProj.name} 🏢`);
+    try {
+      const payload = {
+        name: newProjectForm.name,
+        client_name: newProjectForm.clientName || 'عميل عام',
+        company: newProjectForm.company || 'TED CAPITAL',
+        project_manager: newProjectForm.projectManager || '',
+        start_date: newProjectForm.startDate || null,
+        status: 'Active'
+      };
+
+      const response = await api.post('/dynamic/add/projects', payload);
+      const createdId = String(response.data.id);
+
+      const newProj = {
+        id: createdId,
+        name: newProjectForm.name,
+        clientName: newProjectForm.clientName || 'عميل عام',
+        company: newProjectForm.company || 'TED CAPITAL',
+        projectManager: newProjectForm.projectManager || '',
+        startDate: newProjectForm.startDate || ''
+      };
+
+      setProjects([...projects, newProj]);
+      setActiveProjectId(createdId);
+      setNewProjectForm({ name: '', clientName: '', company: 'TED CAPITAL', projectManager: '', startDate: '' });
+      setShowAddProject(false);
+      triggerNotification(`تم إنشاء مشروع جديد: ${newProj.name} 🏢`);
+    } catch (err) {
+      console.error("Failed to create project on DB:", err);
+      alert(err.response?.data?.error || 'فشل في إنشاء المشروع في قاعدة البيانات.');
+    }
   };
 
   const handleDeleteProject = (projId) => {
@@ -2032,6 +2053,8 @@ export default function ContractorSuite() {
             
             <p className="text-slate-400 font-bold text-xs mt-1.5 leading-relaxed">
               العميل الحالي للمشروع: <span className="text-white font-black">{activeProject.clientName}</span> | الشركة: <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
+              {activeProject.projectManager && <> | مدير المشروع: <span className="text-emerald-450 font-black">{activeProject.projectManager}</span></>}
+              {activeProject.startDate && <> | تاريخ البدء: <span className="text-amber-450 font-black">{activeProject.startDate}</span></>}
             </p>
 
             {/* Segmented Cost Center Toggle */}
@@ -2150,7 +2173,7 @@ export default function ContractorSuite() {
         {showAddProject && (
           <form onSubmit={handleCreateProject} className="bg-slate-900/70 border border-slate-800 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
             <h4 className="text-sm font-black text-cyan-400">تأسيس مشروع إنشائي جديد</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] text-slate-400 font-bold">اسم المشروع / المعرف</label>
                 <input
@@ -2171,7 +2194,6 @@ export default function ContractorSuite() {
                   value={newProjectForm.clientName}
                   onChange={e => setNewProjectForm({ ...newProjectForm, clientName: e.target.value })}
                   className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-                  required
                 />
               </div>
 
@@ -2193,6 +2215,27 @@ export default function ContractorSuite() {
                     </>
                   )}
                 </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">اسم مدير المشروع</label>
+                <input
+                  type="text"
+                  placeholder="مثال: المهندس كريم محمود"
+                  value={newProjectForm.projectManager}
+                  onChange={e => setNewProjectForm({ ...newProjectForm, projectManager: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">تاريخ بداية المشروع</label>
+                <input
+                  type="date"
+                  value={newProjectForm.startDate}
+                  onChange={e => setNewProjectForm({ ...newProjectForm, startDate: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
               </div>
             </div>
             <div className="flex justify-end gap-3">

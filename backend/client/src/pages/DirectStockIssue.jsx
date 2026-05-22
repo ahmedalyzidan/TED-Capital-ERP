@@ -2,6 +2,66 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
+const boqCategories = [
+  "أعمال صحي",
+  "أعمال عزل",
+  "أعمال كهرباء",
+  "أعمال تأسيس تكييف",
+  "أعمال توريد وتركيب تكييف - HVAC",
+  "أعمال تركيب تكييف",
+  "أعمال بياض محاره",
+  "أعمال دهانات",
+  "أعمال دهانات MICRO CEMENT",
+  "أعمال دهانات إيبوكسي",
+  "أعمال دهانات أستر",
+  "أعمال توريد وتركيب أبواب داخلية",
+  "أعمال توريد وتركيب باب مصفح",
+  "أعمال ألوميتال",
+  "أعمال شيش حصره ( SHUTTER )",
+  "أعمال سيراميك حوائط",
+  "أعمال بورسلين أرضيات",
+  "أعمال بورسلين طاولات",
+  "أعمال رخام أرضيات",
+  "أعمال رخام حوائط",
+  "أعمال توريد وتركيب وزر رخام",
+  "أعمال جلي وتلميع رخام",
+  "أعمال رخام مطبخ",
+  "أعمال تركيب زوايا حوائط",
+  "أعمال جيبسوم بورد أبيض",
+  "أعمال جيبسوم بورد أخضر ( MR )",
+  "أعمال جيبسوم بورد أحمر ( FR )",
+  "أعمال أسقف بلاطات",
+  "أعمال تجاليد CEMENT BOARD",
+  "أعمال بانوهات",
+  "أعمال تجاليد خشبيه",
+  "أعمال لاند سكيب",
+  "أعمال شبكة رى",
+  "أعمال أنظمة أمان وكاميرات",
+  "أعمال موبيليا",
+  "أعمال تنجيد",
+  "أعمال تعديلات إنشائية",
+  "أعمال سقاله",
+  "أعمال نظافه",
+  "أعمال تصميم",
+  "إكراميات ونثريات",
+  "أعمال توريد أجهزة كهربائية",
+  "أعمال سيكا",
+  "عماله",
+  "أعمال مكافحة حريق",
+  "أعمال نقل",
+  "توريد وتركيب لوكرات واستندات",
+  "أعمال فيرفورجيه ومشغولات حديد",
+  "أعمال توريد كبائن سيكوريت",
+  "أعمال توريد وتركيب سيكوريت",
+  "أعمال توريد وتركيب أرضيات موكيت",
+  "أعمال توريد وتركيب أرضيات HDF",
+  "أعمال توريد وتركيب وزر خشبي",
+  "أعمال مصاعد",
+  "أعمال توريد وصب خرسانه",
+  "أعمال مباني",
+  "أعمال توريدات"
+];
+
 export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '' }) {
   const { language } = useLanguage();
   const activeComp = localStorage.getItem('active_company') || '';
@@ -171,7 +231,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
 
   // Invoice / Return Items
   const [invoiceLines, setInvoiceLines] = useState([
-    { key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: 0, qty: 1, buy_price: 0, unit_price: 0, total: 0 }
+    { key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: 0, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }
   ]);
   
   // Financial parameters
@@ -598,7 +658,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   // Switch modes cleanly
   const handleModeSwitch = (mode) => {
     setActiveTab(mode);
-    setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: mode === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0 }]);
+    setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: mode === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }]);
     setDiscount(0);
     setSelectedCustomer('');
     setSuccessMsg('');
@@ -710,7 +770,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     const maxQtyLimit = activeTab === 'issue' ? 0 : 999999;
     setInvoiceLines([
       ...invoiceLines,
-      { key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: maxQtyLimit, qty: 1, buy_price: 0, unit_price: 0, total: 0 }
+      { key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: maxQtyLimit, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }
     ]);
   };
 
@@ -771,7 +831,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     e.preventDefault();
     
     // Smart OTC defaulting: On Account requires customer, Cash/Bank/Booking doesn't!
-    if (!selectedCustomer && paymentMethod === 'On Account') {
+    if (!selectedCustomer && paymentMethod === 'On Account' && !selectedProjectId) {
       alert("الرجاء اختيار العميل أولاً (حيث أن طريقة الدفع بالآجل).");
       return;
     }
@@ -783,6 +843,11 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     
     if (activeTab === 'issue' && invoiceLines.some(line => line.qty > line.max_qty)) {
       alert("إحدى الكميات المطلوبة تتجاوز الرصيد المتاح بالمخزن!");
+      return;
+    }
+
+    if (selectedProjectId && invoiceLines.some(line => !line.engineering_classification)) {
+      alert(language === 'ar' ? "عند ربط المعاملة بمشروع إنشائي، يجب تحديد التصنيف الهندسي لكل البنود." : "When linking to a construction project, you must select an engineering classification for all items.");
       return;
     }
 
@@ -817,6 +882,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         }
 
         // 2. Log sale or return transaction record
+        const metadataObj = selectedProjectId ? { engineering_classification: line.engineering_classification || null } : null;
         await api.post('/dynamic/add/inventory_sales', {
           inventory_id: line.inventory_id,
           date: invoiceDate,
@@ -830,7 +896,8 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
           batch_no: line.batch_no || '',
           uom: line.uom || '',
           created_by: 'Admin',
-          project_id: selectedProjectId || null
+          project_id: selectedProjectId || null,
+          metadata: metadataObj ? JSON.stringify(metadataObj) : null
         });
       });
 
@@ -1246,7 +1313,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       setSuccessMsg(`🎉 ${opMsg} | ✉️ إشعار بريدي تلقائي: تم إرسال تفاصيل الحركة بنجاح إلى البريد الإلكتروني المعتمد (ahmedzidan2013@gmail.com)`);
       
       // Reset form fields
-      setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: activeTab === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0 }]);
+      setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: activeTab === 'issue' ? 0 : 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }]);
       setDiscount(0);
       setSelectedCustomer('');
       setSelectedProjectId('');
@@ -1657,7 +1724,15 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 {/* Select Customer + Live Search */}
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-black text-slate-500">{activeTab === 'issue' ? (language === 'ar' ? 'العميل المستلم *' : 'Receiving Customer *') : (language === 'ar' ? 'العميل المرجع *' : 'Return Customer *')}</label>
+                    <label className="text-xs font-black text-slate-500">
+                      {activeTab === 'issue' 
+                        ? (language === 'ar' 
+                            ? `العميل المستلم ${selectedProjectId ? '(اختياري)' : '*'}` 
+                            : `Receiving Customer ${selectedProjectId ? '(Optional)' : '*'}`) 
+                        : (language === 'ar' 
+                            ? `العميل المرجع ${selectedProjectId ? '(اختياري)' : '*'}` 
+                            : `Return Customer ${selectedProjectId ? '(Optional)' : '*'}`)}
+                    </label>
                     <button
                       type="button"
                       onClick={() => {
@@ -1688,7 +1763,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       className={`p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white outline-none transition-all ${focusBorderClass}`}
                     />
                     <select
-                      required
+                      required={!selectedProjectId}
                       value={selectedCustomer || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1788,6 +1863,9 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400 text-xs font-bold">
                       <th className="pb-3 min-w-[200px]">{language === 'ar' ? 'الصنف والباتش' : 'Item & Batch'}</th>
+                      {selectedProjectId && (
+                        <th className="pb-3 w-48">{language === 'ar' ? 'التصنيف الهندسي *' : 'Eng. Classification *'}</th>
+                      )}
                       <th className="pb-3 w-24">{language === 'ar' ? 'الوحدة' : 'UOM'}</th>
                       <th className="pb-3 w-28">{activeTab === 'issue' ? (language === 'ar' ? 'الرصيد المتاح' : 'Available Stock') : (language === 'ar' ? 'الرصيد الحالي' : 'Current Stock')}</th>
                       <th className="pb-3 w-28">{activeTab === 'issue' ? (language === 'ar' ? 'الكمية الصادرة' : 'Issued Qty') : (language === 'ar' ? 'الكمية المرجعة' : 'Returned Qty')}</th>
@@ -1818,6 +1896,25 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                               ))}
                           </select>
                         </td>
+
+                        {/* Engineering Classification Dropdown */}
+                        {selectedProjectId && (
+                          <td className="py-4 pr-1">
+                            <select
+                              required
+                              value={line.engineering_classification || ''}
+                              onChange={(e) => handleLineChange(line.key, 'engineering_classification', e.target.value)}
+                              className={`w-full bg-slate-50 border border-slate-100 group-hover/row:bg-white rounded-xl p-2.5 text-xs font-bold text-slate-700 outline-none transition-all ${focusBorderClass}`}
+                            >
+                              <option value="">{language === 'ar' ? '-- اختر التصنيف --' : '-- Select Category --'}</option>
+                              {boqCategories.map(cat => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
 
                         {/* UOM */}
                         <td className="py-4">
