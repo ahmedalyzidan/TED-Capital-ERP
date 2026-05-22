@@ -459,8 +459,16 @@ export default function ContractorSuite() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({ beneficiary: '', category: 'أعمال صحي', unit: 'م٢', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
 
+  const [selectedPrintInstallment, setSelectedPrintInstallment] = useState(null);
   const [showAddInstallment, setShowAddInstallment] = useState(false);
-  const [newInstallment, setNewInstallment] = useState({ amount: 0, date: new Date().toISOString().split('T')[0], notes: '', valuationId: '' });
+  const [newInstallment, setNewInstallment] = useState({
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+    valuationId: '',
+    paymentMethod: 'نقدًا',
+    referenceNo: ''
+  });
 
   // 🏗️ Progress Claims (Valuations) Wizard States
   const [showAddValuation, setShowAddValuation] = useState(false);
@@ -999,7 +1007,9 @@ export default function ContractorSuite() {
       amount: Number(newInstallment.amount),
       date: newInstallment.date,
       notes: newInstallment.notes,
-      valuationId: newInstallment.valuationId || ''
+      valuationId: newInstallment.valuationId || '',
+      paymentMethod: newInstallment.paymentMethod || 'نقدًا',
+      referenceNo: newInstallment.referenceNo || ''
     };
 
     // Auto-fill valuation reference to notes if selected
@@ -1011,7 +1021,14 @@ export default function ContractorSuite() {
     }
 
     setInstallments([...installments, newItem]);
-    setNewInstallment({ amount: 0, date: new Date().toISOString().split('T')[0], notes: '', valuationId: '' });
+    setNewInstallment({
+      amount: 0,
+      date: new Date().toISOString().split('T')[0],
+      notes: '',
+      valuationId: '',
+      paymentMethod: 'نقدًا',
+      referenceNo: ''
+    });
     setShowAddInstallment(false);
     triggerNotification('💳 تم قيد الدفعة المستلمة من العميل وربطها بالمستخلص بنجاح!');
   };
@@ -1685,6 +1702,8 @@ export default function ContractorSuite() {
   };
 
   const activeGrad = (cat) => categoryGradients[cat] || "from-slate-500/20 to-slate-600/10 border-slate-500/30 text-slate-400 bg-slate-500/5";
+
+  const isMasterBuilder = activeProject?.company && (activeProject.company.toUpperCase().includes('MASTER BUILDER') || activeProject.company.includes('ماستر بيلدر'));
 
   return (
     <div className="contractor-suite-light bg-[#f7f8fc] text-slate-800 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-white font-sans print:bg-white print:text-black relative overflow-hidden" dir="rtl">
@@ -3485,7 +3504,7 @@ export default function ContractorSuite() {
                           <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-3 flex-wrap">
                               <span className="text-xs font-black text-cyan-400">{val.claimNo}</span>
-                              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">فاتورة رقم: {val.invoiceNo}</span>
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">فاتورة رقم: {val.invoiceNo || `INV-TEMP-${val.id}`}</span>
                               {/* ✨ Badge: client or contractor */}
                               {val.isContractor
                                 ? <span className="px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 text-[10px] font-black border border-orange-500/30">🏗️ مستخلص مقاول</span>
@@ -3733,7 +3752,10 @@ export default function ContractorSuite() {
                                 )}
                               </div>
                               <h4 className="text-sm font-black text-white">{inst.notes || 'تحصيل بدون ملاحظات'}</h4>
-                              <span className="text-[10px] text-slate-500 font-mono block">{inst.date}</span>
+                              <span className="text-[10px] text-slate-500 font-mono block">
+                                {inst.date} | طريقة الدفع: {inst.paymentMethod || 'نقدًا'}
+                                {inst.referenceNo ? ` (الرقم المرجعي: ${inst.referenceNo})` : ''}
+                              </span>
                             </div>
 
                             <div className="flex items-center gap-4">
@@ -3741,10 +3763,16 @@ export default function ContractorSuite() {
                                 <span className="text-lg font-black font-mono tracking-tighter">+{inst.amount.toLocaleString()}</span>
                                 <span className="text-[10px] font-bold">جنيه</span>
                               </div>
-                              <div className="flex flex-col gap-1.5 no-print">
+                              <div className="flex flex-col gap-1.5 no-print text-left">
+                                <button
+                                  onClick={() => setSelectedPrintInstallment(inst)}
+                                  className="text-[10px] font-black text-cyan-400 hover:text-cyan-300 transition-colors"
+                                >
+                                  طباعة الإيصال 🖨️
+                                </button>
                                 <button
                                   onClick={() => handleDeleteInstallment(inst.id)}
-                                  className="text-[10px] font-bold text-rose-400 hover:text-rose-300"
+                                  className="text-[10px] font-bold text-rose-400 hover:text-rose-300 transition-colors"
                                 >
                                   حذف 🗑️
                                 </button>
@@ -3812,6 +3840,32 @@ export default function ContractorSuite() {
                         className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                         required
                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold">طريقة الدفع</label>
+                        <select
+                          value={newInstallment.paymentMethod || 'نقدًا'}
+                          onChange={e => setNewInstallment({ ...newInstallment, paymentMethod: e.target.value })}
+                          className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
+                        >
+                          <option value="نقدًا">نقدًا</option>
+                          <option value="شيك">شيك</option>
+                          <option value="تحويل بنكي">تحويل بنكي</option>
+                          <option value="أخرى">أخرى</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold">الرقم المرجعي (اختياري)</label>
+                        <input
+                          type="text"
+                          placeholder="رقم الشيك أو التحويل"
+                          value={newInstallment.referenceNo || ''}
+                          onChange={e => setNewInstallment({ ...newInstallment, referenceNo: e.target.value })}
+                          className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -4165,14 +4219,20 @@ export default function ContractorSuite() {
                 {/* Invoice Header */}
                 <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5">
                   <div className="space-y-1">
-                    <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
-                    <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
-                    <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                    {isMasterBuilder ? (
+                      <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+                    ) : (
+                      <>
+                        <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
+                        <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                        <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                      </>
+                    )}
                   </div>
                   <div className="text-left space-y-1">
                     <h2 className="text-lg font-black text-slate-900">فاتورة مستخلص إنجاز أعمال</h2>
                     <div className="text-[10px] font-mono font-bold text-slate-600">
-                      <div>رقم الفاتورة: <span className="text-slate-900 font-black">{selectedPrintValuation.invoiceNo}</span></div>
+                      <div>رقم الفاتورة: <span className="text-slate-900 font-black">{selectedPrintValuation.invoiceNo || `INV-TEMP-${selectedPrintValuation.id}`}</span></div>
                       <div>رقم المستخلص: <span className="text-cyan-600 font-black">{selectedPrintValuation.claimNo}</span></div>
                       <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintValuation.date}</span></div>
                     </div>
@@ -4182,8 +4242,16 @@ export default function ContractorSuite() {
                 {/* Bill To & Project Details */}
                 <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl text-[11px] border border-slate-100">
                   <div className="space-y-1">
-                    <div className="text-slate-400 font-bold">العميل الكريم:</div>
-                    <div className="font-black text-slate-900 text-sm">{activeProject?.clientName}</div>
+                    <div className="text-slate-400 font-bold">
+                      {selectedPrintValuation.isContractor ? 'المقاول:' : 'العميل الكريم:'}
+                    </div>
+                    <div className="font-black text-slate-900 text-sm">
+                      {selectedPrintValuation.isContractor ? (
+                        Array.from(new Set(selectedPrintValuation.lines?.map(ln => ln.contractorName?.trim()).filter(Boolean))).join('، ') || '—'
+                      ) : (
+                        activeProject?.clientName
+                      )}
+                    </div>
                     <div className="text-slate-500 font-bold">المشروع: <span className="text-slate-900">{activeProject?.name}</span></div>
                   </div>
                   <div className="space-y-1 text-left">
@@ -4201,7 +4269,6 @@ export default function ContractorSuite() {
                         <tr className="bg-slate-900 text-white font-bold">
                           <th className="p-2 border border-slate-200">م</th>
                           <th className="p-2 border border-slate-200">البند المرتبط</th>
-                          <th className="p-2 border border-slate-200">اسم المقاول</th>
                           <th className="p-2 border border-slate-200">وصف العمل</th>
                           <th className="p-2 border border-slate-200 text-center">الوحدة</th>
                           <th className="p-2 border border-slate-200 text-center">الفئة</th>
@@ -4223,7 +4290,6 @@ export default function ContractorSuite() {
                             <tr key={ln.id || idx} className="hover:bg-slate-50 text-slate-800 font-bold">
                               <td className="p-2 border border-slate-200 text-center font-mono">{idx + 1}</td>
                               <td className="p-2 border border-slate-200 text-slate-500">{linkedBoq ? `[${linkedBoq.category}] ${linkedBoq.item_name}` : 'غير مرتبط'}</td>
-                              <td className="p-2 border border-slate-200 text-orange-700">{ln.contractorName || '—'}</td>
                               <td className="p-2 border border-slate-200 text-slate-600">{ln.description || '—'}</td>
                               <td className="p-2 border border-slate-200 text-center">{ln.unit}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono">{Number(ln.unitPrice || 0).toLocaleString()}</td>
@@ -4310,33 +4376,66 @@ export default function ContractorSuite() {
                   </div>
 
                   {/* Right: Totals Breakdown */}
-                  <div className="w-80 text-[11px] font-bold space-y-2 self-end md:self-auto">
-                    <div className="flex justify-between">
-                      <span>إجمالي الأعمال للفترة:</span>
-                      <span className="font-mono">{selectedPrintValuation.totalCurrent.toLocaleString()} ج.م</span>
-                    </div>
-                    {selectedPrintValuation.discount > 0 && (
-                      <div className="flex justify-between text-rose-700">
-                        <span>خصومات وتسويات:</span>
-                        <span className="font-mono">-{selectedPrintValuation.discount.toLocaleString()} ج.م</span>
-                      </div>
-                    )}
-                    {selectedPrintValuation.taxAmount > 0 && (
-                      <div className="flex justify-between text-slate-600">
-                        <span>ضريبة القيمة المضافة ({selectedPrintValuation.taxRate || 14}%):</span>
-                        <span className="font-mono">{selectedPrintValuation.taxAmount.toLocaleString()} ج.م</span>
-                      </div>
-                    )}
-                    {selectedPrintValuation.taxAmount === 0 && selectedPrintValuation.taxRate > 0 && (
-                      <div className="flex justify-between text-emerald-700">
-                        <span>ضريبة القيمة المضافة ({selectedPrintValuation.taxRate}%):</span>
-                        <span className="font-mono">إعفاء / مسددة تراكمياً (0 ج.م)</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm font-black border-t border-slate-200 pt-2 text-slate-950">
-                      <span>إجمالي القيمة المستحقة:</span>
-                      <span className="font-mono">{(selectedPrintValuation.totalFinal || (selectedPrintValuation.totalCurrent - (selectedPrintValuation.discount || 0) + (selectedPrintValuation.taxAmount || 0))).toLocaleString()} ج.م</span>
-                    </div>
+                  <div className="w-80 text-[11px] font-bold space-y-2 self-end md:self-auto border border-slate-150 p-4 rounded-2xl bg-slate-50 text-slate-900">
+                    {(() => {
+                      const isContractor = selectedPrintValuation.isContractor;
+                      const grossVal = isContractor
+                        ? (selectedPrintValuation.cumulativeGross || selectedPrintValuation.totalCurrent || 0)
+                        : (selectedPrintValuation.totalCurrent || 0);
+
+                      const discountVal = selectedPrintValuation.discount || 0;
+                      const afterDiscountVal = grossVal - discountVal;
+
+                      const previouslyDisbursedVal = isContractor
+                        ? (selectedPrintValuation.prevPaid || 0)
+                        : installments
+                            .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
+                            .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
+
+                      const taxVal = selectedPrintValuation.taxAmount || 0;
+                      const taxRateVal = selectedPrintValuation.taxRate || 0;
+
+                      const remainingVal = isContractor
+                        ? (selectedPrintValuation.totalFinal !== undefined ? selectedPrintValuation.totalFinal : (afterDiscountVal - previouslyDisbursedVal + taxVal))
+                        : ((selectedPrintValuation.totalFinal || (afterDiscountVal + taxVal)) - previouslyDisbursedVal);
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-slate-800">
+                            <span>إجمالى المستخلص:</span>
+                            <span className="font-mono text-xs">{grossVal.toLocaleString()} ج.م</span>
+                          </div>
+                          <div className="flex justify-between items-center text-rose-700">
+                            <span>أجمالى الخصم:</span>
+                            <span className="font-mono text-xs">-{discountVal.toLocaleString()} ج.م</span>
+                          </div>
+                          <div className="flex justify-between items-center text-slate-900 border-t border-slate-200 pt-1.5">
+                            <span>الأجمالى بعد الخصم:</span>
+                            <span className="font-mono text-xs">{afterDiscountVal.toLocaleString()} ج.م</span>
+                          </div>
+                          <div className="flex justify-between items-center text-slate-650">
+                            <span>ماسبق صرفه:</span>
+                            <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString()} ج.م</span>
+                          </div>
+                          {taxVal > 0 && (
+                            <div className="flex justify-between items-center text-slate-500 text-[10px]">
+                              <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
+                              <span className="font-mono text-xs">+{taxVal.toLocaleString()} ج.م</span>
+                            </div>
+                          )}
+                          {taxVal === 0 && taxRateVal > 0 && (
+                            <div className="flex justify-between items-center text-emerald-700 text-[10px]">
+                              <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
+                              <span className="font-mono text-[9px]">إعفاء / مسددة تراكمياً</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-sm font-black border-t-2 border-slate-950 pt-2 text-slate-950">
+                            <span>الأجمالى المتبقى:</span>
+                            <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString()} ج.م</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -4394,7 +4493,7 @@ export default function ContractorSuite() {
               <div className="text-left space-y-1">
                 <h2 className="text-lg font-black text-slate-900">فاتورة مستخلص إنجاز أعمال</h2>
                 <div className="text-[10px] font-mono font-bold text-slate-600">
-                  <div>رقم الفاتورة: <span className="text-slate-900 font-black">{selectedPrintValuation.invoiceNo}</span></div>
+                  <div>رقم الفاتورة: <span className="text-slate-900 font-black">{selectedPrintValuation.invoiceNo || `INV-TEMP-${selectedPrintValuation.id}`}</span></div>
                   <div>رقم المستخلص: <span className="text-cyan-600 font-black">{selectedPrintValuation.claimNo}</span></div>
                   <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintValuation.date}</span></div>
                 </div>
@@ -4404,8 +4503,16 @@ export default function ContractorSuite() {
             {/* Bill To & Project Details */}
             <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl text-[11px] border border-slate-100">
               <div className="space-y-1">
-                <div className="text-slate-400 font-bold">العميل الكريم:</div>
-                <div className="font-black text-slate-900 text-sm">{activeProject?.clientName}</div>
+                <div className="text-slate-400 font-bold">
+                  {selectedPrintValuation.isContractor ? 'المقاول:' : 'العميل الكريم:'}
+                </div>
+                <div className="font-black text-slate-900 text-sm">
+                  {selectedPrintValuation.isContractor ? (
+                    Array.from(new Set(selectedPrintValuation.lines?.map(ln => ln.contractorName?.trim()).filter(Boolean))).join('، ') || '—'
+                  ) : (
+                    activeProject?.clientName
+                  )}
+                </div>
                 <div className="text-slate-500 font-bold">المشروع: <span className="text-slate-900">{activeProject?.name}</span></div>
               </div>
               <div className="space-y-1 text-left">
@@ -4423,7 +4530,6 @@ export default function ContractorSuite() {
                     <tr className="bg-slate-900 text-white font-bold">
                       <th className="p-2 border border-slate-200">م</th>
                       <th className="p-2 border border-slate-200">البند المرتبط</th>
-                      <th className="p-2 border border-slate-200">اسم المقاول</th>
                       <th className="p-2 border border-slate-200">وصف العمل</th>
                       <th className="p-2 border border-slate-200 text-center">الوحدة</th>
                       <th className="p-2 border border-slate-200 text-center">الفئة</th>
@@ -4445,7 +4551,6 @@ export default function ContractorSuite() {
                         <tr key={ln.id || idx} className="hover:bg-slate-50 text-slate-800 font-bold">
                           <td className="p-2 border border-slate-200 text-center font-mono">{idx + 1}</td>
                           <td className="p-2 border border-slate-200 text-slate-500">{linkedBoq ? `[${linkedBoq.category}] ${linkedBoq.item_name}` : 'غير مرتبط'}</td>
-                          <td className="p-2 border border-slate-200 text-orange-700">{ln.contractorName || '—'}</td>
                           <td className="p-2 border border-slate-200 text-slate-600">{ln.description || '—'}</td>
                           <td className="p-2 border border-slate-200 text-center">{ln.unit}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono">{Number(ln.unitPrice || 0).toLocaleString()}</td>
@@ -4532,33 +4637,66 @@ export default function ContractorSuite() {
               </div>
 
               {/* Right: Totals Breakdown */}
-              <div className="w-80 text-[11px] font-bold space-y-2 self-end md:self-auto">
-                <div className="flex justify-between">
-                  <span>إجمالي الأعمال للفترة:</span>
-                  <span className="font-mono">{selectedPrintValuation.totalCurrent.toLocaleString()} ج.م</span>
-                </div>
-                {selectedPrintValuation.discount > 0 && (
-                  <div className="flex justify-between text-rose-700">
-                    <span>خصومات وتسويات:</span>
-                    <span className="font-mono">-{selectedPrintValuation.discount.toLocaleString()} ج.م</span>
-                  </div>
-                )}
-                {selectedPrintValuation.taxAmount > 0 && (
-                  <div className="flex justify-between text-slate-650">
-                    <span>ضريبة القيمة المضافة ({selectedPrintValuation.taxRate || 14}%):</span>
-                    <span className="font-mono">{selectedPrintValuation.taxAmount.toLocaleString()} ج.م</span>
-                  </div>
-                )}
-                {selectedPrintValuation.taxAmount === 0 && selectedPrintValuation.taxRate > 0 && (
-                  <div className="flex justify-between text-emerald-700">
-                    <span>ضريبة القيمة المضافة ({selectedPrintValuation.taxRate}%):</span>
-                    <span className="font-mono">إعفاء / مسددة تراكمياً (0 ج.م)</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm font-black border-t border-slate-200 pt-2 text-slate-950">
-                  <span>إجمالي القيمة المستحقة:</span>
-                  <span className="font-mono">{(selectedPrintValuation.totalFinal || (selectedPrintValuation.totalCurrent - (selectedPrintValuation.discount || 0) + (selectedPrintValuation.taxAmount || 0))).toLocaleString()} ج.م</span>
-                </div>
+              <div className="w-80 text-[11px] font-bold space-y-2 self-end md:self-auto border border-slate-150 p-4 rounded-2xl bg-slate-50 text-slate-900">
+                {(() => {
+                  const isContractor = selectedPrintValuation.isContractor;
+                  const grossVal = isContractor
+                    ? (selectedPrintValuation.cumulativeGross || selectedPrintValuation.totalCurrent || 0)
+                    : (selectedPrintValuation.totalCurrent || 0);
+
+                  const discountVal = selectedPrintValuation.discount || 0;
+                  const afterDiscountVal = grossVal - discountVal;
+
+                  const previouslyDisbursedVal = isContractor
+                    ? (selectedPrintValuation.prevPaid || 0)
+                    : installments
+                        .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
+                        .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
+
+                  const taxVal = selectedPrintValuation.taxAmount || 0;
+                  const taxRateVal = selectedPrintValuation.taxRate || 0;
+
+                  const remainingVal = isContractor
+                    ? (selectedPrintValuation.totalFinal !== undefined ? selectedPrintValuation.totalFinal : (afterDiscountVal - previouslyDisbursedVal + taxVal))
+                    : ((selectedPrintValuation.totalFinal || (afterDiscountVal + taxVal)) - previouslyDisbursedVal);
+
+                  return (
+                    <>
+                      <div className="flex justify-between items-center text-slate-800">
+                        <span>إجمالى المستخلص:</span>
+                        <span className="font-mono text-xs">{grossVal.toLocaleString()} ج.م</span>
+                      </div>
+                      <div className="flex justify-between items-center text-rose-700">
+                        <span>أجمالى الخصم:</span>
+                        <span className="font-mono text-xs">-{discountVal.toLocaleString()} ج.م</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-900 border-t border-slate-200 pt-1.5">
+                        <span>الأجمالى بعد الخصم:</span>
+                        <span className="font-mono text-xs">{afterDiscountVal.toLocaleString()} ج.م</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-650">
+                        <span>ماسبق صرفه:</span>
+                        <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString()} ج.م</span>
+                      </div>
+                      {taxVal > 0 && (
+                        <div className="flex justify-between items-center text-slate-500 text-[10px]">
+                          <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
+                          <span className="font-mono text-xs">+{taxVal.toLocaleString()} ج.م</span>
+                        </div>
+                      )}
+                      {taxVal === 0 && taxRateVal > 0 && (
+                        <div className="flex justify-between items-center text-emerald-700 text-[10px]">
+                          <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
+                          <span className="font-mono text-[9px]">إعفاء / مسددة تراكمياً</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-sm font-black border-t-2 border-slate-950 pt-2 text-slate-950">
+                        <span>الأجمالى المتبقى:</span>
+                        <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString()} ج.م</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -4581,6 +4719,212 @@ export default function ContractorSuite() {
           </div>
         </div>
       )}
+
+      {/* 8. PAYMENT RECEIPT PREVIEW MODAL */}
+      {selectedPrintInstallment && (() => {
+        const linkedVal = valuations.find(v => v.id === selectedPrintInstallment.valuationId);
+        return (
+          <div className="fixed inset-0 bg-[#070a13]/85 flex items-center justify-center p-4 z-50 no-print animate-in fade-in duration-300">
+            <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-2xl p-8 space-y-6 overflow-y-auto max-h-[90vh] shadow-2xl flex flex-col">
+              <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+                <h3 className="text-sm font-black text-emerald-400 flex items-center gap-2">
+                  <span>💵</span> معاينة وطباعة إيصال استلام الدفعة
+                </h3>
+                <button
+                  onClick={() => setSelectedPrintInstallment(null)}
+                  className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold"
+                >
+                  إغلاق المعاينة ✕
+                </button>
+              </div>
+
+              {/* HIGH-FIDELITY RECEIPT PREVIEW */}
+              <div className="flex-1 bg-white text-slate-900 p-8 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
+                <div className="space-y-6 border-4 border-double border-slate-350 p-6 rounded-xl">
+                  {/* Header */}
+                  <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
+                    <div className="space-y-1">
+                      {isMasterBuilder ? (
+                        <img src="/master_builder_logo.png" alt="Master Builder" className="h-14 w-auto object-contain mb-1" />
+                      ) : (
+                        <>
+                          <h1 className="text-lg font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
+                          <p className="text-[9px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-left space-y-1">
+                      <h2 className="text-md font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">إيصال استلام نقدية</h2>
+                      <div className="text-[9px] font-mono font-bold text-slate-600">
+                        <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
+                        <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="space-y-4 text-xs font-bold text-slate-850">
+                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <span>وصلنا من السيد / السادة:</span>
+                      <span className="text-sm font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                        <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
+                        <span className="text-slate-950">{activeProject?.name}</span>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                        <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
+                        <span className="text-emerald-800 text-sm font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                        <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
+                        <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                        <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
+                        <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
+                      </div>
+                    </div>
+
+                    {linkedVal && (
+                      <div className="bg-cyan-50/50 p-3 rounded-lg border border-cyan-105 text-[11px]">
+                        <span className="text-cyan-850">ربط وتسوية مستخلص مالي رقم: </span>
+                        <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
+                        {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
+                      </div>
+                    )}
+
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
+                      <span className="text-slate-800">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
+                    </div>
+                  </div>
+
+                  {/* Signatures */}
+                  <div className="grid grid-cols-2 gap-4 pt-8 text-[10px] font-bold text-center">
+                    <div className="space-y-4">
+                      <div>توقيع المستلم (الشركة)</div>
+                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>المدير المالي</div>
+                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Controls */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  onClick={() => setSelectedPrintInstallment(null)}
+                  className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="px-6 py-2.5 bg-cyan-500 rounded-xl text-xs font-black text-slate-950 shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform"
+                >
+                  طباعة الإيصال 🖨️
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 9. PRINT-ONLY EXCLUSIVE PAYMENT RECEIPT DOCUMENT */}
+      {selectedPrintInstallment && (() => {
+        const linkedVal = valuations.find(v => v.id === selectedPrintInstallment.valuationId);
+        return (
+          <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans" dir="rtl">
+            <div className="space-y-6 border-4 border-double border-slate-900 p-8 rounded-2xl">
+              {/* Header */}
+              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-5">
+                <div className="space-y-1">
+                  {isMasterBuilder ? (
+                    <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+                  ) : (
+                    <>
+                      <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
+                      <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                      <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                    </>
+                  )}
+                </div>
+                <div className="text-left space-y-1">
+                  <h2 className="text-lg font-black text-slate-900 bg-slate-100 px-4 py-1.5 rounded-xl">إيصال استلام نقدية</h2>
+                  <div className="text-[10px] font-mono font-bold text-slate-600">
+                    <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
+                    <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body Content */}
+              <div className="space-y-5 text-sm font-bold text-slate-850">
+                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <span>وصلنا من السيد / السادة:</span>
+                  <span className="text-base font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[11px] text-slate-400 block mb-1">حساب مشروع:</span>
+                    <span className="text-slate-950">{activeProject?.name}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[11px] text-slate-400 block mb-1">مبلغ وقدره:</span>
+                    <span className="text-emerald-800 text-base font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[11px] text-slate-400 block mb-1">طريقة الدفع:</span>
+                    <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[11px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
+                    <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
+                  </div>
+                </div>
+
+                {linkedVal && (
+                  <div className="bg-cyan-50/50 p-4 rounded-xl border border-cyan-200 text-xs">
+                    <span className="text-cyan-800">ربط وتسوية مستخلص مالي رقم: </span>
+                    <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
+                    {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
+                  </div>
+                )}
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <span className="text-[11px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
+                  <span className="text-slate-800">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="grid grid-cols-2 gap-6 pt-12 text-xs font-bold text-center">
+                <div className="space-y-6">
+                  <div>توقيع المستلم (الشركة)</div>
+                  <div className="border-b border-dashed border-slate-400 w-36 mx-auto"></div>
+                </div>
+                <div className="space-y-6">
+                  <div>المدير المالي</div>
+                  <div className="border-b border-dashed border-slate-400 w-36 mx-auto"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

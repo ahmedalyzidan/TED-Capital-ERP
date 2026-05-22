@@ -381,13 +381,19 @@ export default function Invoices() {
 }
 
 function PrintView({ invoice, clients, projects, t, language }) {
+  const cur = t;
   const client = clients.find(c => c.id === invoice.client_id);
   const project = projects.find(p => p.id === invoice.project_id);
+  const isMasterBuilder = project?.company && (project.company.toUpperCase().includes('MASTER BUILDER') || project.company.includes('ماستر بيلدر'));
   return (
     <div className="bg-white p-20 min-h-screen font-sans print:p-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className={`flex justify-between items-start border-b-8 border-slate-900 pb-10 mb-10 ${language === 'en' ? 'flex-row-reverse' : ''}`}>
          <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-            <h1 className="text-5xl font-black text-slate-900 mb-2 tracking-tighter uppercase">PRIMEMED PHARMA ERP</h1>
+            {isMasterBuilder ? (
+               <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+            ) : (
+               <h1 className="text-5xl font-black text-slate-900 mb-2 tracking-tighter uppercase">PRIMEMED PHARMA ERP</h1>
+            )}
             <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">{cur.taxInvoice}</p>
          </div>
          <div className={language === 'ar' ? 'text-left' : 'text-right'}>
@@ -453,7 +459,7 @@ function PrintView({ invoice, clients, projects, t, language }) {
          </div>
       </div>
       <div className="mt-40 pt-10 border-t border-slate-100 text-center space-y-2">
-         <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">{cur.footer1}</p>
+         <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">{isMasterBuilder ? "Thank you for choosing MASTER BUILDER HOUSING & CONTRACTING" : cur.footer1}</p>
          <p className="text-slate-900 font-black text-sm">{cur.footer2}</p>
       </div>
     </div>
