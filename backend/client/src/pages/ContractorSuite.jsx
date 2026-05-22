@@ -478,8 +478,9 @@ export default function ContractorSuite() {
   const [contractorValuationTax, setContractorValuationTax] = useState('');
   const [contractorValuationTaxMethod, setContractorValuationTaxMethod] = useState('period'); // 'period' | 'cumulative' | 'waived'
   const [subcontractorsList, setSubcontractorsList] = useState([]);
-  const [contractorValuationLinkedClientValId, setContractorValuationLinkedClientValId] = useState('');
+  const [contractorValuationLinkedClientValId, setContractorValuationLinkedColorId] = useState(''); // Keep variable name consistent if needed, but wait: the original is contractorValuationLinkedClientValId. Let's make sure it matches.
   const [contractorValuationPrevPaid, setContractorValuationPrevPaid] = useState('');
+  const [contractorValuationContractorName, setContractorValuationContractorName] = useState('');
 
   // Quick Add Subcontractor States
   const [showQuickAddSub, setShowQuickAddSub] = useState(false);
@@ -692,7 +693,8 @@ export default function ContractorSuite() {
     // Also include current lines if we are inside the wizard or viewing a specific unsaved valuation
     if (currentLines && currentLines.length > 0) {
       currentLines.forEach(ln => {
-        if (ln.contractorName?.trim().toLowerCase() === cName) {
+        const lnContractor = ln.contractorName || contractorValuationContractorName;
+        if (lnContractor?.trim().toLowerCase() === cName) {
           cumulativeWorks += Number(ln.quantity || 0) * Number(ln.unitPrice || 0);
         }
       });
@@ -1050,7 +1052,7 @@ export default function ContractorSuite() {
               val.lines?.forEach(prevLn => {
                 if (
                   String(prevLn.boqItemId) === String(ln.boqItemId) &&
-                  prevLn.contractorName?.trim().toLowerCase() === ln.contractorName?.trim().toLowerCase()
+                  prevLn.contractorName?.trim().toLowerCase() === (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase()
                 ) {
                   prevQty += Number(prevLn.quantity || 0);
                 }
@@ -1084,7 +1086,7 @@ export default function ContractorSuite() {
 
     let totalCumulative = 0;
     contractorVals.forEach(val => {
-      const matchLines = val.lines?.filter(l => l.contractorName?.trim().toLowerCase() === cName) || [];
+      const matchLines = val.lines?.filter(l => (l.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName) || [];
       if (matchLines.length === 0) return;
 
       const contractorGross = matchLines.reduce((s, l) => s + Number(l.total || (Number(l.quantity) * Number(l.unitPrice)) || 0), 0);
@@ -1129,10 +1131,10 @@ export default function ContractorSuite() {
   };
 
   // 📦 Contractor Valuation Line Helpers
-  const newContractorLine = () => ({
+  const newContractorLine = (overrideName = contractorValuationContractorName) => ({
     id: Date.now() + Math.random(),
     boqItemId: '',
-    contractorName: '',
+    contractorName: overrideName || '',
     description: '',
     quantity: 0,
     unit: 'م٢',
@@ -1162,7 +1164,7 @@ export default function ContractorSuite() {
         // Auto-calculate previous quantity
         if (field === 'boqItemId' || field === 'contractorName') {
           const targetBoqId = field === 'boqItemId' ? value : l.boqItemId;
-          const targetContractor = field === 'contractorName' ? value : l.contractorName;
+          const targetContractor = field === 'contractorName' ? value : (l.contractorName || contractorValuationContractorName);
           
           if (targetBoqId && targetContractor) {
             let autoPrevQty = 0;
@@ -1192,11 +1194,12 @@ export default function ContractorSuite() {
     setContractorValuationLines(prev => prev.filter(l => l.id !== lineId));
 
   const handleStartContractorValuation = () => {
-    setContractorValuationLines([newContractorLine()]);
+    setContractorValuationContractorName('');
+    setContractorValuationLines([newContractorLine('')]);
     setContractorValuationDate(new Date().toISOString().split('T')[0]);
     setContractorValuationDiscount('');
     setContractorValuationTax('');
-    setContractorValuationLinkedClientValId('');
+    setContractorValuationLinkedColorId('');
     setContractorValuationTaxMethod('period');
     setContractorValuationPrevPaid('');
     setShowAddContractorValuation(true);
@@ -1236,6 +1239,29 @@ export default function ContractorSuite() {
       if (quickAddLineId) {
         updateContractorLine(quickAddLineId, 'contractorName', payload.name);
         setQuickAddLineId(null);
+      } else {
+        const newSub = payload.name;
+        setContractorValuationContractorName(newSub);
+        setContractorValuationLines(prev => prev.map(l => {
+          let updated = { ...l, contractorName: newSub };
+          if (l.boqItemId && newSub) {
+            let autoPrevQty = 0;
+            valuations.forEach(val => {
+              if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+                val.lines?.forEach(prevLn => {
+                  if (
+                    String(prevLn.boqItemId) === String(l.boqItemId) &&
+                    (prevLn.contractorName || '').trim().toLowerCase() === newSub.trim().toLowerCase()
+                  ) {
+                    autoPrevQty += Number(prevLn.quantity || 0);
+                  }
+                });
+              }
+            });
+            updated.prevQty = autoPrevQty;
+          }
+          return updated;
+        }));
       }
 
       // clean up states
@@ -1386,6 +1412,7 @@ export default function ContractorSuite() {
 
       return {
         ...line,
+        contractorName: contractorValuationContractorName,
         quantity: currQty,
         prevQty,
         cumulativeQty: cumQty,
@@ -1394,13 +1421,18 @@ export default function ContractorSuite() {
       };
     });
 
+    if (!contractorValuationContractorName) {
+      alert('الرجاء اختيار المقاول للمستخلص.');
+      return;
+    }
+
     if (cumulativeGross <= 0) {
       alert('إجمالي قيمة المستخلص يجب أن تكون أكبر من صفر. تأكد من إدخال الكميات والأسعار بشكل صحيح.');
       return;
     }
 
     const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
-    const uniqueContractorName = linesList[0]?.contractorName || '';
+    const uniqueContractorName = contractorValuationContractorName || '';
     const calculatedPrevPaid = uniqueContractorName 
       ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, linesList).previousSpent 
       : 0;
@@ -2913,11 +2945,73 @@ export default function ContractorSuite() {
                   </h4>
                   <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
+                      <label className="text-xs text-slate-400 font-bold">اسم المقاول:</label>
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={contractorValuationContractorName}
+                          onChange={e => {
+                            const newSub = e.target.value;
+                            setContractorValuationContractorName(newSub);
+                            setContractorValuationLines(prev => prev.map(l => {
+                              let updated = { ...l, contractorName: newSub };
+                              if (l.boqItemId && newSub) {
+                                let autoPrevQty = 0;
+                                valuations.forEach(val => {
+                                  if (val.isContractor && String(val.projectId) === String(activeProjectId)) {
+                                    val.lines?.forEach(prevLn => {
+                                      if (
+                                        String(prevLn.boqItemId) === String(l.boqItemId) &&
+                                        (prevLn.contractorName || '').trim().toLowerCase() === newSub.trim().toLowerCase()
+                                      ) {
+                                        autoPrevQty += Number(prevLn.quantity || 0);
+                                      }
+                                    });
+                                  }
+                                });
+                                updated.prevQty = autoPrevQty;
+                              }
+                              return updated;
+                            }));
+                          }}
+                          className="bg-[#111827] border border-orange-500/20 hover:border-orange-500 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500 transition-all font-bold"
+                          required
+                        >
+                          <option value="">— اختر المقاول —</option>
+                          {subcontractorsList.map((sub, sIdx) => {
+                            const subName = sub.name || sub.contractor_name || '';
+                            return (
+                              <option key={sIdx} value={subName}>
+                                {subName}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const projComp = activeProject?.company || 'TED CAPITAL';
+                            const matched = companies.find(c => c.name.toLowerCase() === projComp.toLowerCase());
+                            setQuickAddSubCompanyId(matched ? String(matched.id) : '');
+                            setQuickAddSubCompany(projComp);
+                            setQuickAddSubEmail('');
+                            setQuickAddSubName('');
+                            setQuickAddSubPhone('');
+                            setQuickAddLineId(null);
+                            setShowQuickAddSub(true);
+                          }}
+                          className="text-[11px] font-black text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-xl border border-emerald-500/20 transition-all flex items-center gap-1 active:scale-95 shadow-sm cursor-pointer whitespace-nowrap"
+                          title="إضافة مقاول جديد"
+                        >
+                          <span className="font-black text-emerald-400">+</span> Quick Add
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-400 font-bold">مستخلص العميل المرتبط:</label>
                       <select
-                        value={contractorValuationLinkedClientValId}
-                        onChange={e => setContractorValuationLinkedClientValId(e.target.value)}
-                        className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                        value={contractorValuationLinkedColorId}
+                        onChange={e => setContractorValuationLinkedColorId(e.target.value)}
+                        className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500 transition-all"
                       >
                         <option value="">— غير مرتبط —</option>
                         {currentValuations.filter(v => !v.isContractor).map(v => (
@@ -2931,7 +3025,7 @@ export default function ContractorSuite() {
                         type="date"
                         value={contractorValuationDate}
                         onChange={e => setContractorValuationDate(e.target.value)}
-                        className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                        className="bg-[#111827] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500 transition-all"
                         required
                       />
                     </div>
@@ -2944,13 +3038,13 @@ export default function ContractorSuite() {
                     <thead className="bg-[#111827] text-slate-400 font-bold">
                       <tr>
                         <th className="p-2 text-right text-[10px]">البند المرتبط (BOQ)</th>
-                        <th className="p-2 text-right text-[10px] w-36">اسم المقاول</th>
-                        <th className="p-2 text-center text-[10px] w-24">الوحدة</th>
+                        <th className="p-2 text-right text-[10px] w-48">وصف البند</th>
+                        <th className="p-2 text-center text-[10px] w-20">الوحدة</th>
                         <th className="p-2 text-center text-[10px] w-16">السابق</th>
                         <th className="p-2 text-center text-[10px] w-16">الحالي</th>
                         <th className="p-2 text-center text-[10px] w-20">سعر الفئة</th>
                         <th className="p-2 text-center text-[10px] w-16">النسبة %</th>
-                        <th className="p-2 text-right text-[10px] w-32">ملاحظات</th>
+                        <th className="p-2 text-right text-[10px] w-28">ملاحظات</th>
                         <th className="p-2 text-center text-[10px] w-24">الإجمالي</th>
                         <th className="p-2 text-center text-[10px] w-8"></th>
                       </tr>
@@ -2979,43 +3073,15 @@ export default function ContractorSuite() {
                                 ))}
                               </select>
                             </td>
-                             {/* Contractor Name */}
+                            {/* Item Description */}
                             <td className="p-1.5">
-                              <div className="flex items-center gap-1">
-                                <select
-                                  value={line.contractorName}
-                                  onChange={e => updateContractorLine(line.id, 'contractorName', e.target.value)}
-                                  className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-xs text-white w-full focus:outline-none"
-                                >
-                                  <option value="">— اختر المقاول —</option>
-                                  {subcontractorsList.map((sub, sIdx) => {
-                                    const subName = sub.name || sub.contractor_name || '';
-                                    return (
-                                      <option key={sIdx} value={subName}>
-                                        {subName}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const projComp = activeProject?.company || 'TED CAPITAL';
-                                    const matched = companies.find(c => c.name.toLowerCase() === projComp.toLowerCase());
-                                    setQuickAddSubCompanyId(matched ? String(matched.id) : '');
-                                    setQuickAddSubCompany(projComp);
-                                    setQuickAddSubEmail('');
-                                    setQuickAddSubName('');
-                                    setQuickAddSubPhone('');
-                                    setQuickAddLineId(line.id);
-                                    setShowQuickAddSub(true);
-                                  }}
-                                  className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-all flex items-center gap-1 active:scale-95 shadow-sm cursor-pointer whitespace-nowrap"
-                                  title="إضافة مقاول جديد"
-                                >
-                                  <span className="text-indigo-650 font-black">+</span> Quick Add
-                                </button>
-                              </div>
+                              <input
+                                type="text"
+                                value={line.description || ''}
+                                onChange={e => updateContractorLine(line.id, 'description', e.target.value)}
+                                placeholder="وصف البند..."
+                                className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-2 py-1 text-xs text-white w-full focus:outline-none"
+                              />
                             </td>
                             {/* Unit */}
                             <td className="p-1.5">
@@ -3126,7 +3192,7 @@ export default function ContractorSuite() {
                     const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
                     const afterDiscount = gross - discountAmt;
 
-                    const uniqueContractorName = contractorValuationLines[0]?.contractorName || '';
+                    const uniqueContractorName = contractorValuationContractorName || '';
                     const calculatedPrevPaid = uniqueContractorName 
                       ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, contractorValuationLines).previousSpent 
                       : 0;
