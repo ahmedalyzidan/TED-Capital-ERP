@@ -239,7 +239,28 @@ export default function ContractorSuite() {
 
       // Also map ledger entries as statements for fallback/completeness
       const mappedLedgerStatements = ledgerRows
-        .filter(row => row.account_name === 'مقاولي الباطن' && Number(row.debit || 0) > 0 && !row.is_deleted)
+        .filter(row => {
+          if (row.account_name !== 'مقاولي الباطن' || !(Number(row.debit || 0) > 0) || row.is_deleted) {
+            return false;
+          }
+          // Avoid duplicate entries: if there is a subcontractor statement with matching ID/reference, skip this ledger entry
+          if (row.reference_no) {
+            if (row.reference_no.startsWith('PMT-')) {
+              const statementId = row.reference_no.replace('PMT-', '');
+              if (statements.some(st => String(st.id) === String(statementId))) {
+                return false;
+              }
+            }
+            const hasMatchingStatement = statements.some(st => {
+              const meta = typeof st.metadata === 'string' ? JSON.parse(st.metadata) : (st.metadata || {});
+              return meta.reference_no && String(meta.reference_no) === String(row.reference_no);
+            });
+            if (hasMatchingStatement) {
+              return false;
+            }
+          }
+          return true;
+        })
         .map(row => {
           const pName = row.cost_center;
           const proj = allCombinedProjects.find(p => p.name === pName);
