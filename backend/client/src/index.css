@@ -175,7 +175,7 @@
   }
 
   /* Breathtaking Table Layout for Printing */
-  table {
+  table:not(.exact-print-preview *) {
     width: 100% !important;
     border-collapse: collapse !important;
     margin-top: 1.5rem !important;
@@ -184,20 +184,20 @@
     font-size: 10pt !important;
   }
 
-  tr {
+  tr:not(.exact-print-preview *) {
     page-break-inside: avoid !important;
     page-break-after: auto !important;
   }
 
-  thead {
+  thead:not(.exact-print-preview *) {
     display: table-header-group !important; /* Repeats table header on every printed page! */
   }
 
-  tfoot {
+  tfoot:not(.exact-print-preview *) {
     display: table-footer-group !important;
   }
 
-  th {
+  th:not(.exact-print-preview *) {
     background-color: #f8fafc !important;
     color: #0f172a !important;
     font-weight: 800 !important;
@@ -210,7 +210,7 @@
     print-color-adjust: exact !important;
   }
 
-  td {
+  td:not(.exact-print-preview *) {
     padding: 10px 14px !important;
     border: 1px solid #cbd5e1 !important;
     color: #1e293b !important;
@@ -222,7 +222,7 @@
   }
 
   /* Fix clipped numbers in amount/currency columns */
-  td:last-child, th:last-child, .amount-cell, .num-cell {
+  td:last-child:not(.exact-print-preview *), th:last-child:not(.exact-print-preview *), .amount-cell:not(.exact-print-preview *), .num-cell:not(.exact-print-preview *) {
     text-align: left !important;
     direction: ltr !important; /* Keeps negative signs and numbers perfectly intact */
     font-family: monospace, sans-serif !important;
@@ -232,7 +232,7 @@
   }
 
   /* Executive KPI Cards in Print */
-  .grid, .data-grid {
+  .grid:not(.exact-print-preview *), .data-grid:not(.exact-print-preview *) {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     gap: 16px !important;
@@ -240,7 +240,14 @@
     page-break-inside: avoid !important;
   }
 
-  .enterprise-card, [class*="rounded-3xl"], [class*="rounded-2xl"], [class*="rounded-[2.5rem]"], [class*="p-8"], [class*="p-6"], [class*="p-5"], [class*="p-4"] {
+  .enterprise-card:not(.exact-print-preview *), 
+  [class*="rounded-3xl"]:not(.exact-print-preview *), 
+  [class*="rounded-2xl"]:not(.exact-print-preview *), 
+  [class*="rounded-[2.5rem]"]:not(.exact-print-preview *), 
+  [class*="p-8"]:not(.exact-print-preview *), 
+  [class*="p-6"]:not(.exact-print-preview *), 
+  [class*="p-5"]:not(.exact-print-preview *), 
+  [class*="p-4"]:not(.exact-print-preview *) {
     border: 1.5px solid #0f172a !important;
     border-radius: 12px !important;
     padding: 18px !important;
@@ -251,28 +258,28 @@
     print-color-adjust: exact !important;
   }
 
-  .metric-label, [class*="text-[10px]"] {
+  .metric-label:not(.exact-print-preview *), [class*="text-[10px]"]:not(.exact-print-preview *) {
     font-size: 9pt !important;
     color: #475569 !important;
     font-weight: 800 !important;
     margin-bottom: 6px !important;
   }
 
-  .metric-value, [class*="text-3xl"], [class*="text-2xl"] {
+  .metric-value:not(.exact-print-preview *), [class*="text-3xl"]:not(.exact-print-preview *), [class*="text-2xl"]:not(.exact-print-preview *) {
     font-size: 18pt !important;
     font-weight: 900 !important;
     color: #0f172a !important;
   }
 
   /* Section Titles & Headers */
-  h1, h2, h3, h4 {
+  h1:not(.exact-print-preview *), h2:not(.exact-print-preview *), h3:not(.exact-print-preview *), h4:not(.exact-print-preview *) {
     color: #0f172a !important;
     page-break-after: avoid !important;
     font-weight: 800 !important;
   }
 
   /* Print Header styling */
-  .print-header, [class*="print:block"] {
+  .print-header:not(.exact-print-preview *), [class*="print:block"]:not(.exact-print-preview *) {
     display: block !important;
     border-bottom: 3px solid #0f172a !important;
     padding-bottom: 16px !important;
@@ -280,13 +287,13 @@
     page-break-after: avoid !important;
   }
 
-  .print-header h1 {
+  .print-header h1:not(.exact-print-preview *) {
     font-size: 24pt !important;
     margin: 0 0 8px 0 !important;
     font-weight: 900 !important;
   }
 
-  .print-header .company-title {
+  .print-header .company-title:not(.exact-print-preview *) {
     font-size: 14pt !important;
     font-weight: 900 !important;
     color: #0f172a !important;
@@ -294,9 +301,22 @@
     letter-spacing: 1px !important;
   }
 
-  .print-header .meta-info {
+  .print-header .meta-info:not(.exact-print-preview *) {
     font-size: 10pt !important;
     color: #475569 !important;
     font-weight: 700 !important;
+  }
+
+  /* ==========================================================================
+     High-Fidelity Exact Print Preview Style Engine
+     ========================================================================== */
+  .exact-print-preview {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-scheme: light !important;
+  }
+  .exact-print-preview * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

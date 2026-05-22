@@ -386,7 +386,7 @@ function PrintView({ invoice, clients, projects, t, language }) {
   const project = projects.find(p => p.id === invoice.project_id);
   const isMasterBuilder = project?.company && (project.company.toUpperCase().includes('MASTER BUILDER') || project.company.includes('ماستر بيلدر'));
   return (
-    <div className="bg-white p-20 min-h-screen font-sans print:p-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="bg-white p-20 min-h-screen font-sans print:p-0 exact-print-preview" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className={`flex justify-between items-start border-b-8 border-slate-900 pb-10 mb-10 ${language === 'en' ? 'flex-row-reverse' : ''}`}>
          <div className={language === 'ar' ? 'text-right' : 'text-left'}>
             {isMasterBuilder ? (

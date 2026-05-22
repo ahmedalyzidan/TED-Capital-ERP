@@ -4589,7 +4589,7 @@ export default function ContractorSuite() {
 
       {/* 7. PRINT-ONLY EXCLUSIVE INVOICE DOCUMENT */}
       {selectedPrintValuation && (
-        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans" dir="rtl">
+        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview" dir="rtl">
           <div className="space-y-6">
 
             {/* Invoice Header */}
@@ -4958,24 +4958,24 @@ export default function ContractorSuite() {
       {selectedPrintInstallment && (() => {
         const linkedVal = valuations.find(v => v.id === selectedPrintInstallment.valuationId);
         return (
-          <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans" dir="rtl">
-            <div className="space-y-6 border-4 border-double border-slate-900 p-8 rounded-2xl">
+          <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview" dir="rtl">
+            <div className="space-y-6 border-4 border-double border-slate-350 p-6 rounded-xl">
               {/* Header */}
-              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-5">
+              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
                 <div className="space-y-1">
                   {isMasterBuilder ? (
-                    <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+                    <img src="/master_builder_logo.png" alt="Master Builder" className="h-14 w-auto object-contain mb-1" />
                   ) : (
                     <>
-                      <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
-                      <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                      <h1 className="text-lg font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
+                      <p className="text-[9px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
                       <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
                     </>
                   )}
                 </div>
                 <div className="text-left space-y-1">
-                  <h2 className="text-lg font-black text-slate-900 bg-slate-100 px-4 py-1.5 rounded-xl">إيصال استلام نقدية</h2>
-                  <div className="text-[10px] font-mono font-bold text-slate-600">
+                  <h2 className="text-md font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">إيصال استلام نقدية</h2>
+                  <div className="text-[9px] font-mono font-bold text-slate-600">
                     <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
                     <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
                   </div>
@@ -4983,57 +4983,57 @@ export default function ContractorSuite() {
               </div>
 
               {/* Body Content */}
-              <div className="space-y-5 text-sm font-bold text-slate-850">
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="space-y-4 text-xs font-bold text-slate-850">
+                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-150">
                   <span>وصلنا من السيد / السادة:</span>
-                  <span className="text-base font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
+                  <span className="text-sm font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <span className="text-[11px] text-slate-400 block mb-1">حساب مشروع:</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                    <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
                     <span className="text-slate-950">{activeProject?.name}</span>
                   </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <span className="text-[11px] text-slate-400 block mb-1">مبلغ وقدره:</span>
-                    <span className="text-emerald-800 text-base font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                    <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
+                    <span className="text-emerald-800 text-sm font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <span className="text-[11px] text-slate-400 block mb-1">طريقة الدفع:</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                    <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
                     <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
                   </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <span className="text-[11px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                    <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
                     <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
                   </div>
                 </div>
 
                 {linkedVal && (
-                  <div className="bg-cyan-50/50 p-4 rounded-xl border border-cyan-200 text-xs">
-                    <span className="text-cyan-800">ربط وتسوية مستخلص مالي رقم: </span>
+                  <div className="bg-cyan-50/50 p-3 rounded-lg border border-cyan-105 text-[11px]">
+                    <span className="text-cyan-850">ربط وتسوية مستخلص مالي رقم: </span>
                     <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
                     {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
                   </div>
                 )}
 
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <span className="text-[11px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                  <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
                   <span className="text-slate-800">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
                 </div>
               </div>
 
               {/* Signatures */}
-              <div className="grid grid-cols-2 gap-6 pt-12 text-xs font-bold text-center">
-                <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 pt-8 text-[10px] font-bold text-center">
+                <div className="space-y-4">
                   <div>توقيع المستلم (الشركة)</div>
-                  <div className="border-b border-dashed border-slate-400 w-36 mx-auto"></div>
+                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>المدير المالي</div>
-                  <div className="border-b border-dashed border-slate-400 w-36 mx-auto"></div>
+                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                 </div>
               </div>
             </div>

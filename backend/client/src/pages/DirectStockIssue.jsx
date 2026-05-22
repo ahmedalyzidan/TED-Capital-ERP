@@ -2934,7 +2934,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
 
       {/* PRINT-ONLY AREA FOR CUSTOMER STATEMENT */}
       {selectedStatementCustomer && activeTab === 'customer_statement' && (
-        <div id="statement-print-area" className="hidden print:block text-right bg-white p-8">
+        <div id="statement-print-area" className="hidden print:block text-right bg-white p-8 exact-print-preview">
           <style>
             {`
               @media print {
@@ -3298,7 +3298,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
               </div>
 
               {/* Modal Print Area Container */}
-              <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar" id="invoice-print-area">
+              <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar exact-print-preview" id="invoice-print-area">
                 
                 {/* Corporate Identity Header */}
                 <div className={`flex justify-between items-start border-b-2 pb-6 mb-6 ${activeInvoiceData.type === 'issue' ? 'border-slate-900' : 'border-amber-700'}`}>
