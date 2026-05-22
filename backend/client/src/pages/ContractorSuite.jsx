@@ -4595,9 +4595,15 @@ export default function ContractorSuite() {
             {/* Invoice Header */}
             <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5">
               <div className="space-y-1">
-                <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
-                <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
-                <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                {isMasterBuilder ? (
+                  <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+                ) : (
+                  <>
+                    <h1 className="text-xl font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
+                    <p className="text-[10px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                    <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                  </>
+                )}
               </div>
               <div className="text-left space-y-1">
                 <h2 className="text-lg font-black text-slate-900">فاتورة مستخلص إنجاز أعمال</h2>

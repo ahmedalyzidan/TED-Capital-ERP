@@ -2975,10 +2975,16 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
               <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? activeCompanyProfile.taxIdAr : activeCompanyProfile.taxIdEn}</p>
             </div>
             <div className="text-left">
-              <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0">
-                {activeCompanyProfile.logoLetter}
-              </div>
-              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{activeCompanyProfile.logoText}</p>
+              {activeCompanyProfile.logoText === 'MASTER BUILDER' ? (
+                <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+              ) : (
+                <>
+                  <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0">
+                    {activeCompanyProfile.logoLetter}
+                  </div>
+                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{activeCompanyProfile.logoText}</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -3302,10 +3308,16 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                     <p className="text-xs text-slate-400 mt-0.5">{language === 'ar' ? companyProfile.taxIdAr : companyProfile.taxIdEn}</p>
                   </div>
                   <div className="text-left">
-                    <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>
-                      {companyProfile.logoLetter}
-                    </div>
-                    <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{companyProfile.logoText}</p>
+                    {companyProfile.logoText === 'MASTER BUILDER' ? (
+                      <img src="/master_builder_logo.png" alt="Master Builder" className="h-16 w-auto object-contain mb-2" />
+                    ) : (
+                      <>
+                        <div className={`w-12 h-12 text-white rounded-2xl flex items-center justify-center font-black text-2xl mx-auto md:mx-0 ${activeInvoiceData.type === 'issue' ? 'bg-slate-900' : 'bg-amber-900'}`}>
+                          {companyProfile.logoLetter}
+                        </div>
+                        <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-2">{companyProfile.logoText}</p>
+                      </>
+                    )}
                   </div>
                 </div>
 
