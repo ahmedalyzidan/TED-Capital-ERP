@@ -147,7 +147,7 @@ export default function ContractorSuite() {
   // Load orgUnits from Governance registry, projects and inventory sales from DB
   const fetchAllData = async () => {
     try {
-      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes, clientPaymentHistoryRes, arInvoicesRes, boqRes] = await Promise.all([
+      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes, clientPaymentHistoryRes, arInvoicesRes, boqRes, expensesRes] = await Promise.all([
         api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } })),
@@ -159,7 +159,8 @@ export default function ContractorSuite() {
         api.get('/dynamic/table/companies?limit=100').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/client_payment_history?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/ar_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/boq?limit=2000').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/boq?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/expenses?limit=5000').catch(() => ({ data: { data: [] } }))
       ]);
 
       // 1. Set Org Units
@@ -179,7 +180,61 @@ export default function ContractorSuite() {
         startDate: p.start_date ? p.start_date.split('T')[0] : ''
       }));
 
-      const allCombinedProjects = [...projects];
+      // --- Auto-migrate localStorage mock project references to DB IDs ---
+      let migratedSomething = false;
+      const migrationMap = {};
+      const savedProjects = localStorage.getItem('contractor_projects');
+      let localProjects = savedProjects ? JSON.parse(savedProjects) : [
+        { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL', projectManager: 'المهندس أحمد', startDate: '2026-01-01' },
+        { id: 'villa-e110', name: 'فيلا E110 - زايد الجديد', clientName: 'المهندس أحمد سالم', company: 'PRIMEMED PHARMA', projectManager: 'المهندس كريم', startDate: '2026-02-15' }
+      ];
+
+      mappedProjects.forEach(mp => {
+        const idx = localProjects.findIndex(lp => lp.name === mp.name && isNaN(Number(lp.id)));
+        if (idx !== -1) {
+          migrationMap[localProjects[idx].id] = mp.id;
+          localProjects.splice(idx, 1);
+          migratedSomething = true;
+        }
+      });
+
+      if (migratedSomething) {
+        localStorage.setItem('contractor_projects', JSON.stringify(localProjects));
+        
+        let newActiveId = activeProjectId;
+        if (migrationMap[activeProjectId]) {
+          newActiveId = migrationMap[activeProjectId];
+          setActiveProjectId(newActiveId);
+          localStorage.setItem('contractor_active_project_id', newActiveId);
+        }
+
+        const localBoq = JSON.parse(localStorage.getItem('contractor_boq') || '[]');
+        const migratedBoq = localBoq.map(item => migrationMap[item.projectId] ? { ...item, projectId: migrationMap[item.projectId] } : item);
+        localStorage.setItem('contractor_boq', JSON.stringify(migratedBoq));
+        setBoqItems(migratedBoq);
+
+        const localExp = JSON.parse(localStorage.getItem('contractor_expenses') || '[]');
+        const migratedExp = localExp.map(item => migrationMap[item.projectId] ? { ...item, projectId: migrationMap[item.projectId] } : item);
+        localStorage.setItem('contractor_expenses', JSON.stringify(migratedExp));
+        setExpenses(migratedExp);
+
+        const localInst = JSON.parse(localStorage.getItem('contractor_installments') || '[]');
+        const migratedInst = localInst.map(item => migrationMap[item.projectId] ? { ...item, projectId: migrationMap[item.projectId] } : item);
+        localStorage.setItem('contractor_installments', JSON.stringify(migratedInst));
+        setInstallments(migratedInst);
+
+        const localVal = JSON.parse(localStorage.getItem('contractor_valuations') || '[]');
+        const migratedVal = localVal.map(item => migrationMap[item.projectId] ? { ...item, projectId: migrationMap[item.projectId] } : item);
+        localStorage.setItem('contractor_valuations', JSON.stringify(migratedVal));
+        setValuations(migratedVal);
+
+        const localFiles = JSON.parse(localStorage.getItem('contractor_files') || '[]');
+        const migratedFiles = localFiles.map(item => migrationMap[item.projectId] ? { ...item, projectId: migrationMap[item.projectId] } : item);
+        localStorage.setItem('contractor_files', JSON.stringify(migratedFiles));
+        setProjectFiles(migratedFiles);
+      }
+
+      const allCombinedProjects = [...localProjects];
       mappedProjects.forEach(mp => {
         if (!allCombinedProjects.some(p => String(p.id) === String(mp.id))) {
           allCombinedProjects.push(mp);
@@ -317,6 +372,29 @@ export default function ContractorSuite() {
         .filter(s => s.beneficiary);
 
       setDbExpenses([...mappedSalesExpenses, ...mappedStatements, ...mappedLedgerStatements]);
+
+      // 4.5 Map DB manual expenses
+      const dbManualExpenses = (expensesRes.data?.data || []).map(exp => {
+        const meta = exp.metadata || {};
+        return {
+          id: exp.id,
+          projectId: exp.project_id ? String(exp.project_id) : (meta.projectId || `company-overhead-${exp.company_entity || 'TED CAPITAL'}`),
+          beneficiary: exp.supplier_name || meta.beneficiary || 'مورد عام',
+          category: meta.category || exp.category_name || 'أعمال توريدات',
+          unit: meta.unit || 'وحدة',
+          qty: Number(meta.qty || 1),
+          rate: Number(meta.rate || exp.amount || 0),
+          total: Number(exp.amount || 0),
+          date: exp.expense_date ? exp.expense_date.split('T')[0] : '',
+          notes: exp.description || '',
+          allocationType: meta.allocationType || (exp.project_id ? 'project' : 'company')
+        };
+      });
+
+      setExpenses(prev => {
+        const localFiltered = prev.filter(e => isNaN(Number(e.projectId)) && !String(e.projectId).startsWith('company-overhead-'));
+        return [...localFiltered, ...dbManualExpenses];
+      });
 
       // 5. Map DB subcontractor invoices (progress claims) to valuations
       const dbInvoices = invoicesRes.data?.data || [];
@@ -969,23 +1047,35 @@ export default function ContractorSuite() {
     }
   };
 
-  const handleDeleteProject = (projId) => {
+  const handleDeleteProject = async (projId) => {
     if (projects.length <= 1) {
       alert('لا يمكن حذف المشروع الأخير المتبقي في النظام.');
       return;
     }
     if (!window.confirm('🚨 تحذير هام: هل أنت متأكد من حذف هذا المشروع بالكامل؟ سيؤدي ذلك إلى إلغاء جميع البنود والمصاريف المرتبطة به وعكس كل التأثيرات المالية.')) return;
 
-    // Financial Impact Reversal: Clean up all items linked to this project
-    setBoqItems(prev => prev.filter(i => i.projectId !== projId));
-    setExpenses(prev => prev.filter(e => e.projectId !== projId));
-    setInstallments(prev => prev.filter(inst => inst.projectId !== projId));
-    setProjectFiles(prev => prev.filter(f => f.projectId !== projId));
+    const isDbProject = !isNaN(Number(projId));
+    if (isDbProject) {
+      try {
+        await api.put(`/dynamic/update/projects/${projId}`, { is_deleted: true });
+        triggerNotification('💥 تم حذف المشروع من قاعدة البيانات وعكس جميع تأثيراته المالية والقيود المحاسبية بنجاح!', 'warning');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to delete project on DB:", err);
+        alert(err.response?.data?.error || 'فشل في حذف المشروع في قاعدة البيانات.');
+      }
+    } else {
+      // Financial Impact Reversal: Clean up all items linked to this project
+      setBoqItems(prev => prev.filter(i => i.projectId !== projId));
+      setExpenses(prev => prev.filter(e => e.projectId !== projId));
+      setInstallments(prev => prev.filter(inst => inst.projectId !== projId));
+      setProjectFiles(prev => prev.filter(f => f.projectId !== projId));
 
-    const remaining = projects.filter(p => p.id !== projId);
-    setProjects(remaining);
-    setActiveProjectId(remaining[0].id);
-    triggerNotification('💥 تم حذف المشروع وعكس جميع تأثيراته المالية والقيود المحاسبية بنجاح!', 'warning');
+      const remaining = projects.filter(p => p.id !== projId);
+      setProjects(remaining);
+      setActiveProjectId(remaining[0].id);
+      triggerNotification('💥 تم حذف المشروع وعكس جميع تأثيراته المالية والقيود المحاسبية بنجاح!', 'warning');
+    }
   };
 
   // BOQ Item CRUD
@@ -1104,23 +1194,58 @@ export default function ContractorSuite() {
   };
 
   // Expenses CRUD
-  const handleAddExpense = (e) => {
+  const handleAddExpense = async (e) => {
     e.preventDefault();
     if (!newExpense.beneficiary || newExpense.rate <= 0) return;
     const total = Number(newExpense.qty) * Number(newExpense.rate);
     const activeCompany = activeProject?.company || 'TED CAPITAL';
-    const newItem = {
-      id: Date.now(),
-      projectId: newExpense.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId,
-      ...newExpense,
-      qty: Number(newExpense.qty),
-      rate: Number(newExpense.rate),
-      total
-    };
-    setExpenses([...expenses, newItem]);
+
+    const isDbProject = !isNaN(Number(activeProjectId));
+    if (isDbProject) {
+      try {
+        const payload = {
+          description: newExpense.notes || `${newExpense.category} - ${newExpense.beneficiary}`,
+          amount: total,
+          currency: 'EGP',
+          category_id: 3, // Project Specific Costs
+          project_id: newExpense.allocationType === 'company' ? null : parseInt(activeProjectId),
+          expense_date: newExpense.date,
+          payment_method: 'Cash',
+          supplier_name: newExpense.beneficiary,
+          company_entity: activeCompany,
+          metadata: {
+            category: newExpense.category,
+            unit: newExpense.unit,
+            qty: Number(newExpense.qty),
+            rate: Number(newExpense.rate),
+            allocationType: newExpense.allocationType,
+            beneficiary: newExpense.beneficiary,
+            projectId: newExpense.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId
+          },
+          auto_post: true
+        };
+        await api.post('/expenses', payload);
+        triggerNotification('💸 تم تسجيل مصروف جديد وتثبيت القيد المالي في قاعدة البيانات!');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to save expense to DB:", err);
+        alert(err.response?.data?.error || 'فشل في حفظ المصروف في قاعدة البيانات.');
+      }
+    } else {
+      const newItem = {
+        id: Date.now(),
+        projectId: newExpense.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId,
+        ...newExpense,
+        qty: Number(newExpense.qty),
+        rate: Number(newExpense.rate),
+        total
+      };
+      setExpenses([...expenses, newItem]);
+      triggerNotification('💸 تم تسجيل مصروف جديد وتثبيت القيد المالي في النظام!');
+    }
+
     setNewExpense({ beneficiary: '', category: 'أعمال صحي', unit: 'م٢', qty: 1, rate: 0, date: new Date().toISOString().split('T')[0], notes: '', allocationType: 'project' });
     setShowAddExpense(false);
-    triggerNotification('💸 تم تسجيل مصروف جديد وتثبيت القيد المالي في النظام!');
   };
 
   const handleStartEditExpense = (item) => {
@@ -1133,32 +1258,68 @@ export default function ContractorSuite() {
     });
   };
 
-  const handleSaveEditExpense = (e) => {
+  const handleSaveEditExpense = async (e) => {
     e.preventDefault();
-    setExpenses(prev => prev.map(item => {
-      if (item.id === editingItemId) {
+    const isDbItem = !isNaN(Number(editingItemId));
+    if (isDbItem) {
+      try {
         const qty = Number(editForm.qty);
         const rate = Number(editForm.rate);
+        const total = qty * rate;
         const activeCompany = activeProject?.company || 'TED CAPITAL';
-        return {
-          ...item,
-          projectId: editForm.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId,
-          beneficiary: editForm.beneficiary,
-          category: editForm.category,
-          unit: editForm.unit,
-          qty,
-          rate,
-          notes: editForm.notes,
-          date: editForm.date,
-          allocationType: editForm.allocationType,
-          total: qty * rate
+        const payload = {
+          description: editForm.notes || `${editForm.category} - ${editForm.beneficiary}`,
+          amount: total,
+          currency: 'EGP',
+          category_id: 3, // Project Specific Costs
+          project_id: editForm.allocationType === 'company' ? null : parseInt(activeProjectId),
+          expense_date: editForm.date,
+          payment_method: 'Cash',
+          supplier_name: editForm.beneficiary,
+          company_entity: activeCompany,
+          metadata: {
+            category: editForm.category,
+            unit: editForm.unit,
+            qty,
+            rate,
+            allocationType: editForm.allocationType,
+            beneficiary: editForm.beneficiary,
+            projectId: editForm.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId
+          }
         };
+        await api.put(`/expenses/${editingItemId}`, payload);
+        triggerNotification('✍️ تم تعديل المصروف بنجاح في قاعدة البيانات.');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to update expense in DB:", err);
+        alert(err.response?.data?.error || 'فشل في تحديث المصروف بقاعدة البيانات.');
       }
-      return item;
-    }));
+    } else {
+      setExpenses(prev => prev.map(item => {
+        if (item.id === editingItemId) {
+          const qty = Number(editForm.qty);
+          const rate = Number(editForm.rate);
+          const activeCompany = activeProject?.company || 'TED CAPITAL';
+          return {
+            ...item,
+            projectId: editForm.allocationType === 'company' ? `company-overhead-${activeCompany}` : activeProjectId,
+            beneficiary: editForm.beneficiary,
+            category: editForm.category,
+            unit: editForm.unit,
+            qty,
+            rate,
+            notes: editForm.notes,
+            date: editForm.date,
+            allocationType: editForm.allocationType,
+            total: qty * rate
+          };
+        }
+        return item;
+      }));
+      triggerNotification('✍️ تم تعديل المصروف وإعادة توزيع التكاليف الفعليه.');
+    }
     setEditingItemType(null);
     setEditingItemId(null);
-    triggerNotification('✍️ تم تعديل المصروف وإعادة توزيع التكاليف الفعليه.');
   };
 
   const handleDeleteExpense = async (itemId) => {
@@ -1245,8 +1406,20 @@ export default function ContractorSuite() {
     } else {
       // 2. Otherwise delete local expense stored in localStorage
       if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟ سيتم إرجاع المبلغ المصروف بالكامل للميزانية وعكس القيد المالي.')) return;
-      setExpenses(prev => prev.filter(item => item.id !== itemId));
-      triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية بنجاح! زاد صافي الربح بمقدار المبلغ المسترد.', 'warning');
+      const isDbItem = !isNaN(Number(itemId));
+      if (isDbItem) {
+        try {
+          await api.delete(`/expenses/${itemId}`);
+          triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية بنجاح من قاعدة البيانات!', 'warning');
+          await fetchAllData();
+        } catch (err) {
+          console.error("Failed to delete expense from DB:", err);
+          alert(err.response?.data?.error || 'فشل في حذف المصروف من قاعدة البيانات.');
+        }
+      } else {
+        setExpenses(prev => prev.filter(item => item.id !== itemId));
+        triggerNotification('💥 تم حذف المصروف وعكس الحركة المالية بنجاح! زاد صافي الربح بمقدار المبلغ المسترد.', 'warning');
+      }
     }
   };
 
