@@ -152,7 +152,52 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       });
       setClientInvoices(allCombinedInvoices);
 
-      setSubInvoices(resSubInvs.data?.data || []);
+      // Load local subcontractor valuations
+      let localSubValuations = [];
+      if (savedValsStr) {
+        try {
+          const parsedVals = JSON.parse(savedValsStr);
+          localSubValuations = parsedVals.filter(v => v.isContractor);
+        } catch (e) {
+          console.error('Error loading local subcontractor valuations:', e);
+        }
+      }
+
+      const mappedLocalSubInvoices = localSubValuations.map(v => {
+        const projObj = allCombinedProjects.find(p => String(p.id) === String(v.projectId));
+        const projName = projObj ? projObj.name : 'عام';
+        const matchedSub = (resSubs.data?.data || []).find(s => 
+          (s.name || '').trim().toLowerCase() === (v.lines?.[0]?.contractorName || '').trim().toLowerCase()
+        );
+        return {
+          id: v.id,
+          subcontractor_id: matchedSub ? matchedSub.id : null,
+          subcontractor_name: v.lines?.[0]?.contractorName || 'مقاول عام',
+          project_id: v.projectId,
+          project_name: projName,
+          amount: v.totalFinal || v.totalCurrent || 0,
+          net_amount: v.totalFinal || v.totalCurrent || 0,
+          status: v.status || 'issued',
+          description: v.lines?.[0]?.description || `مستخلص مقاول رقم ${v.claimNo}`
+        };
+      });
+
+      const dbSubInvoices = resSubInvs.data?.data || [];
+      const mappedDbSubInvoices = dbSubInvoices.map(inv => {
+        const projObj = allCombinedProjects.find(p => String(p.id) === String(inv.project_id));
+        return {
+          ...inv,
+          project_name: inv.project_name || (projObj ? projObj.name : '')
+        };
+      });
+      
+      const allCombinedSubInvoices = [...mappedDbSubInvoices];
+      mappedLocalSubInvoices.forEach(li => {
+        if (!allCombinedSubInvoices.some(inv => String(inv.id) === String(li.id))) {
+          allCombinedSubInvoices.push(li);
+        }
+      });
+      setSubInvoices(allCombinedSubInvoices);
 
       const allCoa = resCoa.data?.data || [];
       const filteredCoa = allCoa.filter(acc => {
@@ -421,12 +466,19 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
     : clientInvoices.filter(inv => (inv.status || '').toLowerCase() !== 'paid');
 
   const selectedSubObj = subcontractors.find(s => s.id === parseInt(payForm.subcontractor_id));
+  const selectedPayProjObj = projects.find(p => String(p.name).toLowerCase().trim() === String(payForm.project_name).toLowerCase().trim());
   const filteredSubInvoices = subInvoices.filter(inv => {
     if (inv.status === 'Paid') return false;
     if (payForm.project_name) {
-      if (!inv.project_name || inv.project_name.toLowerCase().trim() !== payForm.project_name.toLowerCase().trim()) {
-        return false;
-      }
+      const invProjName = inv.project_name || '';
+      const invProjId = inv.project_id || '';
+      const selectedProjId = selectedPayProjObj ? selectedPayProjObj.id : '';
+      
+      const isMatch = 
+        (invProjName && invProjName.toLowerCase().trim() === payForm.project_name.toLowerCase().trim()) ||
+        (invProjId && selectedProjId && String(invProjId) === String(selectedProjId));
+        
+      if (!isMatch) return false;
     } else {
       if (payForm.subcontractor_id && inv.subcontractor_id !== parseInt(payForm.subcontractor_id)) {
         return false;
