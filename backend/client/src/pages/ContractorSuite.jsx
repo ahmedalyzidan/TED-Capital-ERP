@@ -651,6 +651,8 @@ export default function ContractorSuite() {
     "أعمال توريد وصب خرسانه",
     "أعمال مباني",
     "أعمال توريدات",
+    "أعمال مقاولين من الباطن",
+    "مصروفات المخازن",
     "مصروفات أخرى"
   ];
 
@@ -1876,6 +1878,7 @@ export default function ContractorSuite() {
         .contractor-suite-light .bg-\\[\\#0f172a\\]\\/40:not(button) {
           background-color: var(--cs-bg-page) !important;
         }
+        .contractor-suite-light .bg-\\[\\#0f172a\\],
         .contractor-suite-light .bg-\\[\\#131b2e\\],
         .contractor-suite-light .bg-\\[\\#161e2f\\],
         .contractor-suite-light .bg-\\[\\#1b2336\\],
@@ -1899,7 +1902,10 @@ export default function ContractorSuite() {
         .contractor-suite-light .bg-slate-900\\/80,
         .contractor-suite-light .bg-slate-900\\/50,
         .contractor-suite-light .bg-slate-900\\/60,
+        .contractor-suite-light .bg-slate-950\\/50,
+        .contractor-suite-light .bg-slate-955\\/50,
         .contractor-suite-light .bg-slate-950\\/40,
+        .contractor-suite-light .bg-slate-955\\/40,
         .contractor-suite-light .bg-slate-950\\/20 {
           background-color: #f8fafc !important;
         }
@@ -2357,7 +2363,7 @@ export default function ContractorSuite() {
               <p className="text-xs text-slate-400 no-print">تتبع حي للمصروفات مقارنة بالمبلغ المدرج في المقايسة المعتمدة للعميل للتحقق من ربحية البنود</p>
 
               <div className="space-y-5 pt-3">
-                {boqCategories.map(cat => {
+                {Array.from(new Set([...boqCategories, ...Object.keys(totals.expByCategory || {}), ...Object.keys(totals.boqByCategory || {})])).map(cat => {
                   const boqVal = totals.boqByCategory[cat] || 0;
                   const expVal = totals.expByCategory[cat] || 0;
                   const usagePercent = boqVal > 0 ? (expVal / boqVal) * 100 : 0;
@@ -2372,10 +2378,10 @@ export default function ContractorSuite() {
                         <div className="flex gap-4 font-mono font-black">
                           <span className="text-red-400">المصروف: {expVal.toLocaleString()}</span>
                           <span className="text-slate-400">الموازنة: {boqVal.toLocaleString()}</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] ${usagePercent > 100 ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                          <span className={`px-2 py-0.5 rounded text-[10px] ${usagePercent > 100 || (boqVal === 0 && expVal > 0) ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                             usagePercent > 70 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             }`}>
-                            {usagePercent > 0 ? `${usagePercent.toFixed(0)}%` : 'بدون صرف'}
+                            {boqVal === 0 && expVal > 0 ? 'خارج الموازنة' : (usagePercent > 0 ? `${usagePercent.toFixed(0)}%` : 'بدون صرف')}
                           </span>
                         </div>
                       </div>
@@ -2383,10 +2389,10 @@ export default function ContractorSuite() {
                       {/* Interactive Bar */}
                       <div className="w-full bg-[#070a13] h-3 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
                         <div
-                          className={`h-full rounded-full transition-all duration-1000 ${usagePercent > 100 ? 'bg-gradient-to-l from-red-600 to-rose-400' :
+                          className={`h-full rounded-full transition-all duration-1000 ${usagePercent > 100 || (boqVal === 0 && expVal > 0) ? 'bg-gradient-to-l from-red-600 to-rose-400' :
                             usagePercent > 70 ? 'bg-gradient-to-l from-amber-600 to-orange-400' : 'bg-gradient-to-l from-emerald-600 to-teal-400'
                             }`}
-                          style={{ width: `${Math.min(usagePercent || 1, 100)}%` }}
+                          style={{ width: `${Math.min(usagePercent || (boqVal === 0 && expVal > 0 ? 100 : 1), 100)}%` }}
                         ></div>
                       </div>
                     </div>
