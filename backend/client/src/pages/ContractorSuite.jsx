@@ -496,6 +496,8 @@ export default function ContractorSuite() {
   // Modals & form display states
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({ name: '', clientName: '', company: 'TED CAPITAL', projectManager: '', startDate: '' });
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [editProjectForm, setEditProjectForm] = useState({ name: '', clientName: '', company: 'TED CAPITAL', projectManager: '', startDate: '' });
 
   const [showAddBoq, setShowAddBoq] = useState(false);
   const [newBoq, setNewBoq] = useState({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
@@ -838,6 +840,58 @@ export default function ContractorSuite() {
     } catch (err) {
       console.error("Failed to create project on DB:", err);
       alert(err.response?.data?.error || 'فشل في إنشاء المشروع في قاعدة البيانات.');
+    }
+  };
+
+  const handleStartEditProject = () => {
+    if (!activeProject) return;
+    setEditProjectForm({
+      name: activeProject.name || '',
+      clientName: activeProject.clientName || 'عميل عام',
+      company: activeProject.company || 'TED CAPITAL',
+      projectManager: activeProject.projectManager || '',
+      startDate: activeProject.startDate || ''
+    });
+    setShowEditProject(true);
+    setShowAddProject(false);
+  };
+
+  const handleEditProject = async (e) => {
+    e.preventDefault();
+    if (!editProjectForm.name) return;
+    try {
+      const payload = {
+        name: editProjectForm.name,
+        client_name: editProjectForm.clientName || 'عميل عام',
+        company: editProjectForm.company || 'TED CAPITAL',
+        project_manager: editProjectForm.projectManager || '',
+        start_date: editProjectForm.startDate || null
+      };
+
+      const isDbProject = !isNaN(Number(activeProjectId));
+      if (isDbProject) {
+        await api.put(`/dynamic/update/projects/${activeProjectId}`, payload);
+      }
+
+      setProjects(prev => prev.map(p => {
+        if (String(p.id) === String(activeProjectId)) {
+          return {
+            ...p,
+            name: editProjectForm.name,
+            clientName: editProjectForm.clientName || 'عميل عام',
+            company: editProjectForm.company || 'TED CAPITAL',
+            projectManager: editProjectForm.projectManager || '',
+            startDate: editProjectForm.startDate || ''
+          };
+        }
+        return p;
+      }));
+
+      setShowEditProject(false);
+      triggerNotification(`تم تعديل بيانات المشروع بنجاح: ${editProjectForm.name} ✏️`);
+    } catch (err) {
+      console.error("Failed to edit project on DB:", err);
+      alert(err.response?.data?.error || 'فشل في تحديث المشروع في قاعدة البيانات.');
     }
   };
 
@@ -2139,10 +2193,19 @@ export default function ContractorSuite() {
             {/* Project Action buttons */}
             <div className="flex items-center gap-2 mt-4">
               <button
-                onClick={() => setShowAddProject(!showAddProject)}
+                onClick={() => {
+                  setShowAddProject(!showAddProject);
+                  setShowEditProject(false);
+                }}
                 className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-slate-800 hover:border-cyan-500/40 text-cyan-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
               >
                 <span>{showAddProject ? '✕ إغلاق' : '+ مشروع جديد'}</span>
+              </button>
+              <button
+                onClick={handleStartEditProject}
+                className="bg-amber-500/10 hover:bg-amber-500/20 border border-slate-850 hover:border-amber-500/40 text-amber-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <span>تعديل المشروع ✏️</span>
               </button>
               <button
                 onClick={() => handleDeleteProject(activeProjectId)}
@@ -2302,6 +2365,82 @@ export default function ContractorSuite() {
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setShowAddProject(false)} className="px-5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400">إلغاء</button>
               <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-white">تأسيس المشروع الآن 🏢</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal / Form to edit project */}
+        {showEditProject && (
+          <form onSubmit={handleEditProject} className="bg-slate-900/70 border border-slate-800 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
+            <h4 className="text-sm font-black text-cyan-400">تعديل بيانات المشروع الحالي</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">اسم المشروع / المعرف</label>
+                <input
+                  type="text"
+                  placeholder="مثال: فيلا E111 - زايد الجديد"
+                  value={editProjectForm.name}
+                  onChange={e => setEditProjectForm({ ...editProjectForm, name: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">اسم العميل المتعاقد</label>
+                <input
+                  type="text"
+                  placeholder="مثال: الأستاذ محمد عبد الرحمن"
+                  value={editProjectForm.clientName}
+                  onChange={e => setEditProjectForm({ ...editProjectForm, clientName: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">الشركة المالكة / مركز التكلفة</label>
+                <select
+                  value={editProjectForm.company}
+                  onChange={e => setEditProjectForm({ ...editProjectForm, company: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="">-- اختر الشركة من الحوكمة --</option>
+                  {orgUnits.map(unit => (
+                    <option key={unit.id} value={unit.name}>{unit.name}</option>
+                  ))}
+                  {orgUnits.length === 0 && (
+                    <>
+                      <option value="TED CAPITAL">TED CAPITAL</option>
+                      <option value="PRIMEMED PHARMA">PRIMEMED PHARMA</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">اسم مدير المشروع</label>
+                <input
+                  type="text"
+                  placeholder="مثال: المهندس كريم محمود"
+                  value={editProjectForm.projectManager}
+                  onChange={e => setEditProjectForm({ ...editProjectForm, projectManager: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold">تاريخ بداية المشروع</label>
+                <input
+                  type="date"
+                  value={editProjectForm.startDate}
+                  onChange={e => setEditProjectForm({ ...editProjectForm, startDate: e.target.value })}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setShowEditProject(false)} className="px-5 py-2 bg-slate-955 border border-slate-800 rounded-xl text-xs text-slate-400">إلغاء</button>
+              <button type="submit" className="px-6 py-2 bg-cyan-500 rounded-xl text-xs font-black text-white">حفظ التغييرات 💾</button>
             </div>
           </form>
         )}
