@@ -82,6 +82,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         name: p.name,
         clientName: p.client_name || p.client || 'عميل عام',
         company: p.company || 'TED CAPITAL',
+        company_id: p.company_id || null,
         projectManager: p.project_manager || p.manager || '',
         startDate: p.start_date ? p.start_date.split('T')[0] : ''
       }));
@@ -307,10 +308,68 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
           if (existingCust) {
             resolvedClientId = String(existingCust.id);
           } else {
+            // Dynamically determine the company and company_id for this customer
+            let targetCompany = '';
+            let targetCompanyId = null;
+
+            // 1. Try selected project in form
+            const formProj = projects.find(p => String(p.id) === String(colForm.project_id));
+            if (formProj) {
+              targetCompany = formProj.company;
+              targetCompanyId = formProj.company_id || formProj.companyId;
+            }
+
+            // 2. Try embedded project ID
+            if (!targetCompany && embedded && projectId) {
+              const embProj = projects.find(p => String(p.id) === String(projectId));
+              if (embProj) {
+                targetCompany = embProj.company;
+                targetCompanyId = embProj.company_id || embProj.companyId;
+              }
+            }
+
+            // 3. Try finding any project matching the client name
+            if (!targetCompany) {
+              const matchedProj = projects.find(p => {
+                const pClientName = (p.clientName || p.client_name || p.client || '').toLowerCase().trim();
+                return pClientName === clientName.toLowerCase().trim();
+              });
+              if (matchedProj) {
+                targetCompany = matchedProj.company;
+                targetCompanyId = matchedProj.company_id || matchedProj.companyId;
+              }
+            }
+
+            // 4. Try localStorage active company
+            if (!targetCompany) {
+              targetCompany = localStorage.getItem('active_company');
+            }
+
+            // Normalize "All Companies" or null to TED CAPITAL
+            if (!targetCompany || ['all', 'كل الشركات', 'all companies', 'all_companies'].includes(targetCompany.toLowerCase())) {
+              targetCompany = 'TED CAPITAL';
+            }
+
+            // Resolve company_id from name mapping if not present
+            if (!targetCompanyId) {
+              const companyNameToIdMap = {
+                'ted capital': 1,
+                'ted_capital': 1,
+                'design concept': 2,
+                'design_concept': 2,
+                'master builder': 3,
+                'master_builder': 3,
+                'primemed pharma': 4,
+                'primemed_pharma': 4
+              };
+              targetCompanyId = companyNameToIdMap[targetCompany.toLowerCase().trim()] || null;
+            }
+
             // Dynamically create database customer record
             const createRes = await api.post('/dynamic/add/customers', {
               name: clientName,
-              company: 'TED CAPITAL'
+              company: targetCompany,
+              company_id: targetCompanyId
             });
             const newCustId = createRes.data?.data?.id || createRes.data?.id;
             if (newCustId) {
