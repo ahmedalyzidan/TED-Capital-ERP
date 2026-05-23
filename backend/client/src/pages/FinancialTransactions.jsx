@@ -64,10 +64,94 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         api.get('/dynamic/table/chart_of_accounts?limit=1000').catch(() => ({ data: { data: [] } }))
       ]);
 
-      setClients(resClients.data?.data || []);
+      // Load local projects from localStorage
+      let localProjects = [];
+      const savedProjsStr = localStorage.getItem('contractor_projects');
+      if (savedProjsStr) {
+        try {
+          localProjects = JSON.parse(savedProjsStr);
+        } catch (e) {
+          console.error('Error loading local projects:', e);
+        }
+      }
+
+      // Map DB projects to standard format
+      const dbProjects = resProjs.data?.data || [];
+      const mappedDbProjects = dbProjects.map(p => ({
+        id: String(p.id),
+        name: p.name,
+        clientName: p.client_name || p.client || 'عميل عام',
+        company: p.company || 'TED CAPITAL',
+        projectManager: p.project_manager || p.manager || '',
+        startDate: p.start_date ? p.start_date.split('T')[0] : ''
+      }));
+
+      // Combine database projects and local projects
+      const allCombinedProjects = [...localProjects];
+      mappedDbProjects.forEach(mp => {
+        if (!allCombinedProjects.some(p => String(p.id) === String(mp.id))) {
+          allCombinedProjects.push(mp);
+        }
+      });
+      setProjects(allCombinedProjects);
+
+      // Handle clients (database customers + unique clients from projects)
+      const dbClients = resClients.data?.data || [];
+      const combinedClients = [...dbClients];
+      allCombinedProjects.forEach(proj => {
+        const pClientName = proj.clientName || proj.client_name || proj.client || '';
+        if (pClientName && pClientName !== 'عميل عام') {
+          const exists = combinedClients.some(c => c.name && c.name.toLowerCase().trim() === pClientName.toLowerCase().trim());
+          if (!exists) {
+            combinedClients.push({
+              id: `pseudo-client-${pClientName.replace(/\s+/g, '-')}`,
+              name: pClientName,
+              isPseudo: true
+            });
+          }
+        }
+      });
+      setClients(combinedClients);
+
       setSubcontractors(resSubs.data?.data || []);
-      setProjects(resProjs.data?.data || []);
-      setClientInvoices(resClientInvs.data?.data || []);
+
+      // Load local client valuations
+      let localClientValuations = [];
+      const savedValsStr = localStorage.getItem('contractor_valuations');
+      if (savedValsStr) {
+        try {
+          const parsedVals = JSON.parse(savedValsStr);
+          localClientValuations = parsedVals.filter(v => !v.isContractor);
+        } catch (e) {
+          console.error('Error loading local client valuations:', e);
+        }
+      }
+
+      // Map local valuations to invoice format
+      const mappedLocalInvoices = localClientValuations.map(v => {
+        const projObj = allCombinedProjects.find(p => String(p.id) === String(v.projectId));
+        const projName = projObj ? projObj.name : 'عام';
+        const clientName = projObj ? (projObj.clientName || projObj.client_name || projObj.client || 'عميل عام') : 'عميل عام';
+        return {
+          id: v.id,
+          project_id: v.projectId,
+          project_name: projName,
+          client_name: clientName,
+          total_amount: v.totalFinal || v.totalCurrent || 0,
+          status: v.status || 'issued'
+        };
+      });
+
+      // Combine database client invoices with local client valuations
+      const dbInvoices = resClientInvs.data?.data || [];
+      const allCombinedInvoices = [...dbInvoices];
+      mappedLocalInvoices.forEach(li => {
+        if (!allCombinedInvoices.some(inv => String(inv.id) === String(li.id))) {
+          allCombinedInvoices.push(li);
+        }
+      });
+      setClientInvoices(allCombinedInvoices);
+
       setSubInvoices(resSubInvs.data?.data || []);
 
       const allCoa = resCoa.data?.data || [];
@@ -165,10 +249,39 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
     
     try {
       setLoading(true);
+      
+      let resolvedClientId = colForm.client_id;
+      const isPseudoClient = String(colForm.client_id).startsWith('pseudo-client-');
+      
+      if (isPseudoClient) {
+        const pseudoClientObj = clients.find(c => String(c.id) === String(colForm.client_id));
+        if (pseudoClientObj) {
+          const clientName = pseudoClientObj.name;
+          const checkRes = await api.get('/dynamic/table/customers?limit=2000').catch(() => ({ data: { data: [] } }));
+          const existingCust = (checkRes.data?.data || []).find(c => c.name && c.name.toLowerCase().trim() === clientName.toLowerCase().trim());
+          if (existingCust) {
+            resolvedClientId = String(existingCust.id);
+          } else {
+            // Dynamically create database customer record
+            const createRes = await api.post('/dynamic/add/customers', {
+              name: clientName,
+              company: 'TED CAPITAL'
+            });
+            const newCustId = createRes.data?.data?.id || createRes.data?.id;
+            if (newCustId) {
+              resolvedClientId = String(newCustId);
+            }
+          }
+        }
+      }
+
+      const isLocalVal = String(colForm.valuation_id).startsWith('val-');
+      const resolvedProjId = colForm.project_id && !isNaN(parseInt(colForm.project_id)) ? parseInt(colForm.project_id) : null;
+
       const payload = {
-        client_id: parseInt(colForm.client_id) || null,
-        project_id: colForm.project_id ? parseInt(colForm.project_id) : null,
-        valuation_id: colForm.valuation_id ? parseInt(colForm.valuation_id) : null,
+        client_id: resolvedClientId && !isNaN(parseInt(resolvedClientId)) ? parseInt(resolvedClientId) : null,
+        project_id: resolvedProjId,
+        valuation_id: colForm.valuation_id && !isLocalVal ? parseInt(colForm.valuation_id) : null,
         amount: parseFloat(colForm.amount),
         payment_date: colForm.payment_date,
         payment_method: colForm.payment_method,
@@ -178,6 +291,22 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       };
 
       await api.post('/projects/record_collection', payload);
+      
+      // Update local valuation to Paid
+      if (isLocalVal) {
+        const savedValsStr = localStorage.getItem('contractor_valuations');
+        if (savedValsStr) {
+          try {
+            const vals = JSON.parse(savedValsStr);
+            const updated = vals.map(v => v.id === colForm.valuation_id ? { ...v, status: 'Paid' } : v);
+            localStorage.setItem('contractor_valuations', JSON.stringify(updated));
+            window.dispatchEvent(new Event('storage'));
+          } catch (storageErr) {
+            console.error('Failed to update local valuation status:', storageErr);
+          }
+        }
+      }
+
       triggerAlert('success', ar ? 'تم تسجيل التحصيل وقيد الدفعة بنجاح' : 'Collection registered successfully');
       setColForm({
         client_id: '',
@@ -264,17 +393,32 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
   };
 
   // Dynamic dropdown filters
-  const selectedClientObj = clients.find(c => c.id === parseInt(colForm.client_id));
+  const selectedClientObj = clients.find(c => String(c.id) === String(colForm.client_id));
   const filteredProjects = colForm.client_id
-    ? projects.filter(p => p.client_name && selectedClientObj && p.client_name.toLowerCase().trim() === selectedClientObj.name.toLowerCase().trim())
-    : [];
+    ? projects.filter(p => {
+        const pClientName = (p.clientName || p.client_name || p.client || 'عميل عام').toLowerCase().trim();
+        return selectedClientObj && pClientName === selectedClientObj.name.toLowerCase().trim();
+      })
+    : projects;
 
-  const selectedProjObj = projects.find(p => p.id === parseInt(colForm.project_id));
+  const selectedProjObj = projects.find(p => String(p.id) === String(colForm.project_id));
   const filteredClientInvoices = colForm.project_id
-    ? clientInvoices.filter(inv => inv.project_name && selectedProjObj && inv.project_name.toLowerCase().trim() === selectedProjObj.name.toLowerCase().trim() && inv.status !== 'Paid')
+    ? clientInvoices.filter(inv => {
+        const isPaid = (inv.status || '').toLowerCase() === 'paid';
+        if (isPaid) return false;
+        if (inv.project_id && String(inv.project_id) === String(colForm.project_id)) return true;
+        if (inv.project_name && selectedProjObj && inv.project_name.toLowerCase().trim() === selectedProjObj.name.toLowerCase().trim()) return true;
+        return false;
+      })
     : colForm.client_id
-    ? clientInvoices.filter(inv => inv.client_name && selectedClientObj && inv.client_name.toLowerCase().trim() === selectedClientObj.name.toLowerCase().trim() && inv.status !== 'Paid')
-    : clientInvoices.filter(inv => inv.status !== 'Paid');
+    ? clientInvoices.filter(inv => {
+        const isPaid = (inv.status || '').toLowerCase() === 'paid';
+        if (isPaid) return false;
+        const invClientName = (inv.client_name || '').toLowerCase().trim();
+        const clientName = selectedClientObj ? selectedClientObj.name.toLowerCase().trim() : '';
+        return invClientName === clientName;
+      })
+    : clientInvoices.filter(inv => (inv.status || '').toLowerCase() !== 'paid');
 
   const selectedSubObj = subcontractors.find(s => s.id === parseInt(payForm.subcontractor_id));
   const filteredSubInvoices = subInvoices.filter(inv => {
@@ -471,9 +615,23 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                         defaultSource = matchingAcc.account_name;
                       }
                     }
+                    
+                    // Prefill client if selectedProj has one
+                    let matchedClientId = colForm.client_id;
+                    if (selectedProj) {
+                      const pClientName = (selectedProj.clientName || selectedProj.client_name || selectedProj.client || '').toLowerCase().trim();
+                      if (pClientName) {
+                        const foundClient = clients.find(c => c.name && c.name.toLowerCase().trim() === pClientName);
+                        if (foundClient) {
+                          matchedClientId = String(foundClient.id);
+                        }
+                      }
+                    }
+
                     setColForm(prev => ({
                       ...prev,
                       project_id: projId,
+                      client_id: matchedClientId,
                       source_account: defaultSource,
                       valuation_id: ''
                     }));
