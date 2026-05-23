@@ -786,6 +786,8 @@ const applySchemaFixes = async () => {
     await runQuery("Staff Company", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
     await runQuery("Projects Company", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+    await runQuery("Projects Client Name", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_name VARCHAR(255)`);
+    await runQuery("AR Invoices Project ID", `ALTER TABLE ar_invoices ADD COLUMN IF NOT EXISTS project_id INTEGER`);
     await runQuery("Ledger Company", `ALTER TABLE ledger ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
     await runQuery("Installments No", `ALTER TABLE installments ADD COLUMN IF NOT EXISTS installment_no VARCHAR(50)`);

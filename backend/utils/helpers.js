@@ -330,7 +330,7 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `(${prefix}project_id IN (SELECT CAST(id AS varchar) FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList} OR ${prefix}inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_name IN ${namesSqlList}))`;
     }
     if (type === 'ar_invoices') {
-        return `(${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR notes IN ${namesSqlList} OR source_module IN ${namesSqlList})`;
+        return `(${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'material_usage' || type === 'inventory_bookings') {
         return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
