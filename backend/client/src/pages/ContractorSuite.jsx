@@ -2834,6 +2834,11 @@ export default function ContractorSuite() {
             padding: 0 !important;
             margin: 0 !important;
           }
+          body:has(.exact-print-preview) *:not(.exact-print-preview *) {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
           body { background: white !important; color: #0f172a !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
           .no-print { display: none !important; }
           .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; }

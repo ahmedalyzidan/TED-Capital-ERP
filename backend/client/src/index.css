@@ -333,4 +333,11 @@
     border: none !important;
     box-shadow: none !important;
   }
+
+  /* High-specificity override: remove all borders from layout elements when printing invoices or receipts */
+  body:has(.exact-print-preview) *:not(.exact-print-preview *) {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
 }
