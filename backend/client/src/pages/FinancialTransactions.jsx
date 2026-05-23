@@ -274,9 +274,16 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
     : clientInvoices.filter(inv => inv.status !== 'Paid');
 
   const selectedSubObj = subcontractors.find(s => s.id === parseInt(payForm.subcontractor_id));
-  const filteredSubInvoices = payForm.subcontractor_id
-    ? subInvoices.filter(inv => inv.subcontractor_id === parseInt(payForm.subcontractor_id) && inv.status !== 'Paid')
-    : subInvoices.filter(inv => inv.status !== 'Paid');
+  const filteredSubInvoices = subInvoices.filter(inv => {
+    if (inv.status === 'Paid') return false;
+    if (payForm.subcontractor_id && inv.subcontractor_id !== parseInt(payForm.subcontractor_id)) {
+      return false;
+    }
+    if (payForm.project_name && inv.project_name && inv.project_name.toLowerCase().trim() !== payForm.project_name.toLowerCase().trim()) {
+      return false;
+    }
+    return true;
+  });
 
   // Filter logs by search and active project if embedded
   const filteredCollections = collectionsLog.filter(c => {
@@ -739,6 +746,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                     setPayForm(prev => ({
                       ...prev,
                       invoice_id: invId,
+                      subcontractor_id: selectedInv ? String(selectedInv.subcontractor_id) : prev.subcontractor_id,
                       amount_paid: selectedInv ? String(selectedInv.remaining_amount !== undefined ? selectedInv.remaining_amount : selectedInv.net_amount) : '',
                       project_name: selectedInv && selectedInv.project_name ? selectedInv.project_name : prev.project_name
                     }));
