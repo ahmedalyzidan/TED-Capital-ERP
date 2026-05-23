@@ -423,11 +423,14 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
   const selectedSubObj = subcontractors.find(s => s.id === parseInt(payForm.subcontractor_id));
   const filteredSubInvoices = subInvoices.filter(inv => {
     if (inv.status === 'Paid') return false;
-    if (payForm.subcontractor_id && inv.subcontractor_id !== parseInt(payForm.subcontractor_id)) {
-      return false;
-    }
-    if (payForm.project_name && inv.project_name && inv.project_name.toLowerCase().trim() !== payForm.project_name.toLowerCase().trim()) {
-      return false;
+    if (payForm.project_name) {
+      if (!inv.project_name || inv.project_name.toLowerCase().trim() !== payForm.project_name.toLowerCase().trim()) {
+        return false;
+      }
+    } else {
+      if (payForm.subcontractor_id && inv.subcontractor_id !== parseInt(payForm.subcontractor_id)) {
+        return false;
+      }
     }
     return true;
   });
@@ -917,11 +920,13 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                   <option value="">{ar ? '-- غير مرتبط بمستخلص مقاول --' : '-- Not Linked to Sub Invoice --'}</option>
                   {filteredSubInvoices.map(inv => {
                     const remaining = inv.remaining_amount !== undefined ? inv.remaining_amount : inv.net_amount;
+                    const subObj = subcontractors.find(s => s.id === inv.subcontractor_id);
+                    const subName = subObj ? subObj.name : '';
                     return (
                       <option key={inv.id} value={inv.id}>
                         {ar 
-                          ? `مستخلص #${inv.id} - مشروع: ${inv.project_name || 'عام'} - المتبقي: ${parseFloat(remaining).toLocaleString()} جنيه (من أصل ${parseFloat(inv.net_amount || 0).toLocaleString()})` 
-                          : `Invoice #${inv.id} - Bal: ${parseFloat(remaining).toLocaleString()} EGP (of ${parseFloat(inv.net_amount || 0).toLocaleString()})`}
+                          ? `مستخلص #${inv.id} - المقاول: ${subName || 'عام'} - المتبقي: ${parseFloat(remaining).toLocaleString()} جنيه (من أصل ${parseFloat(inv.net_amount || 0).toLocaleString()})` 
+                          : `Invoice #${inv.id} - Sub: ${subName || 'General'} - Bal: ${parseFloat(remaining).toLocaleString()} EGP (of ${parseFloat(inv.net_amount || 0).toLocaleString()})`}
                       </option>
                     );
                   })}
