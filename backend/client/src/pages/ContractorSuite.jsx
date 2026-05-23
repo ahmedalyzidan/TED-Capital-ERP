@@ -288,7 +288,8 @@ export default function ContractorSuite() {
       const mappedStatements = statements
         .filter(st => st.type === 'صرف مستخلص' && !st.is_deleted)
         .map(st => {
-          const pName = st.metadata?.project_name;
+          const meta = typeof st.metadata === 'string' ? JSON.parse(st.metadata) : (st.metadata || {});
+          const pName = meta.project_name;
           const proj = allCombinedProjects.find(p => p.name === pName);
           const pId = proj ? String(proj.id) : activeProjectId;
 
@@ -923,13 +924,16 @@ export default function ContractorSuite() {
     }
 
     // 2. Previous Spent: Sum of all expenses (expenses + dbExpenses) matching the contractor's name (beneficiary) with a date earlier than or equal to the valuation date.
-    // Subcontractor statements and ledger payments bypass project boundaries.
+    // Summed at the project level (matching by project ID or name).
     const allExpenses = [...expenses, ...dbExpenses];
     
     let previousSpent = allExpenses
       .filter(e => {
-        const isPayment = String(e.id).startsWith('db-statement-') || String(e.id).startsWith('db-ledger-');
-        const isProjectMatch = isPayment ? true : (String(e.projectId) === String(activeProjectId));
+        const projObj = projects.find(p => String(p.id) === String(e.projectId));
+        const isProjectMatch = 
+          String(e.projectId) === String(activeProjectId) ||
+          (projObj && activeProject && projObj.name.trim().toLowerCase() === activeProject.name.trim().toLowerCase());
+
         const isBeneficiaryMatch = e.beneficiary?.trim().toLowerCase() === cName;
         let isDateEarlier = true;
         if (refDate && e.date) {
@@ -942,7 +946,8 @@ export default function ContractorSuite() {
     // Fallback: If previousSpent is 0, check the subcontractorsList paid_amount directly as a fallback
     if (previousSpent === 0) {
       const sub = subcontractorsList.find(s => 
-        s.name?.trim().toLowerCase() === cName
+        s.name?.trim().toLowerCase() === cName &&
+        (!s.project_name || s.project_name === activeProject?.name)
       );
       if (sub && Number(sub.paid_amount) > 0) {
         previousSpent = Number(sub.paid_amount);
