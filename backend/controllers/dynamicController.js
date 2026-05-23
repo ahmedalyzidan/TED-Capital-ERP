@@ -713,6 +713,30 @@ class DynamicController {
             // Reversal of Accounting ledger entries
             if (type === 'client_payment_history') {
                 await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`COL-${id}`, oldData.reference_no]);
+                const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});
+                const valId = meta.valuation_id;
+                if (valId && !isNaN(parseInt(valId))) {
+                    const valuationId = parseInt(valId);
+                    const invRes = await client.query("SELECT total_amount FROM ar_invoices WHERE id = $1", [valuationId]);
+                    if (invRes.rows.length > 0) {
+                        const totalAmount = parseFloat(invRes.rows[0].total_amount || 0);
+                        const paidRes = await client.query(`
+                            SELECT COALESCE(SUM(amount_paid), 0) AS total_paid
+                            FROM client_payment_history
+                            WHERE is_deleted = false
+                              AND (CASE WHEN metadata->>'valuation_id' ~ '^[0-9]+$' THEN (metadata->>'valuation_id')::integer ELSE NULL END) = $1
+                        `, [valuationId]);
+                        const totalPaid = parseFloat(paidRes.rows[0].total_paid || 0);
+
+                        let newStatus = 'Unpaid';
+                        if (totalPaid >= totalAmount) {
+                            newStatus = 'Paid';
+                        } else if (totalPaid > 0) {
+                            newStatus = 'Partially Paid';
+                        }
+                        await client.query("UPDATE ar_invoices SET status = $1 WHERE id = $2", [newStatus, valuationId]);
+                    }
+                }
             } else if (type === 'subcontractor_statements') {
                 await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`PMT-${id}`, oldData.reference_no]);
                 const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});

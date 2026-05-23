@@ -396,15 +396,28 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
 
       await api.post('/projects/record_collection', payload);
       
-      // Update local valuation to Paid
+      // Update local valuation status
       if (isLocalVal) {
         const savedValsStr = localStorage.getItem('contractor_valuations');
         if (savedValsStr) {
           try {
             const vals = JSON.parse(savedValsStr);
-            const updated = vals.map(v => v.id === colForm.valuation_id ? { ...v, status: 'Paid' } : v);
-            localStorage.setItem('contractor_valuations', JSON.stringify(updated));
-            window.dispatchEvent(new Event('storage'));
+            const valObj = vals.find(v => v.id === colForm.valuation_id);
+            if (valObj) {
+              const totalValAmount = parseFloat(valObj.totalFinal || valObj.totalCurrent || 0);
+              const existingPaid = collectionsLog
+                .filter(c => {
+                  const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+                  return String(meta.valuation_id) === String(colForm.valuation_id);
+                })
+                .reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+              
+              const newTotalPaid = existingPaid + parseFloat(colForm.amount);
+              const newStatus = newTotalPaid >= totalValAmount ? 'Paid' : 'Partially Paid';
+              const updated = vals.map(v => v.id === colForm.valuation_id ? { ...v, status: newStatus } : v);
+              localStorage.setItem('contractor_valuations', JSON.stringify(updated));
+              window.dispatchEvent(new Event('storage'));
+            }
           } catch (storageErr) {
             console.error('Failed to update local valuation status:', storageErr);
           }
@@ -486,6 +499,41 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
     try {
       setLoading(true);
       await api.delete(`/dynamic/delete/${type}/${id}`);
+      
+      if (type === 'client_payment_history') {
+        const deletedRecord = collectionsLog.find(c => c.id === id);
+        if (deletedRecord) {
+          const meta = typeof deletedRecord.metadata === 'string' ? JSON.parse(deletedRecord.metadata) : (deletedRecord.metadata || {});
+          const valId = meta.valuation_id;
+          if (valId && String(valId).startsWith('val-')) {
+            const savedValsStr = localStorage.getItem('contractor_valuations');
+            if (savedValsStr) {
+              try {
+                const vals = JSON.parse(savedValsStr);
+                const valObj = vals.find(v => v.id === valId);
+                if (valObj) {
+                  const totalValAmount = parseFloat(valObj.totalFinal || valObj.totalCurrent || 0);
+                  const remainingPaid = collectionsLog
+                    .filter(c => c.id !== id)
+                    .filter(c => {
+                      const m = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+                      return String(m.valuation_id) === String(valId);
+                    })
+                    .reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+                  
+                  const newStatus = remainingPaid >= totalValAmount ? 'Paid' : (remainingPaid > 0 ? 'Partially Paid' : 'Draft');
+                  const updated = vals.map(v => v.id === valId ? { ...v, status: newStatus } : v);
+                  localStorage.setItem('contractor_valuations', JSON.stringify(updated));
+                  window.dispatchEvent(new Event('storage'));
+                }
+              } catch (err) {
+                console.error('Failed to revert local valuation status:', err);
+              }
+            }
+          }
+        }
+      }
+      
       triggerAlert('success', ar ? 'تم عكس المعاملة وإلغاء القيود بنجاح' : 'Transaction reversed successfully');
       fetchMasterData();
       fetchLogs();
@@ -505,10 +553,28 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       })
     : projects;
 
+  const getInvoiceStatus = (inv) => {
+    if (!String(inv.id).startsWith('val-')) {
+      return inv.status || 'Unpaid';
+    }
+    const paymentsForVal = collectionsLog.filter(c => {
+      const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+      return String(meta.valuation_id) === String(inv.id);
+    });
+    const totalPaid = paymentsForVal.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+    const totalValAmount = parseFloat(inv.total_amount || 0);
+    if (totalPaid >= totalValAmount) {
+      return 'Paid';
+    } else if (totalPaid > 0) {
+      return 'Partially Paid';
+    }
+    return inv.status || 'Unpaid';
+  };
+
   const selectedProjObj = projects.find(p => String(p.id) === String(colForm.project_id));
   const filteredClientInvoices = colForm.project_id
     ? clientInvoices.filter(inv => {
-        const isPaid = (inv.status || '').toLowerCase() === 'paid';
+        const isPaid = (getInvoiceStatus(inv)).toLowerCase() === 'paid';
         if (isPaid) return false;
         if (inv.project_id && String(inv.project_id) === String(colForm.project_id)) return true;
         if (inv.project_name && selectedProjObj && inv.project_name.toLowerCase().trim() === selectedProjObj.name.toLowerCase().trim()) return true;
@@ -516,13 +582,13 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       })
     : colForm.client_id
     ? clientInvoices.filter(inv => {
-        const isPaid = (inv.status || '').toLowerCase() === 'paid';
+        const isPaid = (getInvoiceStatus(inv)).toLowerCase() === 'paid';
         if (isPaid) return false;
         const invClientName = (inv.client_name || '').toLowerCase().trim();
         const clientName = selectedClientObj ? selectedClientObj.name.toLowerCase().trim() : '';
         return invClientName === clientName;
       })
-    : clientInvoices.filter(inv => (inv.status || '').toLowerCase() !== 'paid');
+    : clientInvoices.filter(inv => (getInvoiceStatus(inv)).toLowerCase() !== 'paid');
 
   const selectedSubObj = subcontractors.find(s => s.id === parseInt(payForm.subcontractor_id));
   const selectedPayProjObj = projects.find(p => String(p.name).toLowerCase().trim() === String(payForm.project_name).toLowerCase().trim());

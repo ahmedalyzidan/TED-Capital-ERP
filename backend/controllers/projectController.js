@@ -270,7 +270,20 @@ class ProjectController {
 
             // 4.5 تحديث حالة الفاتورة/المستخلص إذا تم ربطه
             if (valuation_id) {
-                await client.query("UPDATE ar_invoices SET status = 'Paid' WHERE id = $1", [valuation_id]);
+                const invRes = await client.query("SELECT total_amount FROM ar_invoices WHERE id = $1", [valuation_id]);
+                if (invRes.rows.length > 0) {
+                    const totalAmount = parseFloat(invRes.rows[0].total_amount || 0);
+                    const paidRes = await client.query(`
+                        SELECT COALESCE(SUM(amount_paid), 0) AS total_paid
+                        FROM client_payment_history
+                        WHERE is_deleted = false
+                          AND (CASE WHEN metadata->>'valuation_id' ~ '^[0-9]+$' THEN (metadata->>'valuation_id')::integer ELSE NULL END) = $1
+                    `, [valuation_id]);
+                    const totalPaid = parseFloat(paidRes.rows[0].total_paid || 0);
+
+                    const newStatus = totalPaid >= totalAmount ? 'Paid' : 'Partially Paid';
+                    await client.query("UPDATE ar_invoices SET status = $1 WHERE id = $2", [newStatus, valuation_id]);
+                }
             }
 
             // 5. تسجيل العملية في سجل التدقيق
