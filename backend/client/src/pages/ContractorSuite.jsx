@@ -1267,6 +1267,10 @@ export default function ContractorSuite() {
     setValuationTax('');
     setValuationTaxMethod('period');
     setShowAddValuation(true);
+    setShowAddContractorValuation(false);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   // 📦 Contractor Valuation Line Helpers
@@ -1343,6 +1347,10 @@ export default function ContractorSuite() {
     setContractorValuationTaxMethod('period');
     setContractorValuationPrevPaid('');
     setShowAddContractorValuation(true);
+    setShowAddValuation(false);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleStartEditValuation = (val) => {
@@ -1362,13 +1370,13 @@ export default function ContractorSuite() {
     });
     setNewValuationItems(itemsMapping);
     setShowAddValuation(true);
+    setShowAddContractorValuation(false);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleStartEditContractorValuation = (val) => {
-    if (String(val.id).startsWith('db-sub-inv-')) {
-      alert('لا يمكن تعديل هذا المستخلص المجلوب من قاعدة البيانات مباشرة.');
-      return;
-    }
     setEditingValuationId(val.id);
     setContractorValuationDate(val.date);
     setContractorValuationContractorName(val.lines?.[0]?.contractorName || '');
@@ -1379,6 +1387,10 @@ export default function ContractorSuite() {
     setContractorValuationPrevPaid(val.prevPaid !== undefined ? val.prevPaid : '');
     setContractorValuationLines(val.lines || []);
     setShowAddContractorValuation(true);
+    setShowAddValuation(false);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleQuickAddSub = async (e) => {
@@ -1712,7 +1724,36 @@ export default function ContractorSuite() {
     }
 
     if (editingValuationId) {
-      setValuations(prev => prev.map(v => v.id === editingValuationId ? newContractorVal : v));
+      if (String(editingValuationId).startsWith('db-sub-inv-')) {
+        const dbId = editingValuationId.replace('db-sub-inv-', '');
+        try {
+          const matchedSub = subcontractorsList.find(s => (s.name || s.contractor_name || '').trim().toLowerCase() === uniqueContractorName.trim().toLowerCase());
+          const subId = matchedSub ? matchedSub.id : null;
+          
+          await api.put(`/dynamic/update/subcontractor_invoices/${dbId}`, {
+            subcontractor_id: subId,
+            subcontractor_name: uniqueContractorName,
+            curr_qty: Number(linesList[0]?.quantity || 0),
+            prev_qty: Number(linesList[0]?.prevQty || 0),
+            gross_amount: cumulativeGross,
+            retention_deduction: discountAmt,
+            net_amount: totalAfterAll,
+            amount: totalAfterAll,
+            description: linesList[0]?.description || `مستخلص مقاول رقم ${claimNo}`,
+            date: contractorValuationDate,
+            project_id: activeProjectId
+          });
+          
+          fetchAllData();
+          triggerNotification(`🏗️ تم تعديل مستخلص المقاول في قاعدة البيانات بنجاح!`);
+        } catch (err) {
+          console.error('Failed to update subcontractor invoice in DB:', err);
+          triggerNotification(`حدث خطأ أثناء تعديل المستخلص في قاعدة البيانات!`, 'error');
+        }
+      } else {
+        setValuations(prev => prev.map(v => v.id === editingValuationId ? newContractorVal : v));
+        triggerNotification(`🏗️ تم تعديل مستخلص المقاول ${claimNo} بنجاح!`);
+      }
       setEditingValuationId(null);
     } else {
       setValuations([...valuations, newContractorVal]);
@@ -5038,16 +5079,22 @@ export default function ContractorSuite() {
       {/* 8. PAYMENT RECEIPT PREVIEW MODAL */}
       {selectedPrintInstallment && (() => {
         const linkedVal = valuations.find(v => v.id === selectedPrintInstallment.valuationId);
+        const isContractorVal = linkedVal?.isContractor;
+        const nameToDisplay = isContractorVal ? (linkedVal.lines?.[0]?.contractorName || 'مقاول عام') : (activeProject?.clientName || 'عميل عام');
+        const receiptTitle = isContractorVal ? 'إيصال صرف نقدية' : 'إيصال استلام نقدية';
+        const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
+        const themeColorClass = isContractorVal ? 'border-orange-500/25 bg-orange-500/5 text-orange-400' : 'border-emerald-500/25 bg-emerald-500/5 text-emerald-400';
+        
         return (
           <div className="fixed inset-0 bg-[#070a13]/85 flex items-center justify-center p-4 z-50 no-print animate-in fade-in duration-300">
             <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-2xl p-8 space-y-6 overflow-y-auto max-h-[90vh] shadow-2xl flex flex-col">
               <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                <h3 className="text-sm font-black text-emerald-400 flex items-center gap-2">
-                  <span>💵</span> معاينة وطباعة إيصال استلام الدفعة
+                <h3 className="text-sm font-black text-slate-200 flex items-center gap-2">
+                  <span className={`p-1.5 rounded-lg border ${themeColorClass}`}>💵</span> {receiptTitle} — معاينة وطباعة
                 </h3>
                 <button
                   onClick={() => setSelectedPrintInstallment(null)}
-                  className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold"
+                  className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-slate-400 font-bold transition-all"
                 >
                   إغلاق المعاينة ✕
                 </button>
@@ -5055,7 +5102,7 @@ export default function ContractorSuite() {
 
               {/* HIGH-FIDELITY RECEIPT PREVIEW */}
               <div className="flex-1 bg-white text-slate-900 p-8 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
-                <div className="space-y-6 border-4 border-double border-slate-350 p-6 rounded-xl">
+                <div className="space-y-6 border-4 border-double border-slate-300 p-6 rounded-2xl">
                   {/* Header */}
                   <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
                     <div className="space-y-1">
@@ -5069,7 +5116,9 @@ export default function ContractorSuite() {
                       )}
                     </div>
                     <div className="text-left space-y-1">
-                      <h2 className="text-md font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">إيصال استلام نقدية</h2>
+                      <h2 className={`text-xs font-black px-3 py-1.5 rounded-lg text-center ${isContractorVal ? 'bg-orange-50 text-orange-950 border border-orange-200' : 'bg-emerald-50 text-emerald-950 border border-emerald-200'}`}>
+                        {receiptTitle}
+                      </h2>
                       <div className="text-[9px] font-mono font-bold text-slate-600">
                         <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
                         <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
@@ -5079,55 +5128,61 @@ export default function ContractorSuite() {
 
                   {/* Body Content */}
                   <div className="space-y-4 text-xs font-bold text-slate-850">
-                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-150">
-                      <span>وصلنا من السيد / السادة:</span>
-                      <span className="text-sm font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
+                    <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
+                      <span className="text-slate-500">{relationText}</span>
+                      <span className="text-sm font-black text-slate-950">{nameToDisplay}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                         <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
-                        <span className="text-slate-950">{activeProject?.name}</span>
+                        <span className="text-slate-950 font-black">{activeProject?.name}</span>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                         <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
-                        <span className="text-emerald-800 text-sm font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
+                        <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
+                          {selectedPrintInstallment.amount.toLocaleString()} ج.م
+                        </span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                         <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
-                        <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                        <span className="text-slate-950 font-black">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                         <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
-                        <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
+                        <span className="text-slate-950 font-mono font-black">{selectedPrintInstallment.referenceNo || '—'}</span>
                       </div>
                     </div>
 
                     {linkedVal && (
-                      <div className="bg-cyan-50/50 p-3 rounded-lg border border-cyan-105 text-[11px]">
-                        <span className="text-cyan-850">ربط وتسوية مستخلص مالي رقم: </span>
+                      <div className={`p-3.5 rounded-xl border text-[11px] font-bold ${isContractorVal ? 'bg-orange-50/40 border-orange-100 text-orange-950' : 'bg-cyan-50/50 border-cyan-100 text-cyan-950'}`}>
+                        <span>🔗 ربط وتسوية مستخلص مالي رقم: </span>
                         <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
                         {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
                       </div>
                     )}
 
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                       <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
-                      <span className="text-slate-800">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
+                      <span className="text-slate-800 font-semibold">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
                     </div>
                   </div>
 
                   {/* Signatures */}
-                  <div className="grid grid-cols-2 gap-4 pt-8 text-[10px] font-bold text-center">
-                    <div className="space-y-4">
-                      <div>توقيع المستلم (الشركة)</div>
+                  <div className="grid grid-cols-3 gap-4 pt-10 text-[10px] font-bold text-center text-slate-700">
+                    <div className="space-y-5">
+                      <div>المستلم / المستفيد</div>
                       <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       <div>المدير المالي</div>
+                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                    </div>
+                    <div className="space-y-5">
+                      <div>المدير العام</div>
                       <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                     </div>
                   </div>
@@ -5144,7 +5199,7 @@ export default function ContractorSuite() {
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="px-6 py-2.5 bg-cyan-500 rounded-xl text-xs font-black text-slate-950 shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform"
+                  className={`px-6 py-2.5 rounded-xl text-xs font-black text-slate-950 shadow-lg active:scale-95 transition-all ${isContractorVal ? 'bg-orange-500 shadow-orange-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}
                 >
                   طباعة الإيصال 🖨️
                 </button>
@@ -5157,9 +5212,14 @@ export default function ContractorSuite() {
       {/* 9. PRINT-ONLY EXCLUSIVE PAYMENT RECEIPT DOCUMENT */}
       {selectedPrintInstallment && (() => {
         const linkedVal = valuations.find(v => v.id === selectedPrintInstallment.valuationId);
+        const isContractorVal = linkedVal?.isContractor;
+        const nameToDisplay = isContractorVal ? (linkedVal.lines?.[0]?.contractorName || 'مقاول عام') : (activeProject?.clientName || 'عميل عام');
+        const receiptTitle = isContractorVal ? 'إيصال صرف نقدية' : 'إيصال استلام نقدية';
+        const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
+        
         return (
           <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview" dir="rtl">
-            <div className="space-y-6 border-4 border-double border-slate-350 p-6 rounded-xl">
+            <div className="space-y-6 border-4 border-double border-slate-300 p-6 rounded-2xl">
               {/* Header */}
               <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
                 <div className="space-y-1">
@@ -5174,7 +5234,9 @@ export default function ContractorSuite() {
                   )}
                 </div>
                 <div className="text-left space-y-1">
-                  <h2 className="text-md font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">إيصال استلام نقدية</h2>
+                  <h2 className={`text-xs font-black px-3 py-1.5 rounded-lg text-center ${isContractorVal ? 'bg-orange-50 text-orange-950 border border-orange-200' : 'bg-emerald-50 text-emerald-950 border border-emerald-200'}`}>
+                    {receiptTitle}
+                  </h2>
                   <div className="text-[9px] font-mono font-bold text-slate-600">
                     <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
                     <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
@@ -5184,55 +5246,61 @@ export default function ContractorSuite() {
 
               {/* Body Content */}
               <div className="space-y-4 text-xs font-bold text-slate-850">
-                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-150">
-                  <span>وصلنا من السيد / السادة:</span>
-                  <span className="text-sm font-black text-slate-950">{activeProject?.clientName || 'عميل عام'}</span>
+                <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
+                  <span className="text-slate-500">{relationText}</span>
+                  <span className="text-sm font-black text-slate-950">{nameToDisplay}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                     <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
-                    <span className="text-slate-950">{activeProject?.name}</span>
+                    <span className="text-slate-950 font-black">{activeProject?.name}</span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                     <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
-                    <span className="text-emerald-800 text-sm font-black">{selectedPrintInstallment.amount.toLocaleString()} ج.م</span>
+                    <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
+                      {selectedPrintInstallment.amount.toLocaleString()} ج.م
+                    </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                     <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
-                    <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                    <span className="text-slate-950 font-black">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                     <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
-                    <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
+                    <span className="text-slate-950 font-mono font-black">{selectedPrintInstallment.referenceNo || '—'}</span>
                   </div>
                 </div>
 
                 {linkedVal && (
-                  <div className="bg-cyan-50/50 p-3 rounded-lg border border-cyan-105 text-[11px]">
-                    <span className="text-cyan-850">ربط وتسوية مستخلص مالي رقم: </span>
+                  <div className={`p-3.5 rounded-xl border text-[11px] font-bold ${isContractorVal ? 'bg-orange-50/40 border-orange-100 text-orange-950' : 'bg-cyan-50/50 border-cyan-100 text-cyan-950'}`}>
+                    <span>🔗 ربط وتسوية مستخلص مالي رقم: </span>
                     <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
                     {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
                   </div>
                 )}
 
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-150">
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                   <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
-                  <span className="text-slate-800">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
+                  <span className="text-slate-800 font-semibold">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
                 </div>
               </div>
 
               {/* Signatures */}
-              <div className="grid grid-cols-2 gap-4 pt-8 text-[10px] font-bold text-center">
-                <div className="space-y-4">
-                  <div>توقيع المستلم (الشركة)</div>
+              <div className="grid grid-cols-3 gap-4 pt-10 text-[10px] font-bold text-center text-slate-700">
+                <div className="space-y-5">
+                  <div>المستلم / المستفيد</div>
                   <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>المدير المالي</div>
+                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                </div>
+                <div className="space-y-5">
+                  <div>المدير العام</div>
                   <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
                 </div>
               </div>
