@@ -3416,13 +3416,18 @@ export default function ContractorSuite() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-slate-400 font-bold">التصنيف الهندسي للمصروف</label>
+                    <label className="text-[10px] text-slate-400 font-bold">البند المرتبط (BOQ)</label>
                     <select
                       value={editingItemId ? editForm.category : newExpense.category}
                       onChange={e => editingItemId ? setEditForm({ ...editForm, category: e.target.value }) : setNewExpense({ ...newExpense, category: e.target.value })}
-                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none"
+                      className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
                     >
-                      {boqCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value="">— اختر البند —</option>
+                      {currentBoqItems.map(item => (
+                        <option key={item.id} value={`[${item.category}] ${item.item_name}`}>
+                          [{item.category}] {item.item_name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -3529,10 +3534,14 @@ export default function ContractorSuite() {
               <select
                 value={expenseCategoryFilter}
                 onChange={e => setExpenseCategoryFilter(e.target.value)}
-                className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
+                className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full font-bold"
               >
-                <option value="All">كل الفئات والتصنيفات</option>
-                {boqCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="All">كل البنود المرتبطة (BOQ)</option>
+                {currentBoqItems.map(item => (
+                  <option key={item.id} value={`[${item.category}] ${item.item_name}`}>
+                    [{item.category}] {item.item_name}
+                  </option>
+                ))}
               </select>
 
               <div className="text-xs font-bold flex items-center justify-end text-slate-400">
@@ -3549,7 +3558,7 @@ export default function ContractorSuite() {
                       <th className="px-6 py-5">تاريخ الصرف</th>
                       <th className="px-6 py-5">الجهة المستفيدة / البائع</th>
                       <th className="px-6 py-5">البيان والتفاصيل</th>
-                      <th className="px-6 py-5">التصنيف الهندسي</th>
+                      <th className="px-6 py-5">البند المرتبط (BOQ)</th>
                       <th className="px-6 py-5 text-center">الكمية</th>
                       <th className="px-6 py-5 text-center">الفئة</th>
                       <th className="px-6 py-5 text-center">المبلغ الإجمالي</th>
@@ -4717,102 +4726,7 @@ export default function ContractorSuite() {
 
               {/* Right Col: Collection wizard and payment linkage Form */}
               <div className="space-y-6 no-print">
-                <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-4">
-                  <h3 className="text-sm font-black text-white flex items-center gap-2">
-                    <span className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-455">💰</span> تسجيل تحصيل دفعة جديدة وتسويتها
-                  </h3>
 
-                  <form onSubmit={handleAddInstallment} className="space-y-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-400 font-bold">المبلغ المستلم (جنيه)</label>
-                      <input
-                        type="number"
-                        placeholder="0.00"
-                        value={newInstallment.amount}
-                        onChange={e => setNewInstallment({ ...newInstallment, amount: e.target.value })}
-                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-400 font-bold">ربط الدفعة بمستخلص معين (اختياري)</label>
-                      <select
-                        value={newInstallment.valuationId}
-                        onChange={e => setNewInstallment({ ...newInstallment, valuationId: e.target.value })}
-                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                      >
-                        <option value="">-- تحصيل دفعة عامة (غير مرتبطة بمستخلص) --</option>
-                        {currentValuations.filter(val => !val.isContractor).map(val => {
-                          const valTotal = val.totalFinal !== undefined ? val.totalFinal : (val.taxRate > 0 ? val.totalCurrent * (1 + val.taxRate / 100) : val.totalCurrent);
-                          const paidAmount = currentInstallments.filter(i => i.valuationId === val.id).reduce((acc, curr) => acc + curr.amount, 0);
-                          const unpaidAmount = valTotal - paidAmount;
-                          return (
-                            <option key={val.id} value={val.id}>
-                              {val.claimNo} (غير مسدد: {unpaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
-                            </option>
-                          );
-                        })}
-
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-400 font-bold">تاريخ استلام الدفعة</label>
-                      <input
-                        type="date"
-                        value={newInstallment.date}
-                        onChange={e => setNewInstallment({ ...newInstallment, date: e.target.value })}
-                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] text-slate-400 font-bold">طريقة الدفع</label>
-                        <select
-                          value={newInstallment.paymentMethod || 'نقدًا'}
-                          onChange={e => setNewInstallment({ ...newInstallment, paymentMethod: e.target.value })}
-                          className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                        >
-                          <option value="نقدًا">نقدًا</option>
-                          <option value="شيك">شيك</option>
-                          <option value="تحويل بنكي">تحويل بنكي</option>
-                          <option value="أخرى">أخرى</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] text-slate-400 font-bold">الرقم المرجعي (اختياري)</label>
-                        <input
-                          type="text"
-                          placeholder="رقم الشيك أو التحويل"
-                          value={newInstallment.referenceNo || ''}
-                          onChange={e => setNewInstallment({ ...newInstallment, referenceNo: e.target.value })}
-                          className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-400 font-bold">البيان الهندسي / ملاحظات</label>
-                      <input
-                        type="text"
-                        placeholder="مثال: دفعة تحت حساب التشطيبات..."
-                        value={newInstallment.notes}
-                        onChange={e => setNewInstallment({ ...newInstallment, notes: e.target.value })}
-                        className="bg-[#111827] border border-slate-800 focus:border-cyan-600 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none w-full"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-black transition-all active:scale-95"
-                    >
-                      تسجيل وقيد الدفعة بنجاح 🟢
-                    </button>
-                  </form>
-                </div>
 
                 {/* Progress Summary Gauge */}
                 <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col items-center text-center space-y-4 hover:scale-[1.02] transition-all duration-300">
