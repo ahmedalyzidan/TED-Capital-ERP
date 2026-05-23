@@ -332,7 +332,12 @@ class DynamicController {
 
                 // Clean data (remove calculated/virtual fields that are not in DB)
                 const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'admins_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty', 'adjust_reason', 'adjust_qty', 'recipient', 'subject', 'body', 'attachment_content', 'attachment_filename', 'invoice_data'];
-                calcFields.forEach(f => delete data[f]);
+                
+                let fieldsToRemove = calcFields;
+                if (type === 'projects' || type === 'ar_invoices') {
+                    fieldsToRemove = calcFields.filter(f => f !== 'client_name');
+                }
+                fieldsToRemove.forEach(f => delete data[f]);
 
                 const keys = Object.keys(data);
                 const values = Object.values(data);
@@ -596,7 +601,12 @@ class DynamicController {
 
             const adjustReasonStr = data.adjust_reason ? ` | سبب التسوية: ${data.adjust_reason}` : '';
             const calcFields = ['id', 'created_at', 'updated_at', 'items', 'item', 'admins_count', 'remaining_budget', 'charge_id', 'dynamic_act_qty', 'assigned_qty', 'unassigned_qty', 'issued_invoices', 'proj_budget', 'proj_exp_amt', 'proj_act_amt', 'deposits', 'withdrawals', 'customer_name_readonly', 'sub_name', 'form_type', 'partners_count', 'project_company', 'project_name_temp', 'item_id', 'invoice_id', 'ddp_added_amount', 'ddp_lcy_added_amount', 'po_original_qty', 'po_unit_cost_fcy', 'po_ddp_added', 'po_ddp_lcy_added', 'current_outstanding', 'client_name', 'inventory_name', 'orig_inst_no', 'orig_unit_no', 'total_revenue', 'mgmt_fees', 'waivePenalty', 'adjust_reason', 'adjust_qty', 'recipient', 'subject', 'body', 'attachment_content', 'attachment_filename', 'invoice_data'];
-            calcFields.forEach(f => delete data[f]);
+            
+            let fieldsToRemove = calcFields;
+            if (type === 'projects' || type === 'ar_invoices') {
+                fieldsToRemove = calcFields.filter(f => f !== 'client_name');
+            }
+            fieldsToRemove.forEach(f => delete data[f]);
 
             const keys = Object.keys(data);
             const values = Object.values(data);
