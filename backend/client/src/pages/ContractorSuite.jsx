@@ -198,7 +198,19 @@ export default function ContractorSuite() {
             id: `db-sale-${s.id}`,
             projectId: String(s.project_id),
             beneficiary: isReturn ? 'مرتجع مواد فائضة للمستودع' : 'صرف مخزني مباشر - مستودع المواد',
-            category: s.metadata?.engineering_classification || 'مواد ومستلزمات',
+            category: s.metadata?.engineering_classification || (() => {
+              const name = (s.item_name || '').toLowerCase();
+              if (name.includes('حديد') || name.includes('خرسان') || name.includes('أسمنت') || name.includes('اسمنت')) {
+                return 'أعمال توريد وصب خرسانه';
+              }
+              if (name.includes('سلك') || name.includes('كهرب') || name.includes('لوحة')) {
+                return 'أعمال كهرباء';
+              }
+              if (name.includes('سباك') || name.includes('صحي') || name.includes('مواسير')) {
+                return 'أعمال صحي';
+              }
+              return 'أعمال توريدات';
+            })(),
             unit: s.uom || 'وحدة',
             qty: Math.abs(qtyVal),
             rate: Number(s.buy_price || s.sell_price || 0),

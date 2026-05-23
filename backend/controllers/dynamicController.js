@@ -206,7 +206,7 @@ class DynamicController {
                     if (type === 'subcontractor_items') {
                         conditions.push(`boq_id IN (SELECT id FROM boq WHERE project_name = $${params.length + 1})`);
                     } else if (type === 'inventory_sales') {
-                        conditions.push(`ins.inventory_id IN (SELECT id FROM inventory_items WHERE project_name = $${params.length + 1})`);
+                        conditions.push(`(inventory_id IN (SELECT id FROM inventory_items WHERE project_name = $${params.length + 1}) OR project_id = (SELECT CAST(id AS varchar) FROM projects WHERE name = $${params.length + 1}) OR project_name = $${params.length + 1})`);
                     } else if (type === 'ar_invoices') {
                         conditions.push(`project_id IN (SELECT id FROM projects WHERE name = $${params.length + 1})`);
                     } else if (type === 'inventory_items') {
