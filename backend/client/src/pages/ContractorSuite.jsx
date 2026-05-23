@@ -437,7 +437,8 @@ export default function ContractorSuite() {
             }
           }
 
-          const linesList = [{
+          const meta = typeof inv.metadata === 'string' ? JSON.parse(inv.metadata) : (inv.metadata || {});
+          const linesList = meta.lines || [{
             id: `sub-inv-line-${inv.id}`,
             boqItemId: boqItemId,
             contractorName: inv.subcontractor_name,
@@ -459,8 +460,9 @@ export default function ContractorSuite() {
             lines: linesList,
             totalCurrent: Number(inv.gross_amount || inv.amount || 0),
             discount: Number(inv.retention_deduction || 0) + Number(inv.dp_recovery || 0) + Number(inv.material_deduction || 0),
-            taxRate: Number(inv.tax_deduction || 0) > 0 ? 14 : 0,
-            taxMethod: 'period',
+            discountReason: meta.discountReason || '',
+            taxRate: meta.taxRate !== undefined ? meta.taxRate : (Number(inv.tax_deduction || 0) > 0 ? 14 : 0),
+            taxMethod: meta.taxMethod || 'waived',
             totalAfterDiscount: Number(inv.gross_amount || inv.amount || 0) - (Number(inv.retention_deduction || 0) + Number(inv.dp_recovery || 0) + Number(inv.material_deduction || 0)),
             taxAmount: Number(inv.tax_deduction || 0),
             totalFinal: Number(inv.net_amount || inv.amount || 0),
@@ -681,8 +683,9 @@ export default function ContractorSuite() {
   const [contractorValuationDate, setContractorValuationDate] = useState(new Date().toISOString().split('T')[0]);
   const [contractorValuationLines, setContractorValuationLines] = useState([]);
   const [contractorValuationDiscount, setContractorValuationDiscount] = useState('');
+  const [contractorValuationDiscountReason, setContractorValuationDiscountReason] = useState('');
   const [contractorValuationTax, setContractorValuationTax] = useState('');
-  const [contractorValuationTaxMethod, setContractorValuationTaxMethod] = useState('period'); // 'period' | 'cumulative' | 'waived'
+  const [contractorValuationTaxMethod, setContractorValuationTaxMethod] = useState('waived'); // 'period' | 'cumulative' | 'waived'
   const [subcontractorsList, setSubcontractorsList] = useState([]);
   const [contractorValuationLinkedClientValId, setContractorValuationLinkedClientValId] = useState(''); // Keep variable name consistent if needed, but wait: the original is contractorValuationLinkedClientValId. Let's make sure it matches.
   const [contractorValuationPrevPaid, setContractorValuationPrevPaid] = useState('');
@@ -1627,7 +1630,7 @@ export default function ContractorSuite() {
           const selectedItem = currentBoqItems.find(item => String(item.id) === String(value));
           if (selectedItem) {
             updated.unit = selectedItem.unit || 'م٢';
-            updated.unitPrice = selectedItem.price || 0;
+            updated.unitPrice = 0; // Default to 0, user-defined
             updated.description = selectedItem.item_name || '';
           }
         }
@@ -1670,9 +1673,10 @@ export default function ContractorSuite() {
     setContractorValuationLines([newContractorLine('')]);
     setContractorValuationDate(new Date().toISOString().split('T')[0]);
     setContractorValuationDiscount('');
+    setContractorValuationDiscountReason('');
     setContractorValuationTax('');
     setContractorValuationLinkedClientValId('');
-    setContractorValuationTaxMethod('period');
+    setContractorValuationTaxMethod('waived');
     setContractorValuationPrevPaid('');
     setShowAddContractorValuation(true);
     setShowAddValuation(false);
@@ -1709,8 +1713,9 @@ export default function ContractorSuite() {
     setContractorValuationDate(val.date);
     setContractorValuationContractorName(val.lines?.[0]?.contractorName || '');
     setContractorValuationDiscount(val.discount !== undefined ? val.discount : '');
+    setContractorValuationDiscountReason(val.discountReason || val.metadata?.discountReason || '');
     setContractorValuationTax(val.taxRate !== undefined ? val.taxRate : '');
-    setContractorValuationTaxMethod(val.taxMethod || 'period');
+    setContractorValuationTaxMethod(val.taxMethod || 'waived');
     setContractorValuationLinkedClientValId(val.linkedClientValuationId || '');
     setContractorValuationPrevPaid(val.prevPaid !== undefined ? val.prevPaid : '');
     setContractorValuationLines(val.lines || []);
@@ -1962,6 +1967,26 @@ export default function ContractorSuite() {
       return;
     }
 
+    // Verify remaining available quantities for BOQ items
+    for (const line of contractorValuationLines) {
+      if (line.boqItemId) {
+        const boqItem = currentBoqItems.find(item => String(item.id) === String(line.boqItemId));
+        if (boqItem) {
+          const totalBilledByAll = valuations
+            .filter(v => v.isContractor && String(v.projectId) === String(activeProjectId) && v.id !== editingValuationId)
+            .reduce((sum, v) => {
+              const matchLines = v.lines?.filter(l => String(l.boqItemId) === String(line.boqItemId)) || [];
+              return sum + matchLines.reduce((s, l) => s + Number(l.quantity || 0), 0);
+            }, 0);
+          const availableQty = boqItem.quantity - totalBilledByAll;
+          if (Number(line.quantity || 0) > availableQty) {
+            alert(`الكمية الحالية المدخلة للبند [${boqItem.item_name}] هي ${line.quantity} وهي تتجاوز الكمية المتاحة المتبقية (${availableQty.toFixed(2)})`);
+            return;
+          }
+        }
+      }
+    }
+
     let cumulativeGross = 0;
     const linesList = contractorValuationLines.map(line => {
       const prevQty = Number(line.prevQty || 0);
@@ -2026,6 +2051,7 @@ export default function ContractorSuite() {
       totalCurrent: netDue, // This is the net period gross before tax
       cumulativeGross: cumulativeGross,
       discount: discountAmt,
+      discountReason: contractorValuationDiscountReason,
       prevPaid: prevPaidVal,
       taxRate: taxRatePercent,
       taxMethod: contractorValuationTaxMethod,
@@ -2104,7 +2130,13 @@ export default function ContractorSuite() {
             amount: totalAfterAll,
             description: linesList[0]?.description || `مستخلص مقاول رقم ${claimNo}`,
             date: contractorValuationDate,
-            project_id: activeProjectId
+            project_id: activeProjectId,
+            metadata: {
+              lines: linesList,
+              discountReason: contractorValuationDiscountReason,
+              taxRate: taxRatePercent,
+              taxMethod: contractorValuationTaxMethod
+            }
           });
           
           fetchAllData();
@@ -2137,7 +2169,13 @@ export default function ContractorSuite() {
           project_id: activeProjectId,
           status: 'issued',
           company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1,
-          created_by: 'Engineer'
+          created_by: 'Engineer',
+          metadata: {
+            lines: linesList,
+            discountReason: contractorValuationDiscountReason,
+            taxRate: taxRatePercent,
+            taxMethod: contractorValuationTaxMethod
+          }
         });
 
         const newDbId = dbInvoiceRes.data?.id;
@@ -3894,13 +3932,14 @@ export default function ContractorSuite() {
                       <tr>
                         <th className="p-2 text-right text-[10px]">البند المرتبط (BOQ)</th>
                         <th className="p-2 text-right text-[10px] w-48">وصف البند</th>
-                        <th className="p-2 text-center text-[10px] w-20">الوحدة</th>
-                        <th className="p-2 text-center text-[10px] w-16">السابق</th>
+                        <th className="p-2 text-center text-[10px] w-16">الوحدة</th>
+                        <th className="p-2 text-center text-[10px] w-12">السابق</th>
+                        <th className="p-2 text-center text-[10px] w-16">الكمية المتاحة</th>
                         <th className="p-2 text-center text-[10px] w-16">الحالي</th>
-                        <th className="p-2 text-center text-[10px] w-20">سعر الفئة</th>
-                        <th className="p-2 text-center text-[10px] w-16">النسبة %</th>
-                        <th className="p-2 text-right text-[10px] w-28">ملاحظات</th>
-                        <th className="p-2 text-center text-[10px] w-24">الإجمالي</th>
+                        <th className="p-2 text-center text-[10px] w-16">سعر الفئة</th>
+                        <th className="p-2 text-center text-[10px] w-12">النسبة %</th>
+                        <th className="p-2 text-right text-[10px] w-24">ملاحظات</th>
+                        <th className="p-2 text-center text-[10px] w-20">الإجمالي</th>
                         <th className="p-2 text-center text-[10px] w-8"></th>
                       </tr>
                     </thead>
@@ -3911,6 +3950,16 @@ export default function ContractorSuite() {
                         const cumQty = prevQty + currQty;
                         const pct = Number(line.percentage !== undefined ? line.percentage : 100);
                         const lineTotal = cumQty * Number(line.unitPrice || 0) * (pct / 100);
+                        
+                        const boqItem = currentBoqItems.find(item => String(item.id) === String(line.boqItemId));
+                        const totalBilledByAll = valuations
+                          .filter(v => v.isContractor && String(v.projectId) === String(activeProjectId) && v.id !== editingValuationId)
+                          .reduce((sum, v) => {
+                            const matchLines = v.lines?.filter(l => String(l.boqItemId) === String(line.boqItemId)) || [];
+                            return sum + matchLines.reduce((s, l) => s + Number(l.quantity || 0), 0);
+                          }, 0);
+                        const availableQty = boqItem ? (boqItem.quantity - totalBilledByAll) : 0;
+
                         return (
                           <tr key={line.id} className="bg-slate-950/20 hover:bg-orange-500/[0.03] transition-colors">
                             {/* BOQ Item Selector */}
@@ -3959,11 +4008,22 @@ export default function ContractorSuite() {
                                 className="bg-[#111827] border border-slate-700 focus:border-orange-500 rounded-xl px-1 py-1 text-xs text-white font-mono text-center w-full focus:outline-none"
                               />
                             </td>
+                            {/* Available Qty */}
+                            <td className="p-1.5 text-center font-mono font-bold">
+                              {boqItem ? (
+                                <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-lg">
+                                  {availableQty.toFixed(2)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">-</span>
+                              )}
+                            </td>
                             {/* Current Qty */}
                             <td className="p-1.5">
                               <input
                                 type="number"
                                 min="0"
+                                max={boqItem ? Math.max(0, availableQty) : undefined}
                                 step="0.01"
                                 value={line.quantity || 0}
                                 onChange={e => updateContractorLine(line.id, 'quantity', e.target.value)}
@@ -4110,7 +4170,11 @@ export default function ContractorSuite() {
                           <input
                             type="number" min="0" step="0.01"
                             value={contractorValuationDiscount}
-                            onChange={e => setContractorValuationDiscount(e.target.value)}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setContractorValuationDiscount(v);
+                              if (Number(v) <= 0) setContractorValuationDiscountReason('');
+                            }}
                             placeholder="0.00"
                             className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-36"
                           />
@@ -4120,6 +4184,20 @@ export default function ContractorSuite() {
                             </span>
                           )}
                         </div>
+
+                        {discountAmt > 0 && (
+                          <div className="flex items-center gap-3 flex-wrap animate-in fade-in duration-200">
+                            <label className="text-xs text-slate-400 font-bold whitespace-nowrap">سبب الخصم:</label>
+                            <input
+                              type="text"
+                              value={contractorValuationDiscountReason}
+                              onChange={e => setContractorValuationDiscountReason(e.target.value)}
+                              placeholder="مثال: خصم لعدم الالتزام بالجودة المطلوبة..."
+                              className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white focus:outline-none w-80"
+                              required
+                            />
+                          </div>
+                        )}
 
                         {discountAmt > 0 && (
                           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -4135,7 +4213,7 @@ export default function ContractorSuite() {
                           <label className="text-xs text-slate-400 font-bold whitespace-nowrap">ما سبق صرفه (ج.م) — تعديل أو ترك تلقائي:</label>
                           <input
                             type="number" min="0" step="0.01"
-                            value={contractorValuationPrevPaid}
+                            value={contractorValuationPrevPaid !== '' ? contractorValuationPrevPaid : (calculatedPrevPaid > 0 ? String(calculatedPrevPaid) : '0')}
                             onChange={e => setContractorValuationPrevPaid(e.target.value)}
                             placeholder={calculatedPrevPaid.toFixed(2)}
                             className="bg-[#111827] border border-slate-700 focus:border-cyan-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-44"
