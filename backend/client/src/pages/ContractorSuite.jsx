@@ -2818,6 +2818,22 @@ export default function ContractorSuite() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          html, body, #root, main, .flex-1, .page-container, [class*="h-screen"], [class*="overflow-hidden"] {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            position: static !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .exact-print-preview {
+            border: none !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
           body { background: white !important; color: #0f172a !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
           .no-print { display: none !important; }
           .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
@@ -5664,7 +5680,7 @@ export default function ContractorSuite() {
 
       {/* 7. PRINT-ONLY EXCLUSIVE INVOICE DOCUMENT */}
       {selectedPrintValuation && (
-        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview" dir="rtl">
+        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview border-none rounded-none shadow-none" dir="rtl">
           <div className="space-y-6">
 
             {/* Invoice Header */}
@@ -5936,7 +5952,7 @@ export default function ContractorSuite() {
 
               {/* HIGH-FIDELITY RECEIPT PREVIEW */}
               <div className="flex-1 bg-white text-slate-900 p-6 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
-                <div className="relative border-4 border-double border-slate-700 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden">
+                <div className="relative border border-slate-200 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden shadow-sm">
                   
                   {/* Seal Watermark */}
                   <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">
@@ -6069,8 +6085,8 @@ export default function ContractorSuite() {
         const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
         
         return (
-          <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview" dir="rtl">
-            <div className="relative border-4 border-double border-slate-700 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden">
+          <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview border-none rounded-none shadow-none" dir="rtl">
+            <div className="relative border-none p-6 rounded-none bg-white overflow-visible">
               
               {/* Seal Watermark */}
               <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">

@@ -240,14 +240,14 @@
     page-break-inside: avoid !important;
   }
 
-  .enterprise-card:not(.exact-print-preview *), 
-  [class*="rounded-3xl"]:not(.exact-print-preview *), 
-  [class*="rounded-2xl"]:not(.exact-print-preview *), 
-  [class*="rounded-[2.5rem]"]:not(.exact-print-preview *), 
-  [class*="p-8"]:not(.exact-print-preview *), 
-  [class*="p-6"]:not(.exact-print-preview *), 
-  [class*="p-5"]:not(.exact-print-preview *), 
-  [class*="p-4"]:not(.exact-print-preview *) {
+  .enterprise-card:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="rounded-3xl"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="rounded-2xl"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="rounded-[2.5rem]"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="p-8"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="p-6"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="p-5"]:not(.exact-print-preview):not(.exact-print-preview *), 
+  [class*="p-4"]:not(.exact-print-preview):not(.exact-print-preview *) {
     border: 1.5px solid #0f172a !important;
     border-radius: 12px !important;
     padding: 18px !important;
@@ -314,9 +314,23 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-scheme: light !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
   }
   .exact-print-preview * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Reset outer layouts for multi-page print flow */
+  html, body, #root, main, [class*="h-screen"], [class*="overflow-hidden"], .flex-1 {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
