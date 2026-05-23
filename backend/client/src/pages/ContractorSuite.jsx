@@ -2138,7 +2138,10 @@ export default function ContractorSuite() {
           {/* Right Column: Neat Horizontal KPI cards aligned exactly like the screenshot */}
           <div className="flex flex-wrap items-center gap-3 relative z-10 w-full lg:w-auto">
             
-            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+            <div 
+              onClick={() => setActiveTab('boq')}
+              className="bg-[#1b2336] border border-slate-800 hover:border-cyan-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
+            >
               <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">قيمة المقايسة</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-cyan-400">{totals.totalBOQ.toLocaleString()}</span>
@@ -2146,7 +2149,10 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+            <div 
+              onClick={() => setActiveTab('expenses')}
+              className="bg-[#1b2336] border border-slate-800 hover:border-rose-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
+            >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المصروفات الفعلية</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-rose-400">{totals.totalExpenses.toLocaleString()}</span>
@@ -2154,7 +2160,10 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+            <div 
+              onClick={() => setActiveTab('dashboard')}
+              className="bg-[#1b2336] border border-slate-800 hover:border-emerald-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
+            >
               <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">الربح المتوقع</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-emerald-400">{totals.estProfit.toLocaleString()}</span>
@@ -2162,7 +2171,10 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div className="bg-[#1b2336] border border-slate-800 rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24">
+            <div 
+              onClick={() => setActiveTab('client')}
+              className="bg-[#1b2336] border border-slate-800 hover:border-amber-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
+            >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المحصل من العميل</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-amber-400">{totals.totalCollected.toLocaleString()}</span>
