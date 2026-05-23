@@ -1144,6 +1144,12 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
     `);
 
+    // --- AR Invoices Metadata Column ---
+    await runQuery("AR Invoices Metadata JSONB", `
+        ALTER TABLE ar_invoices 
+        ADD COLUMN IF NOT EXISTS metadata JSONB
+    `);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

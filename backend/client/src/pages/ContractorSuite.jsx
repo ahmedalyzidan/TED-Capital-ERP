@@ -147,7 +147,7 @@ export default function ContractorSuite() {
   // Load orgUnits from Governance registry, projects and inventory sales from DB
   const fetchAllData = async () => {
     try {
-      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes] = await Promise.all([
+      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes, clientPaymentHistoryRes, arInvoicesRes, boqRes] = await Promise.all([
         api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } })),
@@ -156,7 +156,10 @@ export default function ContractorSuite() {
         api.get('/dynamic/table/subcontractor_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/subcontractor_items?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/ledger?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/companies?limit=100').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/companies?limit=100').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/client_payment_history?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/ar_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/boq?limit=2000').catch(() => ({ data: { data: [] } }))
       ]);
 
       // 1. Set Org Units
@@ -389,9 +392,80 @@ export default function ContractorSuite() {
           };
         });
 
+      // Map DB client invoices to valuations
+      const dbClientInvoices = arInvoicesRes.data?.data || [];
+      const mappedClientValuations = dbClientInvoices
+        .filter(inv => !inv.is_deleted)
+        .map(inv => {
+          const meta = typeof inv.metadata === 'string' ? JSON.parse(inv.metadata) : (inv.metadata || {});
+          return {
+            id: inv.id,
+            projectId: String(inv.project_id),
+            claimNo: meta.claimNo || `VAL-${inv.id}`,
+            invoiceNo: meta.invoiceNo || inv.invoice_no || `INV-${inv.id}`,
+            date: inv.date ? inv.date.split('T')[0] : '',
+            items: meta.items || [],
+            totalCurrent: Number(inv.base_amount || 0),
+            discount: Number(meta.discount || 0),
+            discountRate: Number(meta.discountRate || 0),
+            taxRate: Number(inv.tax_percent || 0),
+            taxMethod: meta.taxMethod || 'period',
+            totalAfterDiscount: Number(meta.totalAfterDiscount || 0),
+            taxAmount: Number(inv.tax_amount || 0),
+            totalFinal: Number(inv.total_amount || 0),
+            isContractor: false,
+            status: inv.status?.toLowerCase() === 'paid' ? 'paid' : 'issued'
+          };
+        });
+
       setValuations(prev => {
-        const localOnly = prev.filter(v => !String(v.id).startsWith('db-sub-inv-'));
-        return [...localOnly, ...mappedValuations];
+        const localOnly = prev.filter(v => typeof v.id === 'string' && v.id.startsWith('val-'));
+        return [...localOnly, ...mappedValuations, ...mappedClientValuations];
+      });
+
+      // Map DB BOQ items to boqItems state
+      const dbBoqItems = boqRes.data?.data || [];
+      const mappedDbBoq = dbBoqItems.map(item => {
+        const proj = allCombinedProjects.find(p => p.name === item.project_name);
+        return {
+          id: item.id,
+          projectId: proj ? String(proj.id) : activeProjectId,
+          category: item.material_category || 'أعمال صحي',
+          item_name: item.item_name,
+          quantity: Number(item.est_qty || 0),
+          unit: item.uom || 'م٢',
+          price: Number(item.est_unit_price || 0),
+          total: Number(item.est_total_price || 0),
+          notes: item.item_desc || ''
+        };
+      });
+
+      setBoqItems(prev => {
+        const localFiltered = prev.filter(item => isNaN(Number(item.projectId)));
+        return [...localFiltered, ...mappedDbBoq];
+      });
+
+      // Map DB client payments to installments state
+      const dbClientPayments = clientPaymentHistoryRes.data?.data || [];
+      const mappedDbPayments = dbClientPayments
+        .filter(p => !p.is_deleted)
+        .map(p => {
+          const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {});
+          return {
+            id: p.id,
+            projectId: String(p.project_id),
+            amount: Number(p.amount_paid || 0),
+            date: p.payment_date ? p.payment_date.split('T')[0] : '',
+            notes: p.notes || '',
+            valuationId: meta.valuation_id || p.delayed_payment_id || '',
+            paymentMethod: p.payment_method || 'نقدًا',
+            referenceNo: p.reference_no || ''
+          };
+        });
+
+      setInstallments(prev => {
+        const localFiltered = prev.filter(item => isNaN(Number(item.projectId)));
+        return [...localFiltered, ...mappedDbPayments];
       });
 
       // ✅ Clean up old duplicate 'exp-stock-*' entries from localStorage.
@@ -915,22 +989,46 @@ export default function ContractorSuite() {
   };
 
   // BOQ Item CRUD
-  const handleAddBoq = (e) => {
+  const handleAddBoq = async (e) => {
     e.preventDefault();
     if (!newBoq.item_name || newBoq.price <= 0) return;
     const total = Number(newBoq.quantity) * Number(newBoq.price);
-    const newItem = {
-      id: Date.now(),
-      projectId: activeProjectId,
-      ...newBoq,
-      quantity: Number(newBoq.quantity),
-      price: Number(newBoq.price),
-      total
-    };
-    setBoqItems([...boqItems, newItem]);
+
+    const isDbProject = !isNaN(Number(activeProjectId));
+    if (isDbProject) {
+      try {
+        const payload = {
+          project_name: activeProject.name,
+          item_name: newBoq.item_name,
+          material_category: newBoq.category,
+          uom: newBoq.unit,
+          est_qty: Number(newBoq.quantity),
+          est_unit_price: Number(newBoq.price),
+          est_total_price: total,
+          item_desc: newBoq.notes || ''
+        };
+        await api.post('/dynamic/add/boq', payload);
+        triggerNotification('📝 تم إضافة بند جديد للمقايسة بنجاح!');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to add BOQ to DB:", err);
+        alert(err.response?.data?.error || 'فشل في إضافة البند في قاعدة البيانات.');
+      }
+    } else {
+      const newItem = {
+        id: Date.now(),
+        projectId: activeProjectId,
+        ...newBoq,
+        quantity: Number(newBoq.quantity),
+        price: Number(newBoq.price),
+        total
+      };
+      setBoqItems([...boqItems, newItem]);
+      triggerNotification('📝 تم إضافة بند جديد للمقايسة وتحديث الميزانية بنجاح!');
+    }
+
     setNewBoq({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
     setShowAddBoq(false);
-    triggerNotification('📝 تم إضافة بند جديد للمقايسة وتحديث الميزانية بنجاح!');
   };
 
   const handleStartEditBoq = (item) => {
@@ -939,35 +1037,70 @@ export default function ContractorSuite() {
     setEditForm({ ...item });
   };
 
-  const handleSaveEditBoq = (e) => {
+  const handleSaveEditBoq = async (e) => {
     e.preventDefault();
-    setBoqItems(prev => prev.map(item => {
-      if (item.id === editingItemId) {
-        const qty = Number(editForm.quantity);
-        const price = Number(editForm.price);
-        return {
-          ...item,
-          category: editForm.category,
+    const qty = Number(editForm.quantity);
+    const price = Number(editForm.price);
+    const total = qty * price;
+
+    const isDbItem = !isNaN(Number(editingItemId));
+    if (isDbItem) {
+      try {
+        const payload = {
+          material_category: editForm.category,
           item_name: editForm.item_name,
-          quantity: qty,
-          price,
-          notes: editForm.notes,
-          total: qty * price
+          uom: editForm.unit,
+          est_qty: qty,
+          est_unit_price: price,
+          est_total_price: total,
+          item_desc: editForm.notes || ''
         };
+        await api.put(`/dynamic/update/boq/${editingItemId}`, payload);
+        triggerNotification('✍️ تم تعديل بند المقايسة وإعادة احتساب الأرباح بنجاح!');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to update BOQ on DB:", err);
+        alert(err.response?.data?.error || 'فشل في تحديث البند في قاعدة البيانات.');
       }
-      return item;
-    }));
+    } else {
+      setBoqItems(prev => prev.map(item => {
+        if (item.id === editingItemId) {
+          return {
+            ...item,
+            category: editForm.category,
+            item_name: editForm.item_name,
+            quantity: qty,
+            price,
+            notes: editForm.notes,
+            total
+          };
+        }
+        return item;
+      }));
+      triggerNotification('✍️ تم تعديل بند المقايسة وإعادة احتساب الأرباح بنجاح!');
+    }
+
     setEditingItemType(null);
     setEditingItemId(null);
-    triggerNotification('✍️ تم تعديل بند المقايسة وإعادة احتساب الأرباح بنجاح!');
   };
 
-  const handleDeleteBoq = (itemId) => {
+  const handleDeleteBoq = async (itemId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا البند من المقايسة وعكس جميع الحسابات ذات الصلة؟')) return;
 
-    // Financial Impact Reversal is automatic here as the totals state re-calculates dynamically based on the items list
-    setBoqItems(prev => prev.filter(item => item.id !== itemId));
-    triggerNotification('💥 تم حذف بند المقايسة وعكس تأثيره المالي بالكامل من كشف حساب العميل والربحية.', 'warning');
+    const isDbItem = !isNaN(Number(itemId));
+    if (isDbItem) {
+      try {
+        await api.delete(`/dynamic/delete/boq/${itemId}`);
+        triggerNotification('💥 تم حذف بند المقايسة من قاعدة البيانات وعكس تأثيره المالي.', 'warning');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to delete BOQ from DB:", err);
+        alert(err.response?.data?.error || 'فشل في حذف البند من قاعدة البيانات.');
+      }
+    } else {
+      setBoqItems(prev => prev.filter(item => item.id !== itemId));
+      triggerNotification('💥 تم حذف بند المقايسة وعكس تأثيره المالي بالكامل من كشف حساب العميل والربحية.', 'warning');
+    }
   };
 
   // Expenses CRUD
@@ -1119,9 +1252,11 @@ export default function ContractorSuite() {
 
   // Client Installments CRUD
   // Client Installments CRUD
-  const handleAddInstallment = (e) => {
+  const handleAddInstallment = async (e) => {
     e.preventDefault();
     if (newInstallment.amount <= 0) return;
+
+    const isDbProject = !isNaN(Number(activeProjectId));
     const newItem = {
       id: Date.now(),
       projectId: activeProjectId,
@@ -1133,7 +1268,6 @@ export default function ContractorSuite() {
       referenceNo: newInstallment.referenceNo || ''
     };
 
-    // Auto-fill valuation reference to notes if selected
     if (newInstallment.valuationId) {
       const selectedVal = valuations.find(v => v.id === newInstallment.valuationId);
       if (selectedVal) {
@@ -1141,7 +1275,29 @@ export default function ContractorSuite() {
       }
     }
 
-    setInstallments([...installments, newItem]);
+    if (isDbProject) {
+      try {
+        const payload = {
+          project_id: Number(activeProjectId),
+          amount: Number(newInstallment.amount),
+          payment_date: newInstallment.date,
+          payment_method: newInstallment.paymentMethod || 'نقدًا',
+          reference_no: newInstallment.referenceNo || '',
+          notes: newItem.notes || `تحصيل دفعة للمشروع`,
+          valuation_id: newInstallment.valuationId ? (isNaN(Number(newInstallment.valuationId)) ? null : Number(newInstallment.valuationId)) : null
+        };
+        await api.post('/projects/record_collection', payload);
+        triggerNotification('💳 تم تسجيل الدفعة بنجاح وقيد القيود المحاسبية وتعديل حالة المستخلص!');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to save installment to DB:", err);
+        alert(err.response?.data?.error || 'فشل في حفظ الدفعة بقاعدة البيانات.');
+      }
+    } else {
+      setInstallments([...installments, newItem]);
+      triggerNotification('💳 تم قيد الدفعة المستلمة من العميل وربطها بالمستخلص بنجاح!');
+    }
+
     setNewInstallment({
       amount: 0,
       date: new Date().toISOString().split('T')[0],
@@ -1151,7 +1307,6 @@ export default function ContractorSuite() {
       referenceNo: ''
     });
     setShowAddInstallment(false);
-    triggerNotification('💳 تم قيد الدفعة المستلمة من العميل وربطها بالمستخلص بنجاح!');
   };
 
   // Helper to dynamically calculate subcontractor cumulative work, payments (expenses), and outstanding balance
@@ -1539,55 +1694,90 @@ export default function ContractorSuite() {
       status: 'issued'
     };
 
-    if (!editingValuationId) {
+    const isDbProject = !isNaN(Number(activeProjectId));
+    if (isDbProject) {
       try {
-        await api.post('/dynamic/add/ledger', {
+        const payload = {
+          client_name: activeProject.clientName || 'عميل عام',
+          project_name: activeProject.name,
+          project_id: Number(activeProjectId),
           date: valuationDate,
-          account_name: 'عملاء (حسابات مدينة - AR)',
-          debit: Number((totalAfterAll).toFixed(2)),
-          credit: 0,
-          description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
-          cost_center: activeProject?.name,
-          company: activeProject?.company || 'TED CAPITAL',
-          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-        });
-        await api.post('/dynamic/add/ledger', {
-          date: valuationDate,
-          account_name: 'إيرادات مستخلصات وخدمات',
-          debit: 0,
-          credit: Number(totalClaimAmount.toFixed(2)),
-          description: `إيرادات مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
-          cost_center: activeProject?.name,
-          company: activeProject?.company || 'TED CAPITAL',
-          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
-        });
-        if (taxAmt > 0) {
+          base_amount: totalClaimAmount,
+          tax_percent: taxRatePercent,
+          tax_amount: taxAmt,
+          total_amount: totalAfterAll,
+          status: 'issued',
+          metadata: {
+            claimNo,
+            invoiceNo,
+            discount: discountAmt,
+            discountRate,
+            taxRate: taxRatePercent,
+            taxMethod: valuationTaxMethod,
+            totalAfterDiscount: afterDiscount,
+            taxAmount: taxAmt,
+            totalFinal: totalAfterAll,
+            items: itemsList
+          }
+        };
+
+        if (editingValuationId && !isNaN(Number(editingValuationId))) {
+          await api.put(`/dynamic/update/ar_invoices/${editingValuationId}`, payload);
+          triggerNotification(`🎉 تم تعديل مستخلص العميل ${claimNo} في قاعدة البيانات بنجاح!`);
+        } else {
+          await api.post('/dynamic/add/ar_invoices', payload);
+
+          // Manual ledger postings for DB project invoice
           await api.post('/dynamic/add/ledger', {
             date: valuationDate,
-            account_name: 'ضريبة القيمة المضافة (VAT 14%)',
-            debit: 0,
-            credit: Number(taxAmt.toFixed(2)),
-            description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
+            account_name: 'عملاء (حسابات مدينة - AR)',
+            debit: Number((totalAfterAll).toFixed(2)),
+            credit: 0,
+            description: `فاتورة مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name} - للعميل: ${activeProject?.clientName}`,
             cost_center: activeProject?.name,
             company: activeProject?.company || 'TED CAPITAL',
             company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
           });
+          await api.post('/dynamic/add/ledger', {
+            date: valuationDate,
+            account_name: 'إيرادات مستخلصات وخدمات',
+            debit: 0,
+            credit: Number(totalClaimAmount.toFixed(2)),
+            description: `إيرادات مستخلص إنجاز أعمال رقم ${claimNo} - للمشروع: ${activeProject?.name}`,
+            cost_center: activeProject?.name,
+            company: activeProject?.company || 'TED CAPITAL',
+            company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+          });
+          if (taxAmt > 0) {
+            await api.post('/dynamic/add/ledger', {
+              date: valuationDate,
+              account_name: 'ضريبة القيمة المضافة (VAT 14%)',
+              debit: 0,
+              credit: Number(taxAmt.toFixed(2)),
+              description: `ضريبة مستخلص رقم ${claimNo} (${valuationTax}%) - للمشروع: ${activeProject?.name}`,
+              cost_center: activeProject?.name,
+              company: activeProject?.company || 'TED CAPITAL',
+              company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+            });
+          }
+          triggerNotification(`🎉 تم اعتماد مستخلص العميل ${claimNo} بنجاح وقيد الفاتورة والقيود المحاسبية التلقائية بالكامل!`);
         }
-        triggerNotification(`🎉 تم اعتماد مستخلص العميل ${claimNo} بنجاح وقيد الفاتورة والقيود المحاسبية التلقائية بالكامل!`);
+        await fetchAllData();
       } catch (err) {
-        console.error('Failed to post ledger entries for valuation:', err);
-        triggerNotification(`تم إصدار المستخلص ${claimNo} محلياً بنجاح!`, 'warning');
+        console.error("Failed to save client valuation to DB:", err);
+        alert(err.response?.data?.error || 'فشل في حفظ المستخلص بقاعدة البيانات.');
       }
     } else {
-      triggerNotification(`🎉 تم تعديل مستخلص العميل ${claimNo} بنجاح!`);
+      if (editingValuationId) {
+        setValuations(prev => prev.map(v => v.id === editingValuationId ? newValuation : v));
+        setEditingValuationId(null);
+        triggerNotification(`🎉 تم تعديل مستخلص العميل ${claimNo} بنجاح!`);
+      } else {
+        setValuations([...valuations, newValuation]);
+        triggerNotification(`تم إصدار المستخلص ${claimNo} محلياً بنجاح!`, 'warning');
+      }
     }
 
-    if (editingValuationId) {
-      setValuations(prev => prev.map(v => v.id === editingValuationId ? newValuation : v));
-      setEditingValuationId(null);
-    } else {
-      setValuations([...valuations, newValuation]);
-    }
     setShowAddValuation(false);
   };
 
@@ -1802,7 +1992,10 @@ export default function ContractorSuite() {
   const handleDeleteValuation = async (valId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المستخلص نهائياً؟ سيتم إلغاء قيده وعكس تأثيراته المالية.')) return;
     
-    if (String(valId).startsWith('db-sub-inv-')) {
+    const isDbSubInvoice = String(valId).startsWith('db-sub-inv-');
+    const isDbClientInvoice = !isNaN(Number(valId));
+
+    if (isDbSubInvoice) {
       const dbId = valId.replace('db-sub-inv-', '');
       try {
         await api.delete(`/subcontractors/delete_invoice/${dbId}`);
@@ -1810,6 +2003,53 @@ export default function ContractorSuite() {
         triggerNotification('💥 تم حذف المستخلص من قاعدة البيانات وعكس تأثيراته المالية بنجاح.', 'warning');
       } catch (err) {
         console.error('Failed to delete subcontractor invoice from DB:', err);
+        triggerNotification('حدث خطأ أثناء حذف المستخلص من قاعدة البيانات!', 'error');
+      }
+    } else if (isDbClientInvoice) {
+      try {
+        const valObj = valuations.find(v => v.id === valId);
+        const refNo = valObj ? valObj.claimNo : `VAL-${valId}`;
+
+        await api.delete(`/dynamic/delete/ar_invoices/${valId}`);
+
+        // Post accounting reversals swapping Dr/Cr
+        await api.post('/dynamic/add/ledger', {
+          date: new Date().toISOString().split('T')[0],
+          account_name: 'عملاء (حسابات مدينة - AR)',
+          debit: 0,
+          credit: Number((valObj?.totalFinal || 0).toFixed(2)),
+          description: `[عكس قيد حذف] إلغاء مستخلص إنجاز أعمال رقم ${refNo}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+        await api.post('/dynamic/add/ledger', {
+          date: new Date().toISOString().split('T')[0],
+          account_name: 'إيرادات مستخلصات وخدمات',
+          debit: Number((valObj?.totalCurrent || 0).toFixed(2)),
+          credit: 0,
+          description: `[عكس قيد حذف] إلغاء إيرادات مستخلص إنجاز أعمال رقم ${refNo}`,
+          cost_center: activeProject?.name,
+          company: activeProject?.company || 'TED CAPITAL',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+        });
+        if (valObj?.taxAmount > 0) {
+          await api.post('/dynamic/add/ledger', {
+            date: new Date().toISOString().split('T')[0],
+            account_name: 'ضريبة القيمة المضافة (VAT 14%)',
+            debit: Number(valObj.taxAmount.toFixed(2)),
+            credit: 0,
+            description: `[عكس قيد حذف] إلغاء ضريبة مستخلص رقم ${refNo}`,
+            cost_center: activeProject?.name,
+            company: activeProject?.company || 'TED CAPITAL',
+            company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1
+          });
+        }
+
+        fetchAllData();
+        triggerNotification('💥 تم حذف المستخلص من قاعدة البيانات وعكس تأثيراته المالية بنجاح.', 'warning');
+      } catch (err) {
+        console.error('Failed to delete client valuation from DB:', err);
         triggerNotification('حدث خطأ أثناء حذف المستخلص من قاعدة البيانات!', 'error');
       }
     } else {
@@ -1832,30 +2072,58 @@ export default function ContractorSuite() {
     setEditForm({ ...item });
   };
 
-  const handleSaveEditInstallment = (e) => {
+  const handleSaveEditInstallment = async (e) => {
     e.preventDefault();
-    setInstallments(prev => prev.map(item => {
-      if (item.id === editingItemId) {
-        return {
-          ...item,
-          amount: Number(editForm.amount),
+    const isDbItem = !isNaN(Number(editingItemId));
+    if (isDbItem) {
+      try {
+        const payload = {
+          amount_paid: Number(editForm.amount),
           notes: editForm.notes,
-          date: editForm.date
+          payment_date: editForm.date
         };
+        await api.put(`/dynamic/update/client_payment_history/${editingItemId}`, payload);
+        triggerNotification('✍️ تم تعديل الدفعة بنجاح في قاعدة البيانات.');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to update installment on DB:", err);
+        alert(err.response?.data?.error || 'فشل في تحديث الدفعة في قاعدة البيانات.');
       }
-      return item;
-    }));
+    } else {
+      setInstallments(prev => prev.map(item => {
+        if (item.id === editingItemId) {
+          return {
+            ...item,
+            amount: Number(editForm.amount),
+            notes: editForm.notes,
+            date: editForm.date
+          };
+        }
+        return item;
+      }));
+      triggerNotification('✍️ تم تعديل الدفعة النقدية وإعادة تحديث شريط تحصيل العميل.');
+    }
     setEditingItemType(null);
     setEditingItemId(null);
-    triggerNotification('✍️ تم تعديل الدفعة النقدية وإعادة تحديث شريط تحصيل العميل.');
   };
 
-  const handleDeleteInstallment = (itemId) => {
+  const handleDeleteInstallment = async (itemId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذه الدفعة المقبوضة وعكس تأثيرها من حساب المقبوضات؟')) return;
 
-    // Financial Impact Reversal
-    setInstallments(prev => prev.filter(item => item.id !== itemId));
-    triggerNotification('💥 تم حذف الدفعة المستلمة وعكس تأثيرها من حسابات المقبوضات فوراً.', 'warning');
+    const isDbItem = !isNaN(Number(itemId));
+    if (isDbItem) {
+      try {
+        await api.delete(`/dynamic/delete/client_payment_history/${itemId}`);
+        triggerNotification('💥 تم حذف الدفعة المستلمة وعكس تأثيرها Accounting بنجاح من قاعدة البيانات.', 'warning');
+        await fetchAllData();
+      } catch (err) {
+        console.error("Failed to delete installment from DB:", err);
+        alert(err.response?.data?.error || 'فشل في حذف الدفعة من قاعدة البيانات.');
+      }
+    } else {
+      setInstallments(prev => prev.filter(item => item.id !== itemId));
+      triggerNotification('💥 تم حذف الدفعة المستلمة وعكس تأثيرها من حسابات المقبوضات فوراً.', 'warning');
+    }
   };
 
   // --- 5. FILE MANAGER & INTERACTIVE AUTO-SAVE ENGINE ---
