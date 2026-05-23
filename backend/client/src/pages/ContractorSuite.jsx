@@ -244,16 +244,24 @@ export default function ContractorSuite() {
             return false;
           }
           // Avoid duplicate entries: if there is a subcontractor statement with matching ID/reference, skip this ledger entry
-          if (row.reference_no) {
-            if (row.reference_no.startsWith('PMT-')) {
-              const statementId = row.reference_no.replace('PMT-', '');
-              if (statements.some(st => String(st.id) === String(statementId))) {
+          let refNo = row.reference_no || '';
+          if (!refNo && row.description) {
+            const match = row.description.match(/مرجع:\s*([^\s|]+)/);
+            if (match) {
+              refNo = match[1].trim();
+            }
+          }
+          if (refNo) {
+            if (refNo.startsWith('PMT-')) {
+              const statementId = refNo.replace('PMT-', '');
+              if (statements.some(st => String(st.id) === String(statementId) && !st.is_deleted)) {
                 return false;
               }
             }
             const hasMatchingStatement = statements.some(st => {
+              if (st.is_deleted) return false;
               const meta = typeof st.metadata === 'string' ? JSON.parse(st.metadata) : (st.metadata || {});
-              return meta.reference_no && String(meta.reference_no) === String(row.reference_no);
+              return meta.reference_no && String(meta.reference_no) === String(refNo);
             });
             if (hasMatchingStatement) {
               return false;
