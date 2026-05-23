@@ -922,17 +922,18 @@ export default function ContractorSuite() {
       }
     }
 
-    // 2. Previous Spent: Sum of all expenses (expenses + dbExpenses) in this project matching the contractor's name (beneficiary) with a date earlier than or equal to the valuation date.
+    // 2. Previous Spent: Sum of all expenses (expenses + dbExpenses) matching the contractor's name (beneficiary) with a date earlier than or equal to the valuation date.
+    // Subcontractor statements and ledger payments bypass project boundaries.
     const allExpenses = [...expenses, ...dbExpenses];
-    const refDateObj = refDate ? new Date(refDate) : new Date();
     
     let previousSpent = allExpenses
       .filter(e => {
-        const isProjectMatch = String(e.projectId) === String(activeProjectId);
+        const isPayment = String(e.id).startsWith('db-statement-') || String(e.id).startsWith('db-ledger-');
+        const isProjectMatch = isPayment ? true : (String(e.projectId) === String(activeProjectId));
         const isBeneficiaryMatch = e.beneficiary?.trim().toLowerCase() === cName;
         let isDateEarlier = true;
         if (refDate && e.date) {
-          isDateEarlier = new Date(e.date) <= refDateObj;
+          isDateEarlier = e.date <= refDate;
         }
         return isProjectMatch && isBeneficiaryMatch && isDateEarlier;
       })
@@ -941,8 +942,7 @@ export default function ContractorSuite() {
     // Fallback: If previousSpent is 0, check the subcontractorsList paid_amount directly as a fallback
     if (previousSpent === 0) {
       const sub = subcontractorsList.find(s => 
-        s.name?.trim().toLowerCase() === cName &&
-        (!s.project_name || s.project_name === activeProject?.name)
+        s.name?.trim().toLowerCase() === cName
       );
       if (sub && Number(sub.paid_amount) > 0) {
         previousSpent = Number(sub.paid_amount);

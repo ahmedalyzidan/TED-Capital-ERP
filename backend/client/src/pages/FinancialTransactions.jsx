@@ -194,7 +194,12 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       
       const allCombinedSubInvoices = [...mappedDbSubInvoices];
       mappedLocalSubInvoices.forEach(li => {
-        if (!allCombinedSubInvoices.some(inv => String(inv.id) === String(li.id))) {
+        const normLiId = String(li.id).replace('db-sub-inv-', '');
+        const exists = allCombinedSubInvoices.some(inv => {
+          const normInvId = String(inv.id).replace('db-sub-inv-', '');
+          return normInvId === normLiId;
+        });
+        if (!exists) {
           allCombinedSubInvoices.push(li);
         }
       });
