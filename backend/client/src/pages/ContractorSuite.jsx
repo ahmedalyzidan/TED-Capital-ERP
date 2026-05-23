@@ -2814,16 +2814,20 @@ export default function ContractorSuite() {
 
         /* ═══ Print Styles ═══════════════════════════════════════ */
         @media print {
-          body { background: white !important; color: black !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body { background: white !important; color: #0f172a !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
           .no-print { display: none !important; }
           .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
           .print\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
           table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto !important; margin-top: 15px !important; }
           tr { page-break-inside: avoid !important; page-break-after: auto !important; }
           thead { display: table-header-group !important; }
-          th { border: 1px solid #000 !important; padding: 10px 12px !important; background-color: #f8fafc !important; color: #0f172a !important; font-weight: bold !important; text-align: right !important; font-size: 12px !important; }
+          th { border: 1px solid #e2e8f0 !important; padding: 10px 12px !important; background-color: #f8fafc !important; color: #0f172a !important; font-weight: bold !important; text-align: right !important; font-size: 12px !important; }
           th.text-center { text-align: center !important; }
-          td { border: 1px solid #000 !important; padding: 10px 12px !important; color: #0f172a !important; font-size: 11px !important; vertical-align: top !important; }
+          td { border: 1px solid #f1f5f9 !important; padding: 10px 12px !important; color: #334155 !important; font-size: 11px !important; vertical-align: top !important; }
           td.text-center { text-align: center !important; }
           .print\\:text-black { color: #0f172a !important; }
           .print\\:bg-transparent { background: transparent !important; }
@@ -2832,7 +2836,7 @@ export default function ContractorSuite() {
           .print\\:p-0 { padding: 0 !important; }
           .print\\:p-4 { padding: 12px !important; }
           .print\\:border-black { border-color: #0f172a !important; }
-          .print\\:border { border: 1px solid #0f172a !important; }
+          .print\\:border { border: 1px solid #cbd5e1 !important; }
           .print\\:rounded-xl { border-radius: 8px !important; }
           .print\\:mb-6 { margin-bottom: 24px !important; }
           .print\\:grid { display: grid !important; }
@@ -4834,6 +4838,68 @@ export default function ContractorSuite() {
                     {currentValuations.length === 0 && (
                       <div className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم إصدار أي مستخلصات إنجاز مالي للعميل بعد لهذا المشروع.</div>
                     )}
+                  </div>
+                </div>
+
+                {/* ════════════════════════════════════════
+                    📊 الخلاصة المالية للمقاولين من الباطن
+                ════════════════════════════════════════ */}
+                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black text-white flex items-center gap-3">
+                      <span className="p-2 bg-orange-500/10 rounded-xl border border-orange-500/25 text-orange-400">📊</span> الخلاصة المالية للمقاولين (موقف المقاولين)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات المقاولين والمبالغ المنصرفة والمتبقية لهم على مستوى المشروع</p>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
+                    <table className="w-full text-right text-[11px]">
+                      <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
+                        <tr>
+                          <th className="p-3 text-right">اسم المقاول</th>
+                          <th className="p-3 text-center">عدد المستخلصات</th>
+                          <th className="p-3 text-center">إجمالي المستخلصات</th>
+                          <th className="p-3 text-center">إجمالي المنصرف (المدفوع)</th>
+                          <th className="p-3 text-center">إجمالي المتبقي</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {(() => {
+                          const projectContractorVals = valuations.filter(v => v.isContractor && String(v.projectId) === String(activeProjectId));
+                          const contractorNames = Array.from(new Set(
+                            projectContractorVals.flatMap(v => v.lines?.map(ln => (ln.contractorName || contractorValuationContractorName)?.trim()).filter(Boolean) || [])
+                          ));
+
+                          if (contractorNames.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات للمقاولين بعد لهذا المشروع.</td>
+                              </tr>
+                            );
+                          }
+
+                          return contractorNames.map(cName => {
+                            const cVals = projectContractorVals.filter(v => 
+                              v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
+                            );
+                            const countValuations = cVals.length;
+                            const pos = getContractorFinancialPosition(cName, null, null, []);
+
+                            return (
+                              <tr key={cName} className="hover:bg-white/[0.02] text-slate-350 font-bold">
+                                <td className="p-3 text-right text-orange-400 font-black">{cName}</td>
+                                <td className="p-3 text-center font-mono text-slate-400">{countValuations}</td>
+                                <td className="p-3 text-center font-mono text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                <td className="p-3 text-center font-mono text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                <td className={`p-3 text-center font-mono font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-450'}`}>
+                                  {pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 

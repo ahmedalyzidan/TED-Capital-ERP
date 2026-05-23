@@ -177,7 +177,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       },
       3: {
         nameAr: 'ماستر بيلدر للمقاولات العامة والإنشاءات',
-        nameEn: 'MASTER BUILDER FOR GENERAL CONTRACTING & CONSTRUCTION',
+        nameEn: 'MASTER BUILDER FOR CONTRACTING & GENERALITY SUPPLY',
         taxIdAr: 'الرقم الضريبي: ٣٨٢-١٩٥-٤٠٩',
         taxIdEn: 'Tax ID: 382-195-409',
         logoLetter: 'M',
