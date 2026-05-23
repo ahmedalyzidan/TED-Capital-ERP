@@ -147,7 +147,7 @@ export default function ContractorSuite() {
   // Load orgUnits from Governance registry, projects and inventory sales from DB
   const fetchAllData = async () => {
     try {
-      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes, clientPaymentHistoryRes, arInvoicesRes, boqRes, expensesRes] = await Promise.all([
+      const [orgRes, projRes, salesRes, subcontractorsRes, statementsRes, invoicesRes, subItemsRes, ledgerRes, compRes, clientPaymentHistoryRes, arInvoicesRes, boqRes, expensesRes, customersRes] = await Promise.all([
         api.get('/dynamic/table/org_units?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/projects?limit=500').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } })),
@@ -160,7 +160,8 @@ export default function ContractorSuite() {
         api.get('/dynamic/table/client_payment_history?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/ar_invoices?limit=2000').catch(() => ({ data: { data: [] } })),
         api.get('/dynamic/table/boq?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/expenses?limit=5000').catch(() => ({ data: { data: [] } }))
+        api.get('/expenses?limit=5000').catch(() => ({ data: { data: [] } })),
+        api.get('/dynamic/table/customers?limit=1000').catch(() => ({ data: { data: [] } }))
       ]);
 
       // 1. Set Org Units
@@ -168,6 +169,7 @@ export default function ContractorSuite() {
       const subsList = subcontractorsRes.data?.data || [];
       setSubcontractorsList(subsList);
       setCompanies(compRes.data?.data || []);
+      setCustomers(customersRes.data?.data || []);
 
       // 2. Set Projects (Merge database projects with localStorage projects)
       const dbProjects = projRes.data?.data || [];
@@ -701,6 +703,15 @@ export default function ContractorSuite() {
   const [quickAddSubCompanyId, setQuickAddSubCompanyId] = useState('');
   const [companies, setCompanies] = useState([]);
   const [isAddingSub, setIsAddingSub] = useState(false);
+
+  // Quick Add Customer States
+  const [customers, setCustomers] = useState([]);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerCompanyId, setNewCustomerCompanyId] = useState('');
+  const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [quickAddLineId, setQuickAddLineId] = useState(null);
   const [editingValuationId, setEditingValuationId] = useState(null);
 
@@ -1805,6 +1816,71 @@ export default function ContractorSuite() {
     }
   };
 
+  const handleQuickAddCustomer = async (e) => {
+    if (e) e.preventDefault();
+    if (!newCustomerName.trim()) {
+      alert('الرجاء إدخال اسم العميل');
+      return;
+    }
+    setIsAddingCustomer(true);
+
+    const selectedComp = companies.find(c => Number(c.id) === Number(newCustomerCompanyId));
+
+    try {
+      const payload = {
+        name: newCustomerName.trim(),
+        phone: newCustomerPhone.trim() || '',
+        company_name: selectedComp ? selectedComp.name : '',
+        email: newCustomerEmail.trim() || '',
+        company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
+        company: selectedComp ? selectedComp.name : null,
+        created_at: new Date().toISOString()
+      };
+      const res = await api.post('/dynamic/add/customers', payload);
+      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      
+      setCustomers(prev => [newCust, ...prev]);
+      
+      if (showEditProject) {
+        setEditProjectForm(prev => ({ ...prev, clientName: newCust.name }));
+      } else {
+        setNewProjectForm(prev => ({ ...prev, clientName: newCust.name }));
+      }
+
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerEmail('');
+      setNewCustomerCompanyId('');
+      setShowAddCustomerModal(false);
+      triggerNotification(`تمت إضافة العميل "${newCust.name}" واختياره بنجاح!`);
+    } catch (err) {
+      console.error('Error adding customer:', err);
+      const fallbackCust = {
+        id: Date.now(),
+        name: newCustomerName.trim(),
+        phone: newCustomerPhone.trim() || '',
+        company_name: selectedComp ? selectedComp.name : '',
+        email: newCustomerEmail.trim() || '',
+        company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
+        company: selectedComp ? selectedComp.name : null
+      };
+      setCustomers(prev => [fallbackCust, ...prev]);
+      if (showEditProject) {
+        setEditProjectForm(prev => ({ ...prev, clientName: fallbackCust.name }));
+      } else {
+        setNewProjectForm(prev => ({ ...prev, clientName: fallbackCust.name }));
+      }
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerEmail('');
+      setNewCustomerCompanyId('');
+      setShowAddCustomerModal(false);
+      triggerNotification(`تمت إضافة العميل "${fallbackCust.name}" واختياره بنجاح!`);
+    } finally {
+      setIsAddingCustomer(false);
+    }
+  };
+
   const handleAddValuation = async (e) => {
     e.preventDefault();
 
@@ -2888,14 +2964,30 @@ export default function ContractorSuite() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-slate-400 font-bold">اسم العميل المتعاقد</label>
-                <input
-                  type="text"
-                  placeholder="مثال: الأستاذ محمد عبد الرحمن"
-                  value={newProjectForm.clientName}
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] text-slate-400 font-bold">اسم العميل المتعاقد</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCustomerCompanyId('');
+                      setShowAddCustomerModal(true);
+                    }}
+                    className="text-[9px] font-black text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/25 transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                  >
+                    <span>➕</span> {language === 'ar' ? 'إضافة عميل سريع' : 'Quick Add'}
+                  </button>
+                </div>
+                <select
+                  value={newProjectForm.clientName || ''}
                   onChange={e => setNewProjectForm({ ...newProjectForm, clientName: e.target.value })}
                   className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-                />
+                >
+                  <option value="">{language === 'ar' ? '-- اختر العميل المتعاقد --' : '-- Select Contracted Client --'}</option>
+                  <option value="عميل عام">عميل عام</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.name}>{c.name} {c.company_name ? `(${c.company_name})` : ''}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -2964,14 +3056,30 @@ export default function ContractorSuite() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-slate-400 font-bold">اسم العميل المتعاقد</label>
-                <input
-                  type="text"
-                  placeholder="مثال: الأستاذ محمد عبد الرحمن"
-                  value={editProjectForm.clientName}
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] text-slate-400 font-bold">اسم العميل المتعاقد</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCustomerCompanyId('');
+                      setShowAddCustomerModal(true);
+                    }}
+                    className="text-[9px] font-black text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/25 transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                  >
+                    <span>➕</span> {language === 'ar' ? 'إضافة عميل سريع' : 'Quick Add'}
+                  </button>
+                </div>
+                <select
+                  value={editProjectForm.clientName || ''}
                   onChange={e => setEditProjectForm({ ...editProjectForm, clientName: e.target.value })}
                   className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-                />
+                >
+                  <option value="">{language === 'ar' ? '-- اختر العميل المتعاقد --' : '-- Select Contracted Client --'}</option>
+                  <option value="عميل عام">عميل عام</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.name}>{c.name} {c.company_name ? `(${c.company_name})` : ''}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -5029,6 +5137,105 @@ export default function ContractorSuite() {
                   className={`px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${isAddingSub ? 'opacity-50 cursor-wait' : ''}`}
                 >
                   <span>{isAddingSub ? '⏳' : '💾'}</span> {isAddingSub ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ واختيار' : 'Save & Select')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white flex justify-between items-center shadow-md">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-white/10 rounded-2xl text-2xl backdrop-blur-md border border-white/20 shadow-inner">👤</span>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{language === 'ar' ? 'إضافة عميل جديد سريعاً' : 'Quick Add New Customer'}</h3>
+                  <p className="text-xs text-emerald-100 font-bold">{language === 'ar' ? 'أدخل بيانات العميل لإضافته واختياره فوراً' : 'Enter details to instantly add & select customer'}</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAddCustomerModal(false)}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleQuickAddCustomer} className="p-8 space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم العميل / الشركة بالكامل *' : 'Full Customer / Company Name *'}</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder={language === 'ar' ? 'مثال: شركة الأمل الطبية أو د. خالد' : 'e.g. Al-Amal Medical or Dr. Khaled'}
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</label>
+                    <input 
+                      type="tel" 
+                      placeholder={language === 'ar' ? 'الهاتف' : 'Phone'}
+                      value={newCustomerPhone}
+                      onChange={(e) => setNewCustomerPhone(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
+                    <select 
+                      value={newCustomerCompanyId}
+                      onChange={(e) => setNewCustomerCompanyId(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
+                      {companies.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                  <input 
+                    type="email" 
+                    placeholder={language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                    value={newCustomerEmail}
+                    onChange={(e) => setNewCustomerEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomerModal(false)}
+                  className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingCustomer}
+                  className={`px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${isAddingCustomer ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  <span>{isAddingCustomer ? '⏳' : '💾'}</span> {isAddingCustomer ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ واختيار' : 'Save & Select')}
                 </button>
               </div>
             </form>
