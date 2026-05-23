@@ -2857,7 +2857,7 @@ export default function ContractorSuite() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 print-full-width">
+      <div className={`max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 ${(selectedPrintInstallment || selectedPrintValuation) ? 'print:hidden' : 'print-full-width'}`}>
 
         {/* --- DYNAMIC HEADER --- */}
         <div className="relative rounded-[2rem] p-8 overflow-hidden border border-slate-800 bg-[#161e2f] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 shadow-2xl no-print">
