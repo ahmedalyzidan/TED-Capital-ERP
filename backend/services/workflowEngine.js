@@ -9,7 +9,7 @@ const processApprovalWorkflow = async (moduleName, recordId, action, username, u
     try {
         const normalizedUsername = (username || '').toLowerCase().trim();
         const normalizedRole = (userRole || '').toLowerCase().trim();
-        const isSuperAdmin = normalizedUsername === 'admin' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
+        const isSuperAdmin = normalizedUsername === 'admin' || normalizedUsername === 'abzidan' || ['admin', 'super admin', 'superadmin', 'system admin', 'systemadmin'].includes(normalizedRole);
 
         // 1. جلب تعريف مسار العمل للموديول
         const defRes = await pool.query(

