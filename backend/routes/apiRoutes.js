@@ -528,7 +528,7 @@ router.get('/table/:type', async (req, res) => {
             countStr = `SELECT COUNT(*) FROM subcontractors s`;
         } else if (type === 'subcontractor_invoices') {
             prefix = "si.";
-            queryStr = `SELECT si.*, 
+            queryStr = `SELECT si.*, p.name AS project_name, 
                 COALESCE((
                   SELECT SUM(ss.amount) 
                   FROM subcontractor_statements ss 
@@ -543,7 +543,8 @@ router.get('/table/:type', async (req, res) => {
                     AND ss.type = 'صرف مستخلص' 
                     AND (CASE WHEN ss.metadata->>'invoice_id' ~ '^[0-9]+$' THEN (ss.metadata->>'invoice_id')::integer ELSE NULL END) = si.id
                 ), 0)) AS remaining_amount
-              FROM subcontractor_invoices si`;
+              FROM subcontractor_invoices si
+              LEFT JOIN projects p ON si.project_id = p.id`;
             countStr = `SELECT COUNT(*) FROM subcontractor_invoices si`;
         } else if (type === 'subcontractor_items') {
             prefix = "si.";
