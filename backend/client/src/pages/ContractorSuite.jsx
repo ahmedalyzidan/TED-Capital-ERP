@@ -4,6 +4,77 @@ import api from '../services/api';
 import DirectStockIssue from './DirectStockIssue';
 import FinancialTransactions from './FinancialTransactions';
 
+function tafqeet(number) {
+  if (isNaN(number) || number === null) return '';
+  const parts = Number(number).toFixed(2).split('.');
+  const pounds = Number(parts[0]);
+  const piastres = Number(parts[1]);
+  
+  const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+  const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+  const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+  
+  function convertLessThanThousand(n) {
+    if (n === 0) return '';
+    let res = '';
+    const h = Math.floor(n / 100);
+    const remainder = n % 100;
+    if (h > 0) {
+      res += (h === 1 && remainder === 0) ? 'مائة' : (h === 2 && remainder === 0) ? 'مائتان' : hundreds[h];
+      if (remainder > 0) res += ' و ';
+    }
+    if (remainder > 0) {
+      if (remainder < 20) {
+        res += ones[remainder];
+      } else {
+        const o = remainder % 10;
+        const t = Math.floor(remainder / 10);
+        if (o > 0) {
+          res += ones[o] + ' و ';
+        }
+        res += tens[t];
+      }
+    }
+    return res;
+  }
+  
+  function convert(n) {
+    if (n === 0) return 'صفر';
+    let res = '';
+    const billions = Math.floor(n / 1000000000);
+    let remainder = n % 1000000000;
+    const millions = Math.floor(remainder / 1000000);
+    remainder = remainder % 1000000;
+    const thousands = Math.floor(remainder / 1000);
+    const hundredsVal = remainder % 1000;
+    
+    if (billions > 0) {
+      res += (billions === 1 ? 'مليار' : billions === 2 ? 'ملياران' : convertLessThanThousand(billions) + ' مليار');
+      if (remainder > 0) res += ' و ';
+    }
+    if (millions > 0) {
+      res += (millions === 1 ? 'مليون' : millions === 2 ? 'مليونان' : convertLessThanThousand(millions) + ' مليون');
+      const rem = remainder % 1000000;
+      if (rem > 0) res += ' و ';
+    }
+    if (thousands > 0) {
+      res += (thousands === 1 ? 'ألف' : thousands === 2 ? 'ألفان' : thousands >= 3 && thousands <= 10 ? convertLessThanThousand(thousands) + ' آلاف' : convertLessThanThousand(thousands) + ' ألف');
+      const rem = remainder % 1000;
+      if (rem > 0) res += ' و ';
+    }
+    if (hundredsVal > 0) {
+      res += convertLessThanThousand(hundredsVal);
+    }
+    return res;
+  }
+  
+  let result = convert(pounds) + ' جنيه مصري';
+  if (piastres > 0) {
+    result += ' و ' + convert(piastres) + ' قرشاً';
+  }
+  return result + ' فقط لا غير';
+}
+
 export default function ContractorSuite() {
   const { language } = useLanguage();
 
@@ -910,7 +981,7 @@ export default function ContractorSuite() {
     contractorVals.forEach(val => {
       val.lines?.forEach(ln => {
         if (ln.contractorName?.trim().toLowerCase() === cName) {
-          cumulativeWorks += Number(ln.quantity || 0) * Number(ln.unitPrice || 0);
+          cumulativeWorks += ln.total !== undefined ? Number(ln.total) : (Number(ln.quantity || 0) * Number(ln.unitPrice || 0));
         }
       });
     });
@@ -920,7 +991,7 @@ export default function ContractorSuite() {
       currentLines.forEach(ln => {
         const lnContractor = ln.contractorName || contractorValuationContractorName;
         if (lnContractor?.trim().toLowerCase() === cName) {
-          cumulativeWorks += Number(ln.quantity || 0) * Number(ln.unitPrice || 0);
+          cumulativeWorks += ln.total !== undefined ? Number(ln.total) : (Number(ln.quantity || 0) * Number(ln.unitPrice || 0));
         }
       });
     } else if (currentValuationId) {
@@ -928,7 +999,7 @@ export default function ContractorSuite() {
       if (activeValObj) {
         activeValObj.lines?.forEach(ln => {
           if (ln.contractorName?.trim().toLowerCase() === cName) {
-            cumulativeWorks += Number(ln.quantity || 0) * Number(ln.unitPrice || 0);
+            cumulativeWorks += ln.total !== undefined ? Number(ln.total) : (Number(ln.quantity || 0) * Number(ln.unitPrice || 0));
           }
         });
       }
@@ -1914,7 +1985,7 @@ export default function ContractorSuite() {
     } else if (valuationTaxMethod === 'cumulative') {
       let cumulativeGross = 0;
       itemsList.forEach(it => {
-        const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId));
+        const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId) && String(b.projectId) === String(activeProjectId));
         if (boqItem) {
           cumulativeGross += (it.currPercent / 100) * boqItem.quantity * boqItem.price;
         }
@@ -4644,7 +4715,7 @@ export default function ContractorSuite() {
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                       {val.lines.map((ln, li) => {
-                                        const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId));
+                                        const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId) && String(b.projectId) === String(val.projectId || activeProjectId));
                                         const prevQty = Number(ln.prevQty || 0);
                                         const currQty = Number(ln.quantity || 0);
                                         const pct = Number(ln.percentage !== undefined ? ln.percentage : 100);
@@ -4735,7 +4806,7 @@ export default function ContractorSuite() {
                                   </thead>
                                   <tbody className="divide-y divide-white/5">
                                     {val.items?.map(it => {
-                                      const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId));
+                                      const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId) && String(b.projectId) === String(val.projectId || activeProjectId));
                                       if (!boqItem) return null;
                                       const prevPercent = it.completionPercent - it.netPercent;
                                       if (it.netPercent <= 0) return null;
@@ -5327,7 +5398,7 @@ export default function ContractorSuite() {
                       </thead>
                       <tbody className="divide-y divide-slate-200">
                         {selectedPrintValuation.lines?.map((ln, idx) => {
-                          const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId));
+                          const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId) && String(b.projectId) === String(selectedPrintValuation.projectId || activeProjectId));
                           const prevQty = Number(ln.prevQty || 0);
                           const currQty = Number(ln.quantity || 0);
                           const cumQty = Number(ln.cumulativeQty || (prevQty + currQty));
@@ -5366,7 +5437,7 @@ export default function ContractorSuite() {
                       </thead>
                       <tbody className="divide-y divide-slate-200">
                         {selectedPrintValuation.items?.map((it, idx) => {
-                          const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId));
+                          const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId) && String(b.projectId) === String(selectedPrintValuation.projectId || activeProjectId));
                           if (!boqItem) return null;
 
                           const totalQty = boqItem.quantity || 1;
@@ -5594,7 +5665,7 @@ export default function ContractorSuite() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {selectedPrintValuation.lines?.map((ln, idx) => {
-                      const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId));
+                      const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId) && String(b.projectId) === String(selectedPrintValuation.projectId || activeProjectId));
                       const prevQty = Number(ln.prevQty || 0);
                       const currQty = Number(ln.quantity || 0);
                       const cumQty = Number(ln.cumulativeQty || (prevQty + currQty));
@@ -5633,7 +5704,7 @@ export default function ContractorSuite() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {selectedPrintValuation.items?.map((it, idx) => {
-                      const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId));
+                      const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId) && String(b.projectId) === String(selectedPrintValuation.projectId || activeProjectId));
                       if (!boqItem) return null;
 
                       const totalQty = boqItem.quantity || 1;
@@ -5798,89 +5869,106 @@ export default function ContractorSuite() {
               </div>
 
               {/* HIGH-FIDELITY RECEIPT PREVIEW */}
-              <div className="flex-1 bg-white text-slate-900 p-8 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
-                <div className="space-y-6 border-4 border-double border-slate-300 p-6 rounded-2xl">
+              <div className="flex-1 bg-white text-slate-900 p-6 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
+                <div className="relative border-4 border-double border-slate-700 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden">
+                  
+                  {/* Seal Watermark */}
+                  <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">
+                    <div className="text-center font-bold text-red-500 text-[8px] leading-tight">
+                      {activeProject?.company || 'TED CAPITAL'}<br/>
+                      الختم الرسمي<br/>
+                      OFFICIAL SEAL
+                    </div>
+                  </div>
+
                   {/* Header */}
-                  <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
+                  <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4">
                     <div className="space-y-1">
                       {isMasterBuilder ? (
-                        <img src="/master_builder_logo.png" alt="Master Builder" className="h-14 w-auto object-contain mb-1" />
+                        <img src="/master_builder_logo.png" alt="Master Builder" className="h-12 w-auto object-contain mb-1" />
                       ) : (
                         <>
-                          <h1 className="text-lg font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
-                          <p className="text-[9px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
+                          <h1 className="text-base font-black tracking-tight text-slate-850">{activeProject?.company || 'TED CAPITAL'}</h1>
+                          <p className="text-[8px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
                         </>
                       )}
                     </div>
-                    <div className="text-left space-y-1">
-                      <h2 className={`text-xs font-black px-3 py-1.5 rounded-lg text-center ${isContractorVal ? 'bg-orange-50 text-orange-950 border border-orange-200' : 'bg-emerald-50 text-emerald-950 border border-emerald-200'}`}>
+                    <div className="text-center space-y-1">
+                      <h2 className={`text-xs font-black px-4 py-1.5 rounded-lg border shadow-sm ${isContractorVal ? 'bg-orange-50 text-orange-950 border-orange-200' : 'bg-emerald-50 text-emerald-950 border-emerald-200'}`}>
                         {receiptTitle}
                       </h2>
-                      <div className="text-[9px] font-mono font-bold text-slate-600">
-                        <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
-                        <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
-                      </div>
+                      <p className="text-[8px] text-slate-400 font-mono">VOUCHER RECORD</p>
+                    </div>
+                    <div className="text-left text-[9px] font-mono font-bold text-slate-600 space-y-0.5">
+                      <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
+                      <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
                     </div>
                   </div>
 
-                  {/* Body Content */}
-                  <div className="space-y-4 text-xs font-bold text-slate-850">
-                    <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                      <span className="text-slate-500">{relationText}</span>
-                      <span className="text-sm font-black text-slate-950">{nameToDisplay}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                        <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
-                        <span className="text-slate-950 font-black">{activeProject?.name}</span>
+                  {/* Ledger-style structured Grid */}
+                  <div className="border border-slate-300 rounded-xl overflow-hidden text-[11px] font-bold text-slate-800 bg-white shadow-sm">
+                    <div className="grid grid-cols-2 border-b border-slate-300">
+                      <div className="p-3 border-l border-slate-300 bg-slate-50/50">
+                        <span className="text-slate-400 block text-[9px] mb-0.5">{relationText.split(':')[0]}</span>
+                        <span className="text-slate-950 font-black text-xs">{nameToDisplay}</span>
                       </div>
-                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                        <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
-                        <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
-                          {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-                        </span>
+                      <div className="p-3 bg-slate-50/50">
+                        <span className="text-slate-400 block text-[9px] mb-0.5">حساب مشروع / Project:</span>
+                        <span className="text-slate-950">{activeProject?.name}</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                        <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
-                        <span className="text-slate-950 font-black">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                    <div className="grid grid-cols-2 border-b border-slate-300">
+                      <div className="p-3 border-l border-slate-300">
+                        <span className="text-slate-400 block text-[9px] mb-0.5">طريقة الدفع / Payment Method:</span>
+                        <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
                       </div>
-                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                        <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
-                        <span className="text-slate-950 font-mono font-black">{selectedPrintInstallment.referenceNo || '—'}</span>
+                      <div className="p-3">
+                        <span className="text-slate-400 block text-[9px] mb-0.5">الرقم المرجعي أو التفاصيل / Ref No:</span>
+                        <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
                       </div>
+                    </div>
+
+                    <div className="p-3 border-b border-slate-300 bg-slate-50/30">
+                      <span className="text-slate-400 block text-[9px] mb-0.5">مبلغ وقدره تفقيطاً / Amount in Words:</span>
+                      <span className="text-slate-950 text-xs font-black">{tafqeet(selectedPrintInstallment.amount)}</span>
+                    </div>
+
+                    <div className="p-3 border-b border-slate-300">
+                      <span className="text-slate-400 block text-[9px] mb-0.5">وذلك عن بيان / Being:</span>
+                      <span className="text-slate-800 font-medium leading-relaxed">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
                     </div>
 
                     {linkedVal && (
-                      <div className={`p-3.5 rounded-xl border text-[11px] font-bold ${isContractorVal ? 'bg-orange-50/40 border-orange-100 text-orange-950' : 'bg-cyan-50/50 border-cyan-100 text-cyan-950'}`}>
+                      <div className={`p-3 text-[10px] font-bold ${isContractorVal ? 'bg-orange-50/50 text-orange-950' : 'bg-cyan-50/50 text-cyan-950'}`}>
                         <span>🔗 ربط وتسوية مستخلص مالي رقم: </span>
-                        <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
-                        {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
+                        <span className="font-black underline">{linkedVal.claimNo}</span>
+                        {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="font-black">{linkedVal.invoiceNo}</span></span>}
                       </div>
                     )}
+                  </div>
 
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                      <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
-                      <span className="text-slate-800 font-semibold">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
-                    </div>
+                  {/* Highlighted Amount Numeric Box */}
+                  <div className={`flex justify-between items-center px-4 py-2.5 rounded-xl border-2 border-dashed mt-4 shadow-sm ${isContractorVal ? 'bg-orange-50/60 border-orange-300 text-orange-950' : 'bg-emerald-50/60 border-emerald-300 text-emerald-950'}`}>
+                    <span className="text-[10px] uppercase font-mono tracking-wider">المبلغ الفعلي / Net Amount</span>
+                    <span className="font-mono text-sm font-black">
+                      {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                    </span>
                   </div>
 
                   {/* Signatures */}
-                  <div className="grid grid-cols-3 gap-4 pt-10 text-[10px] font-bold text-center text-slate-700">
-                    <div className="space-y-5">
+                  <div className="grid grid-cols-3 gap-4 pt-8 text-[9px] font-bold text-center text-slate-600">
+                    <div className="space-y-4">
                       <div>المستلم / المستفيد</div>
-                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                      <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                     </div>
-                    <div className="space-y-5">
+                    <div className="space-y-4">
                       <div>المدير المالي</div>
-                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                      <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                     </div>
-                    <div className="space-y-5">
+                    <div className="space-y-4">
                       <div>المدير العام</div>
-                      <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                      <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                     </div>
                   </div>
                 </div>
@@ -5915,90 +6003,106 @@ export default function ContractorSuite() {
         const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
         
         return (
-          <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview" dir="rtl">
-            <div className="space-y-6 border-4 border-double border-slate-300 p-6 rounded-2xl">
+          <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview" dir="rtl">
+            <div className="relative border-4 border-double border-slate-700 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden">
+              
+              {/* Seal Watermark */}
+              <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">
+                <div className="text-center font-bold text-red-500 text-[8px] leading-tight">
+                  {activeProject?.company || 'TED CAPITAL'}<br/>
+                  الختم الرسمي<br/>
+                  OFFICIAL SEAL
+                </div>
+              </div>
+
               {/* Header */}
-              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
+              <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4">
                 <div className="space-y-1">
                   {isMasterBuilder ? (
-                    <img src="/master_builder_logo.png" alt="Master Builder" className="h-14 w-auto object-contain mb-1" />
+                    <img src="/master_builder_logo.png" alt="Master Builder" className="h-12 w-auto object-contain mb-1" />
                   ) : (
                     <>
-                      <h1 className="text-lg font-black tracking-tight text-slate-900">{activeProject?.company || 'TED CAPITAL'}</h1>
-                      <p className="text-[9px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
-                      <p className="text-[9px] text-slate-400 font-mono">القاهرة الجديدة - التجمع الخامس - مصر</p>
+                      <h1 className="text-base font-black tracking-tight text-slate-850">{activeProject?.company || 'TED CAPITAL'}</h1>
+                      <p className="text-[8px] text-slate-500 font-bold">لإدارة المشاريع والاستشارات الهندسية والمقاولات</p>
                     </>
                   )}
                 </div>
-                <div className="text-left space-y-1">
-                  <h2 className={`text-xs font-black px-3 py-1.5 rounded-lg text-center ${isContractorVal ? 'bg-orange-50 text-orange-950 border border-orange-200' : 'bg-emerald-50 text-emerald-950 border border-emerald-200'}`}>
+                <div className="text-center space-y-1">
+                  <h2 className={`text-xs font-black px-4 py-1.5 rounded-lg border shadow-sm ${isContractorVal ? 'bg-orange-50 text-orange-950 border-orange-200' : 'bg-emerald-50 text-emerald-950 border-emerald-200'}`}>
                     {receiptTitle}
                   </h2>
-                  <div className="text-[9px] font-mono font-bold text-slate-600">
-                    <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
-                    <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
-                  </div>
+                  <p className="text-[8px] text-slate-400 font-mono">VOUCHER RECORD</p>
+                </div>
+                <div className="text-left text-[9px] font-mono font-bold text-slate-600 space-y-0.5">
+                  <div>رقم الإيصال: <span className="text-slate-900 font-black">REC-{selectedPrintInstallment.id}</span></div>
+                  <div>التاريخ: <span className="text-slate-900 font-black">{selectedPrintInstallment.date}</span></div>
                 </div>
               </div>
 
-              {/* Body Content */}
-              <div className="space-y-4 text-xs font-bold text-slate-850">
-                <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                  <span className="text-slate-500">{relationText}</span>
-                  <span className="text-sm font-black text-slate-950">{nameToDisplay}</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                    <span className="text-[10px] text-slate-400 block mb-1">حساب مشروع:</span>
-                    <span className="text-slate-950 font-black">{activeProject?.name}</span>
+              {/* Ledger-style structured Grid */}
+              <div className="border border-slate-300 rounded-xl overflow-hidden text-[11px] font-bold text-slate-800 bg-white shadow-sm">
+                <div className="grid grid-cols-2 border-b border-slate-300">
+                  <div className="p-3 border-l border-slate-300 bg-slate-50/50">
+                    <span className="text-slate-400 block text-[9px] mb-0.5">{relationText.split(':')[0]}</span>
+                    <span className="text-slate-950 font-black text-xs">{nameToDisplay}</span>
                   </div>
-                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                    <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
-                    <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
-                      {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-                    </span>
+                  <div className="p-3 bg-slate-50/50">
+                    <span className="text-slate-400 block text-[9px] mb-0.5">حساب مشروع / Project:</span>
+                    <span className="text-slate-950">{activeProject?.name}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                    <span className="text-[10px] text-slate-400 block mb-1">طريقة الدفع:</span>
-                    <span className="text-slate-950 font-black">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
+                <div className="grid grid-cols-2 border-b border-slate-300">
+                  <div className="p-3 border-l border-slate-300">
+                    <span className="text-slate-400 block text-[9px] mb-0.5">طريقة الدفع / Payment Method:</span>
+                    <span className="text-slate-950">{selectedPrintInstallment.paymentMethod || 'نقدًا'}</span>
                   </div>
-                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                    <span className="text-[10px] text-slate-400 block mb-1">الرقم المرجعي / التفاصيل:</span>
-                    <span className="text-slate-950 font-mono font-black">{selectedPrintInstallment.referenceNo || '—'}</span>
+                  <div className="p-3">
+                    <span className="text-slate-400 block text-[9px] mb-0.5">الرقم المرجعي أو التفاصيل / Ref No:</span>
+                    <span className="text-slate-950 font-mono">{selectedPrintInstallment.referenceNo || '—'}</span>
                   </div>
+                </div>
+
+                <div className="p-3 border-b border-slate-300 bg-slate-50/30">
+                  <span className="text-slate-400 block text-[9px] mb-0.5">مبلغ وقدره تفقيطاً / Amount in Words:</span>
+                  <span className="text-slate-950 text-xs font-black">{tafqeet(selectedPrintInstallment.amount)}</span>
+                </div>
+
+                <div className="p-3 border-b border-slate-300">
+                  <span className="text-slate-400 block text-[9px] mb-0.5">وذلك عن بيان / Being:</span>
+                  <span className="text-slate-800 font-medium leading-relaxed">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
                 </div>
 
                 {linkedVal && (
-                  <div className={`p-3.5 rounded-xl border text-[11px] font-bold ${isContractorVal ? 'bg-orange-50/40 border-orange-100 text-orange-950' : 'bg-cyan-50/50 border-cyan-100 text-cyan-950'}`}>
+                  <div className={`p-3 text-[10px] font-bold ${isContractorVal ? 'bg-orange-50/50 text-orange-950' : 'bg-cyan-50/50 text-cyan-950'}`}>
                     <span>🔗 ربط وتسوية مستخلص مالي رقم: </span>
-                    <span className="text-slate-900 font-black">{linkedVal.claimNo}</span>
-                    {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="text-slate-900 font-black">{linkedVal.invoiceNo}</span></span>}
+                    <span className="font-black underline">{linkedVal.claimNo}</span>
+                    {linkedVal.invoiceNo && <span> | فاتورة رقم: <span className="font-black">{linkedVal.invoiceNo}</span></span>}
                   </div>
                 )}
+              </div>
 
-                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
-                  <span className="text-[10px] text-slate-400 block mb-1">وذلك عن (البيان):</span>
-                  <span className="text-slate-800 font-semibold">{selectedPrintInstallment.notes || 'دفعة تحت الحساب للمشروع المذكور أعلاه.'}</span>
-                </div>
+              {/* Highlighted Amount Numeric Box */}
+              <div className={`flex justify-between items-center px-4 py-2.5 rounded-xl border-2 border-dashed mt-4 shadow-sm ${isContractorVal ? 'bg-orange-50/60 border-orange-300 text-orange-950' : 'bg-emerald-50/60 border-emerald-300 text-emerald-950'}`}>
+                <span className="text-[10px] uppercase font-mono tracking-wider">المبلغ الفعلي / Net Amount</span>
+                <span className="font-mono text-sm font-black">
+                  {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                </span>
               </div>
 
               {/* Signatures */}
-              <div className="grid grid-cols-3 gap-4 pt-10 text-[10px] font-bold text-center text-slate-700">
-                <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-4 pt-8 text-[9px] font-bold text-center text-slate-600">
+                <div className="space-y-4">
                   <div>المستلم / المستفيد</div>
-                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                  <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <div>المدير المالي</div>
-                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                  <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <div>المدير العام</div>
-                  <div className="border-b border-dashed border-slate-400 w-28 mx-auto"></div>
+                  <div className="border-b border-dashed border-slate-400 w-24 mx-auto"></div>
                 </div>
               </div>
             </div>
