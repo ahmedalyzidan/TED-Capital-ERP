@@ -1756,22 +1756,74 @@ export default function ContractorSuite() {
       }
       setEditingValuationId(null);
     } else {
-      setValuations([...valuations, newContractorVal]);
+      try {
+        const matchedSub = subcontractorsList.find(s => (s.name || s.contractor_name || '').trim().toLowerCase() === uniqueContractorName.trim().toLowerCase());
+        const subId = matchedSub ? matchedSub.id : null;
+
+        const dbInvoiceRes = await api.post('/dynamic/add/subcontractor_invoices', {
+          subcontractor_id: subId,
+          subcontractor_name: uniqueContractorName,
+          curr_qty: Number(linesList[0]?.quantity || 0),
+          prev_qty: Number(linesList[0]?.prevQty || 0),
+          gross_amount: cumulativeGross,
+          retention_deduction: discountAmt,
+          net_amount: totalAfterAll,
+          amount: totalAfterAll,
+          description: linesList[0]?.description || `مستخلص مقاول رقم ${claimNo}`,
+          date: contractorValuationDate,
+          project_id: activeProjectId,
+          status: 'issued',
+          company_id: activeProject?.company === 'PRIMEMED PHARMA' ? 4 : 1,
+          created_by: 'Engineer'
+        });
+
+        const newDbId = dbInvoiceRes.data?.id;
+        let finalVal = newContractorVal;
+        if (newDbId) {
+          finalVal = { ...newContractorVal, id: `db-sub-inv-${newDbId}` };
+        }
+        
+        setValuations(prev => {
+          const localOnly = prev.filter(v => !String(v.id).startsWith('db-sub-inv-'));
+          return [...localOnly, finalVal];
+        });
+        
+        fetchAllData();
+        triggerNotification(`🏗️ تم إصدار مستخلص المقاول وحفظه في قاعدة البيانات بنجاح!`);
+      } catch (err) {
+        console.error('Failed to save contractor valuation to DB:', err);
+        setValuations([...valuations, newContractorVal]);
+        triggerNotification(`تم إصدار المستخلص محلياً بنجاح!`, 'warning');
+      }
     }
     setShowAddContractorValuation(false);
   };
 
-  const handleDeleteValuation = (valId) => {
+  const handleDeleteValuation = async (valId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المستخلص نهائياً؟ سيتم إلغاء قيده وعكس تأثيراته المالية.')) return;
-    setValuations(prev => prev.filter(v => v.id !== valId));
-    // also clean up any payment links
+    
+    if (String(valId).startsWith('db-sub-inv-')) {
+      const dbId = valId.replace('db-sub-inv-', '');
+      try {
+        await api.delete(`/subcontractors/delete_invoice/${dbId}`);
+        fetchAllData();
+        triggerNotification('💥 تم حذف المستخلص من قاعدة البيانات وعكس تأثيراته المالية بنجاح.', 'warning');
+      } catch (err) {
+        console.error('Failed to delete subcontractor invoice from DB:', err);
+        triggerNotification('حدث خطأ أثناء حذف المستخلص من قاعدة البيانات!', 'error');
+      }
+    } else {
+      setValuations(prev => prev.filter(v => v.id !== valId));
+      triggerNotification('💥 تم حذف مستخلص الإنجاز وعكس تأثيراته المالية بنجاح.', 'warning');
+    }
+    
+    // clean up any payment links
     setInstallments(prev => prev.map(inst => {
       if (inst.valuationId === valId) {
         return { ...inst, valuationId: '' };
       }
       return inst;
     }));
-    triggerNotification('💥 تم حذف مستخلص الإنجاز وعكس تأثيراته المالية بنجاح.', 'warning');
   };
 
   const handleStartEditInstallment = (item) => {
