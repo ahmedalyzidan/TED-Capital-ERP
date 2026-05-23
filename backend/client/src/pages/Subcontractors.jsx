@@ -870,10 +870,10 @@ export default function Subcontractors() {
                             {Number(item.actual_material_qty || 0).toLocaleString()} <span className="text-[8px] opacity-60 font-sans">{item.uom}</span>
                           </td>
                           <td className="px-8 py-4 text-center font-bold text-slate-700 font-mono text-sm">
-                            {estCost.toLocaleString()}
+                            {estCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="px-8 py-4 text-center font-bold text-emerald-650 font-mono text-sm">
-                            {actCost.toLocaleString()}
+                            {actCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="px-8 py-4 text-center">
                             <div className="w-20 mx-auto flex flex-col items-center gap-1">
@@ -1030,13 +1030,13 @@ export default function Subcontractors() {
                           <td className={`px-8 py-4 ${language === 'ar' ? 'text-left' : 'text-right'} font-bold text-emerald-650 text-base`}>
                             <div className="flex flex-col">
                               <span>
-                                {Number(inv.remaining_amount !== undefined ? inv.remaining_amount : (inv.net_amount || inv.amount || 0)).toLocaleString()} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
+                                {Number(inv.remaining_amount !== undefined ? inv.remaining_amount : (inv.net_amount || inv.amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] opacity-60 mr-1 font-sans">LCY</span>
                               </span>
                               {inv.remaining_amount !== undefined && (
                                 <span className="text-[10px] text-slate-450 font-normal mt-0.5">
                                   {language === 'ar' 
-                                    ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString()} من أصل ${Number(inv.net_amount || 0).toLocaleString()}` 
-                                    : `Paid: ${Number(inv.total_paid || 0).toLocaleString()} of ${Number(inv.net_amount || 0).toLocaleString()}`}
+                                    ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} من أصل ${Number(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                    : `Paid: ${Number(inv.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${Number(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                 </span>
                               )}
                             </div>

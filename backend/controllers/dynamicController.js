@@ -715,9 +715,9 @@ class DynamicController {
                 await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`COL-${id}`, oldData.reference_no]);
                 const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});
                 const valId = meta.valuation_id;
-                if (valId && !isNaN(parseInt(valId))) {
+                if (valId && !isNaN(parseInt(valId)) && !String(valId).startsWith('val-')) {
                     const valuationId = parseInt(valId);
-                    const invRes = await client.query("SELECT total_amount FROM ar_invoices WHERE id = $1", [valuationId]);
+                    const invRes = await client.query("SELECT total_amount FROM ar_invoices WHERE id = $1::integer", [valuationId]);
                     if (invRes.rows.length > 0) {
                         const totalAmount = parseFloat(invRes.rows[0].total_amount || 0);
                         const paidRes = await client.query(`
@@ -734,7 +734,7 @@ class DynamicController {
                         } else if (totalPaid > 0) {
                             newStatus = 'Partially Paid';
                         }
-                        await client.query("UPDATE ar_invoices SET status = $1 WHERE id = $2", [newStatus, valuationId]);
+                        await client.query("UPDATE ar_invoices SET status = $1 WHERE id = $2::integer", [newStatus, valuationId]);
                     }
                 }
             } else if (type === 'subcontractor_statements') {

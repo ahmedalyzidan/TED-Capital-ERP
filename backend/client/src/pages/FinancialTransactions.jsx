@@ -385,7 +385,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       const payload = {
         client_id: resolvedClientId && !isNaN(parseInt(resolvedClientId)) ? parseInt(resolvedClientId) : null,
         project_id: resolvedProjId,
-        valuation_id: colForm.valuation_id && !isLocalVal ? parseInt(colForm.valuation_id) : null,
+        valuation_id: colForm.valuation_id || null,
         amount: parseFloat(colForm.amount),
         payment_date: colForm.payment_date,
         payment_method: colForm.payment_method,
@@ -394,7 +394,34 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         notes: colForm.notes
       };
 
-      await api.post('/projects/record_collection', payload);
+      const response = await api.post('/projects/record_collection', payload);
+      const paymentId = response.data?.paymentId || response.data?.id;
+
+      // Add record to contractor_installments in localStorage
+      if (colForm.project_id) {
+        const savedInstsStr = localStorage.getItem('contractor_installments');
+        try {
+          const insts = savedInstsStr ? JSON.parse(savedInstsStr) : [];
+          const maxId = insts.reduce((max, item) => (typeof item.id === 'number' && item.id > max ? item.id : max), 0);
+          const newInstId = maxId + 1;
+          const newInst = {
+            id: newInstId,
+            projectId: String(colForm.project_id),
+            amount: parseFloat(colForm.amount),
+            date: colForm.payment_date || new Date().toISOString().split('T')[0],
+            notes: colForm.notes || (colForm.valuation_id ? `سداد دفعة للمستخلص رقم ${colForm.valuation_id}` : `تحصيل دفعة لمشروع`),
+            valuationId: colForm.valuation_id || '',
+            paymentMethod: colForm.payment_method || 'نقداً',
+            referenceNo: colForm.reference_no || '',
+            paymentId: paymentId
+          };
+          const updatedInsts = [...insts, newInst];
+          localStorage.setItem('contractor_installments', JSON.stringify(updatedInsts));
+          window.dispatchEvent(new Event('storage'));
+        } catch (storageErr) {
+          console.error('Failed to add local installment:', storageErr);
+        }
+      }
       
       // Update local valuation status
       if (isLocalVal) {
@@ -503,6 +530,26 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       if (type === 'client_payment_history') {
         const deletedRecord = collectionsLog.find(c => c.id === id);
         if (deletedRecord) {
+          // Revert local installment
+          const savedInstsStr = localStorage.getItem('contractor_installments');
+          if (savedInstsStr) {
+            try {
+              const insts = JSON.parse(savedInstsStr);
+              const updatedInsts = insts.filter(inst => {
+                if (inst.paymentId && Number(inst.paymentId) === Number(id)) return false;
+                const isMatch = 
+                  String(inst.projectId) === String(deletedRecord.project_id) &&
+                  parseFloat(inst.amount) === parseFloat(deletedRecord.amount_paid) &&
+                  String(inst.date) === String(deletedRecord.payment_date).split('T')[0];
+                return !isMatch;
+              });
+              localStorage.setItem('contractor_installments', JSON.stringify(updatedInsts));
+              window.dispatchEvent(new Event('storage'));
+            } catch (err) {
+              console.error('Failed to remove local installment:', err);
+            }
+          }
+
           const meta = typeof deletedRecord.metadata === 'string' ? JSON.parse(deletedRecord.metadata) : (deletedRecord.metadata || {});
           const valId = meta.valuation_id;
           if (valId && String(valId).startsWith('val-')) {
@@ -552,6 +599,16 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         return selectedClientObj && pClientName === selectedClientObj.name.toLowerCase().trim();
       })
     : projects;
+
+  const getInvoiceRemainingAmount = (inv) => {
+    const paymentsForVal = collectionsLog.filter(c => {
+      const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+      return String(meta.valuation_id) === String(inv.id);
+    });
+    const totalPaid = paymentsForVal.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+    const remaining = parseFloat(inv.total_amount || 0) - totalPaid;
+    return remaining > 0 ? remaining : 0;
+  };
 
   const getInvoiceStatus = (inv) => {
     if (!String(inv.id).startsWith('val-')) {
@@ -702,21 +759,21 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
           <div className="p-3 bg-emerald-100 text-emerald-800 rounded-xl text-xl">📥</div>
           <div>
             <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'إجمالي التحصيلات (العملاء)' : 'Total Client Collections'}</p>
-            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalCollections.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalCollections.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
         <div className={getThemeClass("bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse", "bg-[#131b2e] p-5 rounded-2xl border border-slate-800/60 shadow-sm flex items-center space-x-4 space-x-reverse")}>
           <div className="p-3 bg-cyan-100 text-cyan-800 rounded-xl text-xl">📤</div>
           <div>
             <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'إجمالي المدفوعات (المقاولين)' : 'Total Payments to Subs'}</p>
-            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalPayments.toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
         <div className={getThemeClass("bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-4 space-x-reverse md:col-span-2 lg:col-span-1", "bg-[#131b2e] p-5 rounded-2xl border border-slate-800/60 shadow-sm flex items-center space-x-4 space-x-reverse md:col-span-2 lg:col-span-1")}>
           <div className="p-3 bg-indigo-100 text-indigo-800 rounded-xl text-xl">⚖️</div>
           <div>
             <p className={getThemeClass("text-gray-400 text-xs font-semibold", "text-slate-450 text-xs font-semibold")}>{ar ? 'صافي التدفق النقدي الداخلي' : 'Net Inflow Balance'}</p>
-            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{(totalCollections - totalPayments).toLocaleString()} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
+            <h3 className={getThemeClass("text-xl font-bold text-gray-800 mt-1", "text-xl font-bold text-slate-100 mt-1")}>{(totalCollections - totalPayments).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-gray-500">{ar ? 'جنيه' : 'EGP'}</span></h3>
           </div>
         </div>
       </div>
@@ -833,11 +890,19 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- غير مرتبطة بمستخلص --' : '-- Not Linked to a Valuation --'}</option>
-                  {filteredClientInvoices.map(inv => (
-                    <option key={inv.id} value={inv.id}>
-                      {ar ? `مستخلص رقم ${inv.id} - بقيمة ${parseFloat(inv.total_amount || 0).toLocaleString()} جنيه` : `Valuation #${inv.id} - ${inv.total_amount} EGP`}
-                    </option>
-                  ))}
+                  {filteredClientInvoices.map(inv => {
+                    const remaining = getInvoiceRemainingAmount(inv);
+                    const totalAmtStr = parseFloat(inv.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const remainingStr = remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    return (
+                      <option key={inv.id} value={inv.id}>
+                        {ar 
+                          ? `مستخلص رقم ${inv.id} - بقيمة ${totalAmtStr} جنيه (المتبقي: ${remainingStr} جنيه)` 
+                          : `Valuation #${inv.id} - ${totalAmtStr} EGP (Remaining: ${remainingStr} EGP)`
+                        }
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -989,7 +1054,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                             )}
                           </td>
                           <td className={getThemeClass("p-3 text-center font-bold text-emerald-700", "p-3 text-center font-bold text-emerald-400")}>
-                            {parseFloat(c.amount_paid).toLocaleString()}
+                            {parseFloat(c.amount_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className={getThemeClass("p-3 text-center text-gray-500 font-mono", "p-3 text-center text-slate-400 font-mono")}>
                             {new Date(c.payment_date).toLocaleDateString('ar-EG')}
@@ -1102,8 +1167,8 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                     return (
                       <option key={inv.id} value={inv.id}>
                         {ar 
-                          ? `مستخلص #${inv.id} - المقاول: ${subName || 'عام'} - المتبقي: ${parseFloat(remaining).toLocaleString()} جنيه (من أصل ${parseFloat(inv.net_amount || 0).toLocaleString()})` 
-                          : `Invoice #${inv.id} - Sub: ${subName || 'General'} - Bal: ${parseFloat(remaining).toLocaleString()} EGP (of ${parseFloat(inv.net_amount || 0).toLocaleString()})`}
+                          ? `مستخلص #${inv.id} - المقاول: ${subName || 'عام'} - المتبقي: ${parseFloat(remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} جنيه (من أصل ${parseFloat(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` 
+                          : `Invoice #${inv.id} - Sub: ${subName || 'General'} - Bal: ${parseFloat(remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EGP (of ${parseFloat(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
                       </option>
                     );
                   })}
@@ -1257,7 +1322,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                             )}
                           </td>
                           <td className={getThemeClass("p-3 text-center font-bold text-rose-700", "p-3 text-center font-bold text-rose-400")}>
-                            {parseFloat(p.amount).toLocaleString()}
+                            {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className={getThemeClass("p-3 text-center text-gray-500 font-mono", "p-3 text-center text-slate-400 font-mono")}>
                             {new Date(p.created_at || p.payment_date).toLocaleDateString('ar-EG')}

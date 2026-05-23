@@ -484,11 +484,11 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                     <div className="text-left font-mono border-r border-slate-100 pr-6">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">المتبقي غير المسدد</p>
                       <span className="font-black text-rose-600">
-                        {Number(invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.net_amount || 0)).toLocaleString()} ج.م
+                        {Number(invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.net_amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                       </span>
                       {invoice.remaining_amount !== undefined && (
                         <div className="text-[9px] text-slate-400 font-normal mt-0.5">
-                          تم صرف {Number(invoice.total_paid || 0).toLocaleString()} من {Number(invoice.net_amount || 0).toLocaleString()}
+                          تم صرف {Number(invoice.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} من {Number(invoice.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       )}
                     </div>
@@ -625,11 +625,11 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                     <div className="space-y-3 font-bold text-sm">
                       <div className="flex justify-between items-center text-white/70">
                         <span>إجمالي المنجز الحالي (الخام):</span>
-                        <span className="font-mono text-white text-md">{grossAmount.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-white text-md">{grossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       <div className="flex justify-between items-center text-rose-400">
                         <span>ضمان أعمال محتجز ({valForm.retention_percent}%):</span>
-                        <span className="font-mono text-rose-300">- {retentionDeduction.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-rose-300">- {retentionDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       {Number(valForm.advance_deduction) > 0 && (
                         <div className="flex justify-between items-center text-rose-400">
@@ -639,7 +639,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                       )}
                       <div className="flex justify-between items-center text-rose-400">
                         <span>مصلحة الضرائب والدمغات ({valForm.tax_percent}%):</span>
-                        <span className="font-mono text-rose-300">- {taxDeduction.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-rose-300">- {taxDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       {(Number(valForm.penalty_deduction) > 0 || Number(valForm.other_deduction) > 0) && (
                         <div className="flex justify-between items-center text-rose-400">
@@ -653,7 +653,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                   <div className="border-t border-white/10 pt-6 mt-6">
                     <div className="flex justify-between items-center text-emerald-400 mb-6">
                       <span className="text-md font-black">الصافي المستحق المتبقي:</span>
-                      <span className="font-mono text-2xl font-black">{netAmount.toLocaleString()} ج.م</span>
+                      <span className="font-mono text-2xl font-black">{netAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                     </div>
 
                     <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-950/20 active:scale-95 transition-all">
@@ -721,7 +721,7 @@ export default function SmartValuations({ projectId, projectName, fetchWorkspace
                   <option value="">-- اختياري: ربط بمستخلص عميل --</option>
                   {valuations.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.valuation_no} ({new Date(v.valuation_date).toLocaleDateString('ar-EG')}) - صافي: {Number(v.net_amount).toLocaleString()} ج.م
+                      {v.valuation_no} ({new Date(v.valuation_date).toLocaleDateString('ar-EG')}) - صافي: {Number(v.net_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                     </option>
                   ))}
                 </select>

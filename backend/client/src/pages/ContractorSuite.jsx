@@ -2318,7 +2318,7 @@ export default function ContractorSuite() {
             >
               <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">قيمة المقايسة</span>
               <div className="mt-1">
-                <span className="text-base font-black font-mono text-cyan-400">{totals.totalBOQ.toLocaleString()}</span>
+                <span className="text-base font-black font-mono text-cyan-400">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
               </div>
             </div>
@@ -2329,7 +2329,7 @@ export default function ContractorSuite() {
             >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المصروفات الفعلية</span>
               <div className="mt-1">
-                <span className="text-base font-black font-mono text-rose-400">{totals.totalExpenses.toLocaleString()}</span>
+                <span className="text-base font-black font-mono text-rose-400">{totals.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
               </div>
             </div>
@@ -2340,7 +2340,7 @@ export default function ContractorSuite() {
             >
               <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">الربح المتوقع</span>
               <div className="mt-1">
-                <span className="text-base font-black font-mono text-emerald-400">{totals.estProfit.toLocaleString()}</span>
+                <span className="text-base font-black font-mono text-emerald-400">{totals.estProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
               </div>
             </div>
@@ -2351,7 +2351,7 @@ export default function ContractorSuite() {
             >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المحصل من العميل</span>
               <div className="mt-1">
-                <span className="text-base font-black font-mono text-amber-400">{totals.totalCollected.toLocaleString()}</span>
+                <span className="text-base font-black font-mono text-amber-400">{totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className="text-[9px] text-slate-500 font-bold block">ج.م محصل</span>
               </div>
             </div>
@@ -2608,8 +2608,8 @@ export default function ContractorSuite() {
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-bold text-slate-200 group-hover:text-cyan-400 transition-colors">{cat}</span>
                         <div className="flex gap-4 font-mono font-black">
-                          <span className="text-red-400">المصروف: {expVal.toLocaleString()}</span>
-                          <span className="text-slate-400">الموازنة: {boqVal.toLocaleString()}</span>
+                          <span className="text-red-400">المصروف: {expVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-slate-400">الموازنة: {boqVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           <span className={`px-2 py-0.5 rounded text-[10px] ${usagePercent > 100 || (boqVal === 0 && expVal > 0) ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                             usagePercent > 70 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             }`}>
@@ -2656,7 +2656,7 @@ export default function ContractorSuite() {
                     <span className="text-xl">🚨</span>
                     <div>
                       <h4 className="text-white font-black">السيولة النقدية</h4>
-                      <p className="text-slate-400 mt-1 leading-relaxed">إجمالي المحصل {totals.totalCollected.toLocaleString()} ج.م والمصروف الفعلي {totals.totalExpenses.toLocaleString()} ج.م. السيولة في وضع آمن بنسبة تغطية مريحة.</p>
+                      <p className="text-slate-400 mt-1 leading-relaxed">إجمالي المحصل {totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م والمصروف الفعلي {totals.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م. السيولة في وضع آمن بنسبة تغطية مريحة.</p>
                     </div>
                   </div>
                 </div>
@@ -2675,7 +2675,7 @@ export default function ContractorSuite() {
                         <span className="text-xs font-black text-white">{item.beneficiary}</span>
                         <span className="text-[10px] text-slate-500 font-bold mt-0.5">{item.date}</span>
                       </div>
-                      <span className="text-xs font-mono font-black text-red-400">-{item.total.toLocaleString()} جنيه</span>
+                      <span className="text-xs font-mono font-black text-red-400">-{item.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} جنيه</span>
                     </div>
                   ))}
                   {currentExpenses.length === 0 && (
@@ -2850,8 +2850,8 @@ export default function ContractorSuite() {
                         </td>
                         <td className="px-6 py-5 text-center font-mono font-black text-slate-300 print:text-black">{item.quantity}</td>
                         <td className="px-6 py-5 text-center text-xs text-slate-400 print:text-black">{item.unit || '-'}</td>
-                        <td className="px-6 py-5 text-center font-mono font-black text-cyan-400 print:text-black">{item.price.toLocaleString()} ج.م</td>
-                        <td className="px-6 py-5 text-center font-mono font-black text-white text-sm print:text-black">{(item.quantity * item.price).toLocaleString()} ج.م</td>
+                        <td className="px-6 py-5 text-center font-mono font-black text-cyan-400 print:text-black">{item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                        <td className="px-6 py-5 text-center font-mono font-black text-white text-sm print:text-black">{(item.quantity * item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                         <td className="px-6 py-5 text-left no-print">
                           <div className="flex gap-2 justify-end">
                             <button
@@ -3052,7 +3052,7 @@ export default function ContractorSuite() {
               </select>
 
               <div className="text-xs font-bold flex items-center justify-end text-slate-400">
-                إجمالي المصاريف المصفاة: <span className="font-mono text-cyan-400 font-black text-sm mr-2 bg-cyan-500/10 border border-slate-850 px-3 py-1.5 rounded-xl">{filteredExpenses.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()} ج.م</span>
+                إجمالي المصاريف المصفاة: <span className="font-mono text-cyan-400 font-black text-sm mr-2 bg-cyan-500/10 border border-slate-850 px-3 py-1.5 rounded-xl">{filteredExpenses.reduce((acc, curr) => acc + curr.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
               </div>
             </div>
 
@@ -3088,8 +3088,8 @@ export default function ContractorSuite() {
                           </span>
                         </td>
                         <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.qty} {item.unit || 'فاتورة'}</td>
-                        <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.rate.toLocaleString()}</td>
-                        <td className="px-6 py-5 text-center font-mono font-black text-rose-400 text-sm print:text-black">-{item.total.toLocaleString()} جنيه</td>
+                        <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-6 py-5 text-center font-mono font-black text-rose-400 text-sm print:text-black">-{item.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} جنيه</td>
                         <td className="px-6 py-5 text-left no-print">
                           <div className="flex gap-2 justify-end">
                             {!String(item.id).startsWith('db-sale-') && (
@@ -3131,13 +3131,13 @@ export default function ContractorSuite() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 no-print">
               <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-slate-400">قيمة العقد المعتمد (BOQ)</span>
-                <div className="text-xl font-black text-white font-mono">{totals.totalBOQ.toLocaleString()} <span className="text-xs">ج.م</span></div>
+                <div className="text-xl font-black text-white font-mono">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">ج.م</span></div>
                 <div className="text-[9px] text-slate-500 font-bold">مجموع بنود مقايسة البنود والكميات</div>
               </div>
               <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-cyan-400">إجمالي المستخلصات المعتمدة</span>
                 <div className="text-xl font-black text-cyan-400 font-mono">
-                  {totals.totalValuations.toLocaleString()} <span className="text-xs">ج.م</span>
+                  {totals.totalValuations.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">ج.م</span>
                   <span className="mr-2 text-xs font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-slate-850">{totals.valuationProgressPercent.toFixed(1)}%</span>
                 </div>
                 <div className="text-[9px] text-slate-500 font-bold">قيمة مستخلصات الإنجاز الصادرة</div>
@@ -3145,14 +3145,14 @@ export default function ContractorSuite() {
               <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-emerald-400">إجمالي التحصيلات الفعلية</span>
                 <div className="text-xl font-black text-emerald-400 font-mono">
-                  {totals.totalCollected.toLocaleString()} <span className="text-xs">ج.م</span>
+                  {totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">ج.م</span>
                   <span className="mr-2 text-xs font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">{totals.progressPercent.toFixed(1)}%</span>
                 </div>
                 <div className="text-[9px] text-slate-500 font-bold">المبالغ المقبوضة نقدياً وبنكياً</div>
               </div>
               <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-2 hover:scale-[1.02] transition-all duration-300">
                 <span className="text-[10px] font-black text-amber-400">مستخلصات غير مسددة / ذمم مدينة</span>
-                <div className="text-xl font-black text-amber-400 font-mono">{(Math.max(0, totals.totalValuations - totals.totalCollected)).toLocaleString()} <span className="text-xs">ج.م</span></div>
+                <div className="text-xl font-black text-amber-400 font-mono">{(Math.max(0, totals.totalValuations - totals.totalCollected)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">ج.م</span></div>
                 <div className="text-[9px] text-slate-500 font-bold">مستخلصات معتمدة بانتظار سداد العميل</div>
               </div>
             </div>
@@ -3206,8 +3206,8 @@ export default function ContractorSuite() {
                             <td className="p-3 font-black text-slate-200 max-w-[160px]">{item.item_name}</td>
                             <td className="p-3 text-center font-mono text-slate-450 text-[10px]">{item.unit}</td>
                             <td className="p-3 text-center font-mono text-slate-400">{item.quantity}</td>
-                            <td className="p-3 text-center font-mono text-cyan-400">{item.price.toLocaleString()}</td>
-                            <td className="p-3 text-center font-mono text-slate-400">{(item.quantity * item.price).toLocaleString()}</td>
+                            <td className="p-3 text-center font-mono text-cyan-400">{item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-center font-mono text-slate-400">{(item.quantity * item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="p-3 text-center font-mono font-black text-amber-400">{prevPercent.toFixed(1)}%</td>
                             <td className="p-3 text-center">
                               <div className="flex items-center gap-1 justify-center">
@@ -3225,7 +3225,7 @@ export default function ContractorSuite() {
                               </div>
                             </td>
                             <td className="p-3 text-center font-mono font-black text-cyan-400">+{netPercent.toFixed(1)}%</td>
-                            <td className="p-3 text-center font-mono font-black text-emerald-400">{netClaimVal.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</td>
+                            <td className="p-3 text-center font-mono font-black text-emerald-400">{netClaimVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                           </tr>
                         );
                       })}
@@ -3272,7 +3272,7 @@ export default function ContractorSuite() {
                       <>
                         <div className="flex items-center justify-between flex-wrap gap-3">
                           <span className="text-xs font-bold text-slate-400">إجمالي صافي قيمة المستخلص المالي المقدر:</span>
-                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</span>
+                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                         </div>
 
                         {/* Optional Discount % */}
@@ -3289,7 +3289,7 @@ export default function ContractorSuite() {
                             className="bg-[#111827] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none w-28"
                           />
                           {discountRate > 0 && (
-                            <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">- {discountAmt.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م ({discountRate}%)</span>
+                            <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">- {discountAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م ({discountRate}%)</span>
                           )}
                         </div>
 
@@ -3297,7 +3297,7 @@ export default function ContractorSuite() {
                         {discountRate > 0 && (
                           <div className="flex items-center justify-between flex-wrap gap-3">
                             <span className="text-xs font-bold text-slate-400">الإجمالي بعد الخصم:</span>
-                            <span className="font-mono text-base font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-xl">{afterDiscount.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</span>
+                            <span className="font-mono text-base font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-xl">{afterDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                         )}
 
@@ -3324,7 +3324,7 @@ export default function ContractorSuite() {
                             <option value="waived">إعفاء ضريبي</option>
                           </select>
                           {taxAmt > 0 && (
-                            <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-xl">+ {taxAmt.toLocaleString()} ج.م ضريبة</span>
+                            <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-xl">+ {taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م ضريبة</span>
                           )}
                         </div>
 
@@ -3332,7 +3332,7 @@ export default function ContractorSuite() {
                         {(discountRate > 0 || taxAmt > 0) && (
                           <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-slate-700">
                             <span className="text-xs font-black text-white">🏆 الإجمالي النهائي بعد الخصم والضريبة:</span>
-                            <span className="font-mono text-xl font-black text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 px-4 py-1.5 rounded-xl">{totalFinal.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</span>
+                            <span className="font-mono text-xl font-black text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 px-4 py-1.5 rounded-xl">{totalFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                         )}
                       </>
@@ -3566,7 +3566,7 @@ export default function ContractorSuite() {
                             </td>
                             {/* Line Total */}
                             <td className="p-1.5 text-center font-mono font-black text-emerald-400">
-                              {lineTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                              {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             {/* Delete */}
                             <td className="p-1.5 text-center">
@@ -3640,19 +3640,19 @@ export default function ContractorSuite() {
                           <div className="grid grid-cols-3 gap-3 p-4 bg-slate-900/50 rounded-2xl border border-slate-700">
                             <div className="text-center">
                               <div className="text-[10px] text-cyan-400 font-bold mb-1">💰 إجمالي فواتير العميل</div>
-                              <div className="font-mono font-black text-cyan-300 text-sm">{clientGross.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</div>
+                              <div className="font-mono font-black text-cyan-300 text-sm">{clientGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                             </div>
                             <div className="text-center border-x border-slate-700">
                               <div className="text-[10px] text-orange-400 font-bold mb-1">🏗️ إجمالي تكلفة مقاولين</div>
-                              <div className="font-mono font-black text-orange-300 text-sm">{totalContractorWithNew.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</div>
-                              <div className="text-[9px] text-slate-500 mt-0.5">({allContractorCost.toLocaleString(undefined,{maximumFractionDigits:0})} سابق + {netDue.toLocaleString(undefined,{maximumFractionDigits:0})} حالي للفترة)</div>
+                              <div className="font-mono font-black text-orange-300 text-sm">{totalContractorWithNew.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                              <div className="text-[9px] text-slate-500 mt-0.5">({allContractorCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} سابق + {netDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} حالي للفترة)</div>
                             </div>
                             <div className="text-center">
                               <div className="text-[10px] font-bold mb-1" style={{ color: profitEstimate >= 0 ? '#4ade80' : '#f87171' }}>
                                 {profitEstimate >= 0 ? '📈 صافي الربح المتوقع' : '📉 خسارة متوقعة'}
                               </div>
                               <div className="font-mono font-black text-sm" style={{ color: profitEstimate >= 0 ? '#4ade80' : '#f87171' }}>
-                                {profitEstimate.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م
+                                {profitEstimate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                               </div>
                             </div>
                           </div>
@@ -3660,7 +3660,7 @@ export default function ContractorSuite() {
 
                         <div className="flex items-center justify-between flex-wrap gap-3">
                           <span className="text-xs font-bold text-slate-400">إجمالي قيمة المستخلص التراكمي:</span>
-                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م</span>
+                          <span className="font-mono text-lg font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">{gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                         </div>
 
                         {/* Discount — fixed amount */}
@@ -3675,7 +3675,7 @@ export default function ContractorSuite() {
                           />
                           {discountAmt > 0 && (
                             <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
-                              - {discountAmt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م
+                              - {discountAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                             </span>
                           )}
                         </div>
@@ -3684,7 +3684,7 @@ export default function ContractorSuite() {
                           <div className="flex items-center justify-between flex-wrap gap-3">
                             <span className="text-xs font-bold text-slate-400">الإجمالي بعد الخصم:</span>
                             <span className="font-mono text-base font-black text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-xl">
-                              {afterDiscount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م
+                              {afterDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                             </span>
                           </div>
                         )}
@@ -3701,7 +3701,7 @@ export default function ContractorSuite() {
                           />
                           {prevPaidVal > 0 && (
                             <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-xl">
-                              سابق: {prevPaidVal.toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م
+                              سابق: {prevPaidVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                             </span>
                           )}
                         </div>
@@ -3727,7 +3727,7 @@ export default function ContractorSuite() {
                           </select>
                           {taxAmt > 0 && (
                             <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-xl">
-                              + {taxAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م ضريبة
+                              + {taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م ضريبة
                             </span>
                           )}
                         </div>
@@ -3735,7 +3735,7 @@ export default function ContractorSuite() {
                         <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-orange-500/20">
                           <span className="text-xs font-black text-white">🏆 الأجمالى المتبقى المستحق للفترة (شامل الضريبة):</span>
                           <span className="font-mono text-xl font-black text-orange-300 bg-orange-500/15 border border-orange-400/30 px-4 py-1.5 rounded-xl">
-                            {totalFinal.toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.م
+                            {totalFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                           </span>
                         </div>
                       </>
@@ -3828,20 +3828,20 @@ export default function ContractorSuite() {
                         <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-black">
                           <div className="bg-slate-900/60 rounded-xl p-2.5">
                             <div className="text-slate-400 mb-1">إجمالي المقايسة</div>
-                            <div className="font-mono text-white">{totalBoq.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                            <div className="font-mono text-white">{totalBoq.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                           </div>
                           <div className="bg-cyan-500/10 rounded-xl p-2.5 border border-cyan-500/20">
                             <div className="text-cyan-400 mb-1">مُستخلص للعميل</div>
-                            <div className="font-mono text-cyan-300">{totalBilled.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                            <div className="font-mono text-cyan-300">{totalBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                             <div className="text-[9px] text-slate-400">{totalBoq > 0 ? ((totalBilled/totalBoq)*100).toFixed(1) : 0}%</div>
                           </div>
                           <div className="bg-orange-500/10 rounded-xl p-2.5 border border-orange-500/20">
                             <div className="text-orange-400 mb-1">تكلفة مقاولين</div>
-                            <div className="font-mono text-orange-300">{totalContractor.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                            <div className="font-mono text-orange-300">{totalContractor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                           </div>
                           <div className={`rounded-xl p-2.5 border ${totalProfit >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
                             <div className={`mb-1 ${totalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{totalProfit >= 0 ? '📈 ربح' : '📉 خسارة'}</div>
-                            <div className={`font-mono font-black ${totalProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{totalProfit.toLocaleString(undefined,{maximumFractionDigits:0})} ج.م</div>
+                            <div className={`font-mono font-black ${totalProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                           </div>
                         </div>
 
@@ -3866,8 +3866,8 @@ export default function ContractorSuite() {
                                     <div className="font-bold text-slate-200">{item.item_name}</div>
                                     <div className="text-[9px] text-slate-500">{item.category}</div>
                                   </td>
-                                  <td className="p-2.5 text-center font-mono text-slate-300">{boqValue.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-                                  <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{clientBilledAmt.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                                  <td className="p-2.5 text-center font-mono text-slate-300">{boqValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{clientBilledAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                   <td className="p-2.5 text-center">
                                     <div className="flex items-center gap-1.5 justify-center">
                                       <div className="flex-1 bg-slate-800 rounded-full h-1.5 max-w-[50px]">
@@ -3876,9 +3876,9 @@ export default function ContractorSuite() {
                                       <span className="font-mono font-black text-cyan-400">{clientBilledPct.toFixed(1)}%</span>
                                     </div>
                                   </td>
-                                  <td className="p-2.5 text-center font-mono text-orange-400">{contractorCost.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                                  <td className="p-2.5 text-center font-mono text-orange-400">{contractorCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                   <td className="p-2.5 text-center font-mono font-black" style={{ color: profit >= 0 ? '#4ade80' : '#f87171' }}>
-                                    {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined,{maximumFractionDigits:0})}
+                                    {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="p-2.5 text-center font-mono font-black" style={{ color: margin === null ? '#64748b' : margin >= 0 ? '#4ade80' : '#f87171' }}>
                                     {margin === null ? '—' : `${margin.toFixed(1)}%`}
@@ -3938,7 +3938,7 @@ export default function ContractorSuite() {
                               <div className="font-mono font-black text-slate-200 text-sm">{val.totalCurrent.toLocaleString()} ج.م</div>
                               {/* VAT line: only if taxRate > 0 */}
                               {val.taxRate > 0 && (
-                                <div className="text-[9px] text-cyan-400 font-bold mt-0.5">شامل القيمة المضافة ({val.taxRate}%): {val.totalFinal?.toLocaleString() || (val.totalCurrent * (1 + val.taxRate / 100)).toLocaleString()} ج.م</div>
+                                <div className="text-[9px] text-cyan-400 font-bold mt-0.5">شامل القيمة المضافة ({val.taxRate}%): {val.totalFinal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || (val.totalCurrent * (1 + val.taxRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                               )}
                             </div>
 
@@ -4020,7 +4020,7 @@ export default function ContractorSuite() {
                                             <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">+{currQty.toLocaleString()}</td>
                                             <td className="p-2.5 text-center font-mono">{(ln.unitPrice || 0).toLocaleString()}</td>
                                             <td className="p-2.5 text-center font-mono">{pct}%</td>
-                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">{lineTotal.toLocaleString()} ج.م</td>
+                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                                             <td 
                                               className="p-2.5 text-right font-bold transition-all border border-slate-800/30"
                                               style={{
@@ -4058,15 +4058,15 @@ export default function ContractorSuite() {
                                               <div className="grid grid-cols-3 gap-1 text-center">
                                                 <div>
                                                   <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">إجمالي الأعمال</div>
-                                                  <div className="font-mono text-[9px] font-black text-white">{pos.cumulativeWorks.toLocaleString()}</div>
+                                                  <div className="font-mono text-[9px] font-black text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                 </div>
                                                 <div className="border-r border-white/5">
                                                   <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">المصروف/المدفوع</div>
-                                                  <div className="font-mono text-[9px] font-black text-rose-400">{pos.previousSpent.toLocaleString()}</div>
+                                                  <div className="font-mono text-[9px] font-black text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                 </div>
                                                 <div className="border-r border-white/5">
                                                   <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">صافي المستحق</div>
-                                                  <div className={`font-mono text-[9px] font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pos.currentNetDue.toLocaleString()}</div>
+                                                  <div className={`font-mono text-[9px] font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                 </div>
                                               </div>
                                             </div>
@@ -4102,11 +4102,11 @@ export default function ContractorSuite() {
                                         <tr key={it.boqItemId} className="hover:bg-white/5 text-slate-300">
                                           <td className="p-2.5 font-bold">{boqItem.item_name}<div className="text-[8px] text-slate-500">{boqItem.category}</div></td>
                                           <td className="p-2.5 text-center font-mono text-slate-400">{boqItem.unit}</td>
-                                          <td className="p-2.5 text-center font-mono">{boqItem.price.toLocaleString()}</td>
+                                          <td className="p-2.5 text-center font-mono">{boqItem.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                           <td className="p-2.5 text-center font-mono text-amber-500/80">{prevPercent.toFixed(1)}%</td>
                                           <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{it.completionPercent.toFixed(1)}%</td>
                                           <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">+{it.netPercent.toFixed(1)}%</td>
-                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{it.currentAmount.toLocaleString()} ج.م</td>
+                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{it.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                                         </tr>
                                       );
                                     })}
@@ -4162,7 +4162,7 @@ export default function ContractorSuite() {
 
                             <div className="flex items-center gap-4">
                               <div className="flex items-baseline gap-1 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 font-black">
-                                <span className="text-lg font-black font-mono tracking-tighter">+{inst.amount.toLocaleString()}</span>
+                                <span className="text-lg font-black font-mono tracking-tighter">+{inst.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 <span className="text-[10px] font-bold">جنيه</span>
                               </div>
                               <div className="flex flex-col gap-1.5 no-print text-left">
@@ -4225,7 +4225,7 @@ export default function ContractorSuite() {
                           const unpaidAmount = valTotal - paidAmount;
                           return (
                             <option key={val.id} value={val.id}>
-                              {val.claimNo} (غير مسدد: {unpaidAmount.toLocaleString()} ج.م)
+                              {val.claimNo} (غير مسدد: {unpaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
                             </option>
                           );
                         })}
@@ -4307,7 +4307,7 @@ export default function ContractorSuite() {
                   </div>
 
                   <div className="text-xs text-slate-300 leading-relaxed font-bold">
-                    محصل <span className="font-mono text-cyan-400 font-black">{totals.totalCollected.toLocaleString()}</span> ج.م من عقد بقيمة <span className="font-mono text-white font-black">{totals.totalBOQ.toLocaleString()}</span> ج.م.
+                    محصل <span className="font-mono text-cyan-400 font-black">{totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م من عقد بقيمة <span className="font-mono text-white font-black">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م.
                   </div>
                 </div>
               </div>
@@ -4698,7 +4698,7 @@ export default function ContractorSuite() {
                               <td className="p-2 border border-slate-200 text-center font-mono text-slate-500">{prevQty.toLocaleString()}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono text-cyan-800">+{currQty.toLocaleString()}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{cumQty.toLocaleString()}</td>
-                              <td className="p-2 border border-slate-200 text-center font-mono text-emerald-800">{periodVal.toLocaleString()} ج.م</td>
+                              <td className="p-2 border border-slate-200 text-center font-mono text-emerald-800">{periodVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                             </tr>
                           );
                         })}
@@ -4737,12 +4737,12 @@ export default function ContractorSuite() {
                               <td className="p-2 border border-slate-200 text-center font-mono">{idx + 1}</td>
                               <td className="p-2 border border-slate-200">{boqItem.item_name}</td>
                               <td className="p-2 border border-slate-200 text-center">{boqItem.unit}</td>
-                              <td className="p-2 border border-slate-200 text-center font-mono">{boqItem.price.toLocaleString()}</td>
+                              <td className="p-2 border border-slate-200 text-center font-mono">{boqItem.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono">{totalQty}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono text-slate-500">{prevQty}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono text-slate-800">{currQty}</td>
                               <td className="p-2 border border-slate-200 text-center font-mono text-cyan-750">+{netQty}</td>
-                              <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{it.currentAmount.toLocaleString()} ج.م</td>
+                              <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{it.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                             </tr>
                           );
                         })}
@@ -4765,9 +4765,9 @@ export default function ContractorSuite() {
                               <div key={subName} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[9px] flex justify-between items-center">
                                 <span className="font-black text-slate-800">{subName}</span>
                                 <div className="flex gap-3 font-mono">
-                                  <div>تراكمي الأعمال: <span className="font-bold">{pos.cumulativeWorks.toLocaleString()} ج.م</span></div>
-                                  <div>المصروف/المدفوع: <span className="font-bold text-rose-700">{pos.previousSpent.toLocaleString()} ج.م</span></div>
-                                  <div>صافي المستحق: <span className="font-black text-emerald-700">{pos.currentNetDue.toLocaleString()} ج.م</span></div>
+                                  <div>تراكمي الأعمال: <span className="font-bold">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
+                                  <div>المصروف/المدفوع: <span className="font-bold text-rose-700">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
+                                  <div>صافي المستحق: <span className="font-black text-emerald-700">{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
                                 </div>
                               </div>
                             );
@@ -4805,24 +4805,24 @@ export default function ContractorSuite() {
                         <>
                           <div className="flex justify-between items-center text-slate-800">
                             <span>إجمالى المستخلص:</span>
-                            <span className="font-mono text-xs">{grossVal.toLocaleString()} ج.م</span>
+                            <span className="font-mono text-xs">{grossVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                           <div className="flex justify-between items-center text-rose-700">
                             <span>أجمالى الخصم:</span>
-                            <span className="font-mono text-xs">-{discountVal.toLocaleString()} ج.م</span>
+                            <span className="font-mono text-xs">-{discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                           <div className="flex justify-between items-center text-slate-900 border-t border-slate-200 pt-1.5">
                             <span>الأجمالى بعد الخصم:</span>
-                            <span className="font-mono text-xs">{afterDiscountVal.toLocaleString()} ج.م</span>
+                            <span className="font-mono text-xs">{afterDiscountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                           <div className="flex justify-between items-center text-slate-650">
                             <span>ماسبق صرفه:</span>
-                            <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString()} ج.م</span>
+                            <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                           {taxVal > 0 && (
                             <div className="flex justify-between items-center text-slate-500 text-[10px]">
                               <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
-                              <span className="font-mono text-xs">+{taxVal.toLocaleString()} ج.م</span>
+                              <span className="font-mono text-xs">+{taxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                             </div>
                           )}
                           {taxVal === 0 && taxRateVal > 0 && (
@@ -4833,7 +4833,7 @@ export default function ContractorSuite() {
                           )}
                           <div className="flex justify-between items-center text-sm font-black border-t-2 border-slate-950 pt-2 text-slate-950">
                             <span>الأجمالى المتبقى:</span>
-                            <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString()} ج.م</span>
+                            <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                           </div>
                         </>
                       );
@@ -4965,7 +4965,7 @@ export default function ContractorSuite() {
                           <td className="p-2 border border-slate-200 text-center font-mono text-slate-500">{prevQty.toLocaleString()}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono text-cyan-800">+{currQty.toLocaleString()}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{cumQty.toLocaleString()}</td>
-                          <td className="p-2 border border-slate-200 text-center font-mono text-emerald-800">{periodVal.toLocaleString()} ج.م</td>
+                          <td className="p-2 border border-slate-200 text-center font-mono text-emerald-800">{periodVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                         </tr>
                       );
                     })}
@@ -5004,12 +5004,12 @@ export default function ContractorSuite() {
                           <td className="p-2 border border-slate-200 text-center font-mono">{idx + 1}</td>
                           <td className="p-2 border border-slate-200">{boqItem.item_name}</td>
                           <td className="p-2 border border-slate-200 text-center">{boqItem.unit}</td>
-                          <td className="p-2 border border-slate-200 text-center font-mono">{boqItem.price.toLocaleString()}</td>
+                          <td className="p-2 border border-slate-200 text-center font-mono">{boqItem.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono">{totalQty}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono text-slate-500">{prevQty}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono text-slate-800">{currQty}</td>
                           <td className="p-2 border border-slate-200 text-center font-mono text-cyan-750">+{netQty}</td>
-                          <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{it.currentAmount.toLocaleString()} ج.م</td>
+                          <td className="p-2 border border-slate-200 text-center font-mono text-slate-900">{it.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
                         </tr>
                       );
                     })}
@@ -5032,9 +5032,9 @@ export default function ContractorSuite() {
                           <div key={subName} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[9px] flex justify-between items-center">
                             <span className="font-black text-slate-800">{subName}</span>
                             <div className="flex gap-3 font-mono">
-                              <div>تراكمي الأعمال: <span className="font-bold">{pos.cumulativeWorks.toLocaleString()} ج.م</span></div>
-                              <div>المصروف/المدفوع: <span className="font-bold text-rose-700">{pos.previousSpent.toLocaleString()} ج.م</span></div>
-                              <div>صافي المستحق: <span className="font-black text-emerald-700">{pos.currentNetDue.toLocaleString()} ج.م</span></div>
+                              <div>تراكمي الأعمال: <span className="font-bold">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
+                              <div>المصروف/المدفوع: <span className="font-bold text-rose-700">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
+                              <div>صافي المستحق: <span className="font-black text-emerald-700">{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span></div>
                             </div>
                           </div>
                         );
@@ -5072,24 +5072,24 @@ export default function ContractorSuite() {
                     <>
                       <div className="flex justify-between items-center text-slate-800">
                         <span>إجمالى المستخلص:</span>
-                        <span className="font-mono text-xs">{grossVal.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-xs">{grossVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       <div className="flex justify-between items-center text-rose-700">
                         <span>أجمالى الخصم:</span>
-                        <span className="font-mono text-xs">-{discountVal.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-xs">-{discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-900 border-t border-slate-200 pt-1.5">
                         <span>الأجمالى بعد الخصم:</span>
-                        <span className="font-mono text-xs">{afterDiscountVal.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-xs">{afterDiscountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-650">
                         <span>ماسبق صرفه:</span>
-                        <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-xs">{previouslyDisbursedVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                       {taxVal > 0 && (
                         <div className="flex justify-between items-center text-slate-500 text-[10px]">
                           <span>ضريبة القيمة المضافة ({taxRateVal}%):</span>
-                          <span className="font-mono text-xs">+{taxVal.toLocaleString()} ج.م</span>
+                          <span className="font-mono text-xs">+{taxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                         </div>
                       )}
                       {taxVal === 0 && taxRateVal > 0 && (
@@ -5100,7 +5100,7 @@ export default function ContractorSuite() {
                       )}
                       <div className="flex justify-between items-center text-sm font-black border-t-2 border-slate-950 pt-2 text-slate-950">
                         <span>الأجمالى المتبقى:</span>
-                        <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString()} ج.م</span>
+                        <span className="font-mono text-base font-black text-emerald-800">{remainingVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                       </div>
                     </>
                   );
@@ -5193,7 +5193,7 @@ export default function ContractorSuite() {
                       <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                         <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
                         <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
-                          {selectedPrintInstallment.amount.toLocaleString()} ج.م
+                          {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                         </span>
                       </div>
                     </div>
@@ -5311,7 +5311,7 @@ export default function ContractorSuite() {
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-150 shadow-sm">
                     <span className="text-[10px] text-slate-400 block mb-1">مبلغ وقدره:</span>
                     <span className={`text-sm font-black ${isContractorVal ? 'text-orange-700' : 'text-emerald-800'}`}>
-                      {selectedPrintInstallment.amount.toLocaleString()} ج.م
+                      {selectedPrintInstallment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
                     </span>
                   </div>
                 </div>
