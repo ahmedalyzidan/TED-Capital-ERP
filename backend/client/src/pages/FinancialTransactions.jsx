@@ -190,6 +190,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         source_account: 'صندوق نقدية - تيد كابيتال',
         notes: ''
       });
+      fetchMasterData();
       fetchLogs();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل تسجيل التحصيل' : 'Failed to record collection'));
@@ -237,6 +238,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         source_account: 'نقدية بالبنوك والصندوق',
         notes: ''
       });
+      fetchMasterData();
       fetchLogs();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل تسجيل السداد' : 'Failed to record payment'));
@@ -252,6 +254,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       setLoading(true);
       await api.delete(`/dynamic/delete/${type}/${id}`);
       triggerAlert('success', ar ? 'تم عكس المعاملة وإلغاء القيود بنجاح' : 'Transaction reversed successfully');
+      fetchMasterData();
       fetchLogs();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل إلغاء المعاملة' : 'Failed to reverse transaction'));
