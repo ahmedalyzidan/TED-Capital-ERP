@@ -264,101 +264,97 @@ function PharmaInventory() {
         };
       });
 
-      // If database has very few pharma items (e.g. only the Amoxicillin test items), append the stunning set of initial pharmaceutical mock data
-      if (mappedPharma.length < 10) {
-        const mockPharma = [
-          {
-            id: 9001,
-            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
-            active_substance: 'Paracetamol 500mg + Caffeine 65mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 1500,
-            remaining_qty: getMockItemRemainingQty(9001, 1420),
-            unit_cost: 45,
-            batch_no: 'PH-2026-A10',
-            expiry_date: '2028-05-20',
-            supplier: 'شركة جلاكسو سميث كلاين (GSK)',
-            min_stock_level: 100,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9002,
-            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
-            active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 600,
-            remaining_qty: getMockItemRemainingQty(9002, 510),
-            unit_cost: 130,
-            batch_no: 'PH-2026-B88',
-            expiry_date: '2027-11-15',
-            supplier: 'شركة إيفا فارما',
-            min_stock_level: 50,
-            uom: 'علبة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9003,
-            item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
-            active_substance: 'Morphine Sulfate 10mg/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'CONTROLLED',
-            storage_temp: '20-25°C (قفل أمني)',
-            quantity: 50,
-            remaining_qty: getMockItemRemainingQty(9003, 45),
-            unit_cost: 350,
-            batch_no: 'NAR-2026-X01',
-            expiry_date: '2027-02-01',
-            supplier: 'هيئة الشراء الموحد (مراقبة)',
-            min_stock_level: 10,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9004,
-            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
-            active_substance: 'Insulin Glargine 100 IU/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'COLD_CHAIN',
-            storage_temp: '2-8°C (ثلاجة)',
-            quantity: 200,
-            remaining_qty: getMockItemRemainingQty(9004, 185),
-            unit_cost: 280,
-            batch_no: 'COLD-2026-99',
-            expiry_date: '2026-12-10',
-            supplier: 'شركة سانوفي (Sanofi)',
-            min_stock_level: 30,
-            uom: 'فيال',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          },
-          {
-            id: 9005,
-            item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
-            active_substance: 'Sodium Chloride 0.9%',
-            dosage_form: 'محلول وريدي (IV Infusion)',
-            pharma_category: 'CONSUMABLE',
-            storage_temp: '20-25°C (غرفة)',
-            quantity: 3000,
-            remaining_qty: getMockItemRemainingQty(9005, 2650),
-            unit_cost: 25,
-            batch_no: 'NS-2026-777',
-            expiry_date: '2029-01-01',
-            supplier: 'شركة النيل للأدوية',
-            min_stock_level: 500,
-            uom: 'عبوة',
-            warehouse: 'مخزن الصيدليات والأدوية'
-          }
-        ];
-        const existingIds = new Set(mappedPharma.map(i => i.id));
-        const newMocks = mockPharma.filter(m => !existingIds.has(m.id));
-        pharmaItems = [...mappedPharma, ...newMocks];
-      } else {
-        pharmaItems = mappedPharma;
-      }
+      // Merge database items with mock items to keep them visible for demo purposes, preventing duplicates by matching names
+      const mockPharma = [
+        {
+          id: 9001,
+          item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
+          active_substance: 'Paracetamol 500mg + Caffeine 65mg',
+          dosage_form: 'أقراص (Tablets)',
+          pharma_category: 'OTC',
+          storage_temp: '20-25°C (غرفة)',
+          quantity: 1500,
+          remaining_qty: getMockItemRemainingQty(9001, 1420),
+          unit_cost: 45,
+          batch_no: 'PH-2026-A10',
+          expiry_date: '2028-05-20',
+          supplier: 'شركة جلاكسو سميث كلاين (GSK)',
+          min_stock_level: 100,
+          uom: 'علبة',
+          warehouse: 'مخزن الصيدليات والأدوية'
+        },
+        {
+          id: 9002,
+          item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
+          active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
+          dosage_form: 'أقراص (Tablets)',
+          pharma_category: 'OTC',
+          storage_temp: '20-25°C (غرفة)',
+          quantity: 600,
+          remaining_qty: getMockItemRemainingQty(9002, 510),
+          unit_cost: 130,
+          batch_no: 'PH-2026-B88',
+          expiry_date: '2027-11-15',
+          supplier: 'شركة إيفا فارما',
+          min_stock_level: 50,
+          uom: 'علبة',
+          warehouse: 'مخزن الصيدليات والأدوية'
+        },
+        {
+          id: 9003,
+          item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
+          active_substance: 'Morphine Sulfate 10mg/ml',
+          dosage_form: 'حقن فيال (Vials)',
+          pharma_category: 'CONTROLLED',
+          storage_temp: '20-25°C (قفل أمني)',
+          quantity: 50,
+          remaining_qty: getMockItemRemainingQty(9003, 45),
+          unit_cost: 350,
+          batch_no: 'NAR-2026-X01',
+          expiry_date: '2027-02-01',
+          supplier: 'هيئة الشراء الموحد (مراقبة)',
+          min_stock_level: 10,
+          uom: 'فيال',
+          warehouse: 'مخزن الصيدليات والأدوية'
+        },
+        {
+          id: 9004,
+          item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
+          active_substance: 'Insulin Glargine 100 IU/ml',
+          dosage_form: 'حقن فيال (Vials)',
+          pharma_category: 'COLD_CHAIN',
+          storage_temp: '2-8°C (ثلاجة)',
+          quantity: 200,
+          remaining_qty: getMockItemRemainingQty(9004, 185),
+          unit_cost: 280,
+          batch_no: 'COLD-2026-99',
+          expiry_date: '2026-12-10',
+          supplier: 'شركة سانوفي (Sanofi)',
+          min_stock_level: 30,
+          uom: 'فيال',
+          warehouse: 'مخزن الصيدليات والأدوية'
+        },
+        {
+          id: 9005,
+          item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
+          active_substance: 'Sodium Chloride 0.9%',
+          dosage_form: 'محلول وريدي (IV Infusion)',
+          pharma_category: 'CONSUMABLE',
+          storage_temp: '20-25°C (غرفة)',
+          quantity: 3000,
+          remaining_qty: getMockItemRemainingQty(9005, 2650),
+          unit_cost: 25,
+          batch_no: 'NS-2026-777',
+          expiry_date: '2029-01-01',
+          supplier: 'شركة النيل للأدوية',
+          min_stock_level: 500,
+          uom: 'عبوة',
+          warehouse: 'مخزن الصيدليات والأدوية'
+        }
+      ];
+      const existingNames = new Set(mappedPharma.map(i => i.item_name?.toLowerCase().trim()));
+      const newMocks = mockPharma.filter(m => !existingNames.has(m.item_name?.toLowerCase().trim()));
+      pharmaItems = [...mappedPharma, ...newMocks];
 
       setItems(pharmaItems);
 
@@ -717,14 +713,14 @@ function PharmaInventory() {
 
       if (modalMode === 'ADD') {
         await api.post('/dynamic/add/inventory_items', payload);
-        fetchData();
+        await fetchData();
         alert("تم تسجيل الصنف الدوائي الجديد بنجاح في مخزن الصيدليات!");
       } else {
         if (selectedDrug.id > 9000 && selectedDrug.id < 9010) {
           setItems(prev => prev.map(i => i.id === selectedDrug.id ? { ...i, ...payload } : i));
         } else {
           await api.put(`/dynamic/update/inventory_items/${selectedDrug.id}`, payload);
-          fetchData();
+          await fetchData();
         }
         alert("تم تحديث بيانات الصنف الدوائي بنجاح!");
       }
