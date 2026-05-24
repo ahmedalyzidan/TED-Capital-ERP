@@ -46,6 +46,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - erp_uploads:/app/uploads
     networks:
       - erp-network
     deploy:
@@ -90,3 +92,5 @@ networks:
 
 volumes:
   postgres_data:
+  erp_uploads:
+

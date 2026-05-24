@@ -36,6 +36,8 @@ services:
     depends_on:
       db-staging:
         condition: service_healthy
+    volumes:
+      - erp_uploads_staging:/app/uploads
     networks:
       - erp-network-staging
 
@@ -61,3 +63,5 @@ networks:
 
 volumes:
   postgres_data_staging:
+  erp_uploads_staging:
+

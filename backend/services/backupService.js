@@ -65,8 +65,13 @@ class BackupService {
 
     async restoreBackup(backupId) {
         const res = await pool.query("SELECT * FROM system_backups WHERE id = $1", [backupId]);
-        if (res.rows.length === 0) throw new Error("Backup not found.");
+        if (res.rows.length === 0) throw new Error("Backup not found in registry.");
         const backup = res.rows[0];
+
+        // Defensive check: Ensure backup file exists physically on disk
+        if (!fs.existsSync(backup.file_path)) {
+            throw new Error(`Backup file '${backup.backup_name}' is physically missing from the server's uploads folder. The folder might have been cleared during a system rebuild. Please create a new backup first.`);
+        }
 
         return new Promise((resolve, reject) => {
             const isDocker = process.env.DB_HOST === 'db';
@@ -90,6 +95,7 @@ class BackupService {
             });
         });
     }
+
 }
 
 module.exports = new BackupService();
