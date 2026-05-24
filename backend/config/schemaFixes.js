@@ -280,6 +280,42 @@ const applySchemaFixes = async () => {
         )
     `);
 
+    // --- Accountant Custodies & Expenses Tables ---
+    await runQuery("Custodies Table", `
+        CREATE TABLE IF NOT EXISTS custodies (
+            id SERIAL PRIMARY KEY,
+            custodian_name VARCHAR(255) NOT NULL,
+            assigned_amount NUMERIC(20,6) NOT NULL,
+            remaining_amount NUMERIC(20,6) NOT NULL,
+            status VARCHAR(50) DEFAULT 'Active',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by VARCHAR(100),
+            company_id INTEGER DEFAULT 1
+        )
+    `);
+    await runQuery("Custody Expenses Table", `
+        CREATE TABLE IF NOT EXISTS custody_expenses (
+            id SERIAL PRIMARY KEY,
+            custody_id INTEGER REFERENCES custodies(id) ON DELETE CASCADE,
+            expense_category VARCHAR(150) NOT NULL,
+            amount NUMERIC(20,6) NOT NULL,
+            expense_date DATE NOT NULL,
+            recipient_name VARCHAR(255),
+            notes TEXT,
+            receipt_attachment VARCHAR(512),
+            status VARCHAR(50) DEFAULT 'Pending',
+            approved_by VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    await runQuery("Seed Custody Account", `
+        INSERT INTO chart_of_accounts (account_code, account_name, company_entity, hierarchy_level, parent_account, account_type, currency, manual_entry_allowed, company_id)
+        VALUES ('1170', 'عهد الموظفين والعهدة النقدية', 'All', 3, '1100', 'Asset', 'EGP', true, 1)
+        ON CONFLICT (account_code, company_id) DO NOTHING
+    `);
+
     await runQuery("Inventory Movements Table", `CREATE TABLE IF NOT EXISTS inventory_movements (
         id SERIAL PRIMARY KEY,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,

@@ -88,6 +88,7 @@ export default function Layout() {
         apDue: "المستحقات للدفع (AP) 📉",
         inventoryValuation: "تقييم المخزون 📊",
         cashBalances: "أرصدة النقدية 💵",
+        custody: "إدارة العهد النقدية 💼",
         salesHistory: "6. سجل المبيعات والصرف 🛒",
         constructionStore: "مستودع الإنشاءات 🧱"
       }
@@ -152,6 +153,7 @@ export default function Layout() {
         apDue: "AP Due List 📉",
         inventoryValuation: "Inventory Valuation 📊",
         cashBalances: "Cash Balances 💵",
+        custody: "Custody Management 💼",
         salesHistory: "6. Sales & Dispense History 🛒",
         constructionStore: "Construction Store 🧱"
       }
@@ -275,6 +277,7 @@ export default function Layout() {
           badgeKey: 'finance',
           children: [
             { path: '/finance/360', icon: '⚡', label: t.menu.accountant360, perm: 'FIN_VIEW_LEDGER' },
+            { path: '/finance/custody', icon: '💼', label: t.menu.custody, perm: 'FIN_VIEW_LEDGER' },
             { path: '/finance/ar-due', icon: '📈', label: t.menu.arDue, perm: 'FIN_VIEW_LEDGER' },
             { path: '/finance/ap-due', icon: '📉', label: t.menu.apDue, perm: 'FIN_VIEW_LEDGER' },
             { path: '/finance/inventory-valuation', icon: '📊', label: t.menu.inventoryValuation, perm: 'FIN_VIEW_LEDGER' },

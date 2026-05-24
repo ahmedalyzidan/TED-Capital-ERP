@@ -48,6 +48,7 @@ import StrategicCommandCenter from './pages/StrategicCommandCenter';
 import Accountant360 from './pages/Accountant360';
 import Portal360 from './pages/Portal360';
 import FinancialTransactions from './pages/FinancialTransactions';
+import CustodyManagement from './pages/CustodyManagement';
 import { RBACProtectedRoute } from './components/RBAC';
 
 // Route Protection
@@ -86,6 +87,7 @@ function App() {
               <Route path="/finance/inventory-valuation" element={<InventoryValuation />} />
               <Route path="/finance/cash-balances" element={<CashBalances />} />
               <Route path="/finance/360" element={<Accountant360 />} />
+              <Route path="/finance/custody" element={<CustodyManagement />} />
               <Route path="/finance/transactions" element={<FinancialTransactions />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/inter-company" element={<InterCompany />} />
