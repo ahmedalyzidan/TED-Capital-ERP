@@ -716,12 +716,8 @@ function PharmaInventory() {
       };
 
       if (modalMode === 'ADD') {
-        if (items.some(i => i.id === 9001)) {
-          setItems(prev => [{ id: Date.now(), ...payload }, ...prev]);
-        } else {
-          await api.post('/dynamic/add/inventory_items', payload);
-          fetchData();
-        }
+        await api.post('/dynamic/add/inventory_items', payload);
+        fetchData();
         alert("تم تسجيل الصنف الدوائي الجديد بنجاح في مخزن الصيدليات!");
       } else {
         if (selectedDrug.id > 9000 && selectedDrug.id < 9010) {
