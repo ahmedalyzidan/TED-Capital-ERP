@@ -133,12 +133,26 @@ class DynamicController {
                             ) 
                             FROM ledger l 
                             JOIN chart_of_accounts sub ON l.account_name = sub.account_name
-                            WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
+                            WHERE l.is_deleted = false AND sub.is_deleted = false
+                              AND CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
                             ), 
                         0) AS balance 
                     FROM chart_of_accounts c
                 `;
                 countStr = `SELECT COUNT(*) FROM chart_of_accounts c`;
+            } else if (type === 'ledger') {
+                prefix = "l.";
+                queryStr = `
+                    SELECT l.*, 
+                           COALESCE(p.name, l.cost_center) as cost_center 
+                    FROM ledger l
+                    LEFT JOIN projects p ON (l.cost_center = p.name OR l.cost_center = CAST(p.id AS VARCHAR))
+                `;
+                countStr = `
+                    SELECT COUNT(*) 
+                    FROM ledger l
+                    LEFT JOIN projects p ON (l.cost_center = p.name OR l.cost_center = CAST(p.id AS VARCHAR))
+                `;
             } else if (type === 'client_payment_history') {
                 prefix = "cph.";
                 queryStr = `SELECT cph.*, c.name AS client_name, p.name AS project_name

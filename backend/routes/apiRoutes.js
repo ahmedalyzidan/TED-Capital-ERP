@@ -656,7 +656,8 @@ router.get('/table/:type', async (req, res) => {
                         ) 
                         FROM ledger l 
                         JOIN chart_of_accounts sub ON l.account_name = sub.account_name
-                        WHERE CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
+                        WHERE l.is_deleted = false AND sub.is_deleted = false
+                          AND CAST(sub.account_code AS TEXT) LIKE (RTRIM(CAST(c.account_code AS TEXT), '0') || '%')
                         ${ledgerCompanyFilter}
                         ), 
                     0) AS balance 
@@ -665,8 +666,20 @@ router.get('/table/:type', async (req, res) => {
             countStr = `SELECT COUNT(*) FROM chart_of_accounts c`;
         } else if (type === 'ledger') { // 🌟 التعديل هنا: إضافة تعريف جدول القيود المحاسبية 🌟
             prefix = "l.";
-            queryStr = `SELECT l.* FROM ledger l`;
-            countStr = `SELECT COUNT(*) FROM ledger l`;
+            queryStr = `
+                SELECT l.*, 
+                       COALESCE(p.name, l.cost_center) as cost_center 
+                FROM ledger l
+                LEFT JOIN projects p ON (l.cost_center = p.name OR l.cost_center = CAST(p.id AS VARCHAR))
+                WHERE l.is_deleted = false
+            `;
+            countStr = `
+                SELECT COUNT(*) 
+                FROM ledger l
+                LEFT JOIN projects p ON (l.cost_center = p.name OR l.cost_center = CAST(p.id AS VARCHAR))
+                WHERE l.is_deleted = false
+            `;
+            hasMainWhere = true;
         } else if (type === 'gl_mappings') {
             prefix = "g.";
             queryStr = `SELECT g.* FROM gl_mappings g`;
