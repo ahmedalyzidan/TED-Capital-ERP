@@ -11,6 +11,7 @@ router.get('/backups', requireAdmin, systemController.getBackups);
 router.post('/backup/manual', requireAdmin, systemController.manualBackup);
 router.post('/backups/manual', requireAdmin, systemController.manualBackup); // Alias for plural call from frontend
 router.post('/backup/restore', requireAdmin, systemController.restoreBackup);
+router.post('/backups/restore', requireAdmin, systemController.restoreBackup); // Alias for plural call from frontend
 router.post('/backup/recover', requireAdmin, systemController.recoverBackups); // New: Manual Recovery
 router.post('/factory-reset', requireAdmin, systemController.factoryReset);
 router.get('/purgeable-tables', requireAdmin, systemController.getPurgeableTables);
