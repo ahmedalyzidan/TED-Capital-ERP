@@ -2904,9 +2904,9 @@ export default function ContractorSuite() {
             </div>
             
             <p className="text-slate-400 font-bold text-xs mt-1.5 leading-relaxed">
-              العميل الحالي للمشروع: <span className="text-white font-black">{activeProject.clientName}</span> | الشركة: <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
-              {activeProject.projectManager && <> | مدير المشروع: <span className="text-emerald-450 font-black">{activeProject.projectManager}</span></>}
-              {activeProject.startDate && <> | تاريخ البدء: <span className="text-amber-450 font-black">{activeProject.startDate}</span></>}
+              {language === 'ar' ? 'العميل الحالي للمشروع:' : 'Current Project Client:'} <span className="text-white font-black">{activeProject.clientName}</span> | {language === 'ar' ? 'الشركة:' : 'Company:'} <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
+              {activeProject.projectManager && <> | {language === 'ar' ? 'مدير المشروع:' : 'Project Manager:'} <span className="text-emerald-450 font-black">{activeProject.projectManager}</span></>}
+              {activeProject.startDate && <> | {language === 'ar' ? 'تاريخ البدء:' : 'Start Date:'} <span className="text-amber-450 font-black">{activeProject.startDate}</span></>}
             </p>
 
             {/* Segmented Cost Center Toggle */}
@@ -2915,27 +2915,27 @@ export default function ContractorSuite() {
                 type="button"
                 onClick={() => {
                   setCostCenterMode('project');
-                  triggerNotification('📁 تم تفعيل مركز تكلفة المشروع');
+                  triggerNotification(language === 'ar' ? '📁 تم تفعيل مركز تكلفة المشروع' : '📁 Project Cost Center Activated');
                 }}
                 className={`px-3.5 py-2 rounded-lg text-[10px] font-black transition-all border ${costCenterMode === 'project'
                   ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md'
                   : 'text-slate-450 border-transparent hover:text-slate-200'
                   }`}
               >
-                📁 مركز تكلفة المشروع
+                {language === 'ar' ? '📁 مركز تكلفة المشروع' : '📁 Project Cost Center'}
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setCostCenterMode('company');
-                  triggerNotification(`🏢 تم تفعيل مركز تكلفة الشركة: ${activeProject.company || 'TED CAPITAL'}`);
+                  triggerNotification(language === 'ar' ? `🏢 تم تفعيل مركز تكلفة الشركة: ${activeProject.company || 'TED CAPITAL'}` : `🏢 Company Cost Center Activated: ${activeProject.company || 'TED CAPITAL'}`);
                 }}
                 className={`px-3.5 py-2 rounded-lg text-[10px] font-black transition-all border ${costCenterMode === 'company'
                   ? 'bg-[#1e293b] border-indigo-500/30 text-indigo-400 shadow-md'
                   : 'text-slate-450 border-transparent hover:text-slate-200'
                   }`}
               >
-                🏢 مركز تكلفة الشركة
+                {language === 'ar' ? '🏢 مركز تكلفة الشركة' : '🏢 Company Cost Center'}
               </button>
             </div>
 
@@ -2948,19 +2948,19 @@ export default function ContractorSuite() {
                 }}
                 className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-slate-800 hover:border-cyan-500/40 text-cyan-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
               >
-                <span>{showAddProject ? '✕ إغلاق' : '+ مشروع جديد'}</span>
+                <span>{showAddProject ? (language === 'ar' ? '✕ إغلاق' : '✕ Close') : (language === 'ar' ? '+ مشروع جديد' : '+ New Project')}</span>
               </button>
               <button
                 onClick={handleStartEditProject}
                 className="bg-amber-500/10 hover:bg-amber-500/20 border border-slate-850 hover:border-amber-500/40 text-amber-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
               >
-                <span>تعديل المشروع ✏️</span>
+                <span>{language === 'ar' ? 'تعديل المشروع ✏️' : 'Edit Project ✏️'}</span>
               </button>
               <button
                 onClick={() => handleDeleteProject(activeProjectId)}
                 className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 text-[10px] font-black px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
               >
-                <span>حذف المشروع 🗑️</span>
+                <span>{language === 'ar' ? 'حذف المشروع 🗑️' : 'Delete Project 🗑️'}</span>
               </button>
             </div>
           </div>
@@ -2972,10 +2972,10 @@ export default function ContractorSuite() {
               onClick={() => setActiveTab('boq')}
               className="bg-[#1b2336] border border-slate-800 hover:border-cyan-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
-              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">قيمة المقايسة</span>
+              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">{language === 'ar' ? 'قيمة المقايسة' : 'BOQ Value'}</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-cyan-400">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+                <span className="text-[9px] text-slate-500 font-bold block">{language === 'ar' ? 'جنيه' : 'EGP'}</span>
               </div>
             </div>
 
@@ -2983,10 +2983,10 @@ export default function ContractorSuite() {
               onClick={() => setActiveTab('expenses')}
               className="bg-[#1b2336] border border-slate-800 hover:border-rose-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
-              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المصروفات الفعلية</span>
+              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">{language === 'ar' ? 'المصروفات الفعلية' : 'Actual Expenses'}</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-rose-400">{totals.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+                <span className="text-[9px] text-slate-500 font-bold block">{language === 'ar' ? 'جنيه' : 'EGP'}</span>
               </div>
             </div>
 
@@ -2994,10 +2994,10 @@ export default function ContractorSuite() {
               onClick={() => setActiveTab('dashboard')}
               className="bg-[#1b2336] border border-slate-800 hover:border-emerald-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
-              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">الربح المتوقع</span>
+              <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">{language === 'ar' ? 'الربح المتوقع' : 'Expected Profit'}</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-emerald-400">{totals.estProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                <span className="text-[9px] text-slate-500 font-bold block">جنيه</span>
+                <span className="text-[9px] text-slate-500 font-bold block">{language === 'ar' ? 'جنيه' : 'EGP'}</span>
               </div>
             </div>
 
@@ -3005,10 +3005,10 @@ export default function ContractorSuite() {
               onClick={() => setActiveTab('client')}
               className="bg-[#1b2336] border border-slate-800 hover:border-amber-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
-              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">المحصل من العميل</span>
+              <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">{language === 'ar' ? 'المحصل من العميل' : 'Collected from Client'}</span>
               <div className="mt-1">
                 <span className="text-base font-black font-mono text-amber-400">{totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                <span className="text-[9px] text-slate-500 font-bold block">ج.م محصل</span>
+                <span className="text-[9px] text-slate-500 font-bold block">{language === 'ar' ? 'ج.م محصل' : 'EGP Collected'}</span>
               </div>
             </div>
 
@@ -3019,13 +3019,13 @@ export default function ContractorSuite() {
         <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print">
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
-              { id: 'dashboard', label: 'لوحة القيادة', icon: '📊' },
-              { id: 'boq', label: 'المقايسة والبنود', icon: '📝' },
-              { id: 'expenses', label: 'المصروفات الفعلية', icon: '💸' },
-              { id: 'client', label: 'دفعات العميل', icon: '💳' },
-              { id: 'warehouses', label: 'المخازن', icon: '📦' },
-              { id: 'transactions', label: 'التحصيلات والمدفوعات', icon: '💸' },
-              { id: 'files', label: 'ملفات ومستندات', icon: '📁' }
+              { id: 'dashboard', label: language === 'ar' ? 'لوحة القيادة' : 'Dashboard', icon: '📊' },
+              { id: 'boq', label: language === 'ar' ? 'المقايسة والبنود' : 'BOQ & Items', icon: '📝' },
+              { id: 'expenses', label: language === 'ar' ? 'المصروفات الفعلية' : 'Actual Expenses', icon: '💸' },
+              { id: 'client', label: language === 'ar' ? 'دفعات العميل' : 'Client Payments', icon: '💳' },
+              { id: 'warehouses', label: language === 'ar' ? 'المخازن' : 'Warehouses', icon: '📦' },
+              { id: 'transactions', label: language === 'ar' ? 'التحصيلات والمدفوعات' : 'Collections & Payments', icon: '💸' },
+              { id: 'files', label: language === 'ar' ? 'ملفات ومستندات' : 'Files & Documents', icon: '📁' }
             ].map(tab => (
               <button
                 key={tab.id}

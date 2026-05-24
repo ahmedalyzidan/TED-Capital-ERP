@@ -11,7 +11,7 @@ router.get('/preferences', authenticateToken, async (req, res) => {
             res.json(result.rows[0]);
         } else {
             // Default preferences if not set
-            res.json({ language: 'ar', theme_mode: 'light', sidebar_collapsed: false });
+            res.json({ language: 'en', theme_mode: 'light', sidebar_collapsed: false });
         }
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch preferences" });
