@@ -5,7 +5,7 @@ const AccountingService = require('../services/accountingService');
 class ProjectController {
     async getProjectsDropdown(req, res) {
         try {
-            const projects = await pool.query("SELECT id, name FROM projects");
+            const projects = await pool.query("SELECT id, name FROM projects WHERE is_deleted = false");
             res.json({ success: true, data: projects.rows });
         } catch (err) {
             res.status(500).json({ error: err.message });

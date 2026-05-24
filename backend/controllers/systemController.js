@@ -5,11 +5,11 @@ const maintenanceService = require('../services/maintenanceService');
 class SystemController {
     async getDropdowns(req, res) {
         try {
-            const projects = await pool.query("SELECT id, name FROM projects");
-            const staff = await pool.query("SELECT name, salary FROM staff");
-            const subs = await pool.query("SELECT id, name FROM subcontractors");
+            const projects = await pool.query("SELECT id, name FROM projects WHERE is_deleted = false");
+            const staff = await pool.query("SELECT name, salary FROM staff WHERE is_deleted = false");
+            const subs = await pool.query("SELECT id, name FROM subcontractors WHERE is_deleted = false");
             const accs = await pool.query("SELECT id, account_code, account_name FROM chart_of_accounts ORDER BY account_code ASC");
-            const custs = await pool.query("SELECT id, name, company_name FROM customers");
+            const custs = await pool.query("SELECT id, name, company_name FROM customers WHERE is_deleted = false");
             const units = await pool.query("SELECT value FROM system_parameters WHERE category='Unit'");
             
             res.json({
