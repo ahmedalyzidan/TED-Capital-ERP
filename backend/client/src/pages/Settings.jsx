@@ -42,6 +42,50 @@ export default function Settings() {
     }
   }[language === 'en' ? 'en' : 'ar'];
 
+  const [whatsappStatus, setWhatsappStatus] = useState({ status: 'disconnected', qr: null });
+
+  useEffect(() => {
+    let interval = null;
+    if (formData.whatsapp_enabled && formData.metadata?.whatsapp_type === 'self-hosted') {
+      const getStatus = async () => {
+        try {
+          const { data } = await api.get('/system/whatsapp/status');
+          setWhatsappStatus(data);
+        } catch (e) {
+          console.error("Failed to fetch WhatsApp status:", e);
+        }
+      };
+
+      getStatus();
+      interval = setInterval(getStatus, 3000);
+    } else {
+      setWhatsappStatus({ status: 'disconnected', qr: null });
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [formData.whatsapp_enabled, formData.metadata?.whatsapp_type]);
+
+  const handleWhatsappInit = async () => {
+    try {
+      await api.post('/system/whatsapp/initialize');
+      setWhatsappStatus(prev => ({ ...prev, status: 'connecting' }));
+    } catch (e) {
+      alert("Failed to initialize WhatsApp connection");
+    }
+  };
+
+  const handleWhatsappLogout = async () => {
+    if (!window.confirm(language === 'ar' ? "هل تريد قطع اتصال واتساب ومسح الجلسة الحالية؟" : "Disconnect WhatsApp and clear current session?")) return;
+    try {
+      await api.post('/system/whatsapp/logout');
+      setWhatsappStatus({ status: 'disconnected', qr: null });
+    } catch (e) {
+      alert("Failed to log out");
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
     fetchBackups();
@@ -275,34 +319,108 @@ export default function Settings() {
                     {formData.whatsapp_enabled && (
                       <div className="space-y-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 mt-2 text-slate-900">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">معرف مثيل واتساب (Instance ID)</label>
-                          <input 
-                            type="text" 
-                            value={formData.metadata?.whatsapp_instance_id || ''} 
+                          <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">نوع بوابة الواتساب (Gateway Type)</label>
+                          <select
+                            value={formData.metadata?.whatsapp_type || 'ultramsg'}
                             onChange={e => {
                               const meta = formData.metadata || {};
-                              setFormData({...formData, metadata: {...meta, whatsapp_instance_id: e.target.value}});
+                              setFormData({...formData, metadata: {...meta, whatsapp_type: e.target.value}});
                             }}
-                            placeholder="instance9912"
-                            className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
-                          />
+                            className="w-full p-3 bg-white rounded-xl text-xs text-slate-800 border border-indigo-200 outline-none"
+                          >
+                            <option value="ultramsg">بوابة Ultramsg المدفوعة</option>
+                            <option value="self-hosted">استضافة ذاتية محلية (Self-Hosted Baileys)</option>
+                          </select>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">رمز مرور البوابة (API Token)</label>
-                          <input 
-                            type="text" 
-                            value={formData.metadata?.whatsapp_token || ''} 
-                            onChange={e => {
-                              const meta = formData.metadata || {};
-                              setFormData({...formData, metadata: {...meta, whatsapp_token: e.target.value}});
-                            }}
-                            placeholder="token_value"
-                            className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
-                          />
-                        </div>
-                        <p className="text-[10px] text-indigo-700 font-bold leading-normal text-right">
-                          💡 يرجى استخدام بوابة **Ultramsg** لربط رقمك {`01550261455`} مباشرة عبر مسح رمز QR.
-                        </p>
+
+                        {formData.metadata?.whatsapp_type !== 'self-hosted' ? (
+                          <>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">معرف مثيل واتساب (Instance ID)</label>
+                              <input 
+                                type="text" 
+                                value={formData.metadata?.whatsapp_instance_id || ''} 
+                                onChange={e => {
+                                  const meta = formData.metadata || {};
+                                  setFormData({...formData, metadata: {...meta, whatsapp_instance_id: e.target.value}});
+                                }}
+                                placeholder="instance9912"
+                                className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">رمز مرور البوابة (API Token)</label>
+                              <input 
+                                type="text" 
+                                value={formData.metadata?.whatsapp_token || ''} 
+                                onChange={e => {
+                                  const meta = formData.metadata || {};
+                                  setFormData({...formData, metadata: {...meta, whatsapp_token: e.target.value}});
+                                }}
+                                placeholder="token_value"
+                                className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
+                              />
+                            </div>
+                            <p className="text-[10px] text-indigo-700 font-bold leading-normal text-right">
+                              💡 يرجى استخدام بوابة **Ultramsg** لربط رقمك {`01114704004`} مباشرة عبر مسح رمز QR.
+                            </p>
+                          </>
+                        ) : (
+                          <div className="space-y-3 bg-white p-4 rounded-xl border border-indigo-100 flex flex-col items-center">
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-slate-700">حالة الاتصال:</span>
+                              {whatsappStatus.status === 'connected' ? (
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-lg">متصل ✅</span>
+                              ) : whatsappStatus.status === 'qr' ? (
+                                <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-lg animate-pulse">انتظار المسح 📷</span>
+                              ) : whatsappStatus.status === 'connecting' ? (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-lg animate-pulse">جاري تشغيل الخدمة... ⏳</span>
+                              ) : (
+                                <span className="px-2 py-1 bg-rose-100 text-rose-800 text-[10px] font-bold rounded-lg">غير متصل ❌</span>
+                              )}
+                            </div>
+
+                            {whatsappStatus.status === 'disconnected' && (
+                              <button
+                                type="button"
+                                onClick={handleWhatsappInit}
+                                className="mt-2 w-full p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all text-center"
+                              >
+                                بدء تشغيل الخدمة ومسح الرمز
+                              </button>
+                            )}
+
+                            {whatsappStatus.status === 'connecting' && (
+                              <div className="flex flex-col items-center gap-2 py-4">
+                                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-[10px] text-slate-400">جاري الاتصال...</span>
+                              </div>
+                            )}
+
+                            {whatsappStatus.status === 'qr' && whatsappStatus.qr && (
+                              <div className="flex flex-col items-center gap-2 py-2">
+                                <p className="text-[10px] text-amber-700 text-center font-semibold">
+                                  قم بمسح رمز الـ QR التالي عبر تطبيق واتساب (الأجهزة المرتبطة) من رقمك {`01114704004`}
+                                </p>
+                                <img
+                                  src={whatsappStatus.qr}
+                                  alt="WhatsApp QR Code"
+                                  className="w-48 h-48 border border-slate-200 p-2 rounded-lg bg-white"
+                                />
+                              </div>
+                            )}
+
+                            {whatsappStatus.status === 'connected' && (
+                              <button
+                                type="button"
+                                onClick={handleWhatsappLogout}
+                                className="mt-2 w-full p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all text-center"
+                              >
+                                تسجيل الخروج وإلغاء الربط
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                  </div>

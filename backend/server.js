@@ -227,4 +227,19 @@ app.listen(PORT, () => {
 
     // 🌟 إطلاق المهام المجدولة فور عمل الخادم وتجهيزه
     startCronJobs();
+
+    // 📱 تهيئة خدمة الواتساب المحلية (Self-Hosted) إذا كانت مفعلة في الإعدادات
+    const selfHostedWhatsapp = require('./services/selfHostedWhatsapp');
+    pool.query("SELECT whatsapp_enabled, metadata FROM settings LIMIT 1")
+        .then(res => {
+            if (res.rows.length > 0) {
+                const settings = res.rows[0];
+                const metadata = settings.metadata || {};
+                if (settings.whatsapp_enabled && metadata.whatsapp_type === 'self-hosted') {
+                    console.log("📱 [WhatsApp Startup] Initializing self-hosted WhatsApp client...");
+                    selfHostedWhatsapp.initialize();
+                }
+            }
+        })
+        .catch(err => console.error("⚠️ [WhatsApp Startup Error]:", err.message));
 });

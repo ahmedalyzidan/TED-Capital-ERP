@@ -1,9 +1,10 @@
 const axios = require('axios');
 const pool = require('../config/db');
+const selfHostedWhatsapp = require('./selfHostedWhatsapp');
 
 /**
- * Sends a WhatsApp message using a third-party gateway API (e.g. Ultramsg).
- * If the credentials are not set, it simulates the send in the console/logs.
+ * Sends a WhatsApp message using either the self-hosted Baileys gateway or a third-party gateway (Ultramsg).
+ * If no gateway is configured, it simulates the send in the console/logs.
  * 
  * @param {string} to - Recipient phone number (e.g. 01118764486)
  * @param {string} message - Message body content
@@ -46,7 +47,19 @@ async function sendWhatsAppMessage(to, message) {
             return { success: false, error: "WhatsApp disabled in settings" };
         }
 
-        // 3. Extract credentials from settings metadata or environment
+        // 3. Delegate to self-hosted gateway if selected
+        const whatsappType = metadata.whatsapp_type || 'ultramsg';
+        if (whatsappType === 'self-hosted') {
+            try {
+                const res = await selfHostedWhatsapp.sendMessage(cleanPhone, message);
+                return res;
+            } catch (err) {
+                console.error("❌ [WhatsApp Service] Self-hosted gateway send failed:", err.message);
+                return { success: false, error: err.message };
+            }
+        }
+
+        // 4. Extract credentials for Ultramsg
         const instanceId = metadata.whatsapp_instance_id || process.env.WHATSAPP_INSTANCE_ID;
         const token = metadata.whatsapp_token || process.env.WHATSAPP_TOKEN;
 
@@ -55,7 +68,7 @@ async function sendWhatsAppMessage(to, message) {
             return { success: true, simulated: true };
         }
 
-        // 4. Fire the actual HTTP request to Ultramsg
+        // 5. Fire the actual HTTP request to Ultramsg
         console.log(`📡 [WhatsApp Service] Sending auto-message to ${cleanPhone} via instance ${instanceId}...`);
         const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
         const response = await axios.post(url, {

@@ -33,4 +33,22 @@ router.post('/intelligence/run', requireAdmin, systemController.runIntelligenceD
 // 6. Smart UI Data
 router.get('/sidebar-stats', systemController.getSidebarStats);
 
+// 7. Self-Hosted WhatsApp Service Control
+const selfHostedWhatsapp = require('../services/selfHostedWhatsapp');
+router.get('/whatsapp/status', requireAdmin, (req, res) => {
+    res.json(selfHostedWhatsapp.getStatus());
+});
+router.post('/whatsapp/initialize', requireAdmin, (req, res) => {
+    selfHostedWhatsapp.initialize();
+    res.json({ success: true, message: "WhatsApp client initialization started" });
+});
+router.post('/whatsapp/logout', requireAdmin, async (req, res) => {
+    try {
+        await selfHostedWhatsapp.logout();
+        res.json({ success: true, message: "Logged out and session cleared" });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
