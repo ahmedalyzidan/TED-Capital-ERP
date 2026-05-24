@@ -160,12 +160,25 @@ class CommunicationController {
     async promoteInventoryItem(req, res) {
         const { inventory_id } = req.params;
         try {
-            // 1. جلب تفاصيل الصنف من المخازن
-            const itemRes = await pool.query(`SELECT * FROM inventory_items WHERE id = $1`, [inventory_id]);
-            if (itemRes.rows.length === 0) {
-                return res.status(404).json({ error: "Item not found in inventory" });
+            // 1. جلب تفاصيل الصنف من المخازن (مع دعم الأصناف التجريبية >= 9000)
+            let item;
+            const mockId = parseInt(inventory_id);
+            if (mockId >= 9000) {
+                const mockItems = {
+                    9001: { item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)', remaining_qty: 1420, min_stock_level: 100, expiry_date: new Date('2028-05-20') },
+                    9002: { item_name: 'أوجمينتين 1 جم (Augmentin 1g)', remaining_qty: 510, min_stock_level: 50, expiry_date: new Date('2027-11-15') },
+                    9003: { item_name: 'مورفين فيال 10 مجم (Morphine Vials)', remaining_qty: 45, min_stock_level: 10, expiry_date: new Date('2027-02-01') },
+                    9004: { item_name: 'أنسولين لانتوس فيال (Lantus Insulin)', remaining_qty: 185, min_stock_level: 30, expiry_date: new Date('2026-12-10') },
+                    9005: { item_name: 'محلول ملح 0.9% (Normal Saline 500ml)', remaining_qty: 2900, min_stock_level: 200, expiry_date: new Date('2027-12-31') }
+                };
+                item = mockItems[mockId] || { item_name: 'دواء تجريبي (Mock Drug)', remaining_qty: 50, min_stock_level: 10, expiry_date: new Date('2028-01-01') };
+            } else {
+                const itemRes = await pool.query(`SELECT * FROM inventory_items WHERE id = $1`, [inventory_id]);
+                if (itemRes.rows.length === 0) {
+                    return res.status(404).json({ error: "Item not found in inventory" });
+                }
+                item = itemRes.rows[0];
             }
-            const item = itemRes.rows[0];
 
             // 2. تقييم تاريخ الصلاحية وحجم المخزون الفعلي ومقارنته بالحد الأدنى
             let promoType = 'General';
