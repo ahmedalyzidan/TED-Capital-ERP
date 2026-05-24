@@ -107,6 +107,10 @@ function PharmaInventory() {
   const [salesLogs, setSalesLogs] = useState([]);
   const [salesSearch, setSalesSearch] = useState('');
 
+  // --- B2B CRM & Communication Logs State ---
+  const [communicationLogs, setCommunicationLogs] = useState([]);
+  const [commSearch, setCommSearch] = useState('');
+
   const [logs, setLogs] = useState([]);
   const [iotLogs, setIotLogs] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -377,6 +381,11 @@ function PharmaInventory() {
       try {
         const salesRes = await api.get('/dynamic/table/inventory_sales');
         if (salesRes.data?.data) setSalesLogs(salesRes.data.data);
+      } catch (e) { /* silent fallback */ }
+
+      try {
+        const commRes = await api.get('/communication/logs');
+        if (commRes.data?.logs) setCommunicationLogs(commRes.data.logs);
       } catch (e) { /* silent fallback */ }
 
     } catch (err) {
@@ -744,6 +753,7 @@ function PharmaInventory() {
         alert(language === 'ar'
           ? `📢 نجح ترويج الصنف!\n${response.data.message}\n\nنص الرسالة المرسلة:\n"${response.data.message_sent}"`
           : `📢 Item Promoted Successfully!\n${response.data.message}\n\nMessage:\n"${response.data.message_sent}"`);
+        await fetchData();
       } else {
         alert("فشل الترويج: " + (response.data.error || "خطأ غير معروف"));
       }
@@ -1074,6 +1084,19 @@ function PharmaInventory() {
                 <span className="text-base">🛒</span>
                 <span>{language === 'ar' ? '5. سجل المبيعات والصرف' : '5. Sales & Dispense History'}</span>
                 {activeTab === 'sales' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
+              </button>
+
+              {/* Tab 6: Marketing & B2B Communication Logs */}
+              <button
+                onClick={() => setSearchParams({ tab: 'communications' })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${activeTab === 'communications'
+                    ? 'bg-[#1e293b]/80 border-2 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#131d31]/50 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/40'
+                  }`}
+              >
+                <span className="text-base">📢</span>
+                <span>{language === 'ar' ? '6. سجلات التواصل والتسويق' : '6. CRM & Marketing Logs'}</span>
+                {activeTab === 'communications' && <span className="text-[9px] bg-slate-950 text-white px-2 py-0.5 rounded-full font-bold ml-1 shadow-inner">{language === 'ar' ? 'نشط' : 'Active'}</span>}
               </button>
             </nav>
           </div>
@@ -2405,6 +2428,202 @@ function PharmaInventory() {
                             </td>
                           </tr>
                         ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'communications' && (
+            <div className="space-y-8 animate-fade-in text-slate-900">
+              {/* HEADER & SUMMARY CARDS */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/20 border border-teal-500/30 rounded-xl text-teal-300 text-xs font-black uppercase tracking-widest mb-3">
+                    <span>📢</span> {language === 'ar' ? 'سجل الحملات التسويقية والتواصل B2B' : 'CRM & B2B Campaigns'}
+                  </div>
+                  <h2 className="text-3xl font-black tracking-tight text-white">
+                    {language === 'ar' ? 'سجلات التواصل والتسويق الرقمي' : 'Marketing & Communications Ledger'}
+                  </h2>
+                  <p className="text-xs text-slate-300 font-bold mt-2 max-w-2xl">
+                    {language === 'ar'
+                      ? 'مراقبة ومتابعة رسائل واتساب والبريد الإلكتروني الموجهة للعملاء والصيدليات. يمكنك الضغط على أيقونة الواتساب لتأكيد الإرسال والتواصل الفوري.'
+                      : 'Monitor B2B WhatsApp campaigns and messages sent to pharmacies. Click the WhatsApp icon to open pre-filled manual send/confirmation links.'}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-4 relative z-10 w-full lg:w-auto">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[160px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">{language === 'ar' ? 'إجمالي الرسائل المرسلة' : 'Total Messages Sent'}</span>
+                    <span className="text-2xl font-black text-teal-400 font-mono mt-1 block">
+                      {communicationLogs.length} {language === 'ar' ? 'رسالة' : 'Msgs'}
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[160px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">{language === 'ar' ? 'إرسال ناجح' : 'Successful Sends'}</span>
+                    <span className="text-2xl font-black text-emerald-400 font-mono mt-1 block">
+                      {communicationLogs.filter(l => l.status === 'Sent').length} {language === 'ar' ? 'ناجحة' : 'Success'}
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex-1 min-w-[140px]">
+                    <span className="text-[11px] font-bold text-slate-300 block">{language === 'ar' ? 'فشل الإرسال' : 'Failed Sends'}</span>
+                    <span className="text-2xl font-black text-rose-400 font-mono mt-1 block">
+                      {communicationLogs.filter(l => l.status === 'Failed').length} {language === 'ar' ? 'خطأ' : 'Failed'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEARCH & FILTERS */}
+              <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="w-full md:w-96 relative">
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-11 pl-4 py-3 text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-teal-500 transition-all"
+                    placeholder={language === 'ar' ? 'بحث باسم العميل، الحملة أو محتوى الرسالة...' : 'Search by client name, campaign or message...'}
+                    value={commSearch}
+                    onChange={(e) => setCommSearch(e.target.value)}
+                  />
+                </div>
+                <div className="text-xs text-slate-500 font-bold flex items-center gap-2">
+                  <span>💡 {language === 'ar' ? 'تنبيه:' : 'Tip:'}</span>
+                  <span>
+                    {language === 'ar'
+                      ? 'زر واتساب الأخضر يقوم بفتح محادثة واتساب الرسمية مع العميل ونص العرض جاهز للإرسال.'
+                      : 'The green WhatsApp button opens official WhatsApp Web/App pre-filled with the target message.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* TABLE */}
+              <div className="bg-white rounded-[2rem] border border-slate-150 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                    <span>📋</span> {language === 'ar' ? 'سجلات حملات التواصل والترويج B2B' : 'B2B Communication Logs'}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500">
+                    {language === 'ar' ? 'عدد الحركات:' : 'Records:'}{' '}
+                    {communicationLogs.filter(item =>
+                      !commSearch ||
+                      item.recipient_name?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                      item.campaign_title?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                      item.message_content?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                      item.recipient_phone?.includes(commSearch)
+                    ).length}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right border-collapse" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <thead>
+                      <tr className="bg-slate-100/80 text-slate-600 text-[10px] font-black uppercase tracking-widest border-b border-slate-200">
+                        <th className="p-4">{language === 'ar' ? 'التاريخ والوقت' : 'Date & Time'}</th>
+                        <th className="p-4">{language === 'ar' ? 'الحملة' : 'Campaign'}</th>
+                        <th className="p-4">{language === 'ar' ? 'العميل المستلم' : 'Recipient'}</th>
+                        <th className="p-4 text-center">{language === 'ar' ? 'رقم الهاتف / البريد' : 'Contact Details'}</th>
+                        <th className="p-4 text-center">{language === 'ar' ? 'قناة التواصل' : 'Channel'}</th>
+                        <th className="p-4">{language === 'ar' ? 'محتوى الرسالة' : 'Message Content'}</th>
+                        <th className="p-4 text-center">{language === 'ar' ? 'الحالة الرقابية' : 'Status'}</th>
+                        <th className="p-4 text-center">{language === 'ar' ? 'تأكيد الإرسال' : 'Confirm Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                      {communicationLogs.filter(item =>
+                        !commSearch ||
+                        item.recipient_name?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                        item.campaign_title?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                        item.message_content?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                        item.recipient_phone?.includes(commSearch)
+                      ).length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="text-center py-16 text-slate-400 font-bold text-sm">
+                            {language === 'ar' ? 'لا توجد سجلات تواصل مطابقة للبحث.' : 'No communication logs match your search.'}
+                          </td>
+                        </tr>
+                      ) : (
+                        communicationLogs.filter(item =>
+                          !commSearch ||
+                          item.recipient_name?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                          item.campaign_title?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                          item.message_content?.toLowerCase().includes(commSearch.toLowerCase()) ||
+                          item.recipient_phone?.includes(commSearch)
+                        ).map(item => {
+                          const hasPhone = !!item.recipient_phone;
+                          
+                          // Egyptian/Palestinian number formatter helper
+                          let cleanPhone = item.recipient_phone ? item.recipient_phone.replace(/\D/g, '') : '';
+                          if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+                            cleanPhone = '20' + cleanPhone.substring(1);
+                          } else if (cleanPhone.length === 10 && cleanPhone.startsWith('5')) {
+                            cleanPhone = '970' + cleanPhone;
+                          } else if (cleanPhone.startsWith('05') && cleanPhone.length === 10) {
+                            cleanPhone = '970' + cleanPhone.substring(1);
+                          }
+                          const waLink = hasPhone ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(item.message_content)}` : '#';
+
+                          return (
+                            <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="p-4 font-mono text-[11px] text-slate-500">
+                                {new Date(item.sent_at).toLocaleString('ar-EG')}
+                              </td>
+                              <td className="p-4">
+                                <span className="block font-black text-slate-900">{item.campaign_title || 'Auto Promotion'}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">ID: #{item.campaign_id || 'System'}</span>
+                              </td>
+                              <td className="p-4">
+                                <span className="block font-black text-slate-900">{item.recipient_name}</span>
+                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">{item.recipient_type}</span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className="block font-mono text-slate-900">{item.recipient_phone || '—'}</span>
+                                <span className="block font-mono text-[10px] text-slate-400">{item.recipient_email || '—'}</span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                  item.channel === 'WhatsApp' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                }`}>
+                                  {item.channel}
+                                </span>
+                              </td>
+                              <td className="p-4 max-w-sm truncate text-slate-600 font-normal" title={item.message_content}>
+                                {item.message_content}
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-black border ${
+                                  item.status === 'Sent' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  {item.status === 'Sent' ? 'تم الإرسال 🟢' : 'فشل الإرسال 🔴'}
+                                </span>
+                                {item.error_message && (
+                                  <span className="block text-[9px] text-rose-500 font-mono mt-1">{item.error_message}</span>
+                                )}
+                              </td>
+                              <td className="p-4 text-center">
+                                {hasPhone ? (
+                                  <a
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black transition-all hover:scale-105 active:scale-95 shadow-sm"
+                                  >
+                                    💬 {language === 'ar' ? 'تأكيد واتساب' : 'WhatsApp'}
+                                  </a>
+                                ) : (
+                                  <button
+                                    disabled
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-400 rounded-lg text-[11px] font-black cursor-not-allowed"
+                                  >
+                                    ✕ {language === 'ar' ? 'لا يوجد هاتف' : 'No Phone'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

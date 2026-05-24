@@ -144,9 +144,14 @@ class CommunicationController {
     async getLogs(req, res) {
         try {
             const result = await pool.query(`
-                SELECT l.*, c.title as campaign_title 
+                SELECT 
+                    l.*, 
+                    c.title as campaign_title,
+                    COALESCE(cust.name, lead.contact_person, 'System Recipient') as recipient_name
                 FROM communication_logs l
                 LEFT JOIN crm_campaigns c ON l.campaign_id = c.id
+                LEFT JOIN customers cust ON l.recipient_type = 'Customer' AND l.recipient_id = cust.id
+                LEFT JOIN crm_leads lead ON l.recipient_type = 'Lead' AND l.recipient_id = lead.id
                 ORDER BY l.id DESC
                 LIMIT 200
             `);
