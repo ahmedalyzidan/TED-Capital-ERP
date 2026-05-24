@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
 // Get User Preferences
 router.get('/preferences', authenticateToken, async (req, res) => {
@@ -38,6 +38,57 @@ router.post('/preferences', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to save preferences" });
+    }
+});
+
+// Get All User Preferences (Admin Only)
+router.get('/preferences/all', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.*, u.username, u.email, u.role
+            FROM user_preferences p
+            JOIN users u ON p.user_id = u.id
+            ORDER BY u.username ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch all user preferences" });
+    }
+});
+
+// Update Specific User's Preferences (Admin Only)
+router.put('/preferences/:userId', authenticateToken, requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+    const { language, theme_mode, date_format, sidebar_collapsed, dashboard_layout } = req.body;
+    try {
+        await pool.query(`
+            INSERT INTO user_preferences (user_id, language, theme_mode, date_format, sidebar_collapsed, dashboard_layout, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id) DO UPDATE SET
+                language = EXCLUDED.language,
+                theme_mode = EXCLUDED.theme_mode,
+                date_format = EXCLUDED.date_format,
+                sidebar_collapsed = EXCLUDED.sidebar_collapsed,
+                dashboard_layout = EXCLUDED.dashboard_layout,
+                updated_at = CURRENT_TIMESTAMP
+        `, [userId, language, theme_mode, date_format, sidebar_collapsed, dashboard_layout]);
+        res.json({ success: true, message: "User preferences updated successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update user preferences" });
+    }
+});
+
+// Delete (Reset) Specific User's Preferences (Admin Only)
+router.delete('/preferences/:userId', authenticateToken, requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+    try {
+        await pool.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
+        res.json({ success: true, message: "User preferences deleted/reset successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to delete user preferences" });
     }
 });
 

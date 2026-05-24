@@ -32,6 +32,7 @@ import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import UserPreferencesManager from './pages/UserPreferencesManager';
 import EmployeePortal from './pages/EmployeePortal';
 import SubcontractorPortal from './components/SubcontractorPortal';
 import FixedAssets from './pages/FixedAssets';
@@ -98,6 +99,7 @@ function App() {
               <Route path="/iam/matrix" element={<RBACProtectedRoute resource="USERS" action="UPDATE"><RBACMatrix /></RBACProtectedRoute>} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/preferences" element={<RBACProtectedRoute resource="USERS" action="UPDATE"><UserPreferencesManager /></RBACProtectedRoute>} />
               <Route path="/me" element={<EmployeePortal />} />
               <Route path="/fixed-assets" element={<FixedAssets />} />
               <Route path="/corporate" element={<Corporate />} />

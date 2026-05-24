@@ -2609,7 +2609,7 @@ export default function ContractorSuite() {
   const isMasterBuilder = activeProject?.company && (activeProject.company.toUpperCase().includes('MASTER BUILDER') || activeProject.company.includes('ماستر بيلدر'));
 
   return (
-    <div className="contractor-suite-light bg-[#f7f8fc] text-slate-800 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-white font-sans print:bg-white print:text-black relative overflow-hidden" dir="rtl">
+    <div className="contractor-suite-light bg-[#f7f8fc] text-slate-800 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-white font-sans print:bg-white print:text-black relative overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Background Radial Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[350px] bg-gradient-to-b from-indigo-500/10 via-sky-500/5 to-transparent rounded-full blur-[140px] pointer-events-none no-print"></div>
 
@@ -5418,7 +5418,7 @@ export default function ContractorSuite() {
             </div>
 
             {/* HIGH-FIDELITY CORPORATE INVOICE PREVIEW */}
-            <div className="flex-1 bg-white text-slate-900 p-8 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
+            <div className="flex-1 bg-white text-slate-900 p-8 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
               <div className="space-y-6">
 
                 {/* Invoice Header */}
@@ -5685,7 +5685,7 @@ export default function ContractorSuite() {
 
       {/* 7. PRINT-ONLY EXCLUSIVE INVOICE DOCUMENT */}
       {selectedPrintValuation && (
-        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview border-none rounded-none shadow-none" dir="rtl">
+        <div className="hidden print:block print-full-width text-slate-900 bg-white p-8 font-sans exact-print-preview border-none rounded-none shadow-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           <div className="space-y-6">
 
             {/* Invoice Header */}
@@ -5956,7 +5956,7 @@ export default function ContractorSuite() {
               </div>
 
               {/* HIGH-FIDELITY RECEIPT PREVIEW */}
-              <div className="flex-1 bg-white text-slate-900 p-6 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir="rtl">
+              <div className="flex-1 bg-white text-slate-900 p-6 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                 <div className="relative border border-slate-200 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden shadow-sm">
                   
                   {/* Seal Watermark */}
@@ -6090,7 +6090,7 @@ export default function ContractorSuite() {
         const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
         
         return (
-          <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview border-none rounded-none shadow-none" dir="rtl">
+          <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview border-none rounded-none shadow-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div className="relative border-none p-6 rounded-none bg-white overflow-visible">
               
               {/* Seal Watermark */}

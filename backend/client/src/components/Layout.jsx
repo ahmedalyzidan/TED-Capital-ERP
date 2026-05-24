@@ -80,6 +80,7 @@ export default function Layout() {
         accountant360: "المحاسب 360 ⚡",
         portal360: "بوابة 360 الموحدة 🌀",
         settings: "الإعدادات",
+        userPreferences: "تفضيلات المستخدمين",
         interCompany: "المعاملات بين الشركات 🏢",
         attendance: "سجل الحضور 📅",
         rbacMatrix: "مصفوفة الصلاحيات 🛡️",
@@ -143,6 +144,7 @@ export default function Layout() {
         accountant360: "Accountant 360 ⚡",
         portal360: "Unified 360 Portal 🌀",
         settings: "Settings",
+        userPreferences: "User Preferences",
         interCompany: "Inter-Company 🏢",
         attendance: "Attendance 📅",
         rbacMatrix: "RBAC Matrix 🛡️",
@@ -300,6 +302,7 @@ export default function Layout() {
           perm: 'IAM_MANAGE_ROLES',
           children: [
             { path: '/iam/matrix', icon: '🛡️', label: t.menu.rbacMatrix, perm: 'IAM_MANAGE_ROLES' },
+            { path: '/settings/preferences', icon: '⚙️', label: t.menu.userPreferences, perm: 'IAM_MANAGE_ROLES' },
           ]
         },
         { path: '/settings', icon: '⚙️', label: t.menu.settings, perm: 'IAM_MANAGE_ROLES' },
