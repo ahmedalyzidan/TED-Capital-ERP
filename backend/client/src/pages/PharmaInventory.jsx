@@ -740,6 +740,27 @@ function PharmaInventory() {
     }
   };
 
+  const handlePromoteItem = async (drug) => {
+    try {
+      const confirmMsg = language === 'ar'
+        ? `هل تريد ترويج صنف "${drug.item_name}" تلقائياً بناءً على حالته الحالية وإرسال عروض/تنبيهات للعملاء؟`
+        : `Do you want to promote item "${drug.item_name}" automatically and send B2B campaign alerts to customers?`;
+      if (!window.confirm(confirmMsg)) return;
+
+      const response = await api.post(`/communication/promote/${drug.id}`);
+      if (response.data.success) {
+        alert(language === 'ar'
+          ? `📢 نجح ترويج الصنف!\n${response.data.message}\n\nنص الرسالة المرسلة:\n"${response.data.message_sent}"`
+          : `📢 Item Promoted Successfully!\n${response.data.message}\n\nMessage:\n"${response.data.message_sent}"`);
+      } else {
+        alert("فشل الترويج: " + (response.data.error || "خطأ غير معروف"));
+      }
+    } catch (err) {
+      console.error("Error promoting item", err);
+      alert(language === 'ar' ? "حدث خطأ أثناء ترويج الصنف" : "Error promoting item");
+    }
+  };
+
   const handleOpenDispense = (drug) => {
     setDispenseDrug(drug);
     setDispenseQty('');
@@ -1284,6 +1305,12 @@ function PharmaInventory() {
                                     className="px-3 py-1.5 bg-[#0b0f19] hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all"
                                   >
                                     💊 {language === 'ar' ? 'صرف' : 'Dispense'}
+                                  </button>
+                                  <button
+                                    onClick={() => handlePromoteItem(drug)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-all"
+                                  >
+                                    📢 {language === 'ar' ? 'تسويق' : 'Promote'}
                                   </button>
                                   <button
                                     onClick={() => handleOpenEdit(drug)}

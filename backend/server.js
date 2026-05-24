@@ -159,6 +159,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/dynamic', dynamicRoutes);
+app.use('/api/communication', require('./routes/communicationRoutes'));
 
 // المسار القديم للتوافق المؤقت (سيتم حذفه لاحقاً)
 app.use('/api', apiRoutes);

@@ -107,6 +107,49 @@ async function initializeDatabase() {
         await client.query(`ALTER TABLE po_ddp_lcy_charges ADD COLUMN IF NOT EXISTS amount_fcy NUMERIC DEFAULT 0, ADD COLUMN IF NOT EXISTS fx_rate NUMERIC DEFAULT 1`);
 
         // =========================================================================
+        // 6b. B2B Communication & Marketing Module
+        // =========================================================================
+        console.log("📢 Setting up B2B Communication & Marketing...");
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS crm_templates (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                subject VARCHAR(255),
+                body TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS crm_campaigns (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                channel VARCHAR(50) NOT NULL,
+                template_id INTEGER REFERENCES crm_templates(id) ON DELETE SET NULL,
+                target_segment VARCHAR(100),
+                scheduled_at TIMESTAMP,
+                status VARCHAR(50) DEFAULT 'Draft',
+                created_by VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS communication_logs (
+                id SERIAL PRIMARY KEY,
+                campaign_id INTEGER REFERENCES crm_campaigns(id) ON DELETE SET NULL,
+                recipient_type VARCHAR(50) NOT NULL,
+                recipient_id INTEGER NOT NULL,
+                recipient_phone VARCHAR(50),
+                recipient_email VARCHAR(255),
+                channel VARCHAR(50) NOT NULL,
+                message_content TEXT NOT NULL,
+                status VARCHAR(50) DEFAULT 'Pending',
+                error_message TEXT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // =========================================================================
         // 7. Chart of Accounts (COA) Seeding
         // =========================================================================
         console.log("📊 Verifying Chart of Accounts (COA)...");
