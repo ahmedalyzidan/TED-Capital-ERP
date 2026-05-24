@@ -3,6 +3,44 @@ const AccountingService = require('../services/accountingService');
 const { logAdvancedAudit } = require('../utils/helpers');
 
 class CustodyController {
+    // مساعد لحل تفاصيل الشركة
+    async resolveCompanyDetails(client, req) {
+        let companyId = 1;
+        let companyName = 'TED Capital';
+
+        const selectedCompany = req.user?.selectedCompany || req.headers['x-selected-company'];
+        if (selectedCompany && !['all', 'كل الشركات', 'all companies'].includes(selectedCompany.toLowerCase())) {
+            const nameLower = selectedCompany.toLowerCase();
+            if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
+                companyId = 2; companyName = 'Design Concept';
+            } else if (nameLower.includes('master') || nameLower.includes('ماستر')) {
+                companyId = 3; companyName = 'Master Builder';
+            } else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
+                companyId = 4; companyName = 'PRIMEMED PHARMA';
+            } else if (nameLower.includes('ted') || nameLower.includes('تيد')) {
+                companyId = 1; companyName = 'TED Capital';
+            } else {
+                try {
+                    const compRes = await client.query(
+                        "SELECT id, name FROM companies WHERE UPPER(name) = UPPER($1) OR name ILIKE $2 LIMIT 1",
+                        [selectedCompany, `%${selectedCompany}%`]
+                    );
+                    if (compRes.rows.length > 0) {
+                        companyId = compRes.rows[0].id;
+                        companyName = compRes.rows[0].name;
+                    }
+                } catch(e){}
+            }
+        } else if (req.user?.linkedCompany) {
+            const nameLower = req.user.linkedCompany.toLowerCase();
+            if (nameLower.includes('design') || nameLower.includes('ديزاين')) { companyId = 2; companyName = 'Design Concept'; }
+            else if (nameLower.includes('master') || nameLower.includes('ماستر')) { companyId = 3; companyName = 'Master Builder'; }
+            else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { companyId = 4; companyName = 'PRIMEMED PHARMA'; }
+            else if (nameLower.includes('ted') || nameLower.includes('تيد')) { companyId = 1; companyName = 'TED Capital'; }
+        }
+        return { companyId, companyName };
+    }
+
     // 1. إنشاء عهدة جديدة مع إثباتها دفترياً
     async createCustody(req, res) {
         const { custodian_name, assigned_amount, notes } = req.body;
@@ -16,26 +54,33 @@ class CustodyController {
         try {
             await client.query('BEGIN');
 
+            const { companyId, companyName } = await this.resolveCompanyDetails(client, req);
+
             // إدراج سجل العهدة
             const custodyRes = await client.query(
-                `INSERT INTO custodies (custodian_name, assigned_amount, remaining_amount, notes, created_by)
-                 VALUES ($1, $2, $2, $3, $4) RETURNING *`,
-                [custodian_name, amountNum, notes || null, req.user?.username || 'System']
+                `INSERT INTO custodies (custodian_name, assigned_amount, remaining_amount, notes, created_by, company_id)
+                 VALUES ($1, $2, $2, $3, $4, $5) RETURNING *`,
+                [custodian_name, amountNum, notes || null, req.user?.username || 'System', companyId]
             );
             const custody = custodyRes.rows[0];
 
+            let cashAccount = 'صندوق نقدية - تيد كابيتال';
+            if (companyId === 2) cashAccount = 'صندوق نقدية - ديزاين كونسبت';
+            else if (companyId === 3) cashAccount = 'صندوق نقدية - ماستر بيلدر';
+            else if (companyId === 4) cashAccount = 'صندوق نقدية - بريميميد فارما';
+
             // إثبات صرف العهدة محاسبياً في اليومية العامة
-            // مدين: عهد الموظفين والعهدة النقدية (1150)
-            // دائن: صندوق نقدية - تيد كابيتال (1101)
             await AccountingService.recordDoubleEntry(client, {
                 debitAccount: 'عهد الموظفين والعهدة النقدية',
-                creditAccount: 'صندوق نقدية - تيد كابيتال',
+                creditAccount: cashAccount,
                 amount: amountNum,
                 costCenter: 'General',
                 description: `صرف وتسليم عهدة نقدية مؤقتة للمحاسب/الموظف: ${custodian_name}`,
                 username: req.user?.username || 'System',
                 referenceNo: `CUST-${custody.id}`,
-                sourceModule: 'FinanceCustody'
+                sourceModule: 'FinanceCustody',
+                companyId: companyId,
+                company: companyName
             });
 
             await logAdvancedAudit(
@@ -63,7 +108,16 @@ class CustodyController {
     // 2. جلب قائمة بكافة العهد
     async getCustodies(req, res) {
         try {
-            const result = await pool.query(`SELECT * FROM custodies ORDER BY id DESC`);
+            const { resolveScope } = require('../utils/helpers');
+            const scope = resolveScope(req.user);
+            let query = `SELECT * FROM custodies`;
+            let params = [];
+            if (scope) {
+                query += ` WHERE company_id = ANY($1)`;
+                params.push(scope.ids);
+            }
+            query += ` ORDER BY id DESC`;
+            const result = await pool.query(query, params);
             res.json({ success: true, custodies: result.rows });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -298,12 +352,23 @@ class CustodyController {
 
             const remaining = parseFloat(custody.remaining_amount);
 
+            let cashAccount = 'صندوق نقدية - تيد كابيتال';
+            if (custody.company_id === 2) cashAccount = 'صندوق نقدية - ديزاين كونسبت';
+            else if (custody.company_id === 3) cashAccount = 'صندوق نقدية - ماستر بيلدر';
+            else if (custody.company_id === 4) cashAccount = 'صندوق نقدية - بريميميد فارما';
+
+            let custodyCompanyName = 'TED Capital';
+            const compRes = await client.query("SELECT name FROM companies WHERE id = $1", [custody.company_id]);
+            if (compRes.rows.length > 0) {
+                custodyCompanyName = compRes.rows[0].name;
+            }
+
             // إذا كان هناك رصيد متبقي لم يُصرف، نقوم بإرجاعه للصندوق الرئيسي وإثباته محاسبياً
             if (remaining > 0) {
-                // مدين: صندوق نقدية - تيد كابيتال (1101)
-                // دائن: عهد الموظفين والعهدة النقدية (1150)
+                // مدين: صندوق نقدية
+                // دائن: عهد الموظفين والعهدة النقدية (1170)
                 await AccountingService.recordDoubleEntry(client, {
-                    debitAccount: 'صندوق نقدية - تيد كابيتال',
+                    debitAccount: cashAccount,
                     creditAccount: 'عهد الموظفين والعهدة النقدية',
                     amount: remaining,
                     costCenter: 'General',
@@ -311,7 +376,8 @@ class CustodyController {
                     username: req.user?.username || 'System',
                     referenceNo: `CUST-SETTLE-${custody.id}`,
                     sourceModule: 'FinanceCustody',
-                    companyId: custody.company_id
+                    companyId: custody.company_id,
+                    company: custodyCompanyName
                 });
             }
 
