@@ -41,7 +41,7 @@ async function initialize() {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),
-            browser: ['Ted ERP Self-Hosted', 'Chrome', '1.0.0']
+            browser: ['Ubuntu', 'Chrome', '20.0.0']
         });
         
         sock.ev.on('connection.update', async (update) => {
@@ -50,7 +50,7 @@ async function initialize() {
             if (qr) {
                 connectionStatus = 'qr';
                 try {
-                    qrCodeData = await QRCode.toDataURL(qr);
+                    qrCodeData = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
                     console.log("📷 [WhatsApp Self-Hosted] New QR code generated.");
                 } catch (qrErr) {
                     console.error("❌ [WhatsApp Self-Hosted] Failed to generate QR data URL:", qrErr.message);
