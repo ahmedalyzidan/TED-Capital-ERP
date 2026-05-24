@@ -342,7 +342,7 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `boq_id IN (SELECT id FROM boq WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'ledger' || type === 'general_ledger') {
-        return `(cost_center IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR cost_center IN ${namesSqlList} OR company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+        return `(${prefix}cost_center IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}cost_center IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList})`;
     }
     if (type === 'subcontractors') {
         return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
