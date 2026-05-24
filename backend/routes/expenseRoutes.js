@@ -338,15 +338,29 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
 // 5. Delete Expense (Soft Delete)
 router.delete('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
     try {
-        await pool.query(
+        await client.query('BEGIN');
+        
+        await client.query(
             "UPDATE expenses SET is_deleted = TRUE, deleted_by = $1, deleted_at = CURRENT_TIMESTAMP WHERE id = $2",
             [req.user.username, id]
         );
+        
+        await client.query(
+            "UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1",
+            [`EXP-${id}`]
+        );
+        
+        await client.query('COMMIT');
         res.json({ success: true });
     } catch (err) {
+        await client.query('ROLLBACK');
         res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 
 module.exports = router;
+

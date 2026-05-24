@@ -139,8 +139,8 @@ class AccountingService {
 
         // إدراج القيد في دفتر الأستاذ العام (General Ledger)
         const query = `
-          INSERT INTO ledger (account_name, cost_center, debit, credit, description, created_by, client_id, source_module, org_unit_id, is_contra, original_entry_id, company, company_id, created_at) 
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
+          INSERT INTO ledger (account_name, cost_center, debit, credit, description, reference_no, created_by, client_id, source_module, org_unit_id, is_contra, original_entry_id, company, company_id, created_at) 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
           RETURNING id
         `;
         
@@ -150,6 +150,7 @@ class AccountingService {
             roundedDebit, 
             roundedCredit, 
             description + (referenceNo ? ` | مرجع: ${referenceNo}` : ''), 
+            referenceNo || null,
             username || 'System',
             clientId,
             sourceModule,
@@ -159,6 +160,7 @@ class AccountingService {
             resolvedCompany,
             resolvedCompanyId
         ]);
+
         
         const entryId = res.rows[0].id;
 

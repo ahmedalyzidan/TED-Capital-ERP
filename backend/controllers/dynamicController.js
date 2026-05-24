@@ -748,8 +748,9 @@ class DynamicController {
                     }
                 }
             } else if (type === 'subcontractor_statements') {
-                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`PMT-${id}`, oldData.reference_no]);
                 const meta = typeof oldData.metadata === 'string' ? JSON.parse(oldData.metadata) : (oldData.metadata || {});
+                const refNo = meta.reference_no || null;
+                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1 OR reference_no = $2", [`PMT-${id}`, refNo]);
                 const invoiceId = meta.invoice_id;
                 if (invoiceId) {
                     const paidRes = await client.query(`
@@ -768,7 +769,12 @@ class DynamicController {
                         await client.query("UPDATE subcontractor_invoices SET status = $1 WHERE id = $2", [newStatus, invoiceId]);
                     }
                 }
+            } else if (type === 'expenses') {
+                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1", [`EXP-${id}`]);
+            } else if (type === 'ar_invoices') {
+                await client.query("UPDATE ledger SET is_deleted = true, description = description || ' (Reversed)' WHERE reference_no = $1", [oldData.invoice_no]);
             }
+
 
             if (type === 'shipment_expenses' || type === 'shipment_items') {
                 if (oldData.shipment_id) {

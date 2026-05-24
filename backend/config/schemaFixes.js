@@ -1150,7 +1150,15 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS metadata JSONB
     `);
 
+    // --- Backfill Ledger reference_no from description ---
+    await runQuery("Backfill Ledger reference_no from description", `
+        UPDATE ledger 
+        SET reference_no = TRIM(split_part(description, ' | مرجع: ', 2)) 
+        WHERE (reference_no IS NULL OR reference_no = '') AND description LIKE '% | مرجع: %'
+    `);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 
 module.exports = { applySchemaFixes };
+
