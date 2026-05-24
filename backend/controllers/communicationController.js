@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { logAdvancedAudit } = require('../utils/helpers');
+const { sendWhatsAppMessage } = require('../services/whatsappService');
 
 class CommunicationController {
     // 1. إدارة القوالب
@@ -106,13 +107,24 @@ class CommunicationController {
                     .replace(/{customer_name}/g, recipient.name)
                     .replace(/{company_name}/g, recipient.name);
 
-                // محاكاة الإرسال الناجح افتراضياً
+                // الإرسال الفعلي أو المحاكى وتحديد الحالة
                 let status = 'Sent';
                 let errMsg = null;
 
-                if (campaign.channel === 'WhatsApp' && !recipient.phone) {
-                    status = 'Failed';
-                    errMsg = 'Missing phone number';
+                if (campaign.channel === 'WhatsApp') {
+                    if (!recipient.phone) {
+                        status = 'Failed';
+                        errMsg = 'Missing phone number';
+                    } else {
+                        // إرسال واتساب تلقائي
+                        const wsRes = await sendWhatsAppMessage(recipient.phone, customizedBody);
+                        if (!wsRes.success) {
+                            if (wsRes.error !== "WhatsApp disabled in settings") {
+                                status = 'Failed';
+                                errMsg = wsRes.error || 'Failed to send';
+                            }
+                        }
+                    }
                 } else if (campaign.channel === 'Email' && !recipient.email) {
                     status = 'Failed';
                     errMsg = 'Missing email address';
@@ -237,8 +249,22 @@ class CommunicationController {
 
                 for (const recipient of recipients) {
                     let customizedBody = messageContent.replace(/{customer_name}/g, recipient.name);
-                    let status = recipient.phone ? 'Sent' : 'Failed';
-                    let errMsg = recipient.phone ? null : 'Missing phone number';
+                    let status = 'Sent';
+                    let errMsg = null;
+
+                    if (!recipient.phone) {
+                        status = 'Failed';
+                        errMsg = 'Missing phone number';
+                    } else {
+                        // إرسال واتساب تلقائي
+                        const wsRes = await sendWhatsAppMessage(recipient.phone, customizedBody);
+                        if (!wsRes.success) {
+                            if (wsRes.error !== "WhatsApp disabled in settings") {
+                                status = 'Failed';
+                                errMsg = wsRes.error || 'Failed to send';
+                            }
+                        }
+                    }
 
                     await client.query(`
                         INSERT INTO communication_logs (campaign_id, recipient_type, recipient_id, recipient_phone, recipient_email, channel, message_content, status, error_message)

@@ -109,7 +109,7 @@ export default function Settings() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-       await api.post('/update/settings/' + formData.id, formData);
+       await api.put('/update/settings/' + formData.id, formData);
        alert("تم حفظ الإعدادات بنجاح.");
     } catch (e) { alert("فشل التحديث."); }
     finally { setIsSubmitting(false); }
@@ -272,6 +272,39 @@ export default function Settings() {
                         className="w-6 h-6 rounded-lg accent-[#0f172a]" 
                        />
                     </label>
+                    {formData.whatsapp_enabled && (
+                      <div className="space-y-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 mt-2 text-slate-900">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">معرف مثيل واتساب (Instance ID)</label>
+                          <input 
+                            type="text" 
+                            value={formData.metadata?.whatsapp_instance_id || ''} 
+                            onChange={e => {
+                              const meta = formData.metadata || {};
+                              setFormData({...formData, metadata: {...meta, whatsapp_instance_id: e.target.value}});
+                            }}
+                            placeholder="instance9912"
+                            className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">رمز مرور البوابة (API Token)</label>
+                          <input 
+                            type="text" 
+                            value={formData.metadata?.whatsapp_token || ''} 
+                            onChange={e => {
+                              const meta = formData.metadata || {};
+                              setFormData({...formData, metadata: {...meta, whatsapp_token: e.target.value}});
+                            }}
+                            placeholder="token_value"
+                            className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
+                          />
+                        </div>
+                        <p className="text-[10px] text-indigo-700 font-bold leading-normal text-right">
+                          💡 يرجى استخدام بوابة **Ultramsg** لربط رقمك {`01550261455`} مباشرة عبر مسح رمز QR.
+                        </p>
+                      </div>
+                    )}
                  </div>
 
                  {/* Thresholds */}
