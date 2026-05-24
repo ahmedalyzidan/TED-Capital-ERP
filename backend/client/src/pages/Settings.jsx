@@ -303,7 +303,13 @@ export default function Settings() {
                        <input 
                         type="checkbox" 
                         checked={formData.intelligence_enabled} 
-                        onChange={e => setFormData({...formData, intelligence_enabled: e.target.checked})}
+                        onChange={async (e) => {
+                          const enabled = e.target.checked;
+                          const updated = { ...formData, intelligence_enabled: enabled };
+                          setFormData(updated);
+                          try { await api.put('/update/settings/' + formData.id, updated); }
+                          catch (err) { console.error("Auto-save failed:", err); }
+                        }}
                         className="w-6 h-6 rounded-lg accent-[#0f172a]" 
                        />
                     </label>
@@ -312,7 +318,13 @@ export default function Settings() {
                        <input 
                         type="checkbox" 
                         checked={formData.whatsapp_enabled} 
-                        onChange={e => setFormData({...formData, whatsapp_enabled: e.target.checked})}
+                        onChange={async (e) => {
+                          const enabled = e.target.checked;
+                          const updated = { ...formData, whatsapp_enabled: enabled };
+                          setFormData(updated);
+                          try { await api.put('/update/settings/' + formData.id, updated); }
+                          catch (err) { console.error("Auto-save failed:", err); }
+                        }}
                         className="w-6 h-6 rounded-lg accent-[#0f172a]" 
                        />
                     </label>
@@ -322,9 +334,14 @@ export default function Settings() {
                           <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block text-right">نوع بوابة الواتساب (Gateway Type)</label>
                           <select
                             value={formData.metadata?.whatsapp_type || 'ultramsg'}
-                            onChange={e => {
+                            onChange={async (e) => {
+                              const newType = e.target.value;
                               const meta = formData.metadata || {};
-                              setFormData({...formData, metadata: {...meta, whatsapp_type: e.target.value}});
+                              const updatedMetadata = { ...meta, whatsapp_type: newType };
+                              const updated = { ...formData, metadata: updatedMetadata };
+                              setFormData(updated);
+                              try { await api.put('/update/settings/' + formData.id, updated); }
+                              catch (err) { console.error("Auto-save failed:", err); }
                             }}
                             className="w-full p-3 bg-white rounded-xl text-xs text-slate-800 border border-indigo-200 outline-none"
                           >
@@ -344,6 +361,10 @@ export default function Settings() {
                                   const meta = formData.metadata || {};
                                   setFormData({...formData, metadata: {...meta, whatsapp_instance_id: e.target.value}});
                                 }}
+                                onBlur={async () => {
+                                  try { await api.put('/update/settings/' + formData.id, formData); }
+                                  catch (err) { console.error("Auto-save failed:", err); }
+                                }}
                                 placeholder="instance9912"
                                 className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
                               />
@@ -356,6 +377,10 @@ export default function Settings() {
                                 onChange={e => {
                                   const meta = formData.metadata || {};
                                   setFormData({...formData, metadata: {...meta, whatsapp_token: e.target.value}});
+                                }}
+                                onBlur={async () => {
+                                  try { await api.put('/update/settings/' + formData.id, formData); }
+                                  catch (err) { console.error("Auto-save failed:", err); }
                                 }}
                                 placeholder="token_value"
                                 className="w-full p-3 bg-white rounded-xl text-xs font-mono text-slate-800 border border-indigo-200 outline-none text-left" 
