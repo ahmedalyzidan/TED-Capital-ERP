@@ -77,6 +77,15 @@ const processPayroll = async (req, res) => {
         if (staffRes.rows.length === 0) throw new Error("الموظف غير موجود.");
         const staff = staffRes.rows[0];
 
+        // Resolve company_id from staff.company dynamically
+        let staffCompanyId = 1;
+        if (staff.company) {
+            const compRes = await client.query("SELECT id FROM companies WHERE UPPER(name) = UPPER($1) OR name ILIKE $2 LIMIT 1", [staff.company, `%${staff.company}%`]);
+            if (compRes.rows.length > 0) {
+                staffCompanyId = compRes.rows[0].id;
+            }
+        }
+
         // Ensure required accounts exist in the chart of accounts
         const advCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_name = 'سلف العاملين / ذمم موظفين' LIMIT 1");
         if (advCheck.rows.length === 0) {
@@ -165,8 +174,8 @@ const processPayroll = async (req, res) => {
 
             if (projectGrossExpense > 0) {
                 await client.query(
-                    "INSERT INTO payroll (staff_id, project_name, amount, period, basic_salary, incentives, commissions, deductions, advance_deduction, net_salary) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-                    [staffId, p.project_name, projectNetExpensePayment + (autoCommissions * ratio), `${month}-${year}`, b*ratio, inc*ratio, (manualCom + autoCommissions)*ratio, ded*ratio, projectAdvDeduction, projectNetExpensePayment + (autoCommissions * ratio)]
+                    "INSERT INTO payroll (staff_id, project_name, amount, period, basic_salary, incentives, commissions, deductions, advance_deduction, net_salary, company_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+                    [staffId, p.project_name, projectNetExpensePayment + (autoCommissions * ratio), `${month}-${year}`, b*ratio, inc*ratio, (manualCom + autoCommissions)*ratio, ded*ratio, projectAdvDeduction, projectNetExpensePayment + (autoCommissions * ratio), staffCompanyId]
                 );
 
                 // Accounting Integration for this project:
@@ -189,7 +198,7 @@ const processPayroll = async (req, res) => {
                         description: `تسوية سلفة من راتب ${month}-${year} للموظف ${staff.name}`,
                         username: username,
                         company: staff.company,
-                        companyId: staff.company_id
+                        companyId: staffCompanyId
                     });
                 }
 
@@ -203,7 +212,7 @@ const processPayroll = async (req, res) => {
                         description: `صرف صافي راتب ${month}-${year} للموظف ${staff.name}`,
                         username: username,
                         company: staff.company,
-                        companyId: staff.company_id
+                        companyId: staffCompanyId
                     });
                 }
 
@@ -226,7 +235,7 @@ const processPayroll = async (req, res) => {
                                     activeProj.id,
                                     staff.name,
                                     staff.company || 'TED Capital',
-                                    staff.company_id || 1,
+                                    staffCompanyId,
                                     req.user?.id || null,
                                     JSON.stringify({
                                         category: category || 'مصاريف المرتبات والأجور',
@@ -253,7 +262,7 @@ const processPayroll = async (req, res) => {
                                 projId,
                                 staff.name,
                                 staff.company || 'TED Capital',
-                                staff.company_id || 1,
+                                staffCompanyId,
                                 req.user?.id || null,
                                 JSON.stringify({
                                     category: category || 'مصاريف المرتبات والأجور',
@@ -281,7 +290,7 @@ const processPayroll = async (req, res) => {
                 description: `صرف عمولات مستحقة للموظف ${staff.name} مع راتب ${month}-${year}`,
                 username: username,
                 company: staff.company,
-                companyId: staff.company_id
+                companyId: staffCompanyId
             });
         }
 

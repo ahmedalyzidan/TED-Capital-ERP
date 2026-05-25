@@ -91,7 +91,8 @@ class AccountingService {
                     const isBank = origAcc.account_name.includes('بنك');
                     
                     let matchQuery = `
-                        SELECT account_name FROM chart_of_accounts 
+                        SELECT id, account_code, account_name, account_type, company_entity, parent_account 
+                        FROM chart_of_accounts 
                         WHERE company_entity = $1 
                         AND parent_account = $2 
                     `;
@@ -109,7 +110,8 @@ class AccountingService {
 
                     if (matchRes.rows.length > 0) {
                         console.log(`🔀 [Auto-Routing] Switched account from '${accName}' (${origAcc.company_entity}) to '${matchRes.rows[0].account_name}' (${resolvedCompany}) for project '${costCenter}'`);
-                        accName = matchRes.rows[0].account_name;
+                        origAcc = matchRes.rows[0];
+                        accName = origAcc.account_name;
                     }
                 }
             } catch (projErr) {
