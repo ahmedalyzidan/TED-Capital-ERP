@@ -274,6 +274,48 @@ class CustodyController {
                 company: custodyCompanyName
             });
 
+            // إدراج سجل في جدول المصروفات (expenses) ليظهر في قائمة المصروفات الفعلية للمشروع
+            if (expense.project_id) {
+                let boqFormattedCategory = expense.expense_category;
+                if (expense.boq_id) {
+                    const boqRes = await client.query("SELECT item_name, material_category FROM boq WHERE id = $1", [expense.boq_id]);
+                    if (boqRes.rows.length > 0) {
+                        const boqItem = boqRes.rows[0];
+                        boqFormattedCategory = `[${boqItem.material_category || 'عام'}] ${boqItem.item_name}`;
+                    }
+                }
+
+                const expenseDescription = expense.notes || `صرف من العهدة (${expense.custodian_name}) | بند: ${expense.expense_category}`;
+                
+                const metaJson = JSON.stringify({
+                    category: boqFormattedCategory,
+                    unit: 'وحدة',
+                    qty: 1,
+                    rate: parseFloat(expense.amount),
+                    allocationType: 'project',
+                    beneficiary: expense.recipient_name || expense.custodian_name,
+                    projectId: expense.project_id.toString(),
+                    custody_expense_id: expense.id
+                });
+
+                await client.query(
+                    `INSERT INTO expenses (description, amount, currency, category_id, project_id, expense_date, payment_method, supplier_name, receipt_url, status, company_entity, company_id, created_by, approved_by, metadata)
+                     VALUES ($1, $2, 'EGP', 3, $3, $4, 'Custody', $5, $6, 'Approved', $7, $8, $9, $9, $10)`,
+                    [
+                        expenseDescription,
+                        parseFloat(expense.amount),
+                        expense.project_id,
+                        expense.expense_date,
+                        expense.recipient_name || expense.custodian_name,
+                        expense.receipt_attachment || null,
+                        custodyCompanyName,
+                        expense.company_id,
+                        req.user?.id || null,
+                        metaJson
+                    ]
+                );
+            }
+
             // تحديث تكلفة المقايسة (BOQ) ومزامنة أرباح المشروع
             if (expense.boq_id && expense.cost_type) {
                 const amount = parseFloat(expense.amount);

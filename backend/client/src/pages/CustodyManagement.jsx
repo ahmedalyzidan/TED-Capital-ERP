@@ -1004,54 +1004,46 @@ export default function CustodyManagement() {
                 </select>
               </div>
 
-              {/* Conditional BOQ and Cost Type Fields */}
+              {/* Conditional BOQ Selection */}
               {expenseForm.project_id && (
-                <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                  {/* BOQ Item Selection */}
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                      {cur.expenseForm.boqItem}
-                    </label>
-                    <select
-                      required
-                      value={expenseForm.boq_id}
-                      onChange={e => setExpenseForm({ ...expenseForm, boq_id: e.target.value })}
-                      disabled={loadingBoqs}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
-                    >
-                      <option value="">
-                        {loadingBoqs ? cur.expenseForm.loadingBoqs : cur.expenseForm.boqPlaceholder}
+                <div className="space-y-2 animate-fade-in">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    {cur.expenseForm.boqItem}
+                  </label>
+                  <select
+                    required
+                    value={expenseForm.boq_id}
+                    onChange={e => {
+                      const boqId = e.target.value;
+                      const selectedBoq = boqItems.find(item => item.id === parseInt(boqId));
+                      let resolvedCostType = 'Materials';
+                      if (selectedBoq) {
+                        const cat = (selectedBoq.material_category || '').toLowerCase();
+                        if (cat.includes('labor') || cat.includes('أجور') || cat.includes('عمال')) {
+                          resolvedCostType = 'Labor';
+                        } else if (cat.includes('subcontractor') || cat.includes('مقاول')) {
+                          resolvedCostType = 'Subcontractor';
+                        } else if (cat.includes('equipment') || cat.includes('معدات')) {
+                          resolvedCostType = 'Equipment';
+                        }
+                      }
+                      setExpenseForm({ ...expenseForm, boq_id: boqId, cost_type: resolvedCostType });
+                    }}
+                    disabled={loadingBoqs}
+                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                  >
+                    <option value="">
+                      {loadingBoqs ? cur.expenseForm.loadingBoqs : cur.expenseForm.boqPlaceholder}
+                    </option>
+                    {boqItems.map(item => (
+                      <option key={item.id} value={item.id}>
+                        [{item.material_category || 'عام'}] {item.item_name}
                       </option>
-                      {boqItems.map(item => (
-                        <option key={item.id} value={item.id}>
-                          {item.item_name}
-                        </option>
-                      ))}
-                    </select>
-                    {!loadingBoqs && boqItems.length === 0 && (
-                      <p className="text-[10px] font-bold text-rose-500 mt-1">{cur.expenseForm.noBoqs}</p>
-                    )}
-                  </div>
-
-                  {/* Cost Type Selection */}
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                      {cur.expenseForm.costType}
-                    </label>
-                    <select
-                      required
-                      value={expenseForm.cost_type}
-                      onChange={e => setExpenseForm({ ...expenseForm, cost_type: e.target.value })}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
-                    >
-                      <option value="">{cur.expenseForm.costTypePlaceholder}</option>
-                      <option value="Materials">{cur.expenseForm.costTypes.materials}</option>
-                      <option value="Labor">{cur.expenseForm.costTypes.labor}</option>
-                      <option value="Subcontractor">{cur.expenseForm.costTypes.subcontractor}</option>
-                      <option value="Equipment">{cur.expenseForm.costTypes.equipment}</option>
-                      <option value="Other">{cur.expenseForm.costTypes.other}</option>
-                    </select>
-                  </div>
+                    ))}
+                  </select>
+                  {!loadingBoqs && boqItems.length === 0 && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1">{cur.expenseForm.noBoqs}</p>
+                  )}
                 </div>
               )}
 
