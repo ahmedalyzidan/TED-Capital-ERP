@@ -460,7 +460,7 @@ const boqCategories = [
       setPayrollForm(prev => ({
         ...prev,
         basic_salary: staff ? staff.salary : 0,
-        deductions: attRes.data.suggestedDeduction || 0,
+        deductions: 0,
         advance_deduction: advRes.data.due_amount || 0
       }));
     } catch (error) {
@@ -726,7 +726,7 @@ const boqCategories = [
                                ...payrollForm,
                                staffId: item.staff_id,
                                basic_salary: item.basic_salary,
-                               deductions: item.suggested_deduction,
+                               deductions: 0,
                                advance_deduction: item.advance_deduction,
                                commissions: 0 
                              });

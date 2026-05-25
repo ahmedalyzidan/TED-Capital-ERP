@@ -13,7 +13,19 @@ const grantAdvance = async (req, res) => {
         // Check if staff exists
         const staffRes = await client.query("SELECT * FROM staff WHERE id = $1", [staff_id]);
         if (staffRes.rows.length === 0) throw new Error("الموظف غير موجود.");
-        const staffName = staffRes.rows[0].name;
+        const staff = staffRes.rows[0];
+        const staffName = staff.name;
+
+        // Ensure required accounts exist in the chart of accounts
+        const advCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_name = 'سلف العاملين / ذمم موظفين' LIMIT 1");
+        if (advCheck.rows.length === 0) {
+            const codeCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_code = '1005' LIMIT 1");
+            const codeToUse = codeCheck.rows.length > 0 ? `1005-${Date.now()}` : '1005';
+            await client.query(`
+                INSERT INTO chart_of_accounts (account_code, account_name, account_type, hierarchy_level, parent_account, company_entity, manual_entry_allowed)
+                VALUES ($1, 'سلف العاملين / ذمم موظفين', 'Asset', 3, '1100', 'All', true)
+            `, [codeToUse]);
+        }
 
         await client.query(`
             INSERT INTO staff_advances (staff_id, amount, deduction_per_month, remaining_balance, status, request_date, repayment_method)
@@ -23,11 +35,13 @@ const grantAdvance = async (req, res) => {
         // Accounting: Debit Advance Receivable, Credit Cash/Bank
         await AccountingService.recordDoubleEntry(client, {
             debitAccount: 'سلف العاملين / ذمم موظفين',
-            creditAccount: 'النقدية بالصندوق / البنوك',
+            creditAccount: '1101',
             amount: parseFloat(amount),
             costCenter: 'General',
             description: `منح سلفة للموظف ${staffName} - طريقة السداد: ${repayment_method}`,
-            username: username
+            username: username,
+            company: staff.company,
+            companyId: staff.company_id
         });
 
         await client.query('COMMIT');
@@ -62,6 +76,37 @@ const processPayroll = async (req, res) => {
         const staffRes = await client.query("SELECT * FROM staff WHERE id = $1", [staffId]);
         if (staffRes.rows.length === 0) throw new Error("الموظف غير موجود.");
         const staff = staffRes.rows[0];
+
+        // Ensure required accounts exist in the chart of accounts
+        const advCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_name = 'سلف العاملين / ذمم موظفين' LIMIT 1");
+        if (advCheck.rows.length === 0) {
+            const codeCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_code = '1005' LIMIT 1");
+            const codeToUse = codeCheck.rows.length > 0 ? `1005-${Date.now()}` : '1005';
+            await client.query(`
+                INSERT INTO chart_of_accounts (account_code, account_name, account_type, hierarchy_level, parent_account, company_entity, manual_entry_allowed)
+                VALUES ($1, 'سلف العاملين / ذمم موظفين', 'Asset', 3, '1100', 'All', true)
+            `, [codeToUse]);
+        }
+
+        const salCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_name = 'رواتب الإدارة' LIMIT 1");
+        if (salCheck.rows.length === 0) {
+            const codeCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_code = '6100' LIMIT 1");
+            const codeToUse = codeCheck.rows.length > 0 ? `6100-${Date.now()}` : '6100';
+            await client.query(`
+                INSERT INTO chart_of_accounts (account_code, account_name, account_type, hierarchy_level, parent_account, company_entity, manual_entry_allowed)
+                VALUES ($1, 'رواتب الإدارة', 'Expense', 3, '6000', 'All', true)
+            `, [codeToUse]);
+        }
+
+        const commCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_name = 'عمولات مستحقة' LIMIT 1");
+        if (commCheck.rows.length === 0) {
+            const codeCheck = await client.query("SELECT id FROM chart_of_accounts WHERE account_code = '2140' LIMIT 1");
+            const codeToUse = codeCheck.rows.length > 0 ? `2140-${Date.now()}` : '2140';
+            await client.query(`
+                INSERT INTO chart_of_accounts (account_code, account_name, account_type, hierarchy_level, parent_account, company_entity, manual_entry_allowed)
+                VALUES ($1, 'عمولات مستحقة', 'Liability', 3, '2100', 'All', true)
+            `, [codeToUse]);
+        }
 
         const b = parseFloat(basic_salary || staff.salary || 0);
         const inc = parseFloat(incentives || 0);
@@ -137,24 +182,28 @@ const processPayroll = async (req, res) => {
                 // Step 1: Record Advance Deduction Return
                 if (projectAdvDeduction > 0) {
                     await AccountingService.recordDoubleEntry(client, {
-                        debitAccount: 'مصاريف رواتب وأجور',
+                        debitAccount: '6100',
                         creditAccount: 'سلف العاملين / ذمم موظفين',
                         amount: projectAdvDeduction,
                         costCenter: p.project_name,
                         description: `تسوية سلفة من راتب ${month}-${year} للموظف ${staff.name}`,
-                        username: username
+                        username: username,
+                        company: staff.company,
+                        companyId: staff.company_id
                     });
                 }
 
                 // Step 2: Record Cash Payment for the salary expense part
                 if (projectNetExpensePayment > 0) {
                     await AccountingService.recordDoubleEntry(client, {
-                        debitAccount: 'مصاريف رواتب وأجور',
-                        creditAccount: 'النقدية بالصندوق / البنوك',
+                        debitAccount: '6100',
+                        creditAccount: '1101',
                         amount: projectNetExpensePayment,
                         costCenter: p.project_name,
                         description: `صرف صافي راتب ${month}-${year} للموظف ${staff.name}`,
-                        username: username
+                        username: username,
+                        company: staff.company,
+                        companyId: staff.company_id
                     });
                 }
 
@@ -226,11 +275,13 @@ const processPayroll = async (req, res) => {
             await client.query("UPDATE sales_commissions SET status = 'Paid' WHERE id = ANY($1::int[])", [commIds]);
             await AccountingService.recordDoubleEntry(client, {
                 debitAccount: 'عمولات مستحقة',
-                creditAccount: 'النقدية بالصندوق / البنوك',
+                creditAccount: '1101',
                 amount: autoCommissions,
                 costCenter: 'General',
                 description: `صرف عمولات مستحقة للموظف ${staff.name} مع راتب ${month}-${year}`,
-                username: username
+                username: username,
+                company: staff.company,
+                companyId: staff.company_id
             });
         }
 
