@@ -12,6 +12,9 @@ export default function CustodyManagement() {
   const [accounts, setAccounts] = useState([]);
   const [attachmentsMap, setAttachmentsMap] = useState({});
   const [uploadingExpenseId, setUploadingExpenseId] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [boqItems, setBoqItems] = useState([]);
+  const [loadingBoqs, setLoadingBoqs] = useState(false);
 
   // Modals / Drawers States
   const [isCustodyModalOpen, setIsCustodyModalOpen] = useState(false);
@@ -32,6 +35,9 @@ export default function CustodyManagement() {
     amount: '',
     expense_date: new Date().toISOString().split('T')[0],
     recipient_name: '',
+    project_id: '',
+    boq_id: '',
+    cost_type: '',
     notes: ''
   });
 
@@ -111,6 +117,21 @@ export default function CustodyManagement() {
         date: "تاريخ المصروف *",
         recipient: "الجهة المستلمة للمصروف (المستفيد)",
         recipientPlaceholder: "مثال: شركة النور للأدوات المكتبية...",
+        project: "المشروع المرتبط",
+        projectPlaceholder: "اختر المشروع (اختياري)...",
+        boqItem: "بند المقايسة المرتبط",
+        boqPlaceholder: "اختر بند المقايسة...",
+        loadingBoqs: "جاري تحميل البنود...",
+        noBoqs: "لا توجد بنود مقايسة لهذا المشروع",
+        costType: "نوع التكلفة",
+        costTypePlaceholder: "اختر نوع التكلفة...",
+        costTypes: {
+          materials: "مواد وخامات",
+          labor: "أجور وعمالة",
+          subcontractor: "مقاولين باطن",
+          equipment: "معدات وآلات",
+          other: "مصاريف أخرى"
+        },
         notes: "شرح وتفاصيل المصروف",
         notesPlaceholder: "اكتب بيان الفاتورة هنا بالتفصيل...",
         submit: "حفظ وتسجيل المصروف"
@@ -204,6 +225,21 @@ export default function CustodyManagement() {
         date: "Expense Date *",
         recipient: "Recipient / Supplier Name",
         recipientPlaceholder: "Enter vendor name...",
+        project: "Linked Project",
+        projectPlaceholder: "Select Project (Optional)...",
+        boqItem: "Linked BOQ Item",
+        boqPlaceholder: "Select BOQ Item...",
+        loadingBoqs: "Loading items...",
+        noBoqs: "No BOQ items for this project",
+        costType: "Cost Type",
+        costTypePlaceholder: "Select Cost Type...",
+        costTypes: {
+          materials: "Materials & Supplies",
+          labor: "Labor & Wages",
+          subcontractor: "Subcontractors",
+          equipment: "Equipment & Machinery",
+          other: "Other Expenses"
+        },
         notes: "Description / Notes",
         notesPlaceholder: "Enter detailed invoice explanation...",
         submit: "Save & Log Expenditure"
@@ -255,10 +291,39 @@ export default function CustodyManagement() {
       if (res.data.accounts_dd) {
         setAccounts(res.data.accounts_dd);
       }
+      if (res.data.projects_dd) {
+        setProjects(res.data.projects_dd);
+      }
     } catch (error) {
       console.error("Error fetching accounts:", error);
     }
   };
+
+  const fetchBOQItems = async (projectName) => {
+    setLoadingBoqs(true);
+    try {
+      const res = await api.get(`/dynamic/table/boq?filter=${encodeURIComponent(projectName)}&limit=200`);
+      if (res.data && res.data.data) {
+        setBoqItems(res.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching BOQ items:", error);
+    } finally {
+      setLoadingBoqs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!expenseForm.project_id) {
+      setBoqItems([]);
+      setExpenseForm(prev => ({ ...prev, boq_id: '', cost_type: '' }));
+      return;
+    }
+    const selectedProj = projects.find(p => p.id === parseInt(expenseForm.project_id));
+    if (selectedProj) {
+      fetchBOQItems(selectedProj.name);
+    }
+  }, [expenseForm.project_id, projects]);
 
   const handleCustodyClick = async (custody) => {
     setSelectedCustody(custody);
@@ -322,6 +387,9 @@ export default function CustodyManagement() {
           amount: '',
           expense_date: new Date().toISOString().split('T')[0],
           recipient_name: '',
+          project_id: '',
+          boq_id: '',
+          cost_type: '',
           notes: ''
         });
         // refresh selected custody details
@@ -658,6 +726,26 @@ export default function CustodyManagement() {
                           </div>
                         </div>
 
+                        {exp.project_name && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <span className="px-2.5 py-0.5 bg-blue-50/80 text-blue-700 rounded-lg text-[9px] font-black border border-blue-200/30">
+                              📁 {exp.project_name}
+                            </span>
+                            {exp.cost_type && (
+                              <span className="px-2.5 py-0.5 bg-indigo-50/80 text-indigo-700 rounded-lg text-[9px] font-black border border-indigo-200/30">
+                                🏷️ {
+                                  language === 'ar' 
+                                    ? (exp.cost_type === 'Materials' ? 'مواد وخامات' :
+                                       exp.cost_type === 'Labor' ? 'أجور وعمالة' :
+                                       exp.cost_type === 'Subcontractor' ? 'مقاولين باطن' :
+                                       exp.cost_type === 'Equipment' ? 'معدات وآلات' : 'مصاريف أخرى')
+                                    : exp.cost_type
+                                }
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         {exp.notes && <p className="text-xs text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-100">{exp.notes}</p>}
 
                         {/* Status Badge */}
@@ -898,6 +986,74 @@ export default function CustodyManagement() {
                   className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
                 />
               </div>
+
+              {/* Project Selection Dropdown */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  {cur.expenseForm.project}
+                </label>
+                <select
+                  value={expenseForm.project_id}
+                  onChange={e => setExpenseForm({ ...expenseForm, project_id: e.target.value })}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                >
+                  <option value="">{cur.expenseForm.projectPlaceholder}</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Conditional BOQ and Cost Type Fields */}
+              {expenseForm.project_id && (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                  {/* BOQ Item Selection */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      {cur.expenseForm.boqItem}
+                    </label>
+                    <select
+                      required
+                      value={expenseForm.boq_id}
+                      onChange={e => setExpenseForm({ ...expenseForm, boq_id: e.target.value })}
+                      disabled={loadingBoqs}
+                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                    >
+                      <option value="">
+                        {loadingBoqs ? cur.expenseForm.loadingBoqs : cur.expenseForm.boqPlaceholder}
+                      </option>
+                      {boqItems.map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.item_name}
+                        </option>
+                      ))}
+                    </select>
+                    {!loadingBoqs && boqItems.length === 0 && (
+                      <p className="text-[10px] font-bold text-rose-500 mt-1">{cur.expenseForm.noBoqs}</p>
+                    )}
+                  </div>
+
+                  {/* Cost Type Selection */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      {cur.expenseForm.costType}
+                    </label>
+                    <select
+                      required
+                      value={expenseForm.cost_type}
+                      onChange={e => setExpenseForm({ ...expenseForm, cost_type: e.target.value })}
+                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                    >
+                      <option value="">{cur.expenseForm.costTypePlaceholder}</option>
+                      <option value="Materials">{cur.expenseForm.costTypes.materials}</option>
+                      <option value="Labor">{cur.expenseForm.costTypes.labor}</option>
+                      <option value="Subcontractor">{cur.expenseForm.costTypes.subcontractor}</option>
+                      <option value="Equipment">{cur.expenseForm.costTypes.equipment}</option>
+                      <option value="Other">{cur.expenseForm.costTypes.other}</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{cur.expenseForm.notes}</label>

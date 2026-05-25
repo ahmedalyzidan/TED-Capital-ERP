@@ -3,6 +3,16 @@ const AccountingService = require('../services/accountingService');
 const { logAdvancedAudit } = require('../utils/helpers');
 
 class CustodyController {
+    constructor() {
+        this.createCustody = this.createCustody.bind(this);
+        this.getCustodies = this.getCustodies.bind(this);
+        this.getCustodyDetails = this.getCustodyDetails.bind(this);
+        this.addCustodyExpense = this.addCustodyExpense.bind(this);
+        this.approveExpense = this.approveExpense.bind(this);
+        this.rejectExpense = this.rejectExpense.bind(this);
+        this.settleCustody = this.settleCustody.bind(this);
+    }
+
     // مساعد لحل تفاصيل الشركة
     async resolveCompanyDetails(client, req) {
         let companyId = 1;
@@ -134,7 +144,11 @@ class CustodyController {
             }
 
             const expensesRes = await pool.query(
-                `SELECT * FROM custody_expenses WHERE custody_id = $1 ORDER BY id DESC`,
+                `SELECT ce.*, p.name as project_name 
+                 FROM custody_expenses ce 
+                 LEFT JOIN projects p ON ce.project_id = p.id 
+                 WHERE ce.custody_id = $1 
+                 ORDER BY ce.id DESC`,
                 [id]
             );
 
@@ -151,7 +165,7 @@ class CustodyController {
     // 4. تسجيل بند مصروف جديد من العهدة (Pending)
     async addCustodyExpense(req, res) {
         const { id } = req.params;
-        const { expense_category, amount, expense_date, recipient_name, notes, receipt_attachment } = req.body;
+        const { expense_category, amount, expense_date, recipient_name, notes, receipt_attachment, project_id, boq_id, cost_type } = req.body;
         const amountNum = parseFloat(amount);
 
         if (!expense_category || isNaN(amountNum) || amountNum <= 0 || !expense_date) {
@@ -179,9 +193,9 @@ class CustodyController {
 
             // إدراج بند المصروف
             const expenseRes = await client.query(
-                `INSERT INTO custody_expenses (custody_id, expense_category, amount, expense_date, recipient_name, notes, receipt_attachment, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending') RETURNING *`,
-                [id, expense_category, amountNum, expense_date, recipient_name || null, notes || null, receipt_attachment || null]
+                `INSERT INTO custody_expenses (custody_id, expense_category, amount, expense_date, recipient_name, notes, receipt_attachment, status, project_id, boq_id, cost_type)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending', $8, $9, $10) RETURNING *`,
+                [id, expense_category, amountNum, expense_date, recipient_name || null, notes || null, receipt_attachment || null, project_id || null, boq_id || null, cost_type || null]
             );
             const expense = expenseRes.rows[0];
 
@@ -213,10 +227,11 @@ class CustodyController {
 
             // جلب تفاصيل المصروف والعهدة المرتبطة به
             const expRes = await client.query(
-                `SELECT ce.*, c.custodian_name, c.company_id
+                `SELECT ce.*, c.custodian_name, c.company_id, p.name as project_name
                  FROM custody_expenses ce
                  JOIN custodies c ON ce.custody_id = c.id
-                 WHERE ce.id = $1 FOR UPDATE`,
+                 LEFT JOIN projects p ON ce.project_id = p.id
+                 WHERE ce.id = $1 FOR UPDATE OF ce, c`,
                 [expense_id]
             );
 
@@ -239,20 +254,54 @@ class CustodyController {
             // إذا لم يتم تمرير حساب معين، نستخدم حساب المصروفات الافتراضي المتوفر بالدليل
             const resolvedDebitAccount = debit_account || 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما';
 
+            let custodyCompanyName = 'TED Capital';
+            const compRes = await client.query("SELECT name FROM companies WHERE id = $1", [expense.company_id]);
+            if (compRes.rows.length > 0) {
+                custodyCompanyName = compRes.rows[0].name;
+            }
+
             // ترحيل قيد التسوية المحاسبية للمصروف
-            // مدين: حساب المصاريف المعني (Resolved Account)
-            // دائن: عهد الموظفين والعهدة النقدية (1150)
             await AccountingService.recordDoubleEntry(client, {
                 debitAccount: resolvedDebitAccount,
                 creditAccount: 'عهد الموظفين والعهدة النقدية',
                 amount: parseFloat(expense.amount),
-                costCenter: 'General',
+                costCenter: expense.project_name || 'General',
                 description: `اعتماد مصروف عهدة (${expense.custodian_name}) | بند: ${expense.expense_category} | المستلم: ${expense.recipient_name || 'N/A'}`,
                 username: req.user?.username || 'System',
                 referenceNo: `EXP-${expense.id}`,
                 sourceModule: 'FinanceCustody',
-                companyId: expense.company_id
+                companyId: expense.company_id,
+                company: custodyCompanyName
             });
+
+            // تحديث تكلفة المقايسة (BOQ) ومزامنة أرباح المشروع
+            if (expense.boq_id && expense.cost_type) {
+                const amount = parseFloat(expense.amount);
+                let updateCol = null;
+                const ct = expense.cost_type.toLowerCase();
+                if (ct.includes('material') || ct.includes('مواد') || ct.includes('خام')) {
+                    updateCol = 'actual_material_cost';
+                } else if (ct.includes('labor') || ct.includes('أجور') || ct.includes('عمال')) {
+                    updateCol = 'actual_labor_cost';
+                } else if (ct.includes('subcontractor') || ct.includes('مقاول')) {
+                    updateCol = 'actual_subcontractor_cost';
+                } else {
+                    updateCol = 'actual_material_cost'; // Default fallback
+                }
+
+                await client.query(
+                    `UPDATE boq 
+                     SET ${updateCol} = COALESCE(${updateCol}, 0) + $1
+                     WHERE id = $2`,
+                    [amount, expense.boq_id]
+                );
+
+                // إعادة احتساب أرباح ومصاريف المشروع وتحديث لوحة تحكم المالية
+                const { syncProjectFinancials } = require('../utils/helpers');
+                if (expense.project_name) {
+                    await syncProjectFinancials(expense.project_name, client);
+                }
+            }
 
             await logAdvancedAudit(
                 client,

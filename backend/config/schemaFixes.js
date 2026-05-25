@@ -309,6 +309,9 @@ const applySchemaFixes = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    await runQuery("Custody Expenses Add project_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL");
+    await runQuery("Custody Expenses Add boq_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE SET NULL");
+    await runQuery("Custody Expenses Add cost_type", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS cost_type VARCHAR(100)");
 
     await runQuery("Seed Custody Account", `
         INSERT INTO chart_of_accounts (account_code, account_name, company_entity, hierarchy_level, parent_account, account_type, currency, manual_entry_allowed, company_id)
