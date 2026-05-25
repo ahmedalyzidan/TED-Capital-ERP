@@ -45,7 +45,8 @@ const processPayroll = async (req, res) => {
     const { 
         staffId, month, year, projects, 
         basic_salary, incentives, commissions, 
-        expenses, profit_share, deductions, advance_deduction 
+        expenses, profit_share, deductions, advance_deduction,
+        category
     } = req.body;
     
     const client = await pool.connect();
@@ -155,6 +156,64 @@ const processPayroll = async (req, res) => {
                         description: `صرف صافي راتب ${month}-${year} للموظف ${staff.name}`,
                         username: username
                     });
+                }
+
+                // Actual Project Expenses Log Integration:
+                if (p.project_name === 'General') {
+                    const activeProjectsRes = await client.query("SELECT id, name FROM projects WHERE status = 'In Progress'");
+                    const activeProjects = activeProjectsRes.rows;
+                    if (activeProjects.length > 0) {
+                        const distributedAmount = projectGrossExpense / activeProjects.length;
+                        for (const activeProj of activeProjects) {
+                            await client.query(
+                                `INSERT INTO expenses (description, amount, currency, category_id, project_id, expense_date, payment_method, supplier_name, status, company_entity, company_id, created_by, approved_by, metadata)
+                                 VALUES ($1, $2, 'EGP', 3, $3, CURRENT_DATE, 'Payroll', $4, 'Approved', $5, $6, $7, $7, $8)`,
+                                [
+                                    `توزيع مصاريف إدارية (راتب الموظف ${staff.name} لشهر ${month}-${year})`,
+                                    distributedAmount,
+                                    activeProj.id,
+                                    staff.name,
+                                    staff.company || 'TED Capital',
+                                    staff.company_id || 1,
+                                    req.user?.id || null,
+                                    JSON.stringify({
+                                        category: category || 'مصروفات أخرى',
+                                        unit: 'شهر',
+                                        qty: 1,
+                                        rate: distributedAmount,
+                                        allocationType: 'general_distribution',
+                                        beneficiary: staff.name
+                                    })
+                                ]
+                            );
+                        }
+                    }
+                } else {
+                    const projRes = await client.query("SELECT id FROM projects WHERE name = $1 LIMIT 1", [p.project_name]);
+                    if (projRes.rows.length > 0) {
+                        const projId = projRes.rows[0].id;
+                        await client.query(
+                            `INSERT INTO expenses (description, amount, currency, category_id, project_id, expense_date, payment_method, supplier_name, status, company_entity, company_id, created_by, approved_by, metadata)
+                             VALUES ($1, $2, 'EGP', 3, $3, CURRENT_DATE, 'Payroll', $4, 'Approved', $5, $6, $7, $7, $8)`,
+                            [
+                                `رواتب وأجور - الموظف ${staff.name} لشهر ${month}-${year}`,
+                                projectGrossExpense,
+                                projId,
+                                staff.name,
+                                staff.company || 'TED Capital',
+                                staff.company_id || 1,
+                                req.user?.id || null,
+                                JSON.stringify({
+                                    category: category || 'مصروفات أخرى',
+                                    unit: 'شهر',
+                                    qty: 1,
+                                    rate: projectGrossExpense,
+                                    allocationType: 'project',
+                                    beneficiary: staff.name
+                                })
+                            ]
+                        );
+                    }
                 }
             }
         }

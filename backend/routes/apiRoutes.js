@@ -384,12 +384,17 @@ router.post('/action/approve_sub_invoice/:id', async (req, res) => {
 
 router.get('/table/staff', authGuard, isolateData, async (req, res) => {
     try {
-        let query = "SELECT * FROM staff WHERE 1=1";
+        let query = "SELECT * FROM staff WHERE is_deleted = false";
         let params = [];
 
-        if (req.isolation && req.isolation.company) {
-            query += ` AND (company = $1 OR company IS NULL OR company = '')`;
-            params.push(req.isolation.company);
+        if (req.isolation) {
+            if (req.isolation.sql) {
+                query += req.isolation.sql;
+                params = req.isolation.params || [];
+            } else if (req.isolation.company) {
+                query += ` AND (company = $1 OR company IS NULL OR company = '')`;
+                params.push(req.isolation.company);
+            }
         }
 
         query += " ORDER BY id DESC";

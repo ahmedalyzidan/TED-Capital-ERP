@@ -5,10 +5,10 @@ hostname = '46.224.144.166'
 username = 'root'
 password = 'Zid@n2026'
 
-# Commands to run
 commands = [
-    'cd /root && git fetch origin && git reset --hard origin/main',
-    'cd /root && bash deploy.sh',
+    'cd /root/TED-Capital-ERP && git fetch origin && git reset --hard origin/main',
+    'cd /root/TED-Capital-ERP && bash deploy.sh',
+    'docker exec erp-backend node backend/sync_existing_payroll.js',
     'mkdir -p ~/.ssh && echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHG5S7FmOyFaeerBeWuJAs6mRpYoUaPugZCZ90nJaHxP ahmedalyzidan2013@gmail.com" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
 ]
 

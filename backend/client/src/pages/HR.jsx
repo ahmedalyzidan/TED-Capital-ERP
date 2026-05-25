@@ -309,14 +309,91 @@ export default function HR() {
   const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState(null);
+
+  const handleEditStaff = (s) => {
+    setEditingStaffId(s.id);
+    setStaffForm({
+      name: s.name || '',
+      salary: s.salary || '',
+      company: s.company || '',
+      job_title: s.job_title || s.jobTitle || '',
+      department: s.department || '',
+      id_number: s.id_number || '',
+      joining_date: s.joining_date ? new Date(s.joining_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    });
+    setIsStaffModalOpen(true);
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا الموظف؟' : 'Are you sure you want to delete this employee?')) {
+      try {
+        await api.delete(`/delete/staff/${id}`);
+        fetchData();
+      } catch (error) {
+        alert(t.alerts.error);
+      }
+    }
+  };
   
+const boqCategories = [
+  "مصروفات أخرى",
+  "أعمال صحي",
+  "أعمال عزل",
+  "أعمال كهرباء",
+  "أعمال تأسيس تكييف",
+  "أعمال توريد وتركيب تكييف - HVAC",
+  "أعمال تركيب تكييف",
+  "أعمال بياض محاره",
+  "أعمال دهانات",
+  "أعمال دهانات MICRO CEMENT",
+  "أعمال دهانات إيبوكسي",
+  "أعمال دهانات أستر",
+  "أعمال توريد وتركيب أبواب داخلية",
+  "أعمال توريد وتركيب باب مصفح",
+  "أعمال ألوميتال",
+  "أعمال شيش حصره ( SHUTTER )",
+  "أعمال سيراميك حوائط",
+  "أعمال بورسلين أرضيات",
+  "أعمال بورسلين طاولات",
+  "أعمال رخام أرضيات",
+  "أعمال رخام حوائط",
+  "أعمال رخام درج",
+  "أعمال رخام طاولات",
+  "أعمال جيرانيت درج",
+  "أعمال جيرانيت طاولات",
+  "أعمال جيرانيت أرضيات",
+  "أعمال جيرانيت حوائط",
+  "أعمال توريد وتركيب حجر مايكا حوائط",
+  "أعمال باركيه أرضيات",
+  "أعمال إتش دي إف أرضيات",
+  "أعمال ورق حائط جدران",
+  "أعمال فوم حوائط",
+  "أعمال ستيل جدران",
+  "أعمال مرايات جدران",
+  "أعمال زجاج سيكوريت",
+  "أعمال جبسون بورد أسقف",
+  "أعمال بانوهات جدران",
+  "أعمال بديل رخام جدران",
+  "أعمال بديل خشب جدران",
+  "أعمال توريد وتركيب حديد فورفورجيه حماية شبابيك وبلكونات وباب شقة",
+  "أعمال سلك شريط ناموس رول حماية",
+  "أعمال نجارة باب وشباك",
+  "أعمال زجاج دبل جلاس عازل للصوت والحرارة",
+  "أعمال توريد وتركيب قرميد أسقف ومظلات وبرجولات خشيبية وحديدية وبلاستيك",
+  "أعمال لاند سكيب",
+  "أعمال شبكات ري",
+  "أعمال إضاءة لاند سكيب"
+];
+
   const [staffForm, setStaffForm] = useState({ name: '', salary: '', company: '', job_title: '', department: '', id_number: '', joining_date: new Date().toISOString().split('T')[0] });
   const [advanceForm, setAdvanceForm] = useState({ staff_id: '', amount: '', deduction_per_month: '', request_date: new Date().toISOString().split('T')[0], repayment_method: 'Payroll Deduction' });
   const [advancesList, setAdvancesList] = useState([]);
   const [payrollForm, setPayrollForm] = useState({
     staffId: '', month: new Date().getMonth() + 1, year: new Date().getFullYear(),
     projects: [{ project_name: 'General', percent: 100 }],
-    basic_salary: 0, incentives: 0, commissions: 0, expenses: 0, profit_share: 0, deductions: 0, advance_deduction: 0
+    basic_salary: 0, incentives: 0, commissions: 0, expenses: 0, profit_share: 0, deductions: 0, advance_deduction: 0,
+    category: 'مصروفات أخرى'
   });
 
   const [payrollSheet, setPayrollSheet] = useState([]);
@@ -420,8 +497,13 @@ export default function HR() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post('/add/staff', { ...staffForm, salary: Number(staffForm.salary) });
+      if (editingStaffId) {
+        await api.put(`/update/staff/${editingStaffId}`, { ...staffForm, salary: Number(staffForm.salary) });
+      } else {
+        await api.post('/add/staff', { ...staffForm, salary: Number(staffForm.salary) });
+      }
       setIsStaffModalOpen(false);
+      setEditingStaffId(null);
       setStaffForm({ name: '', salary: '', company: '', job_title: '', department: '', id_number: '', joining_date: new Date().toISOString().split('T')[0] });
       fetchData();
     } catch (error) {
@@ -555,13 +637,14 @@ export default function HR() {
                       <th className="px-6 py-4 font-bold">{t.staffTable.name}</th>
                       <th className="px-6 py-4 font-bold">{t.staffTable.company}</th>
                       <th className={`px-6 py-4 font-bold ${language === 'ar' ? 'text-left' : 'text-right'}`}>{t.staffTable.salary}</th>
+                      <th className="px-6 py-4 font-bold text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
-                      <tr><td colSpan="4" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Syncing records...</td></tr>
+                      <tr><td colSpan="5" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Syncing records...</td></tr>
                     ) : staffList.length === 0 ? (
-                      <tr><td colSpan="4" className="p-24 text-center text-slate-400 font-bold italic">{t.staffTable.empty}</td></tr>
+                      <tr><td colSpan="5" className="p-24 text-center text-slate-400 font-bold italic">{t.staffTable.empty}</td></tr>
                     ) : staffList.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50 transition-all group">
                         <td className="px-6 py-4 font-mono font-bold text-slate-400 text-xs">EMP-{s.id}</td>
@@ -573,6 +656,20 @@ export default function HR() {
                         </td>
                         <td className={`px-6 py-4 font-mono font-bold text-slate-900 text-lg ${language === 'ar' ? 'text-left' : 'text-right'} bg-slate-50/50`}>
                           {Number(s.salary).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-center space-x-2">
+                          <button 
+                            onClick={() => handleEditStaff(s)}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all inline-flex items-center gap-1"
+                          >
+                            ✏️ {language === 'ar' ? 'تعديل' : 'Edit'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteStaff(s.id)}
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all inline-flex items-center gap-1"
+                          >
+                            🗑️ {language === 'ar' ? 'حذف' : 'Delete'}
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -910,10 +1007,14 @@ export default function HR() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 transform transition-all scale-100">
             <div className="px-10 py-8 border-b border-slate-100 flex justify-between items-center bg-white">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">{t.modals.staff.title}</h3>
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {editingStaffId 
+                    ? (language === 'ar' ? "تعديل بيانات موظف" : "Edit Employee Data") 
+                    : t.modals.staff.title}
+                </h3>
                 <p className="text-slate-400 font-medium text-[10px] uppercase tracking-widest mt-1">Human Resource Record Creation</p>
               </div>
-              <button onClick={() => setIsStaffModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">✕</button>
+              <button onClick={() => { setIsStaffModalOpen(false); setEditingStaffId(null); setStaffForm({ name: '', salary: '', company: '', job_title: '', department: '', id_number: '', joining_date: new Date().toISOString().split('T')[0] }); }} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">✕</button>
             </div>
             <form onSubmit={submitStaff} className="p-10 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -929,7 +1030,7 @@ export default function HR() {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.staff.jobTitle}</label>
                   <select name="job_title" value={staffForm.job_title} onChange={handleStaffChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none">
                     <option value="">{language === 'ar' ? '-- اختر المسمى --' : '-- Select Title --'}</option>
-                    {jobTitlesList.map(title => <option key={title} value={title}>{title}</option>)}
+                    {Array.from(new Set([...jobTitlesList, ...boqCategories])).map(title => <option key={title} value={title}>{title}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -951,7 +1052,11 @@ export default function HR() {
                 </div>
               </div>
               <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 text-white py-5 rounded-xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50">
-                {isSubmitting ? (language === 'ar' ? 'جاري الحفظ...' : 'Registering...') : t.modals.staff.save}
+                {isSubmitting 
+                  ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') 
+                  : (editingStaffId 
+                      ? (language === 'ar' ? "حفظ التعديلات" : "Save Changes") 
+                      : t.modals.staff.save)}
               </button>
             </form>
           </div>
@@ -1018,6 +1123,18 @@ export default function HR() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.payroll.month}</label>
                   <input type="number" value={payrollForm.month} onChange={(e) => setPayrollForm({...payrollForm, month: e.target.value})} required min="1" max="12" className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 font-mono focus:bg-white text-center" />
+                </div>
+                
+                <div className="col-span-full space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'القسم الأساسي للمصروف' : 'Main Expense Category'}</label>
+                  <select 
+                    value={payrollForm.category || 'مصروفات أخرى'} 
+                    onChange={(e) => setPayrollForm({...payrollForm, category: e.target.value})} 
+                    required 
+                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none"
+                  >
+                    {boqCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                 </div>
                 
                 <div className="space-y-2">
