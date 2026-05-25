@@ -5,6 +5,7 @@ import DirectStockIssue from './DirectStockIssue';
 import FinancialTransactions from './FinancialTransactions';
 import CustodyManagement from './CustodyManagement';
 import HR from './HR';
+import DXFQuantityTakeoff from './DXFQuantityTakeoff';
 
 function tafqeet(number) {
   if (isNaN(number) || number === null) return '';
@@ -2565,7 +2566,7 @@ export default function ContractorSuite() {
     };
 
     const fileExt = file.name.split('.').pop().toLowerCase();
-    const isTextFile = ['txt', 'json', 'html'].includes(fileExt) || (file.type && file.type.startsWith('text') && !['csv', 'xls', 'xlsx', 'doc', 'docx'].includes(fileExt));
+    const isTextFile = ['txt', 'json', 'html', 'dxf', 'svg', 'xml'].includes(fileExt) || (file.type && file.type.startsWith('text') && !['csv', 'xls', 'xlsx', 'doc', 'docx'].includes(fileExt));
 
     if (isTextFile) {
       reader.readAsText(file);
@@ -3083,7 +3084,7 @@ export default function ContractorSuite() {
 
         {/* --- PREMIUM INLINE TABS ROW (Custody & HR) --- */}
         <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print mt-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={() => setActiveTab('custody')}
               className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'custody'
@@ -3103,6 +3104,16 @@ export default function ContractorSuite() {
             >
               <span className="text-sm">👥</span>
               <span>{language === 'ar' ? 'الموارد البشرية' : 'HR'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('takeoff')}
+              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'takeoff'
+                ? 'bg-[#1e293b] border-indigo-500/30 text-indigo-400 shadow-md transform -translate-y-[1px]'
+                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <span className="text-sm">📐</span>
+              <span>{language === 'ar' ? 'استخراج المقايسات' : 'DXF Takeoff'}</span>
             </button>
           </div>
         </div>
@@ -5526,6 +5537,20 @@ export default function ContractorSuite() {
         {activeTab === 'hr' && (
           <div className="animate-in slide-in-from-bottom duration-500">
             <HR />
+          </div>
+        )}
+
+        {/* 5.5 DXF QUANTITY TAKEOFF ENGINE */}
+        {activeTab === 'takeoff' && (
+          <div className="animate-in slide-in-from-bottom duration-500">
+            <DXFQuantityTakeoff
+              projectFiles={projectFiles}
+              boqItems={boqItems}
+              setBoqItems={setBoqItems}
+              activeProjectId={activeProjectId}
+              activeProject={projects?.find(p => String(p.id) === String(activeProjectId))}
+              language={language}
+            />
           </div>
         )}
 
