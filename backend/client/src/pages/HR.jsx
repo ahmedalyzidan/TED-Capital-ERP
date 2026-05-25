@@ -404,6 +404,40 @@ const boqCategories = [
   const [payrollSheet, setPayrollSheet] = useState([]);
   const [sheetPeriod, setSheetPeriod] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
 
+  // Company filtering context
+  const activeCompany = localStorage.getItem('active_company') || 'كل الشركات';
+
+  const filteredStaffList = useMemo(() => {
+    if (!activeCompany || activeCompany === 'كل الشركات' || activeCompany === 'All Companies') {
+      return staffList;
+    }
+    return staffList.filter(s => (s.company || '').trim().toLowerCase() === activeCompany.trim().toLowerCase());
+  }, [staffList, activeCompany]);
+
+  const filteredAdvancesList = useMemo(() => {
+    if (!activeCompany || activeCompany === 'كل الشركات' || activeCompany === 'All Companies') {
+      return advancesList;
+    }
+    const allowedIds = new Set(filteredStaffList.map(s => String(s.id)));
+    return advancesList.filter(adv => allowedIds.has(String(adv.staff_id)));
+  }, [advancesList, filteredStaffList, activeCompany]);
+
+  const filteredPayrollHistory = useMemo(() => {
+    if (!activeCompany || activeCompany === 'كل الشركات' || activeCompany === 'All Companies') {
+      return payrollHistory;
+    }
+    const allowedIds = new Set(filteredStaffList.map(s => String(s.id)));
+    return payrollHistory.filter(pr => allowedIds.has(String(pr.staff_id)));
+  }, [payrollHistory, filteredStaffList, activeCompany]);
+
+  const filteredPayrollSheet = useMemo(() => {
+    if (!activeCompany || activeCompany === 'كل الشركات' || activeCompany === 'All Companies') {
+      return payrollSheet;
+    }
+    const allowedIds = new Set(filteredStaffList.map(s => String(s.id)));
+    return payrollSheet.filter(item => allowedIds.has(String(item.staff_id)));
+  }, [payrollSheet, filteredStaffList, activeCompany]);
+
   const [location, setLocation] = useState({ lat: null, lng: null });
   const [locError, setLocError] = useState('');
   const [selectedAttProject, setSelectedAttProject] = useState('');
