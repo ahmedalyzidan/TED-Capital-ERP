@@ -250,15 +250,20 @@ class CustodyController {
                 [req.user?.username || 'System', expense_id]
             );
 
-            // تحديد الحساب المدين المحمل بالمصروف
-            // إذا لم يتم تمرير حساب معين، نستخدم حساب المصروفات الافتراضي المتوفر بالدليل
-            const resolvedDebitAccount = debit_account || 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما';
-
+            // جلب اسم شركة العهدة أولاً لتحديد الحساب المدين الصحيح
             let custodyCompanyName = 'TED Capital';
             const compRes = await client.query("SELECT name FROM companies WHERE id = $1", [expense.company_id]);
             if (compRes.rows.length > 0) {
                 custodyCompanyName = compRes.rows[0].name;
             }
+
+            // تحديد الحساب المدين المحمل بالمصروف حسب شركة العهدة
+            // يُستخدم الحساب المُمرَّر من الواجهة إن وُجد، وإلا يُختار الحساب المناسب للشركة
+            let defaultDebitAccount = 'مصاريف عمومية وإدارية'; // حساب 6000 - شامل لكل الشركات
+            if (custodyCompanyName.includes('PRIMEMED') || custodyCompanyName.includes('بريميميد')) {
+                defaultDebitAccount = 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما';
+            }
+            const resolvedDebitAccount = debit_account || defaultDebitAccount;
 
             // ترحيل قيد التسوية المحاسبية للمصروف
             await AccountingService.recordDoubleEntry(client, {
