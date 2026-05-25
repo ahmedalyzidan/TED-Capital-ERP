@@ -674,16 +674,18 @@ const boqCategories = [
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 text-[10px] uppercase tracking-widest">
                       <th className="px-6 py-4 font-bold">{t.staffTable.id}</th>
                       <th className="px-6 py-4 font-bold">{t.staffTable.name}</th>
+                      <th className="px-6 py-4 font-bold">{language === 'ar' ? 'الوظيفة' : 'Job Title'}</th>
                       <th className="px-6 py-4 font-bold">{t.staffTable.company}</th>
+                      <th className="px-6 py-4 font-bold">{language === 'ar' ? 'تاريخ التعيين' : 'Hiring Date'}</th>
                       <th className={`px-6 py-4 font-bold ${language === 'ar' ? 'text-left' : 'text-right'}`}>{t.staffTable.salary}</th>
                       <th className="px-6 py-4 font-bold text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
-                      <tr><td colSpan="5" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Syncing records...</td></tr>
+                      <tr><td colSpan="7" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Syncing records...</td></tr>
                     ) : filteredStaffList.length === 0 ? (
-                      <tr><td colSpan="5" className="p-24 text-center text-slate-400 font-bold italic">{t.staffTable.empty}</td></tr>
+                      <tr><td colSpan="7" className="p-24 text-center text-slate-400 font-bold italic">{t.staffTable.empty}</td></tr>
                     ) : filteredStaffList.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50 transition-all group">
                         <td className="px-6 py-4 font-mono font-bold text-slate-400 text-xs">EMP-{s.id}</td>
@@ -691,7 +693,13 @@ const boqCategories = [
                           <span className="font-bold text-slate-900 text-base">{s.name}</span>
                         </td>
                         <td className="px-6 py-4">
+                          <span className="font-bold text-slate-500 text-sm">{s.job_title || s.jobTitle || '-'}</span>
+                        </td>
+                        <td className="px-6 py-4">
                           <span className="font-bold text-slate-500 text-sm">{s.company || '-'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="font-mono text-slate-500 text-xs">{s.joining_date ? s.joining_date.split('T')[0] : '-'}</span>
                         </td>
                         <td className={`px-6 py-4 font-mono font-bold text-slate-900 text-lg ${language === 'ar' ? 'text-left' : 'text-right'} bg-slate-50/50`}>
                           {Number(s.salary).toLocaleString()}

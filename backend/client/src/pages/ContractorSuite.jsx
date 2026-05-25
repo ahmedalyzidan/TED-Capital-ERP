@@ -2918,7 +2918,7 @@ export default function ContractorSuite() {
         </div>
       )}
 
-      <div className={`max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 ${(selectedPrintInstallment || selectedPrintValuation) ? 'print:hidden' : 'print-full-width'}`}>
+      <div className={`max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700 ${(selectedPrintInstallment || selectedPrintValuation) ? 'print:hidden' : 'print-full-width'}`}>
 
         {/* --- DYNAMIC HEADER --- */}
         <div className="relative rounded-[2rem] p-8 overflow-hidden border border-slate-800 bg-[#161e2f] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 shadow-2xl no-print">
@@ -3854,7 +3854,7 @@ export default function ContractorSuite() {
                           <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors print:text-black">{item.beneficiary}</span>
                         </td>
                         <td className="px-6 py-5">
-                          <span className="text-xs text-slate-300 print:text-black whitespace-normal break-words max-w-[250px] inline-block">{item.notes || '-'}</span>
+                          <span className="text-xs text-slate-300 print:text-black whitespace-normal break-words max-w-[400px] inline-block">{item.notes || '-'}</span>
                         </td>
                         <td className="px-6 py-5">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${activeGrad(item.category)}`}>
