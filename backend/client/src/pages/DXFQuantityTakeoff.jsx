@@ -263,12 +263,13 @@ export default function DXFQuantityTakeoff({
   const [isProcessing, setIsProcessing] = useState(false);
   const [boqGenerated, setBoqGenerated] = useState(false);
 
-  // Filter DXF files from project files
+  // Filter DXF and DWG files from project files
   const dxfFiles = useMemo(() =>
-    projectFiles.filter(f =>
-      (f.name || '').toLowerCase().endsWith('.dxf') &&
-      String(f.projectId) === String(activeProjectId)
-    ), [projectFiles, activeProjectId]);
+    projectFiles.filter(f => {
+      const name = (f.name || '').toLowerCase();
+      return (name.endsWith('.dxf') || name.endsWith('.dwg')) &&
+             String(f.projectId) === String(activeProjectId);
+    }), [projectFiles, activeProjectId]);
 
   // ── Auto-classify a layer name ──
   const classifyLayer = useCallback((layerName) => {
@@ -293,6 +294,16 @@ export default function DXFQuantityTakeoff({
     const file = projectFiles.find(f => f.id === selectedFileId);
     if (!file) { setParseError('الملف غير موجود'); return; }
 
+    const fileNameLower = (file.name || '').toLowerCase();
+    if (fileNameLower.endsWith('.dwg')) {
+      setParseError(
+        language === 'ar'
+          ? 'ملفات DWG هي ملفات ثنائية مغلقة ولا يمكن تحليلها مباشرة. يرجى فتح الملف في برنامج AutoCAD وحفظه بصيغة DXF (AutoCAD DXF) ثم رفعه مجدداً لتتمكن من استخراج المقايسات بدقة.'
+          : 'DWG files are binary and cannot be parsed directly. Please open the file in AutoCAD and save/export it as DXF (AutoCAD DXF), then upload the DXF file to parse it successfully.'
+      );
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -302,7 +313,17 @@ export default function DXFQuantityTakeoff({
       if (textContent.startsWith('data:')) {
         const base64Part = textContent.split(',')[1];
         if (base64Part) {
-          textContent = atob(base64Part);
+          try {
+            textContent = atob(base64Part);
+          } catch (e) {
+            setParseError(
+              language === 'ar'
+                ? 'فشل في قراءة بنية الملف. يرجى التأكد من حفظ الملف بصيغة DXF النصية (ASCII DXF) وليس بصيغة ثنائية.'
+                : 'Failed to read file content. Please ensure the file was saved as text-based DXF (ASCII DXF) and not binary.'
+            );
+            setIsProcessing(false);
+            return;
+          }
         }
       }
 
@@ -671,15 +692,15 @@ export default function DXFQuantityTakeoff({
         <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-4">
           <h3 className="text-sm font-black text-cyan-400 flex items-center gap-2">
             <span className="p-1.5 bg-cyan-500/10 rounded-lg border border-cyan-500/25">📁</span>
-            {language === 'ar' ? 'اختيار ملف DXF' : 'Select DXF File'}
+            {language === 'ar' ? 'اختيار ملف هندسي (DXF / DWG)' : 'Select Engineering File (DXF / DWG)'}
           </h3>
           {dxfFiles.length === 0 ? (
             <div className="p-6 text-center bg-[#0f172a] rounded-2xl border border-dashed border-slate-700">
               <span className="text-4xl block mb-3">📂</span>
               <p className="text-xs text-slate-400 font-bold leading-relaxed">
                 {language === 'ar'
-                  ? 'لا توجد ملفات DXF مرفوعة لهذا المشروع بعد.\nارفع ملف .dxf من تاب "ملفات ومستندات" أولاً.'
-                  : 'No DXF files found. Upload a .dxf file in the Files tab first.'}
+                  ? 'لا توجد ملفات DXF أو DWG مرفوعة لهذا المشروع بعد. ارفع ملف AutoCAD من تاب "ملفات ومستندات" أولاً.'
+                  : 'No DXF or DWG files found. Upload an AutoCAD file in the Files tab first.'}
               </p>
             </div>
           ) : (
