@@ -161,8 +161,7 @@ const processPayroll = async (req, res) => {
                 // Actual Project Expenses Log Integration:
                 if (p.project_name === 'General') {
                     const activeProjectsRes = await client.query(
-                        "SELECT id, name FROM projects WHERE status IN ('In Progress', 'Active') AND company = $1",
-                        [staff.company || 'TED Capital']
+                        "SELECT id, name FROM projects WHERE status IN ('Active', 'In Progress')"
                     );
                     const activeProjects = activeProjectsRes.rows;
                     if (activeProjects.length > 0) {
