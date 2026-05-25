@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import api from '../services/api';
 import DirectStockIssue from './DirectStockIssue';
@@ -12,11 +11,11 @@ function tafqeet(number) {
   const parts = Number(number).toFixed(2).split('.');
   const pounds = Number(parts[0]);
   const piastres = Number(parts[1]);
-  
+
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
   const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
   const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
-  
+
   function convertLessThanThousand(n) {
     if (n === 0) return '';
     let res = '';
@@ -40,7 +39,7 @@ function tafqeet(number) {
     }
     return res;
   }
-  
+
   function convert(n) {
     if (n === 0) return 'صفر';
     let res = '';
@@ -50,7 +49,7 @@ function tafqeet(number) {
     remainder = remainder % 1000000;
     const thousands = Math.floor(remainder / 1000);
     const hundredsVal = remainder % 1000;
-    
+
     if (billions > 0) {
       res += (billions === 1 ? 'مليار' : billions === 2 ? 'ملياران' : convertLessThanThousand(billions) + ' مليار');
       if (remainder > 0) res += ' و ';
@@ -70,7 +69,7 @@ function tafqeet(number) {
     }
     return res;
   }
-  
+
   let result = convert(pounds) + ' جنيه مصري';
   if (piastres > 0) {
     result += ' و ' + convert(piastres) + ' قرشاً';
@@ -276,7 +275,7 @@ export default function ContractorSuite() {
 
       if (migratedSomething) {
         localStorage.setItem('contractor_projects', JSON.stringify(localProjects));
-        
+
         let newActiveId = activeProjectId;
         if (migrationMap[activeProjectId]) {
           newActiveId = migrationMap[activeProjectId];
@@ -975,10 +974,10 @@ export default function ContractorSuite() {
 
     // 1. Cumulative Works: Sum of quantity * unitPrice for each subcontractor line in all contractor valuations up to refDate
     let cumulativeWorks = 0;
-    
+
     // Gather all contractor valuations for this project
     let contractorVals = valuations.filter(v => v.isContractor && String(v.projectId) === String(activeProjectId));
-    
+
     // If refDate is specified, filter valuations up to refDate
     if (refDate) {
       contractorVals = contractorVals.filter(v => {
@@ -1018,11 +1017,11 @@ export default function ContractorSuite() {
     // 2. Previous Spent: Sum of all expenses (expenses + dbExpenses) matching the contractor's name (beneficiary) with a date earlier than or equal to the valuation date.
     // Summed at the project level (matching by project ID or name).
     const allExpenses = [...expenses, ...dbExpenses];
-    
+
     let previousSpent = allExpenses
       .filter(e => {
         const projObj = projects.find(p => String(p.id) === String(e.projectId));
-        const isProjectMatch = 
+        const isProjectMatch =
           String(e.projectId) === String(activeProjectId) ||
           (projObj && activeProject && projObj.name.trim().toLowerCase() === activeProject.name.trim().toLowerCase());
 
@@ -1037,7 +1036,7 @@ export default function ContractorSuite() {
 
     // Fallback: If previousSpent is 0, check the subcontractorsList paid_amount directly as a fallback
     if (previousSpent === 0) {
-      const sub = subcontractorsList.find(s => 
+      const sub = subcontractorsList.find(s =>
         s.name?.trim().toLowerCase() === cName &&
         (!s.project_name || s.project_name === activeProject?.name)
       );
@@ -1751,7 +1750,7 @@ export default function ContractorSuite() {
     setContractorValuationLines(prev => prev.map(l => {
       if (l.id === lineId) {
         let updated = { ...l, [field]: value };
-        
+
         // Auto-fill from BOQ item
         if (field === 'boqItemId' && value) {
           const selectedItem = currentBoqItems.find(item => String(item.id) === String(value));
@@ -1761,12 +1760,12 @@ export default function ContractorSuite() {
             updated.description = selectedItem.item_name || '';
           }
         }
-        
+
         // Auto-calculate previous quantity
         if (field === 'boqItemId' || field === 'contractorName') {
           const targetBoqId = field === 'boqItemId' ? value : l.boqItemId;
           const targetContractor = field === 'contractorName' ? value : (l.contractorName || contractorValuationContractorName);
-          
+
           if (targetBoqId && targetContractor) {
             let autoPrevQty = 0;
             valuations.forEach(val => {
@@ -1784,7 +1783,7 @@ export default function ContractorSuite() {
             updated.prevQty = autoPrevQty;
           }
         }
-        
+
         return updated;
       }
       return l;
@@ -1822,7 +1821,7 @@ export default function ContractorSuite() {
     setValuationDiscount(val.discountRate !== undefined ? val.discountRate : '');
     setValuationTax(val.taxRate !== undefined ? val.taxRate : '');
     setValuationTaxMethod(val.taxMethod || 'period');
-    
+
     const itemsMapping = {};
     val.items?.forEach(item => {
       itemsMapping[item.boqItemId] = item.currPercent !== undefined ? item.currPercent : item.completionPercent;
@@ -1949,9 +1948,9 @@ export default function ContractorSuite() {
       };
       const res = await api.post('/dynamic/add/customers', payload);
       const newCust = res.data?.data || { id: Date.now(), ...payload };
-      
+
       setCustomers(prev => [newCust, ...prev]);
-      
+
       if (showEditProject) {
         setEditProjectForm(prev => ({ ...prev, clientName: newCust.name }));
       } else {
@@ -2211,13 +2210,13 @@ export default function ContractorSuite() {
 
     const discountAmt = contractorValuationDiscount ? Number(contractorValuationDiscount) : 0;
     const uniqueContractorName = contractorValuationContractorName || '';
-    const calculatedPrevPaid = uniqueContractorName 
-      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, linesList).previousSpent 
+    const calculatedPrevPaid = uniqueContractorName
+      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, linesList).previousSpent
       : 0;
     const prevPaidVal = contractorValuationPrevPaid !== '' ? Number(contractorValuationPrevPaid) : calculatedPrevPaid;
 
     const netDue = (cumulativeGross - discountAmt) - prevPaidVal;
-    
+
     let taxAmt = 0;
     const taxRatePercent = contractorValuationTax ? Number(contractorValuationTax) : 0;
     if (contractorValuationTaxMethod === 'period') {
@@ -2310,7 +2309,7 @@ export default function ContractorSuite() {
         try {
           const matchedSub = subcontractorsList.find(s => (s.name || s.contractor_name || '').trim().toLowerCase() === uniqueContractorName.trim().toLowerCase());
           const subId = matchedSub ? matchedSub.id : null;
-          
+
           await api.put(`/dynamic/update/subcontractor_invoices/${dbId}`, {
             subcontractor_id: subId,
             subcontractor_name: uniqueContractorName,
@@ -2330,7 +2329,7 @@ export default function ContractorSuite() {
               taxMethod: contractorValuationTaxMethod
             }
           });
-          
+
           fetchAllData();
           triggerNotification(`🏗️ تم تعديل مستخلص المقاول في قاعدة البيانات بنجاح!`);
         } catch (err) {
@@ -2375,12 +2374,12 @@ export default function ContractorSuite() {
         if (newDbId) {
           finalVal = { ...newContractorVal, id: `db-sub-inv-${newDbId}` };
         }
-        
+
         setValuations(prev => {
           const localOnly = prev.filter(v => !String(v.id).startsWith('db-sub-inv-'));
           return [...localOnly, finalVal];
         });
-        
+
         fetchAllData();
         triggerNotification(`🏗️ تم إصدار مستخلص المقاول وحفظه في قاعدة البيانات بنجاح!`);
       } catch (err) {
@@ -2394,7 +2393,7 @@ export default function ContractorSuite() {
 
   const handleDeleteValuation = async (valId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المستخلص نهائياً؟ سيتم إلغاء قيده وعكس تأثيراته المالية.')) return;
-    
+
     const isDbSubInvoice = String(valId).startsWith('db-sub-inv-');
     const isDbClientInvoice = !isNaN(Number(valId));
 
@@ -2459,7 +2458,7 @@ export default function ContractorSuite() {
       setValuations(prev => prev.filter(v => v.id !== valId));
       triggerNotification('💥 تم حذف مستخلص الإنجاز وعكس تأثيراته المالية بنجاح.', 'warning');
     }
-    
+
     // clean up any payment links
     setInstallments(prev => prev.map(inst => {
       if (inst.valuationId === valId) {
@@ -2930,7 +2929,7 @@ export default function ContractorSuite() {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest">
               💎 CONTRACTOR & SUBCONTRACTORS SUITE
             </div>
-            
+
             <div className="flex items-center gap-2 mt-1">
               <select
                 value={activeProjectId}
@@ -2942,7 +2941,7 @@ export default function ContractorSuite() {
                 ))}
               </select>
             </div>
-            
+
             <p className="text-slate-400 font-bold text-xs mt-1.5 leading-relaxed">
               {language === 'ar' ? 'العميل الحالي للمشروع:' : 'Current Project Client:'} <span className="text-white font-black">{activeProject.clientName}</span> | {language === 'ar' ? 'الشركة:' : 'Company:'} <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
               {activeProject.projectManager && <> | {language === 'ar' ? 'مدير المشروع:' : 'Project Manager:'} <span className="text-emerald-450 font-black">{activeProject.projectManager}</span></>}
@@ -3007,8 +3006,8 @@ export default function ContractorSuite() {
 
           {/* Right Column: Neat Horizontal KPI cards aligned exactly like the screenshot */}
           <div className="flex flex-wrap items-center gap-3 relative z-10 w-full lg:w-auto">
-            
-            <div 
+
+            <div
               onClick={() => setActiveTab('boq')}
               className="bg-[#1b2336] border border-slate-800 hover:border-cyan-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
@@ -3019,7 +3018,7 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('expenses')}
               className="bg-[#1b2336] border border-slate-800 hover:border-rose-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
@@ -3030,7 +3029,7 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('dashboard')}
               className="bg-[#1b2336] border border-slate-800 hover:border-emerald-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
@@ -3041,7 +3040,7 @@ export default function ContractorSuite() {
               </div>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('client')}
               className="bg-[#1b2336] border border-slate-800 hover:border-amber-500/50 hover:bg-[#1f283d] cursor-pointer rounded-2xl p-4 min-w-[130px] flex flex-col justify-between h-24 transition-all duration-300 active:scale-95"
             >
@@ -3057,15 +3056,12 @@ export default function ContractorSuite() {
 
         {/* --- PREMIUM RESPONSIVE NAVIGATION GRID --- */}
         <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
               { id: 'dashboard', label: language === 'ar' ? 'لوحة القيادة' : 'Dashboard', icon: '📊' },
               { id: 'boq', label: language === 'ar' ? 'المقايسة والبنود' : 'BOQ & Items', icon: '📝' },
               { id: 'expenses', label: language === 'ar' ? 'المصروفات الفعلية' : 'Actual Expenses', icon: '💸' },
               { id: 'client', label: language === 'ar' ? 'دفعات العميل' : 'Client Payments', icon: '💳' },
-              { id: 'financial_position', label: language === 'ar' ? 'الموقف المالي' : 'Financial Position', icon: '📈' },
-              { id: 'custody', label: language === 'ar' ? 'إدارة العهد النقدية' : 'Custody Management', icon: '💼' },
-              { id: 'hr', label: language === 'ar' ? 'الموارد البشرية' : 'HR', icon: '👥' },
               { id: 'warehouses', label: language === 'ar' ? 'المخازن' : 'Warehouses', icon: '📦' },
               { id: 'transactions', label: language === 'ar' ? 'التحصيلات والمدفوعات' : 'Collections & Payments', icon: '💸' },
               { id: 'files', label: language === 'ar' ? 'ملفات ومستندات' : 'Files & Documents', icon: '📁' }
@@ -3082,6 +3078,32 @@ export default function ContractorSuite() {
                 <span>{tab.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* --- PREMIUM INLINE TABS ROW (Custody & HR) --- */}
+        <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => setActiveTab('custody')}
+              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'custody'
+                ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
+                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <span className="text-sm">💼</span>
+              <span>{language === 'ar' ? 'إدارة العهد النقدية' : 'Custody Management'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('hr')}
+              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'hr'
+                ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
+                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <span className="text-sm">👥</span>
+              <span>{language === 'ar' ? 'الموارد البشرية' : 'HR'}</span>
+            </button>
           </div>
         </div>
 
@@ -4211,7 +4233,7 @@ export default function ContractorSuite() {
                         const cumQty = prevQty + currQty;
                         const pct = Number(line.percentage !== undefined ? line.percentage : 100);
                         const lineTotal = cumQty * Number(line.unitPrice || 0) * (pct / 100);
-                        
+
                         const boqItem = currentBoqItems.find(item => String(item.id) === String(line.boqItemId));
                         const totalBilledByAll = valuations
                           .filter(v => v.isContractor && String(v.projectId) === String(activeProjectId) && v.id !== editingValuationId)
@@ -4369,8 +4391,8 @@ export default function ContractorSuite() {
                     const afterDiscount = gross - discountAmt;
 
                     const uniqueContractorName = contractorValuationContractorName || '';
-                    const calculatedPrevPaid = uniqueContractorName 
-                      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, contractorValuationLines).previousSpent 
+                    const calculatedPrevPaid = uniqueContractorName
+                      ? getContractorFinancialPosition(uniqueContractorName, contractorValuationDate, null, contractorValuationLines).previousSpent
                       : 0;
                     const prevPaidVal = contractorValuationPrevPaid !== '' ? Number(contractorValuationPrevPaid) : calculatedPrevPaid;
                     const netDue = afterDiscount - prevPaidVal;
@@ -4613,7 +4635,7 @@ export default function ContractorSuite() {
                           <div className="bg-cyan-500/10 rounded-xl p-2.5 border border-cyan-500/20">
                             <div className="text-cyan-400 mb-1">مُستخلص للعميل</div>
                             <div className="font-mono text-cyan-300">{totalBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                            <div className="text-[9px] text-slate-400">{totalBoq > 0 ? ((totalBilled/totalBoq)*100).toFixed(1) : 0}%</div>
+                            <div className="text-[9px] text-slate-400">{totalBoq > 0 ? ((totalBilled / totalBoq) * 100).toFixed(1) : 0}%</div>
                           </div>
                           <div className="bg-orange-500/10 rounded-xl p-2.5 border border-orange-500/20">
                             <div className="text-orange-400 mb-1">تكلفة مقاولين</div>
@@ -4708,13 +4730,285 @@ export default function ContractorSuite() {
                             </h4>
                             <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold">
                               <span>📅 تاريخ الإصدار: {val.date}</span>
-                              <span>📊 عدد البنود المشمولة: {val.isContractor ? (val.lines?.length || 0) : (val.items?.filter(it => it.netPercent > 0).> (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
+                              <span>📊 عدد البنود المشمولة: {val.isContractor ? (val.lines?.length || 0) : (val.items?.filter(it => it.netPercent > 0).length || 0)} بنود</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-6 self-end md:self-auto">
+                            <div className="text-left">
+                              <div className="text-[9px] text-slate-500 font-bold">قيمة المستخلص (بدون ضريبة)</div>
+                              <div className="font-mono font-black text-slate-200 text-sm">{val.totalCurrent.toLocaleString()} ج.م</div>
+                              {/* VAT line: only if taxRate > 0 */}
+                              {val.taxRate > 0 && (
+                                <div className="text-[9px] text-cyan-400 font-bold mt-0.5">شامل القيمة المضافة ({val.taxRate}%): {val.totalFinal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || (val.totalCurrent * (1 + val.taxRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2 no-print">
+                              <button
+                                onClick={() => setExpandedValuationId(expandedValuationId === val.id ? null : val.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${expandedValuationId === val.id
+                                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-600/30'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                                  }`}
+                              >
+                                {expandedValuationId === val.id ? 'إغلاق التفاصيل 📂' : 'عرض التفاصيل 📋'}
+                              </button>
+                              <button
+                                onClick={() => val.isContractor ? handleStartEditContractorValuation(val) : handleStartEditValuation(val)}
+                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg text-[10px] font-bold flex items-center gap-1"
+                                title="تعديل المستخلص"
+                              >
+                                ✏️ تعديل
+                              </button>
+                              <button
+                                onClick={() => setSelectedPrintValuation(val)}
+                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg text-[10px] font-bold flex items-center gap-1"
+                              >
+                                🖨️ الفاتورة
+                              </button>
+                              <button
+                                onClick={() => handleDeleteValuation(val.id)}
+                                className="px-2 py-1.5 bg-rose-950/20 hover:bg-rose-600 hover:text-white border border-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dropdown details showing history breakdown */}
+                        {expandedValuationId === val.id && (
+                          <div className="pt-4 border-t border-slate-800 space-y-3 animate-in slide-in-from-top duration-300">
+                            <h5 className="text-[10px] font-black text-cyan-400 flex items-center gap-1.5">
+                              <span>📂</span> تفصيل بنود وكميات المستخلص {val.claimNo}:
+                            </h5>
+
+                            {val.isContractor && val.lines ? (
+                              /* Contractor valuation lines */
+                              <div className="space-y-4">
+                                <div className="overflow-x-auto rounded-xl border border-orange-500/20 bg-slate-950/20">
+                                  <table className="w-full text-right text-[10px]">
+                                    <thead className="bg-[#070a13] text-slate-400 font-bold border-b border-slate-800">
+                                      <tr>
+                                        <th className="p-2.5 text-center">م</th>
+                                        <th className="p-2.5 text-right">البند المرتبط</th>
+                                        <th className="p-2.5 text-right">اسم المقاول</th>
+                                        <th className="p-2.5 text-center w-24">الوحدة</th>
+                                        <th className="p-2.5 text-center">الكمية السابقة</th>
+                                        <th className="p-2.5 text-center">الكمية الحالية</th>
+                                        <th className="p-2.5 text-center">سعر الفئة</th>
+                                        <th className="p-2.5 text-center">النسبة %</th>
+                                        <th className="p-2.5 text-center">الإجمالي جنيه</th>
+                                        <th className="p-2.5 text-right">ملاحظات</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                      {val.lines.map((ln, li) => {
+                                        const linkedBoq = boqItems.find(b => String(b.id) === String(ln.boqItemId) && String(b.projectId) === String(val.projectId || activeProjectId));
+                                        const prevQty = Number(ln.prevQty || 0);
+                                        const currQty = Number(ln.quantity || 0);
+                                        const pct = Number(ln.percentage !== undefined ? ln.percentage : 100);
+                                        const lineTotal = (prevQty + currQty) * Number(ln.unitPrice || 0) * (pct / 100);
+                                        const noteText = ln.notes || ln.description || ln.note || '';
+
+                                        return (
+                                          <tr key={li} className="hover:bg-white/5 text-slate-300">
+                                            <td className="p-2.5 text-center font-mono">{li + 1}</td>
+                                            <td className="p-2.5 text-slate-400 text-[9px]">{linkedBoq ? `[${linkedBoq.category}] ${linkedBoq.item_name}` : 'غير مرتبط'}</td>
+                                            <td className="p-2.5 font-bold text-orange-400">{ln.contractorName || '—'}</td>
+                                            <td className="p-2.5 text-center font-mono w-24">{ln.unit}</td>
+                                            <td className="p-2.5 text-center font-mono text-slate-500">{prevQty.toLocaleString()}</td>
+                                            <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">+{currQty.toLocaleString()}</td>
+                                            <td className="p-2.5 text-center font-mono">{(ln.unitPrice || 0).toLocaleString()}</td>
+                                            <td className="p-2.5 text-center font-mono">{pct}%</td>
+                                            <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                            <td
+                                              className="p-2.5 text-right font-bold transition-all border border-slate-800/30"
+                                              style={{
+                                                ...getNoteStyle(noteText),
+                                                ...(noteText ? { borderStyle: 'solid', borderWidth: '1px' } : {})
+                                              }}
+                                            >
+                                              {noteText || '—'}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* Subcontractor Financial Position summary cards */}
+                                {(() => {
+                                  const uniqueSubs = Array.from(new Set(val.lines?.map(ln => ln.contractorName?.trim()).filter(Boolean)));
+                                  if (uniqueSubs.length === 0) return null;
+                                  return (
+                                    <div className="space-y-3 p-4 bg-slate-950/40 rounded-2xl border border-slate-800">
+                                      <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <span>🏛️</span> الخلاصة المالية للمقاولين من الباطن في هذا المستخلص:
+                                      </h6>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {uniqueSubs.map(subName => {
+                                          const pos = getContractorFinancialPosition(subName, val.date, val.id);
+                                          return (
+                                            <div key={subName} className="bg-[#070a13] border border-slate-800 rounded-xl p-3.5 space-y-2">
+                                              <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                                                <span className="text-xs font-black text-orange-400">{subName}</span>
+                                                <span className="text-[8px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">موقف مالي</span>
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-1 text-center">
+                                                <div>
+                                                  <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">إجمالي الأعمال</div>
+                                                  <div className="font-mono text-[9px] font-black text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                </div>
+                                                <div className="border-r border-white/5">
+                                                  <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">المصروف/المدفوع</div>
+                                                  <div className="font-mono text-[9px] font-black text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                </div>
+                                                <div className="border-r border-white/5">
+                                                  <div className="text-[7.5px] text-slate-500 font-bold mb-0.5">صافي المستحق</div>
+                                                  <div className={`font-mono text-[9px] font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              /* Client valuation items */
+                              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+                                <table className="w-full text-right text-[10px]">
+                                  <thead className="bg-[#070a13] text-slate-400 font-bold">
+                                    <tr>
+                                      <th className="p-2.5">بيان البند والتوصيف</th>
+                                      <th className="p-2.5 text-center">الوحدة</th>
+                                      <th className="p-2.5 text-center">الفئة</th>
+                                      <th className="p-2.5 text-center">النسبة السابقة %</th>
+                                      <th className="p-2.5 text-center">النسبة التراكمية %</th>
+                                      <th className="p-2.5 text-center">إنجاز الفترة %</th>
+                                      <th className="p-2.5 text-center">قيمة الفترة</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5">
+                                    {val.items?.map(it => {
+                                      const boqItem = boqItems.find(b => String(b.id) === String(it.boqItemId) && String(b.projectId) === String(val.projectId || activeProjectId));
+                                      if (!boqItem) return null;
+                                      const prevPercent = it.completionPercent - it.netPercent;
+                                      if (it.netPercent <= 0) return null;
+                                      return (
+                                        <tr key={it.boqItemId} className="hover:bg-white/5 text-slate-300">
+                                          <td className="p-2.5 font-bold">{boqItem.item_name}<div className="text-[8px] text-slate-500">{boqItem.category}</div></td>
+                                          <td className="p-2.5 text-center font-mono text-slate-400">{boqItem.unit}</td>
+                                          <td className="p-2.5 text-center font-mono">{boqItem.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                          <td className="p-2.5 text-center font-mono text-amber-500/80">{prevPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-cyan-400 font-bold">{it.completionPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-bold">+{it.netPercent.toFixed(1)}%</td>
+                                          <td className="p-2.5 text-center font-mono text-emerald-400 font-black">{it.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {currentValuations.length === 0 && (
+                      <div className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم إصدار أي مستخلصات إنجاز مالي للعميل بعد لهذا المشروع.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ════════════════════════════════════════
+                    📊 الخلاصة المالية للمقاولين من الباطن
+                ════════════════════════════════════════ */}
+                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black text-white flex items-center gap-3">
+                      <span className="p-2 bg-orange-500/10 rounded-xl border border-orange-500/25 text-orange-400">📊</span> الخلاصة المالية للمقاولين (موقف المقاولين)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات المقاولين والمبالغ المنصرفة والمتبقية لهم على مستوى المشروع (اضغط على مقاول لعرض تفاصيله)</p>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
+                    <table className="w-full text-right text-[11px]">
+                      <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
+                        <tr>
+                          <th className="p-3 text-right">اسم المقاول</th>
+                          <th className="p-3 text-center">عدد المستخلصات</th>
+                          <th className="p-3 text-center">إجمالي المستخلصات</th>
+                          <th className="p-3 text-center">إجمالي المنصرف (المدفوع)</th>
+                          <th className="p-3 text-center">إجمالي المتبقي</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {(() => {
+                          const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
+                          const contractorNames = Array.from(new Set(
+                            projectContractorVals.flatMap(v => v.lines?.map(ln => (ln.contractorName || contractorValuationContractorName)?.trim()).filter(Boolean) || [])
+                          ));
+
+                          if (contractorNames.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات للمقاولين بعد لهذا المشروع.</td>
+                              </tr>
+                            );
+                          }
+
+                          return contractorNames.map(cName => {
+                            const cVals = projectContractorVals.filter(v =>
+                              v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
+                            );
+                            const countValuations = cVals.length;
+                            const pos = getContractorFinancialPosition(cName, null, null, []);
+
+                            return (
+                              <tr
+                                key={cName}
+                                onClick={() => {
+                                  setSelectedContractorForDetails(selectedContractorForDetails === cName ? null : cName);
+                                  setSelectedClientForDetails(null);
+                                }}
+                                className={`hover:bg-white/[0.04] active:scale-[0.99] transition-all cursor-pointer text-slate-355 font-bold ${selectedContractorForDetails === cName ? 'bg-orange-500/10 border-r-4 border-orange-500' : ''}`}
+                              >
+                                <td className="p-3 text-right text-orange-400 font-black">{cName}</td>
+                                <td className="p-3 text-center font-mono text-slate-400">{countValuations}</td>
+                                <td className="p-3 text-center font-mono text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                <td className="p-3 text-center font-mono text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                                <td className={`p-3 text-center font-mono font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-450'}`}>
+                                  {pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* detailed panel for subcontractor */}
+                  {selectedContractorForDetails && (() => {
+                    const cName = selectedContractorForDetails;
+                    const pos = getContractorFinancialPosition(cName, null, null, []);
+
+                    const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
+                    const subValuations = projectContractorVals.filter(v =>
+                      v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
                     );
-                    
+
                     const allExpenses = [...expenses, ...dbExpenses];
                     const subPayments = allExpenses.filter(e => {
                       const projObj = projects.find(p => String(p.id) === String(e.projectId));
-                      const isProjectMatch = costCenterMode === 'company' 
+                      const isProjectMatch = costCenterMode === 'company'
                         ? companyProjects.some(cp => String(cp.id) === String(e.projectId))
                         : (String(e.projectId) === String(activeProjectId) || (projObj && activeProject && projObj.name.trim().toLowerCase() === activeProject.name.trim().toLowerCase()));
 
@@ -4728,7 +5022,7 @@ export default function ContractorSuite() {
                           <h4 className="text-sm font-black text-orange-400 flex items-center gap-2">
                             <span>👷</span> التفاصيل والتدفقات المالية للمقاول: {cName}
                           </h4>
-                          <button 
+                          <button
                             onClick={() => setSelectedContractorForDetails(null)}
                             className="text-slate-400 hover:text-white text-xs font-bold"
                           >
@@ -4835,8 +5129,8 @@ export default function ContractorSuite() {
                             const pos = getClientFinancialPosition(cName);
 
                             return (
-                              <tr 
-                                key={cName} 
+                              <tr
+                                key={cName}
                                 onClick={() => {
                                   setSelectedClientForDetails(selectedClientForDetails === cName ? null : cName);
                                   setSelectedContractorForDetails(null);
@@ -4862,7 +5156,7 @@ export default function ContractorSuite() {
                   {selectedClientForDetails && (() => {
                     const cName = selectedClientForDetails;
                     const pos = getClientFinancialPosition(cName);
-                    
+
                     const projList = costCenterMode === 'company' ? companyProjects : (activeProject ? [activeProject] : []);
                     const clientProjectIds = projList
                       .filter(p => (p.clientName || p.client_name || 'عميل عام').trim().toLowerCase() === cName.toLowerCase())
@@ -4876,7 +5170,7 @@ export default function ContractorSuite() {
                           <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
                             <span>🏛️</span> التفاصيل والتحصيلات المالية للعميل: {cName}
                           </h4>
-                          <button 
+                          <button
                             onClick={() => setSelectedClientForDetails(null)}
                             className="text-slate-400 hover:text-white text-xs font-bold"
                           >
@@ -5221,6 +5515,20 @@ export default function ContractorSuite() {
           </div>
         )}
 
+        {/* 5.3 CUSTODY MANAGEMENT (INLINE TAB) */}
+        {activeTab === 'custody' && (
+          <div className="animate-in slide-in-from-bottom duration-500">
+            <CustodyManagement />
+          </div>
+        )}
+
+        {/* 5.4 HR — HUMAN RESOURCES (INLINE TAB) */}
+        {activeTab === 'hr' && (
+          <div className="animate-in slide-in-from-bottom duration-500">
+            <HR />
+          </div>
+        )}
+
       </div>
 
       {/* 5.3 QUICK ADD SUBCONTRACTOR MODAL */}
@@ -5236,8 +5544,8 @@ export default function ContractorSuite() {
                   <p className="text-xs text-emerald-100 font-bold">{language === 'ar' ? 'أدخل بيانات المقاول لإضافته واختياره فوراً' : 'Enter details to instantly add & select subcontractor'}</p>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowQuickAddSub(false)}
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
               >
@@ -5251,13 +5559,13 @@ export default function ContractorSuite() {
                 <div>
                   <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المقاول / الشركة بالكامل *' : 'Full Subcontractor / Company Name *'}</label>
                   <div className="relative">
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       placeholder={language === 'ar' ? 'مثال: شركة المقاولات الحديثة أو البشير' : 'e.g. Modern Contracting or Al-Basheer'}
                       value={quickAddSubName}
                       onChange={(e) => setQuickAddSubName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -5265,21 +5573,21 @@ export default function ContractorSuite() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       placeholder={language === 'ar' ? 'الهاتف' : 'Phone'}
                       value={quickAddSubPhone}
                       onChange={(e) => setQuickAddSubPhone(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
-                    <select 
+                    <select
                       value={quickAddSubCompanyId}
                       onChange={(e) => setQuickAddSubCompanyId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     >
                       <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
                       {companies.map(c => (
@@ -5291,12 +5599,12 @@ export default function ContractorSuite() {
 
                 <div>
                   <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder={language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
                     value={quickAddSubEmail}
                     onChange={(e) => setQuickAddSubEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -5335,8 +5643,8 @@ export default function ContractorSuite() {
                   <p className="text-xs text-emerald-100 font-bold">{language === 'ar' ? 'أدخل بيانات العميل لإضافته واختياره فوراً' : 'Enter details to instantly add & select customer'}</p>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowAddCustomerModal(false)}
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
               >
@@ -5350,13 +5658,13 @@ export default function ContractorSuite() {
                 <div>
                   <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم العميل / الشركة بالكامل *' : 'Full Customer / Company Name *'}</label>
                   <div className="relative">
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       placeholder={language === 'ar' ? 'مثال: شركة الأمل الطبية أو د. خالد' : 'e.g. Al-Amal Medical or Dr. Khaled'}
                       value={newCustomerName}
                       onChange={(e) => setNewCustomerName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -5364,21 +5672,21 @@ export default function ContractorSuite() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       placeholder={language === 'ar' ? 'الهاتف' : 'Phone'}
                       value={newCustomerPhone}
                       onChange={(e) => setNewCustomerPhone(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'اسم المنشأة / الشركة' : 'Operating Company Name'}</label>
-                    <select 
+                    <select
                       value={newCustomerCompanyId}
                       onChange={(e) => setNewCustomerCompanyId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     >
                       <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
                       {companies.map(c => (
@@ -5390,12 +5698,12 @@ export default function ContractorSuite() {
 
                 <div>
                   <label className="text-xs font-black text-slate-700 block mb-1.5">{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder={language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
                     value={newCustomerEmail}
                     onChange={(e) => setNewCustomerEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -5615,8 +5923,8 @@ export default function ContractorSuite() {
                       const previouslyDisbursedVal = isContractor
                         ? (selectedPrintValuation.prevPaid || 0)
                         : installments
-                            .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
-                            .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
+                          .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
+                          .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
 
                       const taxVal = selectedPrintValuation.taxAmount || 0;
                       const taxRateVal = selectedPrintValuation.taxRate || 0;
@@ -5882,8 +6190,8 @@ export default function ContractorSuite() {
                   const previouslyDisbursedVal = isContractor
                     ? (selectedPrintValuation.prevPaid || 0)
                     : installments
-                        .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
-                        .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
+                      .filter(inst => String(inst.projectId) === String(selectedPrintValuation.projectId) && inst.date < selectedPrintValuation.date)
+                      .reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
 
                   const taxVal = selectedPrintValuation.taxAmount || 0;
                   const taxRateVal = selectedPrintValuation.taxRate || 0;
@@ -5960,7 +6268,7 @@ export default function ContractorSuite() {
         const receiptTitle = isContractorVal ? 'إيصال صرف نقدية' : 'إيصال استلام نقدية';
         const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
         const themeColorClass = isContractorVal ? 'border-orange-500/25 bg-orange-500/5 text-orange-400' : 'border-emerald-500/25 bg-emerald-500/5 text-emerald-400';
-        
+
         return (
           <div className="fixed inset-0 bg-[#070a13]/85 flex items-center justify-center p-4 z-50 no-print animate-in fade-in duration-300">
             <div className="bg-[#0b0f19] border border-slate-800 rounded-3xl w-full max-w-2xl p-8 space-y-6 overflow-y-auto max-h-[90vh] shadow-2xl flex flex-col">
@@ -5979,12 +6287,12 @@ export default function ContractorSuite() {
               {/* HIGH-FIDELITY RECEIPT PREVIEW */}
               <div className="flex-1 bg-white text-slate-900 p-6 rounded-2xl shadow-inner border border-slate-200 overflow-y-auto select-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                 <div className="relative border border-slate-200 p-6 rounded-2xl bg-[#fcfcfc] overflow-hidden shadow-sm">
-                  
+
                   {/* Seal Watermark */}
                   <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">
                     <div className="text-center font-bold text-red-500 text-[8px] leading-tight">
-                      {activeProject?.company || 'TED CAPITAL'}<br/>
-                      الختم الرسمي<br/>
+                      {activeProject?.company || 'TED CAPITAL'}<br />
+                      الختم الرسمي<br />
                       OFFICIAL SEAL
                     </div>
                   </div>
@@ -6109,16 +6417,16 @@ export default function ContractorSuite() {
         const nameToDisplay = isContractorVal ? (linkedVal.lines?.[0]?.contractorName || 'مقاول عام') : (activeProject?.clientName || 'عميل عام');
         const receiptTitle = isContractorVal ? 'إيصال صرف نقدية' : 'إيصال استلام نقدية';
         const relationText = isContractorVal ? 'صرفنا إلى السيد / السادة:' : 'وصلنا من السيد / السادة:';
-        
+
         return (
           <div className="hidden print:block print-full-width text-slate-900 bg-white p-6 font-sans exact-print-preview border-none rounded-none shadow-none" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div className="relative border-none p-6 rounded-none bg-white overflow-visible">
-              
+
               {/* Seal Watermark */}
               <div className="absolute bottom-16 right-16 w-24 h-24 border-2 border-dashed border-red-400 rounded-full flex items-center justify-center rotate-12 opacity-25 select-none pointer-events-none">
                 <div className="text-center font-bold text-red-500 text-[8px] leading-tight">
-                  {activeProject?.company || 'TED CAPITAL'}<br/>
-                  الختم الرسمي<br/>
+                  {activeProject?.company || 'TED CAPITAL'}<br />
+                  الختم الرسمي<br />
                   OFFICIAL SEAL
                 </div>
               </div>
