@@ -393,7 +393,7 @@ const boqCategories = [
     staffId: '', month: new Date().getMonth() + 1, year: new Date().getFullYear(),
     projects: [{ project_name: 'General', percent: 100 }],
     basic_salary: 0, incentives: 0, commissions: 0, expenses: 0, profit_share: 0, deductions: 0, advance_deduction: 0,
-    category: 'مصروفات أخرى'
+    category: 'مصاريف المرتبات والأجور'
   });
 
   const [payrollSheet, setPayrollSheet] = useState([]);
@@ -1030,7 +1030,7 @@ const boqCategories = [
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.staff.jobTitle}</label>
                   <select name="job_title" value={staffForm.job_title} onChange={handleStaffChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none">
                     <option value="">{language === 'ar' ? '-- اختر المسمى --' : '-- Select Title --'}</option>
-                    {Array.from(new Set([...jobTitlesList, ...boqCategories])).map(title => <option key={title} value={title}>{title}</option>)}
+                    {jobTitlesList.map(title => <option key={title} value={title}>{title}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -1123,18 +1123,6 @@ const boqCategories = [
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.payroll.month}</label>
                   <input type="number" value={payrollForm.month} onChange={(e) => setPayrollForm({...payrollForm, month: e.target.value})} required min="1" max="12" className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 font-mono focus:bg-white text-center" />
-                </div>
-                
-                <div className="col-span-full space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'القسم الأساسي للمصروف' : 'Main Expense Category'}</label>
-                  <select 
-                    value={payrollForm.category || 'مصروفات أخرى'} 
-                    onChange={(e) => setPayrollForm({...payrollForm, category: e.target.value})} 
-                    required 
-                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none"
-                  >
-                    {boqCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
                 </div>
                 
                 <div className="space-y-2">

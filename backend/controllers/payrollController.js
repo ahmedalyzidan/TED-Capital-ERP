@@ -160,7 +160,10 @@ const processPayroll = async (req, res) => {
 
                 // Actual Project Expenses Log Integration:
                 if (p.project_name === 'General') {
-                    const activeProjectsRes = await client.query("SELECT id, name FROM projects WHERE status = 'In Progress'");
+                    const activeProjectsRes = await client.query(
+                        "SELECT id, name FROM projects WHERE status IN ('In Progress', 'Active') AND company = $1",
+                        [staff.company || 'TED Capital']
+                    );
                     const activeProjects = activeProjectsRes.rows;
                     if (activeProjects.length > 0) {
                         const distributedAmount = projectGrossExpense / activeProjects.length;
@@ -177,7 +180,7 @@ const processPayroll = async (req, res) => {
                                     staff.company_id || 1,
                                     req.user?.id || null,
                                     JSON.stringify({
-                                        category: category || 'مصروفات أخرى',
+                                        category: category || 'مصاريف المرتبات والأجور',
                                         unit: 'شهر',
                                         qty: 1,
                                         rate: distributedAmount,
@@ -204,7 +207,7 @@ const processPayroll = async (req, res) => {
                                 staff.company_id || 1,
                                 req.user?.id || null,
                                 JSON.stringify({
-                                    category: category || 'مصروفات أخرى',
+                                    category: category || 'مصاريف المرتبات والأجور',
                                     unit: 'شهر',
                                     qty: 1,
                                     rate: projectGrossExpense,
