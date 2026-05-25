@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -98,14 +98,19 @@ export default function HR() {
         checkOut: "تسجيل الانصراف"
       },
       qr: {
-        title: "امسح الرمز لتسجيل الحضور",
-        note: "يتم تحديث هذا الرمز تلقائياً كل 10 ثوانٍ لمنع التلاعب."
+        title: "بوابة الحضور السريعة QR",
+        success: "تم تسجيل الحضور بنجاح",
+        scan: "امسح الكود عبر التطبيق للهاتف المحمول",
+        refresh: "يتغير الكود كل 10 ثوانٍ تلقائياً"
       },
       batch: {
-        title: "رفع مجمع (CSV)",
-        required: "الأعمدة المطلوبة:",
-        note: "تأكد من توافق تنسيق التاريخ مع معايير النظام.",
-        uploadBtn: "اعتماد الملف"
+        title: "رفع مجمع لملفات الحضور والرواتب",
+        downloadTemplate: "تحميل قالب CSV للموظفين",
+        selectFile: "اختر ملف CSV للرفع *",
+        upload: "بدء رفع الملف وتحديث السيرفر",
+        selectLocProject: "يجب اختيار الموقع أولاً!",
+        success: "تم الرفع والتثبيت بنجاح!",
+        uploadSuccess: "تم معالجة الملف وتعيين الموظفين!"
       },
       modals: {
         advance: {
@@ -159,39 +164,39 @@ export default function HR() {
       }
     },
     en: {
-      title: "Comprehensive HR Management (HRMS)",
-      subtitle: "Payroll, Advances, GPS Attendance, & Automated Entries",
+      title: "Comprehensive HR & Resource Management (HRMS)",
+      subtitle: "Integrated Payroll, Advances, GPS Verification & Ledger Sync",
       tabs: {
-        staff: "Staff",
-        archive: "Archive",
+        staff: "Staff Database",
+        archive: "Payroll Archive",
         payrollSheet: "Payroll Sheet",
-        advances: "Advances",
-        gps: "GPS",
-        qr: "QR Code",
-        batch: "Batch",
-        logs: "Logs"
+        advances: "Advances Ledger",
+        gps: "GPS Attendance",
+        qr: "QR Portal",
+        batch: "Batch Upload",
+        logs: "Shift Logs"
       },
       staffTable: {
-        title: "Staff Database",
+        title: "Employee Directory",
         addAdvance: "Issue Advance",
         addStaff: "Hire Employee",
         id: "ID",
-        name: "Name",
+        name: "Full Name",
         company: "Company",
-        salary: "Basic",
-        loading: "Loading staff records...",
-        empty: "No staff registered."
+        salary: "Basic Salary",
+        loading: "Fetching personnel files...",
+        empty: "No employees registered yet."
       },
       payrollSheet: {
-        period: "Period:",
-        update: "Update Data",
-        note: "Attendance, commissions, and advances are automated 🤖",
+        period: "Payroll Month:",
+        update: "Recompute Sheet",
+        note: "Absence, advances & commissions are pulled automatically 🤖",
         employee: "Employee",
-        jobTitle: "Job Title",
+        jobTitle: "Role",
         basic: "Basic",
-        absence: "Absence (GPS)",
+        absence: "Absences",
         advanceDeduction: "Advances",
-        autoCommissions: "Auto Comms",
+        autoCommissions: "Commissions",
         netSalary: "Expected Net",
         action: "Action",
         review: "Review & Issue"
@@ -643,9 +648,9 @@ const boqCategories = [
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr><td colSpan="5" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Syncing records...</td></tr>
-                    ) : staffList.length === 0 ? (
+                    ) : filteredStaffList.length === 0 ? (
                       <tr><td colSpan="5" className="p-24 text-center text-slate-400 font-bold italic">{t.staffTable.empty}</td></tr>
-                    ) : staffList.map(s => (
+                    ) : filteredStaffList.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50 transition-all group">
                         <td className="px-6 py-4 font-mono font-bold text-slate-400 text-xs">EMP-{s.id}</td>
                         <td className="px-6 py-4">
@@ -707,7 +712,7 @@ const boqCategories = [
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                     {payrollSheet.map(item => (
+                     {filteredPayrollSheet.map(item => (
                        <tr key={item.staff_id} className="hover:bg-slate-50 transition-all group">
                          <td className="px-6 py-4">
                            <div className="flex flex-col">
@@ -770,7 +775,7 @@ const boqCategories = [
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {advancesList.map(adv => (
+                    {filteredAdvancesList.map(adv => (
                       <tr key={adv.id} className="hover:bg-slate-50 transition-all group">
                         <td className="px-6 py-4 font-mono font-bold text-slate-900 text-xs">EMP-{adv.staff_id}</td>
                         <td className="px-6 py-4 font-bold text-slate-500 text-xs">{new Date(adv.request_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</td>
@@ -820,9 +825,9 @@ const boqCategories = [
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr><td colSpan="5" className="p-24 text-center text-slate-300 font-bold animate-pulse italic">Loading history...</td></tr>
-                    ) : payrollHistory.length === 0 ? (
+                    ) : filteredPayrollHistory.length === 0 ? (
                       <tr><td colSpan="5" className="p-24 text-center text-slate-400 font-bold italic">{t.archive.empty}</td></tr>
-                    ) : payrollHistory.map(pr => (
+                    ) : filteredPayrollHistory.map(pr => (
                       <tr key={pr.id} className="hover:bg-slate-50 transition-all group">
                         <td className="px-6 py-4 font-mono font-bold text-slate-400 text-xs">PAY-{pr.id}</td>
                         <td className="px-6 py-4 font-bold text-slate-900 text-sm">{pr.staff_name || pr.staff_id}</td>
@@ -1079,7 +1084,7 @@ const boqCategories = [
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.advance.staff}</label>
                 <select value={advanceForm.staff_id} onChange={(e) => setAdvanceForm({...advanceForm, staff_id: e.target.value})} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500 transition-all outline-none">
                   <option value="">{t.modals.advance.selectStaff}</option>
-                  {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {filteredStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1117,7 +1122,7 @@ const boqCategories = [
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.payroll.staff}</label>
                   <select name="staffId" value={payrollForm.staffId} onChange={(e) => setPayrollForm({...payrollForm, staffId: e.target.value})} required className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none">
                     <option value="">{t.modals.payroll.selectStaff}</option>
-                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name} - ({t.modals.payroll.basic}: {Number(s.salary).toLocaleString()})</option>)}
+                    {filteredStaffList.map(s => <option key={s.id} value={s.id}>{s.name} - ({t.modals.payroll.basic}: {Number(s.salary).toLocaleString()})</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">

@@ -3832,7 +3832,7 @@ export default function ContractorSuite() {
             {/* Expenses List */}
             <div className="bg-[#131b2e] border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl print:border-black print:bg-white">
               <div className="overflow-x-auto">
-                <table className="w-full text-right whitespace-nowrap">
+                <table className="w-full text-right whitespace-nowrap min-w-[1000px]">
                   <thead className="bg-[#111827] border-b border-slate-800 print:bg-slate-100 print:text-black">
                     <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black print:text-black">
                       <th className="px-6 py-5">تاريخ الصرف</th>
@@ -3842,7 +3842,7 @@ export default function ContractorSuite() {
                       <th className="px-6 py-5 text-center">الكمية</th>
                       <th className="px-6 py-5 text-center">الفئة</th>
                       <th className="px-6 py-5 text-center">المبلغ الإجمالي</th>
-                      <th className="px-6 py-5 text-left no-print">الإجراءات</th>
+                      <th className="px-6 py-5 text-center no-print w-[160px] min-w-[160px]">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 print:divide-black">
@@ -3863,8 +3863,8 @@ export default function ContractorSuite() {
                         <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.qty} {item.unit || 'فاتورة'}</td>
                         <td className="px-6 py-5 text-center font-mono font-bold text-slate-400 print:text-black">{item.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="px-6 py-5 text-center font-mono font-black text-rose-400 text-sm print:text-black">-{item.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} جنيه</td>
-                        <td className="px-6 py-5 text-left no-print">
-                          <div className="flex gap-2 justify-end">
+                        <td className="px-6 py-5 text-center no-print w-[160px] min-w-[160px]">
+                          <div className="flex gap-2 justify-center">
                             {!String(item.id).startsWith('db-sale-') && (
                               <button
                                 onClick={() => handleStartEditExpense(item)}
