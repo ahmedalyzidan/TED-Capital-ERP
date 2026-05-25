@@ -74,10 +74,10 @@ class FinanceController {
             }
 
             const result = await InterCompanyService.reconcileTransaction(
-                source_company_id, 
-                target_company_id, 
-                amount, 
-                description, 
+                source_company_id,
+                target_company_id,
+                amount,
+                description,
                 project_id
             );
 
@@ -95,11 +95,11 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let ledgerFilter = "AND l.is_deleted = FALSE AND sub.is_deleted = FALSE";
             let coaFilter = "";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -107,13 +107,13 @@ class FinanceController {
                 }
                 params.push(targetId);
                 ledgerFilter += ` AND l.company_id = $1`;
-                
+
                 let entityName = "";
                 if (String(targetId) === '1') entityName = 'TED Capital';
                 else if (String(targetId) === '2') entityName = 'Design Concept';
                 else if (String(targetId) === '3') entityName = 'Master Builder';
                 else if (String(targetId) === '4') entityName = 'PRIMEMED PHARMA';
-                
+
                 if (entityName) {
                     params.push(entityName);
                     coaFilter = ` AND (c.company_entity = 'All' OR c.company_entity = $2)`;
@@ -196,11 +196,11 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let lFilter = "AND l.is_deleted = FALSE AND c.is_deleted = FALSE";
             let customerFilter = "WHERE is_deleted = FALSE";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -208,7 +208,7 @@ class FinanceController {
                 }
                 params.push(targetId);
                 lFilter += " AND l.company_id = $1";
-                
+
                 let entityName = "";
                 if (String(targetId) === '1') entityName = 'TED Capital';
                 else if (String(targetId) === '2') entityName = 'Design Concept';
@@ -288,7 +288,7 @@ class FinanceController {
 
             const data = stats.rows[0];
             data.net_profit = parseFloat(data.total_revenue) - parseFloat(data.total_expenses);
-            
+
             console.log("📊 Dashboard Data Calculated:", {
                 AR: data.accounts_receivable,
                 AP: data.accounts_payable,
@@ -309,10 +309,10 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let lFilter = "AND l.is_deleted = FALSE AND coa.is_deleted = FALSE";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -349,10 +349,10 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let filter = "WHERE i.quantity != 0";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -386,10 +386,10 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let lFilter = "AND l.is_deleted = FALSE AND coa.is_deleted = FALSE";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -428,10 +428,10 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let lFilter = "AND l.is_deleted = FALSE";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {
@@ -469,10 +469,10 @@ class FinanceController {
         try {
             const companyId = req.query.company_id;
             const allowed = resolveAllowedCompanies(req);
-            
+
             let filter = "WHERE p.is_deleted = FALSE";
             const params = [];
-            
+
             if (companyId && companyId !== 'all') {
                 let targetId = parseInt(companyId);
                 if (allowed && !allowed.ids.includes(targetId)) {

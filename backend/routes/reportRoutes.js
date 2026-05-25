@@ -67,7 +67,7 @@ router.get('/dashboard_stats', async (req, res) => {
     try {
         const proj = req.query.project || '';
         const params = proj ? [proj] : [];
-        
+
         const allowed = resolveAllowedCompanies(req);
         let projectClause = "";
         let installmentClause = "";
@@ -125,14 +125,14 @@ router.get('/dashboard_stats', async (req, res) => {
         const netProfit = Number(revRes.rows[0]?.sum || 0) - Number(expRes.rows[0]?.sum || 0);
 
         const pRes = await pool.query(`SELECT name, budget, expected_profit_percent, actual_profit_percent, management_pct FROM projects WHERE is_deleted = FALSE ${proj ? "AND name = $1" : ""} ${projectClause}`, params);
-        
+
         const partnersRes = await pool.query(`
             SELECT p.*,
                    COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS total_deposits,
                    COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS total_withdrawals
             FROM partners p WHERE p.is_deleted = FALSE ${proj ? "AND project_name = $1" : ""} ${partnerClause}
         `, params);
-        
+
         const processedPartners = partnersRes.rows.map(p => {
             const mgmtFees = netProfit * ((p.management_rate || 0) / 100);
             const remainingProfit = netProfit - mgmtFees;
@@ -148,17 +148,17 @@ router.get('/dashboard_stats', async (req, res) => {
         });
 
         res.json({ totalBudget, pendingAR, lowStockCount, netProfit, projects: pRes.rows, partnersBreakdown: processedPartners, partners: processedPartners });
-    } catch(e) { 
+    } catch (e) {
         console.error("Dashboard Stats Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
 router.get('/project_360_stats', async (req, res) => {
     try {
         const projName = req.query.project;
-        if (!projName) return res.status(400).json({error: "Project required"});
-        
+        if (!projName) return res.status(400).json({ error: "Project required" });
+
         const allowed = resolveAllowedCompanies(req);
         if (allowed) {
             const check = await pool.query(`
@@ -173,21 +173,21 @@ router.get('/project_360_stats', async (req, res) => {
         const pRes = await pool.query("SELECT * FROM projects WHERE name = $1 AND is_deleted = FALSE", [projName]);
         const project = pRes.rows[0] || {};
         const total_budget = Number(project.budget || 0);
-        
+
         const subRes = await pool.query("SELECT SUM(net_amount) as sum FROM subcontractor_invoices WHERE project_name = $1 AND status = 'اعتماد مالي' AND is_deleted = FALSE", [projName]);
         const matRes = await pool.query("SELECT SUM(est_cost) as sum FROM material_usage WHERE project_name = $1 AND is_deleted = FALSE", [projName]);
         const total_costs = Number(subRes.rows[0]?.sum || 0) + Number(matRes.rows[0]?.sum || 0);
-        
+
         const tasks = await pool.query("SELECT COUNT(*) as total, SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) as completed FROM tasks WHERE project_name = $1", [projName]);
         const task_completion_pct = Number(tasks.rows[0]?.total) > 0 ? (Number(tasks.rows[0]?.completed) / Number(tasks.rows[0]?.total)) * 100 : 0;
-        
+
         const mp = await pool.query("SELECT SUM(manpower_count) as mp FROM daily_reports WHERE project_name = $1", [projName]);
         const manpower_count = Number(mp.rows[0]?.mp || 0);
-        
+
         const burn_series = [0, total_costs * 0.5, total_costs];
         const burn_categories = ['البداية', 'منتصف المدة', 'الوضع الحالي'];
-        const recent_events = []; 
-        
+        const recent_events = [];
+
         res.json({
             total_budget,
             total_costs,
@@ -197,19 +197,19 @@ router.get('/project_360_stats', async (req, res) => {
             burn_categories,
             recent_events
         });
-    } catch(e) { 
+    } catch (e) {
         console.error("Project 360 Stats Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
 router.get('/ceo_dashboard', async (req, res) => {
     try {
         res.json({
-            cashflow: { daily: {income:0, due:0}, weekly: {income:0, due:0}, monthly: {income:0, due:0}, annual: {income:0, due:0} },
+            cashflow: { daily: { income: 0, due: 0 }, weekly: { income: 0, due: 0 }, monthly: { income: 0, due: 0 }, annual: { income: 0, due: 0 } },
             breakdown: {}, chartDataDoughnut: null, chartDataBar: null
         });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/cashflow_projection', async (req, res) => {
@@ -277,9 +277,9 @@ router.get('/cashflow_projection', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { 
+    } catch (e) {
         console.error("Cashflow Projection Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -287,7 +287,7 @@ router.get('/gl_summary', async (req, res) => {
     try {
         const proj = req.query.project || '';
         const params = proj ? [proj] : [];
-        
+
         const allowed = resolveAllowedCompanies(req);
         let paymentClause = "";
         let subInvoiceClause = "";
@@ -310,24 +310,24 @@ router.get('/gl_summary', async (req, res) => {
         const revRes = await pool.query(`SELECT SUM(amount) as sum FROM payment_receipts WHERE is_deleted = FALSE ${proj ? "AND project_name = $1" : ""} ${paymentClause}`, params);
         const subRes = await pool.query(`SELECT SUM(net_amount) as sum FROM subcontractor_invoices WHERE status = 'اعتماد مالي' AND is_deleted = FALSE ${proj ? "AND project_name = $1" : ""} ${subInvoiceClause}`, params);
         const matRes = await pool.query(`SELECT SUM(est_cost) as sum FROM material_usage WHERE is_deleted = FALSE ${proj ? "AND project_name = $1" : ""} ${materialClause}`, params);
-        
+
         const pl = {
             revenue: Number(revRes.rows[0]?.sum || 0),
             subs: Number(subRes.rows[0]?.sum || 0),
-            payroll: 0, 
+            payroll: 0,
             material: Number(matRes.rows[0]?.sum || 0),
             expenses: 0
         };
         const bs = { assets: 0, liabilities: 0, equity: 0 };
         res.json({ pl, bs });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/realestate_stats', async (req, res) => {
     try {
         const proj = req.query.project || '';
         const params = proj ? [proj] : [];
-        
+
         const allowed = resolveAllowedCompanies(req);
         let projectClause = "";
 
@@ -345,16 +345,16 @@ router.get('/realestate_stats', async (req, res) => {
 
         const uVal = await pool.query(`SELECT SUM(price) as sum FROM property_units WHERE is_deleted = FALSE ${proj ? "AND project_name = $1" : ""} ${projectClause}`, params);
         const cVal = await pool.query(`SELECT SUM(total_value) as sum FROM contracts WHERE is_deleted = FALSE ${proj ? "WHERE unit_id IN (SELECT id FROM property_units WHERE project_name = $1)" : ""} ${projectClause}`, params);
-        
+
         res.json({ unitsValue: Number(uVal.rows[0]?.sum || 0), contractsValue: Number(cVal.rows[0]?.sum || 0), pendingInstallments: 0, totalCollected: 0 });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/pi_stats', async (req, res) => {
     try {
         const proj = req.query.project || '';
         const params = proj ? [proj] : [];
-        
+
         const allowed = resolveAllowedCompanies(req);
         let poClause = "";
         let invClause = "";
@@ -382,7 +382,7 @@ router.get('/pi_stats', async (req, res) => {
             totalPO: Number(po.rows[0]?.sum || 0), inventoryValue: Number(inv.rows[0]?.sum || 0),
             totalIssued: Number(mat.rows[0]?.sum || 0), totalReturned: 0, pendingRFQ: 0, activeSubs: 0, lowStock: 0, totalTransfers: 0
         });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/sub_variance', async (req, res) => {
@@ -405,7 +405,7 @@ router.get('/sub_variance', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/aging_payables', async (req, res) => {
@@ -427,7 +427,7 @@ router.get('/aging_payables', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/boq_tracking', async (req, res) => {
@@ -449,7 +449,7 @@ router.get('/boq_tracking', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/project_profitability', async (req, res) => {
@@ -474,14 +474,14 @@ router.get('/project_profitability', async (req, res) => {
             ${filterClause}
         `;
         const result = await pool.query(q);
-        
+
         const data = result.rows.map(row => {
             const totalCosts = parseFloat(row.sub_costs || 0) + parseFloat(row.proc_costs || 0) + parseFloat(row.mat_costs || 0);
             const budget = parseFloat(row.budget || 0);
             const grossProfit = budget - totalCosts;
             const managementFee = grossProfit * (parseFloat(row.management_pct || 0) / 100);
             const netDistributedProfit = grossProfit - managementFee;
-            
+
             return {
                 ...row,
                 total_costs: totalCosts,
@@ -493,9 +493,9 @@ router.get('/project_profitability', async (req, res) => {
         });
 
         res.json({ data });
-    } catch(e) { 
+    } catch (e) {
         console.error("Project Profitability Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -520,7 +520,7 @@ router.get('/realestate_absorption', async (req, res) => {
             ${filterClause}
         `;
         const result = await pool.query(q);
-        
+
         const data = result.rows.map(row => {
             const sold = parseFloat(row.sold_units || 0);
             const total = parseFloat(row.registered_units || 0);
@@ -530,11 +530,11 @@ router.get('/realestate_absorption', async (req, res) => {
                 remaining_inventory_value: parseFloat(row.available_value || 0)
             };
         });
-        
+
         res.json({ data });
-    } catch(e) { 
+    } catch (e) {
         console.error("Real Estate Absorption Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -559,9 +559,9 @@ router.get('/payroll_efficiency', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { 
+    } catch (e) {
         console.error("Payroll Efficiency Error:", e);
-        res.status(500).json({ error: e.message }); 
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -594,7 +594,7 @@ router.get('/trial_balance', async (req, res) => {
         `;
         const result = await pool.query(q);
         res.json({ data: result.rows });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
