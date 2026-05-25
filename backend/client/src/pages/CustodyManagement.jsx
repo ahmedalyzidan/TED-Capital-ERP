@@ -10,6 +10,7 @@ export default function CustodyManagement() {
   const [custodyDetails, setCustodyDetails] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [attachmentsMap, setAttachmentsMap] = useState({});
   const [uploadingExpenseId, setUploadingExpenseId] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -27,7 +28,8 @@ export default function CustodyManagement() {
   const [custodyForm, setCustodyForm] = useState({
     custodian_name: '',
     assigned_amount: '',
-    notes: ''
+    notes: '',
+    company: localStorage.getItem('active_company') || ''
   });
 
   const [expenseForm, setExpenseForm] = useState({
@@ -269,6 +271,7 @@ export default function CustodyManagement() {
   useEffect(() => {
     fetchCustodies();
     fetchAccounts();
+    fetchCompanies();
   }, []);
 
   const fetchCustodies = async () => {
@@ -296,6 +299,17 @@ export default function CustodyManagement() {
       }
     } catch (error) {
       console.error("Error fetching accounts:", error);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/dynamic/table/companies?limit=50');
+      if (res.data?.data) {
+        setCompanies(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
     }
   };
 
@@ -363,7 +377,12 @@ export default function CustodyManagement() {
       if (res.data.success) {
         alert(cur.alerts.successCustody);
         setIsCustodyModalOpen(false);
-        setCustodyForm({ custodian_name: '', assigned_amount: '', notes: '' });
+        setCustodyForm({
+          custodian_name: '',
+          assigned_amount: '',
+          notes: '',
+          company: localStorage.getItem('active_company') || ''
+        });
         fetchCustodies();
       }
     } catch (error) {
@@ -887,6 +906,24 @@ export default function CustodyManagement() {
                   onChange={e => setCustodyForm({ ...custodyForm, assigned_amount: e.target.value })}
                   className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-xl font-mono text-center font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
                 />
+              </div>
+
+              {/* Company Field */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  {language === 'ar' ? 'الشركة *' : 'Company *'}
+                </label>
+                <select
+                  required
+                  value={custodyForm.company}
+                  onChange={e => setCustodyForm({ ...custodyForm, company: e.target.value })}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
+                >
+                  <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">

@@ -53,7 +53,7 @@ class CustodyController {
 
     // 1. إنشاء عهدة جديدة مع إثباتها دفترياً
     async createCustody(req, res) {
-        const { custodian_name, assigned_amount, notes } = req.body;
+        const { custodian_name, assigned_amount, notes, company: bodyCompany } = req.body;
         const amountNum = parseFloat(assigned_amount);
         
         if (!custodian_name || isNaN(amountNum) || amountNum <= 0) {
@@ -64,7 +64,20 @@ class CustodyController {
         try {
             await client.query('BEGIN');
 
-            const { companyId, companyName } = await this.resolveCompanyDetails(client, req);
+            // تحديد الشركة: نعطي الأولوية للشركة المحددة صراحةً من الواجهة (req.body.company)
+            let { companyId, companyName } = await this.resolveCompanyDetails(client, req);
+
+            if (bodyCompany && bodyCompany.trim()) {
+                // إذا أرسل الـ frontend شركة محددة → نبحث عنها في قاعدة البيانات
+                const compRes = await client.query(
+                    "SELECT id, name FROM companies WHERE UPPER(name) = UPPER($1) OR name ILIKE $2 LIMIT 1",
+                    [bodyCompany.trim(), `%${bodyCompany.trim()}%`]
+                );
+                if (compRes.rows.length > 0) {
+                    companyId = compRes.rows[0].id;
+                    companyName = compRes.rows[0].name;
+                }
+            }
 
             // إدراج سجل العهدة
             const custodyRes = await client.query(
@@ -74,6 +87,7 @@ class CustodyController {
             );
             const custody = custodyRes.rows[0];
 
+            // تحديد حساب الصندوق بناءً على الشركة المختارة
             let cashAccount = 'صندوق نقدية - تيد كابيتال';
             if (companyId === 2) cashAccount = 'صندوق نقدية - ديزاين كونسبت';
             else if (companyId === 3) cashAccount = 'صندوق نقدية - ماستر بيلدر';

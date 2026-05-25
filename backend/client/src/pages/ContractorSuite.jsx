@@ -1676,8 +1676,7 @@ export default function ContractorSuite() {
     const initItems = {};
     currentBoqItems.forEach(item => {
       const prevPercent = getPrevCompletionPercent(item.id);
-      const prevQty = Number(((prevPercent / 100) * item.quantity).toFixed(2));
-      initItems[item.id] = prevQty;
+      initItems[item.id] = Number(prevPercent.toFixed(1));
     });
     setNewValuationItems(initItems);
     setValuationDate(new Date().toISOString().split('T')[0]);
@@ -3042,6 +3041,26 @@ export default function ContractorSuite() {
           </div>
         </div>
 
+        {/* --- PREMIUM DIRECT NAVIGATION LINKS (ADDITIONAL ROW) --- */}
+        <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <a
+              href={window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '/finance/custody' : 'http://46.224.144.166/finance/custody'}
+              className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700 hover:border-cyan-500/30 text-center decoration-none"
+            >
+              <span className="text-sm">💼</span>
+              <span>{language === 'ar' ? 'إدارة العهد النقدية' : 'Custody Management'}</span>
+            </a>
+            <a
+              href={window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '/hr' : 'http://46.224.144.166/hr'}
+              className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700 hover:border-cyan-500/30 text-center decoration-none"
+            >
+              <span className="text-sm">👥</span>
+              <span>{language === 'ar' ? 'الموارد البشرية' : 'HR'}</span>
+            </a>
+          </div>
+        </div>
+
         {/* Modal / Form to create new project */}
         {showAddProject && (
           <form onSubmit={handleCreateProject} className="bg-slate-900/70 border border-slate-800 p-6 rounded-3xl space-y-4 animate-in slide-in-from-top duration-300 no-print">
@@ -3913,7 +3932,7 @@ export default function ContractorSuite() {
                                   min={prevPercent}
                                   max={100}
                                   step="0.5"
-                                  value={currPercentVal}
+                                  value={currPercentVal !== undefined && Number(currPercentVal) >= prevPercent ? currPercentVal : prevPercent}
                                   onChange={e => setNewValuationItems({ ...newValuationItems, [item.id]: e.target.value })}
                                   className="bg-[#111827] border border-cyan-600/40 focus:border-cyan-500 rounded-xl p-1.5 text-center text-xs text-white font-mono w-16 focus:outline-none"
                                   required
