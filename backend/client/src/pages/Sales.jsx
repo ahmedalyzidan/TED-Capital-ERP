@@ -88,26 +88,21 @@ const StatCard = ({ icon, label, value, sub, color = 'indigo', trend }) => {
   );
 };
 
-// ─── PRODUCT PICKER ───────────────────────────────────────────────────────────
+// ─── PRODUCT PICKER (Instant Client-Side Filtering) ───────────────────────────
 function ProductPicker({ onSelect, placeholder = 'ابحث عن منتج...' }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
-    const handler = setTimeout(async () => {
-      if (query.length < 2) { setResults([]); setOpen(false); return; }
-      setLoading(true);
-      try {
-        const { data } = await api.get(`/sales/inventory-lookup?q=${encodeURIComponent(query)}&limit=15`);
-        setResults(data.data || []);
-        setOpen(true);
-      } catch { setResults([]); } finally { setLoading(false); }
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [query]);
+    setLoading(true);
+    api.get('/sales/inventory-lookup?q=&limit=1000')
+      .then(r => setInventory(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -115,20 +110,30 @@ function ProductPicker({ onSelect, placeholder = 'ابحث عن منتج...' }) 
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
+  const filteredResults = query.trim() === '' 
+    ? [] 
+    : inventory.filter(item => 
+        item.name?.toLowerCase().includes(query.toLowerCase()) || 
+        item.category?.toLowerCase().includes(query.toLowerCase())
+      );
+
+  const displayResults = filteredResults.slice(0, 15);
+
   return (
     <div ref={ref} className="relative">
       <div className="relative">
         <input
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className="w-full border border-indigo-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all pr-9"
         />
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{loading ? '⟳' : '🔍'}</span>
       </div>
-      {open && results.length > 0 && (
+      {open && displayResults.length > 0 && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-          {results.map(item => (
+          {displayResults.map(item => (
             <button key={item.id} type="button" onClick={() => { onSelect(item); setQuery(''); setOpen(false); }}
               className="w-full text-right flex items-center justify-between px-4 py-2.5 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0">
               <div>
@@ -143,12 +148,60 @@ function ProductPicker({ onSelect, placeholder = 'ابحث عن منتج...' }) 
           ))}
         </div>
       )}
-      {open && results.length === 0 && !loading && query.length >= 2 && (
+      {open && query.trim() !== '' && filteredResults.length === 0 && !loading && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 text-center text-slate-400 text-sm">لا توجد نتائج</div>
       )}
     </div>
   );
 }
+
+// ─── NEW CUSTOMER MODAL (Inline Addition) ────────────────────────────────────
+const NewCustomerModal = ({ open, onClose, onCreated, language }) => {
+  const ar = language === 'ar';
+  const [form, setForm] = useState({ name: '', company_name: '', phone: '', email: '', address: '', customer_type: 'Individual' });
+  const [submitting, setSubmitting] = useState(false);
+
+  const save = async () => {
+    if (!form.name) {
+      alert(ar ? 'يرجى إدخال اسم العميل' : 'Please enter customer name');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/add/customers', form);
+      alert(ar ? 'تم إضافة العميل بنجاح!' : 'Customer added successfully!');
+      if (onCreated) onCreated(data.data || data);
+      onClose();
+      setForm({ name: '', company_name: '', phone: '', email: '', address: '', customer_type: 'Individual' });
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Error adding customer');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={ar ? 'إضافة عميل جديد' : 'Add New Client'}>
+      <div className="space-y-3">
+        <Input label={ar ? 'الاسم بالكامل *' : 'Full Name *'} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+        <Input label={ar ? 'اسم الشركة' : 'Company Name'} value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
+        <div className="grid grid-cols-2 gap-2">
+          <Input label={ar ? 'الهاتف' : 'Phone'} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+          <Input label={ar ? 'البريد الإلكتروني' : 'Email'} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        </div>
+        <Select label={ar ? 'نوع العميل' : 'Customer Type'} value={form.customer_type} onChange={e => setForm(f => ({ ...f, customer_type: e.target.value }))}>
+          <option value="Individual">{ar ? 'فرد' : 'Individual'}</option>
+          <option value="Corporate">{ar ? 'شركة' : 'Corporate'}</option>
+        </Select>
+        <Textarea label={ar ? 'العنوان' : 'Address'} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+        <div className="flex justify-end gap-2 pt-2">
+          <Btn variant="ghost" onClick={onClose}>{ar ? 'إلغاء' : 'Cancel'}</Btn>
+          <Btn variant="success" onClick={save} disabled={submitting}>💾 {ar ? 'حفظ العميل' : 'Save Customer'}</Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 // ─── MINI BAR CHART (SVG) ─────────────────────────────────────────────────────
 function MiniBarChart({ data = [], color = '#6366f1' }) {
@@ -300,16 +353,22 @@ function AnalyticsTab({ language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. QUOTATIONS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function QuotationsTab({ clients, language }) {
+function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [converting, setConverting] = useState(null);
   const [cartItems, setCartItems] = useState([]);
-  const [form, setForm] = useState({ customer_id: '', valid_until: '', notes: '', currency: 'EGP' });
+  const [form, setForm] = useState({ customer_id: '', valid_until: '', notes: '', currency: defaultCurrency || 'EGP' });
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [clientSearch, setClientSearch] = useState('');
+  const [applyTax, setApplyTax] = useState(false);
+
+  useEffect(() => {
+    setForm(f => ({ ...f, currency: defaultCurrency || 'EGP' }));
+  }, [defaultCurrency]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -325,12 +384,12 @@ function QuotationsTab({ clients, language }) {
   const removeItem = (i) => setCartItems(c => c.filter((_, idx) => idx !== i));
 
   const total = cartItems.reduce((a, c) => a + (c.qty * c.price), 0);
-  const tax = total * 0.14;
+  const tax = applyTax ? total * 0.14 : 0;
 
   const save = async () => {
     try {
       await api.post('/sales/quotations', { ...form, items: cartItems, total_amount: total + tax, tax_amount: tax, discount: 0 });
-      setModal(false); setCartItems([]); setForm({ customer_id: '', valid_until: '', notes: '', currency: 'EGP' }); load();
+      setModal(false); setCartItems([]); setForm({ customer_id: '', valid_until: '', notes: '', currency: defaultCurrency || 'EGP' }); load();
     } catch (e) { alert(e?.response?.data?.error || 'خطأ'); }
   };
 
@@ -348,6 +407,8 @@ function QuotationsTab({ clients, language }) {
     return matchSearch && matchStatus;
   });
 
+  const filteredClients = clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()));
+
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -356,7 +417,7 @@ function QuotationsTab({ clients, language }) {
           { label: ar ? 'إجمالي' : 'Total', value: items.length, icon: '📄', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
           { label: ar ? 'مسودة' : 'Draft', value: items.filter(i => i.status === 'Draft').length, icon: '✏️', color: 'bg-slate-50 text-slate-700 border-slate-100' },
           { label: ar ? 'محوّلة' : 'Converted', value: items.filter(i => i.status === 'Converted').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'قيمة مفتوحة' : 'Open Value', value: fmt(items.filter(i => !['Converted', 'Rejected'].includes(i.status)).reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💎', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'قيمة مفتوحة' : 'Open Value', value: fmt(items.filter(i => !['Converted', 'Rejected'].includes(i.status)).reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💎', color: 'bg-amber-50 text-amber-700 border-amber-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
             <div className="text-xl mb-1">{s.icon}</div>
@@ -389,7 +450,7 @@ function QuotationsTab({ clients, language }) {
                 <tr key={item.id} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors">
                   <td className="px-4 py-3 font-black text-indigo-700 text-xs">{item.quotation_number}</td>
                   <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || '—'}</td>
-                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} EGP</td>
+                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} {item.currency || 'EGP'}</td>
                   <td className="px-4 py-3 text-slate-500">{fmt(item.tax_amount)}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(item.valid_until)}</td>
                   <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{statusAr(item.status)}</Badge></td>
@@ -411,15 +472,45 @@ function QuotationsTab({ clients, language }) {
       <Modal open={modal} onClose={() => { setModal(false); setCartItems([]); }} title={ar ? 'عرض سعر جديد' : 'New Quotation'} maxW="max-w-3xl">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Select label={ar ? 'العميل' : 'Client'} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
-              <option value="">-- {ar ? 'اختر العميل' : 'Select Client'} --</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">{ar ? 'العميل' : 'Client'}</label>
+                <div className="flex gap-1">
+                  <input 
+                    value={clientSearch} 
+                    onChange={e => setClientSearch(e.target.value)} 
+                    placeholder={ar ? '🔍 بحث...' : '🔍 Search...'} 
+                    className="w-1/3 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30" 
+                  />
+                  <select 
+                    value={form.customer_id} 
+                    onChange={e => {
+                      if (e.target.value === 'ADD_NEW_CLIENT') {
+                        onNewClientClick(clientSearch);
+                      } else {
+                        setForm(f => ({ ...f, customer_id: e.target.value }));
+                      }
+                    }}
+                    className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                  >
+                    <option value="">-- {ar ? 'اختر العميل' : 'Select Client'} --</option>
+                    {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {clientSearch.trim() !== '' && !filteredClients.some(c => c.name?.toLowerCase() === clientSearch.toLowerCase()) && (
+                      <option value="ADD_NEW_CLIENT">
+                        {ar ? `+ إضافة "${clientSearch}" كعميل جديد...` : `+ Add "${clientSearch}" as new client...`}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <Btn type="button" variant="outline" onClick={() => onNewClientClick(clientSearch)} className="px-3.5 py-2.5 h-[42px]">+</Btn>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Input label={ar ? 'صالح حتى' : 'Valid Until'} type="date" value={form.valid_until} onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))} />
               <Select label={ar ? 'العملة' : 'Currency'} value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
                 <option value="EGP">EGP</option>
                 <option value="USD">USD</option>
+                <option value="ILS">ILS (שקל)</option>
               </Select>
             </div>
           </div>
@@ -428,6 +519,20 @@ function QuotationsTab({ clients, language }) {
           <div>
             <label className="block text-xs font-black text-slate-500 mb-2 uppercase tracking-wide">{ar ? 'إضافة منتج من المخزن' : 'Add from Inventory'}</label>
             <ProductPicker onSelect={addProductFromPicker} placeholder={ar ? 'ابحث عن منتج في المخزن...' : 'Search inventory...'} />
+          </div>
+
+          {/* Tax Checkbox */}
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              id="applyTax" 
+              checked={applyTax} 
+              onChange={e => setApplyTax(e.target.checked)} 
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" 
+            />
+            <label htmlFor="applyTax" className="text-xs font-black text-slate-700">
+              {ar ? 'تطبيق ضريبة القيمة المضافة (14%)' : 'Apply VAT (14%)'}
+            </label>
           </div>
 
           {/* Items Table */}
@@ -451,11 +556,11 @@ function QuotationsTab({ clients, language }) {
             </div>
             <div className="bg-indigo-950 text-white px-4 py-3 flex justify-between items-center">
               <div className="text-xs space-x-4 space-x-reverse">
-                <span className="opacity-60">{ar ? 'الضريبة (14%):' : 'Tax (14%):'} {fmt(tax)} EGP</span>
+                <span className="opacity-60">{ar ? 'الضريبة (14%):' : 'Tax (14%):'} {fmt(tax)} {form.currency}</span>
               </div>
               <div>
                 <span className="text-xs opacity-60 ml-2">{ar ? 'الإجمالي مع الضريبة' : 'Total inc. Tax'}</span>
-                <span className="text-xl font-black mr-2">{fmt(total + tax)} EGP</span>
+                <span className="text-xl font-black mr-2">{fmt(total + tax)} {form.currency}</span>
               </div>
             </div>
           </div>
@@ -670,7 +775,7 @@ function DeliveryNotesTab({ language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. SALES RETURNS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function SalesReturnsTab({ clients, language }) {
+function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -678,6 +783,7 @@ function SalesReturnsTab({ clients, language }) {
   const [modal, setModal] = useState(false);
   const [returnItems, setReturnItems] = useState([{ inventory_id: null, name: '', qty: 1, price: 0 }]);
   const [form, setForm] = useState({ source_invoice_id: '', customer_id: '', reason: '', reason_code: 'CUSTOMER_REQUEST', refund_method: 'Credit', restock_warehouse: 'المخزن الرئيسي', auto_restock: true, notes: '' });
+  const [clientSearch, setClientSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -702,6 +808,8 @@ function SalesReturnsTab({ clients, language }) {
   const statusColor = s => ({ Pending: 'amber', Approved: 'green', Rejected: 'rose' }[s] || 'slate');
   const refundColor = s => ({ Credit: 'blue', Cash: 'emerald', Exchange: 'purple' }[s] || 'slate');
 
+  const filteredClients = clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()));
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -709,7 +817,7 @@ function SalesReturnsTab({ clients, language }) {
           { label: ar ? 'إجمالي' : 'Total Returns', value: items.length, icon: '↩️', color: 'bg-rose-50 text-rose-700 border-rose-100' },
           { label: ar ? 'معتمدة' : 'Approved', value: items.filter(i => i.status === 'Approved').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
           { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
-          { label: ar ? 'إجمالي المردودات' : 'Total Refunded', value: fmt(items.filter(i => i.status === 'Approved').reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💸', color: 'bg-slate-50 text-slate-700 border-slate-100' },
+          { label: ar ? 'إجمالي المردودات' : 'Total Refunded', value: fmt(items.filter(i => i.status === 'Approved').reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💸', color: 'bg-slate-50 text-slate-700 border-slate-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
             <div className="text-xl mb-1">{s.icon}</div>
@@ -735,7 +843,7 @@ function SalesReturnsTab({ clients, language }) {
                   <td className="px-4 py-3 font-black text-rose-700 text-xs">{item.return_number}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{item.invoice_number || '—'}</td>
                   <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || '—'}</td>
-                  <td className="px-4 py-3 font-black text-rose-700">{fmt(item.total_amount)} EGP</td>
+                  <td className="px-4 py-3 font-black text-rose-700">{fmt(item.total_amount)} {item.currency || defaultCurrency || 'EGP'}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{item.reason || '—'}</td>
                   <td className="px-4 py-3"><Badge color={refundColor(item.refund_method)}>{item.refund_method}</Badge></td>
                   <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{item.status === 'Approved' ? (ar ? 'معتمد' : 'Approved') : item.status === 'Pending' ? (ar ? 'معلق' : 'Pending') : (ar ? 'مرفوض' : 'Rejected')}</Badge></td>
@@ -754,10 +862,39 @@ function SalesReturnsTab({ clients, language }) {
               <option value="">-- {ar ? 'اختر الفاتورة' : 'Select Invoice'} --</option>
               {invoices.filter(i => i.status === 'مدفوعة').map(i => <option key={i.id} value={i.id}>{i.invoice_number} — {i.customer_name}</option>)}
             </Select>
-            <Select label={ar ? 'العميل' : 'Client'} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
-              <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">{ar ? 'العميل' : 'Client'}</label>
+                <div className="flex gap-1">
+                  <input 
+                    value={clientSearch} 
+                    onChange={e => setClientSearch(e.target.value)} 
+                    placeholder={ar ? '🔍 بحث...' : '🔍 Search...'} 
+                    className="w-1/3 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30" 
+                  />
+                  <select 
+                    value={form.customer_id} 
+                    onChange={e => {
+                      if (e.target.value === 'ADD_NEW_CLIENT') {
+                        onNewClientClick(clientSearch);
+                      } else {
+                        setForm(f => ({ ...f, customer_id: e.target.value }));
+                      }
+                    }}
+                    className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                  >
+                    <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
+                    {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {clientSearch.trim() !== '' && !filteredClients.some(c => c.name?.toLowerCase() === clientSearch.toLowerCase()) && (
+                      <option value="ADD_NEW_CLIENT">
+                        {ar ? `+ إضافة "${clientSearch}" كعميل جديد...` : `+ Add "${clientSearch}" as new client...`}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <Btn type="button" variant="outline" onClick={() => onNewClientClick(clientSearch)} className="px-3.5 py-2.5 h-[42px]">+</Btn>
+            </div>
           </div>
 
           {/* Return Items */}
@@ -813,12 +950,13 @@ function SalesReturnsTab({ clients, language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 6. INVOICING TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function InvoicingTab({ clients, staff = [], language }) {
+function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewClientClick }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
   const [form, setForm] = useState({ customer_id: '', invoice_number: '', total_amount: 0, tax_amount: 0, discount: 0, due_date: '', status: 'مسودة', notes: '', salesperson_id: '', sales_type: 'Inventory', commission_rate: 0 });
 
   const load = useCallback(async () => {
@@ -836,14 +974,16 @@ function InvoicingTab({ clients, staff = [], language }) {
   const totalRevenue = items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0);
   const totalPaid = items.filter(i => i.status === 'مدفوعة').reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0);
 
+  const filteredClients = clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()));
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: ar ? 'إجمالي الفواتير' : 'Total Invoices', value: items.length, icon: '🧾', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'إجمالي الإيرادات' : 'Revenue', value: fmt(totalRevenue) + ' EGP', icon: '💰', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'المحصّل' : 'Collected', value: fmt(totalPaid) + ' EGP', icon: '✅', color: 'bg-green-50 text-green-700 border-green-100' },
-          { label: ar ? 'المعلّق' : 'Pending', value: fmt(totalRevenue - totalPaid) + ' EGP', icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي الإيرادات' : 'Revenue', value: fmt(totalRevenue) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          { label: ar ? 'المحصّل' : 'Collected', value: fmt(totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '✅', color: 'bg-green-50 text-green-700 border-green-100' },
+          { label: ar ? 'المعلّق' : 'Pending', value: fmt(totalRevenue - totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
             <div className="text-xl mb-1">{s.icon}</div>
@@ -867,7 +1007,7 @@ function InvoicingTab({ clients, staff = [], language }) {
                 <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3 font-black text-indigo-700 text-xs">{item.invoice_number}</td>
                   <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || '—'}</td>
-                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)}</td>
+                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} {item.currency || defaultCurrency || 'EGP'}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmt(item.tax_amount)}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmt(item.discount)}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(item.due_date)}</td>
@@ -881,10 +1021,39 @@ function InvoicingTab({ clients, staff = [], language }) {
       )}
       <Modal open={modal} onClose={() => setModal(false)} title={ar ? 'فاتورة جديدة' : 'New Invoice'}>
         <div className="space-y-3">
-          <Select label={ar ? 'العميل' : 'Client'} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
-            <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">{ar ? 'العميل' : 'Client'}</label>
+              <div className="flex gap-1">
+                <input 
+                  value={clientSearch} 
+                  onChange={e => setClientSearch(e.target.value)} 
+                  placeholder={ar ? '🔍 بحث...' : '🔍 Search...'} 
+                  className="w-1/3 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30" 
+                />
+                <select 
+                  value={form.customer_id} 
+                  onChange={e => {
+                    if (e.target.value === 'ADD_NEW_CLIENT') {
+                      onNewClientClick(clientSearch);
+                    } else {
+                      setForm(f => ({ ...f, customer_id: e.target.value }));
+                    }
+                  }}
+                  className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                >
+                  <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
+                  {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clientSearch.trim() !== '' && !filteredClients.some(c => c.name?.toLowerCase() === clientSearch.toLowerCase()) && (
+                    <option value="ADD_NEW_CLIENT">
+                      {ar ? `+ إضافة "${clientSearch}" كعميل جديد...` : `+ Add "${clientSearch}" as new client...`}
+                    </option>
+                  )}
+                </select>
+              </div>
+            </div>
+            <Btn type="button" variant="outline" onClick={() => onNewClientClick(clientSearch)} className="px-3.5 py-2.5 h-[42px]">+</Btn>
+          </div>
           <Input label={ar ? 'رقم الفاتورة' : 'Invoice #'} value={form.invoice_number} onChange={e => setForm(f => ({ ...f, invoice_number: e.target.value }))} placeholder="Auto-generated if empty" />
           <div className="grid grid-cols-3 gap-2">
             <Input label={ar ? 'المبلغ' : 'Amount'} type="number" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: +e.target.value }))} />
@@ -924,13 +1093,14 @@ function InvoicingTab({ clients, staff = [], language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. POS TAB (Enhanced with Inventory Lookup)
 // ═══════════════════════════════════════════════════════════════════════════════
-function POSTab({ clients, language }) {
+function POSTab({ clients, language, defaultCurrency, onNewClientClick }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [cart, setCart] = useState([]);
   const [form, setForm] = useState({ customer_id: '', payment_method: 'نقدي', notes: '' });
+  const [clientSearch, setClientSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -952,13 +1122,14 @@ function POSTab({ clients, language }) {
   };
 
   const todayItems = items.filter(i => i.created_at?.slice(0, 10) === new Date().toISOString().slice(0, 10));
+  const filteredClients = clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()));
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { label: ar ? 'مبيعات اليوم' : "Today's Sales", value: todayItems.length, icon: '📊', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'إيرادات اليوم' : "Today's Revenue", value: fmt(todayItems.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💵', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          { label: ar ? 'إيرادات اليوم' : "Today's Revenue", value: fmt(todayItems.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💵', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
           { label: ar ? 'إجمالي العمليات' : 'Total Transactions', value: items.length, icon: '🧾', color: 'bg-slate-50 text-slate-700 border-slate-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
@@ -986,7 +1157,7 @@ function POSTab({ clients, language }) {
                 <tr key={item.id} className="border-b border-slate-50 hover:bg-emerald-50/20 transition-colors">
                   <td className="px-4 py-3 text-slate-500 text-xs font-bold">POS-{item.id}</td>
                   <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || (ar ? 'عميل عابر' : 'Walk-in')}</td>
-                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} EGP</td>
+                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} {item.currency || defaultCurrency || 'EGP'}</td>
                   <td className="px-4 py-3"><Badge color="blue">{item.payment_method}</Badge></td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleString('ar-EG') : '—'}</td>
                 </tr>
@@ -1000,13 +1171,44 @@ function POSTab({ clients, language }) {
       <Modal open={modal} onClose={() => setModal(false)} title={ar ? '🏪 نقطة البيع — بيع جديد' : '🏪 POS — New Sale'} maxW="max-w-2xl">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Select label={ar ? 'العميل' : 'Client'} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
-              <option value="">{ar ? 'عميل عابر' : 'Walk-in Customer'}</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
-            <Select label={ar ? 'طريقة الدفع' : 'Payment'} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
-              {['نقدي', 'بطاقة', 'تحويل بنكي', 'آجل'].map(m => <option key={m} value={m}>{m}</option>)}
-            </Select>
+            <div className="flex gap-2 items-end col-span-2">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">{ar ? 'العميل' : 'Client'}</label>
+                <div className="flex gap-1">
+                  <input 
+                    value={clientSearch} 
+                    onChange={e => setClientSearch(e.target.value)} 
+                    placeholder={ar ? '🔍 بحث...' : '🔍 Search...'} 
+                    className="w-1/3 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30" 
+                  />
+                  <select 
+                    value={form.customer_id} 
+                    onChange={e => {
+                      if (e.target.value === 'ADD_NEW_CLIENT') {
+                        onNewClientClick(clientSearch);
+                      } else {
+                        setForm(f => ({ ...f, customer_id: e.target.value }));
+                      }
+                    }}
+                    className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                  >
+                    <option value="">{ar ? 'عميل عابر' : 'Walk-in Customer'}</option>
+                    {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {clientSearch.trim() !== '' && !filteredClients.some(c => c.name?.toLowerCase() === clientSearch.toLowerCase()) && (
+                      <option value="ADD_NEW_CLIENT">
+                        {ar ? `+ إضافة "${clientSearch}" كعميل جديد...` : `+ Add "${clientSearch}" as new client...`}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <Btn type="button" variant="outline" onClick={() => onNewClientClick(clientSearch)} className="px-3.5 py-2.5 h-[42px]">+</Btn>
+            </div>
+            <div className="col-span-2">
+              <Select label={ar ? 'طريقة الدفع' : 'Payment'} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
+                {['نقدي', 'بطاقة', 'تحويل بنكي', 'آجل'].map(m => <option key={m} value={m}>{m}</option>)}
+              </Select>
+            </div>
           </div>
 
           <div>
@@ -1033,7 +1235,7 @@ function POSTab({ clients, language }) {
             ))}
             <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
               <span className="font-bold text-sm">{ar ? 'الإجمالي' : 'Total'}</span>
-              <span className="text-2xl font-black">{fmt(cartTotal)} EGP</span>
+              <span className="text-2xl font-black">{fmt(cartTotal)} {defaultCurrency || 'EGP'}</span>
             </div>
           </div>
 
@@ -1360,18 +1562,21 @@ function CommissionsTab({ staff = [], language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 11. INSTALLMENTS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function InstallmentsTab({ clients, language }) {
+function InstallmentsTab({ clients, language, defaultCurrency, onNewClientClick }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ customer_id: '', total_amount: 0, installment_count: 12, monthly_amount: 0, start_date: '', status: 'نشط', notes: '' });
+  const [clientSearch, setClientSearch] = useState('');
 
   const load = useCallback(async () => { setLoading(true); try { const { data } = await api.get('/sales/installments'); setItems(data.data || []); } catch { } finally { setLoading(false); } }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (form.total_amount > 0 && form.installment_count > 0) setForm(f => ({ ...f, monthly_amount: Math.ceil(f.total_amount / f.installment_count) })); }, [form.total_amount, form.installment_count]);
   const save = async () => { try { await api.post('/sales/installments', form); setModal(false); load(); } catch (e) { alert(e?.response?.data?.error || 'خطأ'); } };
   const statusColor = s => ({ 'نشط': 'green', 'مكتمل': 'blue', 'متعثر': 'rose', 'ملغي': 'slate' }[s] || 'slate');
+
+  const filteredClients = clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()));
 
   return (
     <div className="space-y-4">
@@ -1380,7 +1585,7 @@ function InstallmentsTab({ clients, language }) {
           { label: ar ? 'إجمالي الخطط' : 'Total Plans', value: items.length, icon: '📝', color: 'bg-blue-50 text-blue-700 border-blue-100' },
           { label: ar ? 'نشطة' : 'Active', value: items.filter(i => i.status === 'نشط').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
           { label: ar ? 'متعثرة' : 'Defaulted', value: items.filter(i => i.status === 'متعثر').length, icon: '⚠️', color: 'bg-rose-50 text-rose-700 border-rose-100' },
-          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💰', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'bg-amber-50 text-amber-700 border-amber-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
             <div className="text-xl mb-1">{s.icon}</div>
@@ -1400,9 +1605,9 @@ function InstallmentsTab({ clients, language }) {
               {items.map(item => (
                 <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || '—'}</td>
-                  <td className="px-4 py-3 font-black text-indigo-700">{fmt(item.total_amount)} EGP</td>
+                  <td className="px-4 py-3 font-black text-indigo-700">{fmt(item.total_amount)} {item.currency || defaultCurrency || 'EGP'}</td>
                   <td className="px-4 py-3 text-center font-bold text-slate-700">{item.installment_count}</td>
-                  <td className="px-4 py-3 font-bold text-emerald-700">{fmt(item.monthly_amount)} EGP</td>
+                  <td className="px-4 py-3 font-bold text-emerald-700">{fmt(item.monthly_amount)} {item.currency || defaultCurrency || 'EGP'}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(item.start_date)}</td>
                   <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{item.status}</Badge></td>
                 </tr>
@@ -1414,10 +1619,39 @@ function InstallmentsTab({ clients, language }) {
       )}
       <Modal open={modal} onClose={() => setModal(false)} title={ar ? 'خطة تقسيط جديدة' : 'New Installment Plan'}>
         <div className="space-y-3">
-          <Select label={ar ? 'العميل' : 'Client'} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
-            <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">{ar ? 'العميل' : 'Client'}</label>
+              <div className="flex gap-1">
+                <input 
+                  value={clientSearch} 
+                  onChange={e => setClientSearch(e.target.value)} 
+                  placeholder={ar ? '🔍 بحث...' : '🔍 Search...'} 
+                  className="w-1/3 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30" 
+                />
+                <select 
+                  value={form.customer_id} 
+                  onChange={e => {
+                    if (e.target.value === 'ADD_NEW_CLIENT') {
+                      onNewClientClick(clientSearch);
+                    } else {
+                      setForm(f => ({ ...f, customer_id: e.target.value }));
+                    }
+                  }}
+                  className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                >
+                  <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
+                  {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clientSearch.trim() !== '' && !filteredClients.some(c => c.name?.toLowerCase() === clientSearch.toLowerCase()) && (
+                    <option value="ADD_NEW_CLIENT">
+                      {ar ? `+ إضافة "${clientSearch}" كعميل جديد...` : `+ Add "${clientSearch}" as new client...`}
+                    </option>
+                  )}
+                </select>
+              </div>
+            </div>
+            <Btn type="button" variant="outline" onClick={() => onNewClientClick(clientSearch)} className="px-3.5 py-2.5 h-[42px]">+</Btn>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             <Input label={ar ? 'المبلغ الإجمالي' : 'Total'} type="number" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: +e.target.value }))} />
             <Input label={ar ? 'عدد الأقساط' : 'Installments'} type="number" value={form.installment_count} onChange={e => setForm(f => ({ ...f, installment_count: +e.target.value }))} />
@@ -1467,13 +1701,25 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState('analytics');
   const [clients, setClients] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [prefilledClientName, setPrefilledClientName] = useState('');
+
+  const refreshClients = () => {
+    api.get('/table/customers?limit=500').then(r => setClients(r.data.data || [])).catch(() => {});
+  };
+
+  const openNewClientModal = (name = '') => {
+    setPrefilledClientName(name);
+    setNewClientOpen(true);
+  };
 
   useEffect(() => {
-    api.get('/table/customers?limit=500').then(r => setClients(r.data.data || [])).catch(() => {});
+    refreshClients();
     api.get('/table/staff?limit=1000').then(r => setStaff(r.data.data || [])).catch(() => {});
   }, []);
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';
+  const defaultCurrency = activeCompany?.toLowerCase().includes('primemed') ? 'ILS' : 'EGP';
 
   return (
     <div className="min-h-screen bg-slate-50/80 p-4 md:p-6 space-y-5" dir={ar ? 'rtl' : 'ltr'}>
@@ -1521,17 +1767,19 @@ export default function Sales() {
       {/* Tab Content */}
       <div>
         {activeTab === 'analytics'    && <AnalyticsTab    language={language} />}
-        {activeTab === 'quotations'   && <QuotationsTab   clients={clients} language={language} />}
+        {activeTab === 'quotations'   && <QuotationsTab   clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
         {activeTab === 'orders'       && <OrdersTab       clients={clients} language={language} />}
         {activeTab === 'delivery'     && <DeliveryNotesTab language={language} />}
-        {activeTab === 'returns'      && <SalesReturnsTab  clients={clients} language={language} />}
-        {activeTab === 'invoicing'    && <InvoicingTab    clients={clients} staff={staff} language={language} />}
-        {activeTab === 'pos'          && <POSTab          clients={clients} language={language} />}
+        {activeTab === 'returns'      && <SalesReturnsTab  clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
+        {activeTab === 'invoicing'    && <InvoicingTab    clients={clients} staff={staff} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
+        {activeTab === 'pos'          && <POSTab          clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
         {activeTab === 'offers'       && <OffersTab       language={language} />}
         {activeTab === 'pricelists'   && <PriceListsTab   language={language} />}
         {activeTab === 'commissions'  && <CommissionsTab  staff={staff} language={language} />}
-        {activeTab === 'installments' && <InstallmentsTab clients={clients} language={language} />}
+        {activeTab === 'installments' && <InstallmentsTab clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
       </div>
+
+      <NewCustomerModal open={newClientOpen} onClose={() => setNewClientOpen(false)} onCreated={refreshClients} language={language} prefilledName={prefilledClientName} />
     </div>
   );
 }

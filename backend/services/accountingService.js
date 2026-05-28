@@ -144,6 +144,55 @@ class AccountingService {
                 } catch (e) { }
             }
 
+            // 🌟 Auto-Routing: Switch account to the target company's equivalent account if mismatch exists
+            if (origAcc && origAcc.company_entity && origAcc.company_entity !== 'All' && origAcc.company_entity !== resolvedCompany) {
+                try {
+                    const isCash = origAcc.account_name.includes('صندوق') || origAcc.account_name.includes('نقدية') || origAcc.account_code.startsWith('110');
+                    const isBank = origAcc.account_name.includes('بنك') || origAcc.account_code.startsWith('111');
+                    const isReceivables = origAcc.account_name.includes('عملاء') || origAcc.account_code.startsWith('112');
+                    const isPayables = origAcc.account_name.includes('موردين') || origAcc.account_code.startsWith('211');
+                    const isRevenue = origAcc.account_type === 'Revenue' || origAcc.account_code.startsWith('4');
+                    const isExpense = origAcc.account_type === 'Expense' || origAcc.account_code.startsWith('5') || origAcc.account_code.startsWith('6');
+
+                    let matchQuery = `
+                        SELECT id, account_code, account_name, account_type, company_entity, parent_account 
+                        FROM chart_of_accounts 
+                        WHERE company_entity = $1 AND is_deleted = false
+                    `;
+                    if (isCash) {
+                        matchQuery += ` AND (account_name LIKE '%صندوق%' OR account_name LIKE '%نقدية%' OR account_code LIKE '110%') `;
+                    } else if (isBank) {
+                        matchQuery += ` AND (account_name LIKE '%بنك%' OR account_code LIKE '111%') `;
+                    } else if (isReceivables) {
+                        matchQuery += ` AND (account_name LIKE '%عملاء%' OR account_code LIKE '112%') `;
+                    } else if (isPayables) {
+                        matchQuery += ` AND (account_name LIKE '%موردين%' OR account_code LIKE '211%') `;
+                    } else if (isRevenue) {
+                        matchQuery += ` AND account_type = 'Revenue' `;
+                    } else if (isExpense) {
+                        matchQuery += ` AND account_type = 'Expense' `;
+                    } else {
+                        matchQuery += ` AND parent_account = $2 `;
+                    }
+                    matchQuery += ` LIMIT 1`;
+
+                    const params = [resolvedCompany];
+                    if (!isCash && !isBank && !isReceivables && !isPayables && !isRevenue && !isExpense) {
+                        params.push(origAcc.parent_account || '');
+                    }
+
+                    const matchRes = await client.query(matchQuery, params);
+
+                    if (matchRes.rows.length > 0) {
+                        console.log(`🔀 [Auto-Routing] Switched account from '${accName}' (${origAcc.company_entity}) to '${matchRes.rows[0].account_name}' (${resolvedCompany})`);
+                        origAcc = matchRes.rows[0];
+                        accName = origAcc.account_name;
+                    }
+                } catch (routeErr) {
+                    console.warn(`⚠️ Could not auto-route account:`, routeErr.message);
+                }
+            }
+
             // 🌟 تطبيق Row-Level Security (RLS) للسياق الحالي
             if (reqContext?.primaryOrgUnitId) {
                 await client.query(`SET LOCAL app.current_org_unit_id = $1`, [reqContext.primaryOrgUnitId]);
