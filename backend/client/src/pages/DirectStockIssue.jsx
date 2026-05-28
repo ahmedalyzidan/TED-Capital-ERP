@@ -1447,7 +1447,13 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
 
     const wNameLower = (w.name || '').toLowerCase();
-    const isPharmaWarehouse = wNameLower.includes('pharm') || wNameLower.includes('صيدل') || wNameLower.includes('مستودع') || wNameLower.includes('غزة');
+    const isPharmaWarehouse = wNameLower.includes('pharm') || 
+                              wNameLower.includes('صيدل') || 
+                              wNameLower.includes('مستودع') || 
+                              wNameLower.includes('غزة') ||
+                              wNameLower.includes('branch') ||
+                              wNameLower.includes('فرع') ||
+                              wNameLower.includes('أدوية');
 
     if (activeLower.includes('prime') || activeLower.includes('pharma') || activeLower.includes('بريم') || activeLower.includes('فارما')) {
       return isPharmaWarehouse;
@@ -1831,7 +1837,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 </div>
 
                 {/* Construction Project Selection Dropdown */}
-                {filteredContractorProjects.length > 0 && (
+                {!isPharma && filteredContractorProjects.length > 0 && (
                   <div className="flex flex-col gap-2 justify-end">
                     <label className="text-xs font-black text-slate-500">
                       🏗️ {language === 'ar' ? 'ربط بمشروع إنشائي (اختياري)' : 'Link to Construction Project'}

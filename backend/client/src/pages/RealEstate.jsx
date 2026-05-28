@@ -327,6 +327,29 @@ export default function RealEstate() {
     }
   };
 
+  const handleQuickAddCustomer = async (name, phone) => {
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        name: name.trim(),
+        phone: phone.trim() || '',
+        company: 'TED CAPITAL',
+        company_id: 1,
+        customer_type: 'Real Estate',
+        created_at: new Date().toISOString()
+      };
+      const res = await api.post('/dynamic/add/customers', payload);
+      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      setCustomers(prev => [...prev, newCust]);
+      setContractForm(prev => ({ ...prev, customer_id: String(newCust.id) }));
+    } catch (error) {
+      console.error(error);
+      alert(language === 'ar' ? 'حدث خطأ أثناء إضافة العميل.' : 'Error adding customer.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleContractSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -1046,7 +1069,21 @@ export default function RealEstate() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.customer} *</label>
+                    <div className="flex justify-between items-center">
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.customer} *</label>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const name = prompt(language === 'ar' ? 'اسم العميل الجديد:' : 'New Customer Name:');
+                          if (!name) return;
+                          const phone = prompt(language === 'ar' ? 'رقم الهاتف (اختياري):' : 'Phone Number (Optional):') || '';
+                          handleQuickAddCustomer(name, phone);
+                        }}
+                        className="text-xs font-black text-violet-600 hover:text-slate-950 transition-colors uppercase tracking-wider"
+                      >
+                        + {language === 'ar' ? 'عميل جديد' : 'New Customer'}
+                      </button>
+                    </div>
                     <div className="relative group">
                       <select 
                         value={contractForm.customer_id} 
