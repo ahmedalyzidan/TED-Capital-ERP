@@ -30,17 +30,68 @@ router.post('/invoices', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, salesperson_id, sales_type, commission_rate } = req.body;
+    const { customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, salesperson_id, sales_type, commission_rate, payment_method, amount_paid, remaining_balance, items } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
     const autoNum = invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
     const commRate = parseFloat(commission_rate) || 0;
     const totalAmt = parseFloat(total_amount) || 0;
     const commAmt = totalAmt * (commRate / 100);
 
+    // If payment method is customer wallet, deduct the amount from their credit_balance
+    if (customer_id && (payment_method === 'Customer Wallet' || payment_method === 'محفظة العميل')) {
+      const amtPaid = parseFloat(amount_paid) || totalAmt;
+      await client.query(
+        `UPDATE customers SET credit_balance = credit_balance - $1 WHERE id = $2`,
+        [amtPaid, customer_id]
+      );
+    }
+
+    // Deduct Stock Levels and Post COGS for direct invoices if Inventory
+    const parsedItems = Array.isArray(items) ? items : [];
+    if ((sales_type || 'Inventory') === 'Inventory' && parsedItems.length > 0) {
+      const AccountingService = require('../services/accountingService');
+      for (const item of parsedItems) {
+        const qty = parseFloat(item.qty) || 0;
+        if (qty <= 0) continue;
+
+        const itemRes = await client.query(
+          `SELECT id, remaining_qty, buy_price, avg_cost, item_name FROM inventory_items 
+           WHERE item_name ILIKE $1 AND remaining_qty >= $2 LIMIT 1`,
+          [item.name, qty]
+        );
+
+        if (itemRes.rows.length > 0) {
+          const invItem = itemRes.rows[0];
+          const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
+          const cogsAmount = qty * buyPrice;
+
+          // Deduct Stock
+          await client.query(
+            "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
+            [qty, invItem.id]
+          );
+
+          // Post COGS
+          if (cogsAmount > 0) {
+            await AccountingService.recordDoubleEntry(client, {
+              debitAccount: '5100',
+              creditAccount: '1130',
+              amount: cogsAmount,
+              costCenter: 'General',
+              description: `تكلفة مبيعات - صنف ${invItem.item_name} - فاتورة ${autoNum}`,
+              username: req.user?.username || 'System',
+              referenceNo: autoNum,
+              company: company
+            });
+          }
+        }
+      }
+    }
+
     const { rows } = await client.query(
-      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [customer_id||null, autoNum, totalAmt, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt]
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount, payment_method, amount_paid, remaining_balance, items)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+      [customer_id||null, autoNum, totalAmt, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt, payment_method||'Cash', parseFloat(amount_paid)||0, parseFloat(remaining_balance)||0, JSON.stringify(parsedItems)]
     );
 
     const invoice = rows[0];

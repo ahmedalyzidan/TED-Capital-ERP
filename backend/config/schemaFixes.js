@@ -653,6 +653,9 @@ const applySchemaFixes = async () => {
     await runQuery("Sales Invoices sales_type", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
     await runQuery("Sales Invoices commission_rate", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
     await runQuery("Sales Invoices commission_amount", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
+    await runQuery("Sales Invoices payment_method", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'Cash'`);
+    await runQuery("Sales Invoices amount_paid", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0.00`);
+    await runQuery("Sales Invoices remaining_balance", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS remaining_balance NUMERIC(20,6) DEFAULT 0.00`);
 
     await runQuery("Sales Commissions agent_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
     await runQuery("Sales Commissions salesperson_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
