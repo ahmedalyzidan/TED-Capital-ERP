@@ -467,7 +467,7 @@ router.post('/convert-dwg', async (req, res) => {
 
             if (error) {
                 console.error("dwg2dxf execution error:", error, stderr);
-                return res.status(500).json({ error: "فشل تحويل ملف DWG. تأكد من أن الملف سليم وبصيغة AutoCAD صحيحة." });
+                return res.status(500).json({ error: `فشل تحويل ملف DWG: ${error.message}. تفاصيل: ${stderr || stdout}` });
             }
 
             if (fs.existsSync(tempDxfPath)) {
