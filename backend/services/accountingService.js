@@ -55,6 +55,20 @@ class AccountingService {
                         else if (resolvedCompany === 'TED CAPITAL') resolvedCompany = 'TED Capital';
                     }
                 } catch (e) { }
+            } else if (company && !companyId) {
+                try {
+                    const compRes = await client.query(
+                        "SELECT id, name FROM companies WHERE UPPER(name) = UPPER($1) OR name ILIKE $2 LIMIT 1",
+                        [company, `%${company}%`]
+                    );
+                    if (compRes.rows.length > 0) {
+                        resolvedCompanyId = compRes.rows[0].id;
+                        resolvedCompany = compRes.rows[0].name;
+                        if (resolvedCompany === 'MASTER BUILDER') resolvedCompany = 'Master Builder';
+                        else if (resolvedCompany === 'DESIGN CONCEPT') resolvedCompany = 'Design Concept';
+                        else if (resolvedCompany === 'TED CAPITAL') resolvedCompany = 'TED Capital';
+                    }
+                } catch (e) { }
             } else if (costCenter && costCenter !== 'General' && !companyId && !company) {
                 try {
                     const projRes = await client.query(
