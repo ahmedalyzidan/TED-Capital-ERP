@@ -350,11 +350,37 @@ export default function RealEstate() {
   const handleQuickAddCustomer = async (name, phone) => {
     try {
       setIsSubmitting(true);
+      const activeComp = localStorage.getItem('active_company') || '';
+      let resolvedCompanyId = 1;
+      let resolvedCompanyName = 'TED CAPITAL';
+
+      const compLower = activeComp.toLowerCase();
+      if (compLower.includes('design') || compLower.includes('ديزاين')) {
+        resolvedCompanyId = 2; resolvedCompanyName = 'Design Concept';
+      } else if (compLower.includes('master') || compLower.includes('ماستر')) {
+        resolvedCompanyId = 3; resolvedCompanyName = 'Master Builder';
+      } else if (compLower.includes('prime') || compLower.includes('فارما') || compLower.includes('بريم')) {
+        resolvedCompanyId = 4; resolvedCompanyName = 'PRIMEMED PHARMA';
+      } else if (activeComp === 'all' || activeComp === 'كل الشركات' || activeComp === '') {
+        if (contractForm.unit_id) {
+          const selectedUnitObj = units.find(u => Number(u.id) === Number(contractForm.unit_id));
+          const selectedProj = selectedUnitObj ? projects.find(p => Number(p.id) === Number(selectedUnitObj.project_id)) : null;
+          if (selectedProj && selectedProj.company) {
+            resolvedCompanyName = selectedProj.company;
+            const projCompLower = selectedProj.company.toLowerCase();
+            if (projCompLower.includes('design') || projCompLower.includes('ديزاين')) resolvedCompanyId = 2;
+            else if (projCompLower.includes('master') || projCompLower.includes('ماستر')) resolvedCompanyId = 3;
+            else if (projCompLower.includes('prime') || projCompLower.includes('فارما')) resolvedCompanyId = 4;
+            else resolvedCompanyId = 1;
+          }
+        }
+      }
+
       const payload = {
         name: name.trim(),
         phone: phone.trim() || '',
-        company: 'TED CAPITAL',
-        company_id: 1,
+        company: resolvedCompanyName,
+        company_id: resolvedCompanyId,
         customer_type: 'Real Estate',
         created_at: new Date().toISOString()
       };

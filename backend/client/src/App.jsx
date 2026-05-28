@@ -49,6 +49,8 @@ import Accountant360 from './pages/Accountant360';
 import Portal360 from './pages/Portal360';
 import FinancialTransactions from './pages/FinancialTransactions';
 import CustodyManagement from './pages/CustodyManagement';
+import CRM from './pages/CRM';
+import Sales from './pages/Sales';
 import { RBACProtectedRoute } from './components/RBAC';
 
 // Route Protection
@@ -110,6 +112,8 @@ function App() {
               <Route path="/approvals" element={<Navigate to="/approval-inbox" replace />} />
               <Route path="/notifications" element={<StrategicCommandCenter />} />
               <Route path="/clients/:id/soa" element={<ClientSOA />} />
+              <Route path="/crm" element={<CRM />} />
+              <Route path="/sales" element={<Sales />} />
             </Route>
           </Routes>
         </Router>

@@ -90,7 +90,9 @@ export default function Layout() {
         cashBalances: "أرصدة النقدية 💵",
         custody: "إدارة العهد النقدية 💼",
         salesHistory: "6. سجل المبيعات والصرف 🛒",
-        constructionStore: "مستودع الإنشاءات 🧱"
+        constructionStore: "مستودع الإنشاءات 🧱",
+        crmModule: "إدارة CRM",
+        salesModule: "المبيعات"
       }
     },
     en: {
@@ -155,7 +157,9 @@ export default function Layout() {
         cashBalances: "Cash Balances 💵",
         custody: "Custody Management 💼",
         salesHistory: "6. Sales & Dispense History 🛒",
-        constructionStore: "Construction Store 🧱"
+        constructionStore: "Construction Store 🧱",
+        crmModule: "CRM Module",
+        salesModule: "Sales"
       }
     }
   };
@@ -264,6 +268,8 @@ export default function Layout() {
       items: [
         { path: '/partners', icon: '🤝', label: t.menu.partners, perm: 'FIN_VIEW_LEDGER' },
         { path: '/clients', icon: '🤝', label: t.menu.crm, perm: 'INV_MANAGE_STOCK' },
+        { path: '/crm', icon: '📇', label: t.menu.crmModule, perm: 'INV_MANAGE_STOCK' },
+        { path: '/sales', icon: '💰', label: t.menu.salesModule, perm: 'FIN_VIEW_LEDGER' },
       ]
     },
     {

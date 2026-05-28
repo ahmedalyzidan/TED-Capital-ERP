@@ -161,6 +161,8 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/dynamic', dynamicRoutes);
 app.use('/api/communication', require('./routes/communicationRoutes'));
 app.use('/api/custodies', require('./routes/custodyRoutes'));
+app.use('/api/crm', require('./routes/crmRoutes'));
+app.use('/api/sales', require('./routes/salesModuleRoutes'));
 
 // المسار القديم للتوافق المؤقت (سيتم حذفه لاحقاً)
 app.use('/api', apiRoutes);

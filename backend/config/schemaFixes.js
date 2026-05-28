@@ -1236,6 +1236,236 @@ const applySchemaFixes = async () => {
         WHERE (reference_no IS NULL OR reference_no = '') AND description LIKE '% | مرجع: %'
     `);
 
+    // --- CRM Extensions Tables ---
+    await runQuery("CRM Appointments Table", `CREATE TABLE IF NOT EXISTS crm_appointments (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        resource_name VARCHAR(255),
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP NOT NULL,
+        status VARCHAR(50) DEFAULT 'Scheduled',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Memberships Table", `CREATE TABLE IF NOT EXISTS crm_memberships (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        tier VARCHAR(100) DEFAULT 'Standard',
+        status VARCHAR(50) DEFAULT 'Active',
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Loyalty Ledger Table", `CREATE TABLE IF NOT EXISTS crm_loyalty_ledger (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        points_change INTEGER NOT NULL,
+        reason VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Attendance Table", `CREATE TABLE IF NOT EXISTS crm_attendance (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        check_in_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        check_out_time TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'Present'
+    )`);
+
+    // --- Sales Extensions Tables ---
+    await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        discount_percent NUMERIC(5,2) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        id SERIAL PRIMARY KEY,
+        item_name VARCHAR(255) NOT NULL,
+        price_tier VARCHAR(100) DEFAULT 'Retail',
+        price_factor NUMERIC(10,4) DEFAULT 1.0000,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Insurance Claims Table", `CREATE TABLE IF NOT EXISTS sales_insurance_claims (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+        insurer_name VARCHAR(255) NOT NULL,
+        coverage_percent NUMERIC(5,2) DEFAULT 0.00,
+        claim_status VARCHAR(50) DEFAULT 'Pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
+        id SERIAL PRIMARY KEY,
+        agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+        sales_amount NUMERIC(15,2) NOT NULL,
+        commission_earned NUMERIC(15,2) NOT NULL,
+        payout_status VARCHAR(50) DEFAULT 'Unpaid',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // ─── CRM MODULE TABLES ─────────────────────────────────────────────────
+    await runQuery("CRM Appointments", `CREATE TABLE IF NOT EXISTS crm_appointments (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        title VARCHAR(255),
+        appointment_date TIMESTAMP,
+        duration_minutes INTEGER DEFAULT 60,
+        status VARCHAR(50) DEFAULT 'مجدول',
+        notes TEXT,
+        assigned_to VARCHAR(255),
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Membership Plans", `CREATE TABLE IF NOT EXISTS crm_membership_plans (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        duration_days INTEGER DEFAULT 30,
+        price NUMERIC(15,2) DEFAULT 0,
+        sessions_included INTEGER DEFAULT 0,
+        description TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Memberships", `CREATE TABLE IF NOT EXISTS crm_memberships (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        plan_id INTEGER REFERENCES crm_membership_plans(id) ON DELETE SET NULL,
+        start_date DATE,
+        end_date DATE,
+        sessions_used INTEGER DEFAULT 0,
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Points", `CREATE TABLE IF NOT EXISTS crm_points (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        points NUMERIC(15,2) DEFAULT 0,
+        type VARCHAR(50) DEFAULT 'إضافة',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("CRM Client Attendance", `CREATE TABLE IF NOT EXISTS crm_client_attendance (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        check_in TIMESTAMP NOT NULL,
+        check_out TIMESTAMP,
+        visit_type VARCHAR(100) DEFAULT 'زيارة عادية',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // ─── SALES MODULE TABLES ────────────────────────────────────────────────
+    await runQuery("Sales Invoices", `CREATE TABLE IF NOT EXISTS sales_invoices (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        invoice_number VARCHAR(100),
+        total_amount NUMERIC(15,2) DEFAULT 0,
+        tax_amount NUMERIC(15,2) DEFAULT 0,
+        discount NUMERIC(15,2) DEFAULT 0,
+        due_date DATE,
+        status VARCHAR(50) DEFAULT 'مسودة',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales POS Transactions", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        payment_method VARCHAR(50) DEFAULT 'نقدي',
+        total_amount NUMERIC(15,2) DEFAULT 0,
+        items JSONB DEFAULT '[]'::jsonb,
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Offers", `CREATE TABLE IF NOT EXISTS sales_offers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        discount_type VARCHAR(50) DEFAULT 'نسبة',
+        discount_value NUMERIC(15,2) DEFAULT 0,
+        min_purchase NUMERIC(15,2) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        description TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Price Lists", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        product_name VARCHAR(255),
+        base_price NUMERIC(15,2) DEFAULT 0,
+        selling_price NUMERIC(15,2) DEFAULT 0,
+        category VARCHAR(100),
+        effective_date DATE,
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Insurance", `CREATE TABLE IF NOT EXISTS sales_insurance (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        provider VARCHAR(255),
+        policy_number VARCHAR(100),
+        coverage_amount NUMERIC(15,2) DEFAULT 0,
+        premium NUMERIC(15,2) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Targets", `CREATE TABLE IF NOT EXISTS sales_targets (
+        id SERIAL PRIMARY KEY,
+        agent_name VARCHAR(255),
+        target_amount NUMERIC(15,2) DEFAULT 0,
+        achieved_amount NUMERIC(15,2) DEFAULT 0,
+        commission_rate NUMERIC(5,2) DEFAULT 0,
+        period VARCHAR(100),
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Installments", `CREATE TABLE IF NOT EXISTS sales_installments (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        total_amount NUMERIC(15,2) DEFAULT 0,
+        installment_count INTEGER DEFAULT 12,
+        monthly_amount NUMERIC(15,2) DEFAULT 0,
+        paid_count INTEGER DEFAULT 0,
+        start_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

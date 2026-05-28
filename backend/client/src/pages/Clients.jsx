@@ -16,7 +16,7 @@ export default function Clients() {
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('ALL'); // ALL, Contractor, Pharma, Real Estate, Supplier, Individual
+  const [filterType, setFilterType] = useState('ALL'); // ALL, Contractor, Pharma, Real Estate, Supplier, Individual, Decor, Commercial, Industrial, Services, Government
 
   // Interaction Form State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -609,6 +609,36 @@ export default function Clients() {
             🚛 {language === 'ar' ? 'موردين' : 'Suppliers'} ({clients.filter(c => c.customer_type === 'Supplier').length})
           </button>
           <button 
+            onClick={() => setFilterType('Decor')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Decor' ? 'bg-pink-600 border-pink-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🎨 {language === 'ar' ? 'ديكور' : 'Decor'} ({clients.filter(c => c.customer_type === 'Decor').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Commercial')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Commercial' ? 'bg-cyan-600 border-cyan-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🏪 {language === 'ar' ? 'تجاري' : 'Commercial'} ({clients.filter(c => c.customer_type === 'Commercial').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Industrial')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Industrial' ? 'bg-orange-600 border-orange-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🏭 {language === 'ar' ? 'صناعي' : 'Industrial'} ({clients.filter(c => c.customer_type === 'Industrial').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Services')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Services' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            💼 {language === 'ar' ? 'خدمات' : 'Services'} ({clients.filter(c => c.customer_type === 'Services').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Government')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Government' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🏛️ {language === 'ar' ? 'جهات حكومية' : 'Government'} ({clients.filter(c => c.customer_type === 'Government').length})
+          </button>
+          <button 
             onClick={() => setFilterType('Individual')}
             className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Individual' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
           >
@@ -666,17 +696,9 @@ export default function Clients() {
                             </span>
                           )}
                           <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
-                            c.customer_type === 'Pharma' 
-                              ? 'bg-teal-50 text-teal-700 border-teal-200' 
-                              : c.customer_type === 'Contractor' 
-                              ? 'bg-violet-50 text-violet-750 border-violet-200' 
-                              : c.customer_type === 'Real Estate'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : c.customer_type === 'Supplier'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                            ({'Pharma':'bg-teal-50 text-teal-700 border-teal-200','Contractor':'bg-violet-50 text-violet-700 border-violet-200','Real Estate':'bg-amber-50 text-amber-700 border-amber-200','Supplier':'bg-rose-50 text-rose-700 border-rose-200','Decor':'bg-pink-50 text-pink-700 border-pink-200','Commercial':'bg-cyan-50 text-cyan-700 border-cyan-200','Industrial':'bg-orange-50 text-orange-700 border-orange-200','Services':'bg-indigo-50 text-indigo-700 border-indigo-200','Government':'bg-emerald-50 text-emerald-700 border-emerald-200'})[c.customer_type] || 'bg-blue-50 text-blue-700 border-blue-200'
                           }`}>
-                            🏷️ {c.customer_type === 'Pharma' ? (language === 'ar' ? 'عميل أدوية' : 'Pharma') : c.customer_type === 'Contractor' ? (language === 'ar' ? 'مقاول' : 'Contractor') : c.customer_type === 'Real Estate' ? (language === 'ar' ? 'عقارات' : 'Real Estate') : c.customer_type === 'Supplier' ? (language === 'ar' ? 'مورد' : 'Supplier') : (language === 'ar' ? 'أفراد' : 'Individual')}
+                            {({'Contractor':'🏗️','Real Estate':'🏢','Pharma':'💊','Decor':'🎨','Supplier':'📦','Commercial':'🏪','Industrial':'🏭','Services':'💼','Government':'🏛️','Individual':'👤'})[c.customer_type] || '🏷️'} {language === 'ar' ? ({'Contractor':'مقاولات','Real Estate':'عقارات','Pharma':'أدوية','Decor':'ديكور','Supplier':'مورد','Commercial':'تجاري','Industrial':'صناعي','Services':'خدمات','Government':'حكومي','Individual':'أفراد'})[c.customer_type] || c.customer_type || 'أفراد' : c.customer_type || 'Individual'}
                           </span>
                         </div>
                       </td>
@@ -738,6 +760,26 @@ export default function Clients() {
                     ))}
                   </select>
                 </div>
+                <div className="col-span-1 md:col-span-2 space-y-3">
+                  <label className="text-[11px] font-black text-violet-600 uppercase tracking-[0.2em] ml-1">⭐ {language === 'ar' ? 'تصنيف العميل *' : 'Client Classification *'}</label>
+                  <select
+                    name="customer_type"
+                    value={clientForm.customer_type}
+                    onChange={handleClientChange}
+                    className="w-full px-6 py-4 bg-violet-50 border-2 border-violet-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm cursor-pointer"
+                  >
+                    <option value="Contractor">{language === 'ar' ? '🏗️ عميل مقاولات' : '🏗️ Contractor'}</option>
+                    <option value="Real Estate">{language === 'ar' ? '🏢 عميل عقارات' : '🏢 Real Estate'}</option>
+                    <option value="Pharma">{language === 'ar' ? '💊 عميل أدوية / صيدليات' : '💊 Pharma Client'}</option>
+                    <option value="Decor">{language === 'ar' ? '🎨 عميل ديكور / تشطيبات' : '🎨 Decor / Finishing'}</option>
+                    <option value="Supplier">{language === 'ar' ? '📦 مورد' : '📦 Supplier'}</option>
+                    <option value="Commercial">{language === 'ar' ? '🏪 عميل تجاري' : '🏪 Commercial'}</option>
+                    <option value="Industrial">{language === 'ar' ? '🏭 عميل صناعي' : '🏭 Industrial'}</option>
+                    <option value="Services">{language === 'ar' ? '💼 عميل خدمات' : '💼 Services'}</option>
+                    <option value="Government">{language === 'ar' ? '🏛️ جهة حكومية' : '🏛️ Government'}</option>
+                    <option value="Individual">{language === 'ar' ? '👤 أفراد' : '👤 Individual'}</option>
+                  </select>
+                </div>
                 <div className="space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'رقم التواصل المعتمد' : 'Primary Contact Phone'}</label>
                   <input type="text" name="phone" value={clientForm.phone} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black text-slate-900 font-mono focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm" />
@@ -746,24 +788,9 @@ export default function Clients() {
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'عنوان المراسلات الرقمية' : 'Primary Email Correspondence'}</label>
                   <input type="email" name="email" value={clientForm.email} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm" />
                 </div>
-                <div className="space-y-3">
+                <div className="col-span-1 md:col-span-2 space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'الحد الائتماني المعتمد (Credit Limit)' : 'Authorized Credit Facility'}</label>
                   <input type="number" name="credit_limit" value={clientForm.credit_limit} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 font-mono focus:bg-white focus:border-violet-600 transition-all outline-none shadow-inner" />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'تصنيف العميل' : 'Client Classification'}</label>
-                  <select
-                    name="customer_type"
-                    value={clientForm.customer_type}
-                    onChange={handleClientChange}
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm cursor-pointer"
-                  >
-                    <option value="Contractor">{language === 'ar' ? 'مقاول' : 'Contractor'}</option>
-                    <option value="Pharma">{language === 'ar' ? 'عميل أدوية' : 'Pharma Client'}</option>
-                    <option value="Real Estate">{language === 'ar' ? 'عقارات' : 'Real Estate'}</option>
-                    <option value="Supplier">{language === 'ar' ? 'مورد' : 'Supplier'}</option>
-                    <option value="Individual">{language === 'ar' ? 'أفراد' : 'Individual'}</option>
-                  </select>
                 </div>
               </div>
 
