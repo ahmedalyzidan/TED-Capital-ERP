@@ -2052,6 +2052,15 @@ export default function Sales() {
   const [staff, setStaff] = useState([]);
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [prefilledClientName, setPrefilledClientName] = useState('');
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('sales_theme') === 'dark');
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const newVal = !prev;
+      localStorage.setItem('sales_theme', newVal ? 'dark' : 'light');
+      return newVal;
+    });
+  };
 
   const refreshClients = () => {
     api.get('/table/customers?limit=500').then(r => setClients(r.data.data || [])).catch(() => {});
@@ -2071,7 +2080,7 @@ export default function Sales() {
   const defaultCurrency = activeCompany?.toLowerCase().includes('primemed') ? 'ILS' : 'EGP';
 
   return (
-    <div className="min-h-screen bg-slate-50/80 p-4 md:p-6 space-y-5" dir={ar ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen transition-colors duration-300 p-4 md:p-6 space-y-5 ${darkMode ? 'bg-[#12151c] text-[#f8fafc]' : 'bg-slate-50/80 text-slate-900'}`} dir={ar ? 'rtl' : 'ltr'}>
       {/* Premium Header */}
       <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-900/20">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 15% 85%, #818cf8 0%, transparent 55%), radial-gradient(circle at 85% 20%, #f472b6 0%, transparent 50%), radial-gradient(circle at 50% 50%, #0ea5e9 0%, transparent 70%)' }} />
@@ -2089,7 +2098,10 @@ export default function Sales() {
             </div>
             <p className="text-xs text-white/40 mt-1">{ar ? 'نظام ERP احترافي — عروض الأسعار · أوامر البيع · التسليم · المردودات · التحليلات' : 'Enterprise Sales — Quotations · Orders · Delivery · Returns · Analytics'}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button onClick={toggleDarkMode} className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10 text-lg shadow-sm" title={ar ? 'تغيير المظهر' : 'Toggle Theme'}>
+              {darkMode ? '☀️' : '🌙'}
+            </button>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-bold border border-white/10">
               {ar ? '🌐 متكامل مع: المخازن · العقارات · المحاسبة · CRM' : '🌐 Integrated: Inventory · Real Estate · Finance · CRM'}
             </div>
@@ -2098,14 +2110,16 @@ export default function Sales() {
       </div>
 
       {/* Tab Bar */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-1.5 overflow-x-auto">
+      <div className={`rounded-2xl border shadow-sm p-1.5 overflow-x-auto transition-all duration-300 ${darkMode ? 'bg-[#1e2530]/80 border-[#2e3748]' : 'bg-white border-slate-100'}`}>
         <div className="flex gap-1 min-w-max sm:min-w-0">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200
                 ${activeTab === tab.id
                   ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-sm shadow-indigo-200'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+                  : darkMode 
+                    ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
               <span>{tab.icon}</span>
               <span className="hidden sm:inline">{ar ? tab.ar : tab.en}</span>
             </button>
@@ -2115,17 +2129,17 @@ export default function Sales() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'analytics'      && <AnalyticsTab      language={language} />}
-        {activeTab === 'customerledger' && <CustomerLedgerTab clients={clients} language={language} defaultCurrency={defaultCurrency} />}
-        {activeTab === 'quotations'     && <QuotationsTab     clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
-        {activeTab === 'orders'         && <OrdersTab         clients={clients} language={language} />}
-        {activeTab === 'delivery'       && <DeliveryNotesTab  language={language} />}
-        {activeTab === 'returns'        && <SalesReturnsTab   clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
-        {activeTab === 'invoicing'      && <InvoicingTab      clients={clients} staff={staff} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} activeCompany={activeCompany} />}
-        {activeTab === 'offers'         && <OffersTab         language={language} />}
-        {activeTab === 'pricelists'     && <PriceListsTab     language={language} />}
-        {activeTab === 'commissions'    && <CommissionsTab    staff={staff} language={language} />}
-        {activeTab === 'installments'   && <InstallmentsTab   clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} />}
+        {activeTab === 'analytics'      && <AnalyticsTab      language={language} darkMode={darkMode} />}
+        {activeTab === 'customerledger' && <CustomerLedgerTab clients={clients} language={language} defaultCurrency={defaultCurrency} darkMode={darkMode} />}
+        {activeTab === 'quotations'     && <QuotationsTab     clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} darkMode={darkMode} />}
+        {activeTab === 'orders'         && <OrdersTab         clients={clients} language={language} darkMode={darkMode} />}
+        {activeTab === 'delivery'       && <DeliveryNotesTab  language={language} darkMode={darkMode} />}
+        {activeTab === 'returns'        && <SalesReturnsTab   clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} darkMode={darkMode} />}
+        {activeTab === 'invoicing'      && <InvoicingTab      clients={clients} staff={staff} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} activeCompany={activeCompany} darkMode={darkMode} />}
+        {activeTab === 'offers'         && <OffersTab         language={language} darkMode={darkMode} />}
+        {activeTab === 'pricelists'     && <PriceListsTab     language={language} darkMode={darkMode} />}
+        {activeTab === 'commissions'    && <CommissionsTab    staff={staff} language={language} darkMode={darkMode} />}
+        {activeTab === 'installments'   && <InstallmentsTab   clients={clients} language={language} defaultCurrency={defaultCurrency} onNewClientClick={openNewClientModal} darkMode={darkMode} />}
       </div>
 
       <NewCustomerModal open={newClientOpen} onClose={() => setNewClientOpen(false)} onCreated={refreshClients} language={language} prefilledName={prefilledClientName} activeCompany={activeCompany} />
