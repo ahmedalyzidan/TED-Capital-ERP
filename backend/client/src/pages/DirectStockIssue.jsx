@@ -68,7 +68,7 @@ const boqCategories = [
 export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '' }) {
   const { language } = useLanguage();
   const activeComp = localStorage.getItem('active_company') || '';
-  const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
+  const isPharma = !activeComp || activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
   
   let activeCompId = 4; // default
   let activeCompName = activeComp || 'PRIMEMED PHARMA';
