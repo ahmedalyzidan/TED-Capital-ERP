@@ -1002,6 +1002,47 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick 
           </div>
 
           {/* Return Items */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-slate-50 px-4 py-2 flex items-center justify-between border-b border-slate-200">
+              <span className="text-xs font-black text-slate-600 uppercase">{ar ? 'الأصناف المرتجعة' : 'Return Items'}</span>
+              <button type="button" onClick={() => setReturnItems(c => [...c, { inventory_id: null, name: '', qty: 1, price: 0 }])} className="text-xs text-indigo-600 font-bold hover:underline">+ {ar ? 'إضافة سطر' : 'Add Line'}</button>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {returnItems.map((item, idx) => (
+                <div key={idx} className="flex gap-2 items-center p-3">
+                  <div className="flex-1">
+                    <input value={item.name} onChange={e => setReturnItems(c => c.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder={ar ? 'اسم المنتج' : 'Product name'} className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                  </div>
+                  <div className="w-24">
+                    <input type="number" value={item.qty} onChange={e => setReturnItems(c => c.map((it, i) => i === idx ? { ...it, qty: +e.target.value } : it))} placeholder={ar ? 'الكمية' : 'Qty'} className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                  </div>
+                  <div className="w-28">
+                    <input type="number" value={item.price} onChange={e => setReturnItems(c => c.map((it, i) => i === idx ? { ...it, price: +e.target.value } : it))} placeholder={ar ? 'السعر' : 'Price'} className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                  </div>
+                  <button onClick={() => setReturnItems(c => c.filter((_, i) => i !== idx))} className="w-7 h-7 flex items-center justify-center text-rose-400 hover:bg-rose-50 rounded-lg">×</button>
+                </div>
+              ))}
+            </div>
+            <div className="bg-slate-50 px-4 py-3 flex justify-between items-center border-t border-slate-200">
+              <span className="text-xs font-black text-slate-600">{ar ? 'الإجمالي:' : 'Total:'}</span>
+              <span className="text-sm font-black text-slate-800">{fmt(total)} {defaultCurrency || 'EGP'}</span>
+            </div>
+          </div>
+
+          <Textarea label={ar ? 'ملاحظات' : 'Notes'} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="ghost" onClick={() => setModal(false)}>{ar ? 'إلغاء' : 'Cancel'}</Btn>
+            <Btn variant="success" onClick={save}>↩ {ar ? 'حفظ المردود' : 'Save Return'}</Btn>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6. INVOICING TAB
+// ═══════════════════════════════════════════════════════════════════════════════
 function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewClientClick, activeCompany }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
