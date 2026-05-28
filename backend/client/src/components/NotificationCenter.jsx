@@ -10,8 +10,30 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Check every minute
-    return () => clearInterval(interval);
+
+    // Real-time EventSource listener
+    const eventSource = new EventSource('/api/notifications/stream');
+    eventSource.onmessage = (event) => {
+      try {
+        const newNotif = JSON.parse(event.data);
+        setNotifications(prev => {
+          if (prev.some(n => n.id === newNotif.id)) return prev;
+          const updated = [newNotif, ...prev].slice(0, 20);
+          setUnreadCount(updated.filter(n => !n.is_read).length);
+          return updated;
+        });
+      } catch (err) {
+        console.error("Error parsing EventSource data:", err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.warn("EventSource disconnected. Browser will reconnect automatically.");
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   const fetchNotifications = async () => {

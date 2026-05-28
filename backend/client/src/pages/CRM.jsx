@@ -105,11 +105,17 @@ function AppointmentsTab({ clients, language }) {
     duration_minutes: 60, status: 'مجدول', notes: '', assigned_to: ''
   });
 
+  const [staff, setStaff] = useState([]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/crm/appointments');
-      setItems(data.data || []);
+      const [resApp, resStaff] = await Promise.all([
+        api.get('/crm/appointments'),
+        api.get('/table/staff?limit=1000').catch(() => ({ data: { data: [] } }))
+      ]);
+      setItems(resApp.data.data || []);
+      setStaff(resStaff.data.data || []);
     } catch { /* graceful */ } finally { setLoading(false); }
   }, []);
 
@@ -194,7 +200,14 @@ function AppointmentsTab({ clients, language }) {
             <Select label={ar ? 'الحالة' : 'Status'} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               {['مجدول', 'مكتمل', 'ملغي', 'غائب'].map(s => <option key={s} value={s}>{s}</option>)}
             </Select>
-            <Input label={ar ? 'المسؤول' : 'Assigned To'} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} />
+            <Select label={ar ? 'المسؤول' : 'Assigned To'} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}>
+              <option value="">-- {ar ? 'اختر المسؤول' : 'Select Employee'} --</option>
+              {staff.map(s => (
+                <option key={s.id} value={s.name}>
+                  {s.name} {s.role ? `(${s.role})` : s.department ? `(${s.department})` : ''}
+                </option>
+              ))}
+            </Select>
           </div>
           <Textarea label={ar ? 'ملاحظات' : 'Notes'} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
           <div className="flex justify-end gap-2 pt-2">

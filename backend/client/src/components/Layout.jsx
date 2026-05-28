@@ -126,7 +126,7 @@ export default function Layout() {
         assets: "Assets",
         realEstate: "Real Estate",
         partners: "Partners",
-        crm: "CRM",
+        crm: "Clients",
         inventory: "Inventory",
         directIssue: "Direct Stock Issue 🚚",
         transfers: "Transfers 🔄",

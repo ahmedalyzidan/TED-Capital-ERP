@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import api from '../services/api';
+
 
 // ══════════════════════════════════════════════════════════════
 //  📐 DXF Quantity Takeoff Engine — Phase 1 MVP
@@ -284,56 +286,14 @@ export default function DXFQuantityTakeoff({
     return 'unknown';
   }, []);
 
-  // ── Parse the selected DXF file ──
-  const handleParse = useCallback(() => {
-    setParseError(null);
-    setResults(null);
-    setBoqGenerated(false);
-    setAdjustments({});
-
-    const file = projectFiles.find(f => f.id === selectedFileId);
-    if (!file) { setParseError('الملف غير موجود'); return; }
-
-    const fileNameLower = (file.name || '').toLowerCase();
-    if (fileNameLower.endsWith('.dwg')) {
-      setParseError(
-        language === 'ar'
-          ? 'ملفات DWG هي ملفات ثنائية مغلقة ولا يمكن تحليلها مباشرة. يرجى فتح الملف في برنامج AutoCAD وحفظه بصيغة DXF (AutoCAD DXF) ثم رفعه مجدداً لتتمكن من استخراج المقايسات بدقة.'
-          : 'DWG files are binary and cannot be parsed directly. Please open the file in AutoCAD and save/export it as DXF (AutoCAD DXF), then upload the DXF file to parse it successfully.'
-      );
-      return;
-    }
-
-    setIsProcessing(true);
-
+  const loadDxfData = useCallback((textContent) => {
     try {
-      let textContent = file.content || '';
-
-      // If stored as base64 data URL, decode it
-      if (textContent.startsWith('data:')) {
-        const base64Part = textContent.split(',')[1];
-        if (base64Part) {
-          try {
-            textContent = atob(base64Part);
-          } catch (e) {
-            setParseError(
-              language === 'ar'
-                ? 'فشل في قراءة بنية الملف. يرجى التأكد من حفظ الملف بصيغة DXF النصية (ASCII DXF) وليس بصيغة ثنائية.'
-                : 'Failed to read file content. Please ensure the file was saved as text-based DXF (ASCII DXF) and not binary.'
-            );
-            setIsProcessing(false);
-            return;
-          }
-        }
-      }
-
       if (!textContent || textContent.length < 50) {
-        setParseError('محتوى الملف فارغ أو تالف. تأكد من رفع ملف DXF صحيح.');
+        setParseError('محتوى الملف فارغ أو تالف. تأكد من رفع ملف صحيح.');
         setIsProcessing(false);
         return;
       }
 
-      // Use inline DXF parser (works without npm dependencies)
       let parsed;
       try {
         parsed = parseDxfText(textContent);
@@ -344,7 +304,7 @@ export default function DXFQuantityTakeoff({
       }
 
       if (!parsed.entities || parsed.entities.length === 0) {
-        setParseError('لم يتم العثور على أي عناصر رسومية في الملف. تأكد أنه ملف DXF صحيح من AutoCAD.');
+        setParseError('لم يتم العثور على أي عناصر رسومية في الملف. تأكد أنه ملف صحيح من AutoCAD.');
         setIsProcessing(false);
         return;
       }
@@ -375,7 +335,65 @@ export default function DXFQuantityTakeoff({
       setParseError(`خطأ في تحليل الملف: ${err.message}`);
       setIsProcessing(false);
     }
-  }, [selectedFileId, projectFiles, classifyLayer]);
+  }, [classifyLayer]);
+
+  // ── Parse the selected DXF file ──
+  const handleParse = useCallback(() => {
+    setParseError(null);
+    setResults(null);
+    setBoqGenerated(false);
+    setAdjustments({});
+
+    const file = projectFiles.find(f => f.id === selectedFileId);
+    if (!file) { setParseError('الملف غير موجود'); return; }
+
+    setIsProcessing(true);
+
+    const fileNameLower = (file.name || '').toLowerCase();
+    if (fileNameLower.endsWith('.dwg')) {
+      api.post('/subcontractors/convert-dwg', { content: file.content })
+        .then(res => {
+          if (res.data.success && res.data.dxfContent) {
+            loadDxfData(res.data.dxfContent);
+          } else {
+            setParseError(language === 'ar' ? 'فشل تحويل الملف من DWG إلى DXF.' : 'Failed to convert DWG to DXF.');
+            setIsProcessing(false);
+          }
+        })
+        .catch(err => {
+          setParseError(err.response?.data?.error || (language === 'ar' ? 'حدث خطأ أثناء الاتصال بالخادم لتحويل ملف DWG.' : 'Server connection error during DWG conversion.'));
+          setIsProcessing(false);
+        });
+      return;
+    }
+
+    try {
+      let textContent = file.content || '';
+
+      // If stored as base64 data URL, decode it
+      if (textContent.startsWith('data:')) {
+        const base64Part = textContent.split(',')[1];
+        if (base64Part) {
+          try {
+            textContent = atob(base64Part);
+          } catch (e) {
+            setParseError(
+              language === 'ar'
+                ? 'فشل في قراءة بنية الملف. يرجى التأكد من حفظ الملف بصيغة DXF النصية (ASCII DXF) وليس بصيغة ثنائية.'
+                : 'Failed to read file content. Please ensure the file was saved as text-based DXF (ASCII DXF) and not binary.'
+            );
+            setIsProcessing(false);
+            return;
+          }
+        }
+      }
+
+      loadDxfData(textContent);
+    } catch (err) {
+      setParseError(`خطأ في قراءة ملف DXF: ${err.message}`);
+      setIsProcessing(false);
+    }
+  }, [selectedFileId, projectFiles, language, loadDxfData]);
 
   // ── Calculate quantities ──
   const handleCalculate = useCallback(() => {

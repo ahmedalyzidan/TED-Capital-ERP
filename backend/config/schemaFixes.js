@@ -1466,6 +1466,24 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // --- WebSocket notification trigger ---
+    await runQuery("Notify Function", `
+        CREATE OR REPLACE FUNCTION notify_new_notification()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            PERFORM pg_notify('new_notification', row_to_json(NEW)::text);
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    `);
+
+    await runQuery("Notify Trigger", `
+        CREATE OR REPLACE TRIGGER trg_notify_new_notification
+        AFTER INSERT ON notifications
+        FOR EACH ROW
+        EXECUTE FUNCTION notify_new_notification();
+    `);
+
     console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
 };
 

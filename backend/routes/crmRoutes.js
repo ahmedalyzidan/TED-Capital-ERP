@@ -35,6 +35,37 @@ router.post('/appointments', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [customer_id || null, title, appointment_date, duration_minutes || 60, status || 'مجدول', notes, assigned_to, company, req.user?.username]
     );
+
+    // Trigger Notification & Alert Integration
+    try {
+      let assignedUser = null;
+      if (assigned_to) {
+        const uRes = await pool.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [assigned_to.trim()]);
+        if (uRes.rows.length > 0) {
+          assignedUser = uRes.rows[0].id;
+        }
+      }
+      
+      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custName = custRes.rows[0]?.name || 'غير محدد';
+      
+      if (assignedUser) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type, severity, link) 
+           VALUES ($1, $2, $3, 'CRM_APPOINTMENT', 'strategic', '/crm')`,
+          [assignedUser, 'موعد عميل جديد مسند إليك', `تم جدولة موعد للعميل ${custName} بعنوان: ${title} بتاريخ ${appointment_date}`]
+        );
+      }
+      
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, severity, link) 
+         VALUES (NULL, $1, $2, 'CRM_APPOINTMENT', 'strategic', '/crm')`,
+        ['موعد عميل جديد في النظام', `تم جدولة موعد جديد للعميل ${custName} بعنوان (${title}) مسند إلى (${assigned_to || 'غير محدد'})`]
+      );
+    } catch (nErr) {
+      console.error("CRM notification error:", nErr);
+    }
+
     res.json({ success: true, data: rows[0] });
   } catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
 });

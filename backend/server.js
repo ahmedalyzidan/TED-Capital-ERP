@@ -6,6 +6,26 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
 const app = express();
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        credentials: true
+    }
+});
+
+global.io = io;
+
+io.on('connection', (socket) => {
+    console.log(`🔌 [Socket.io] Client connected: ${socket.id}`);
+    socket.on('disconnect', () => {
+        console.log(`🔌 [Socket.io] Client disconnected: ${socket.id}`);
+    });
+});
 
 // 1. الأساسيات (Basics)
 app.use(cors({ 
@@ -167,6 +187,18 @@ app.use('/api/sales', require('./routes/salesModuleRoutes'));
 // المسار القديم للتوافق المؤقت (سيتم حذفه لاحقاً)
 app.use('/api', apiRoutes);
 
+let sseClients = [];
+app.get('/api/notifications/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    sseClients.push(res);
+    req.on('close', () => {
+        sseClients = sseClients.filter(c => c !== res);
+    });
+});
+
 // 4. Health Check Endpoint
 app.get('/api/health', async (req, res) => {
     try {
@@ -225,8 +257,34 @@ app.use((err, req, res, next) => {
 
 // تشغيل السيرفر
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 TED CAPITAL ERP Server running on http://localhost:${PORT}`);
+
+    // PG Listener for Real-time Notifications via WebSockets
+    const runPgListener = async () => {
+        try {
+            const client = await pool.connect();
+            await client.query('LISTEN new_notification');
+            client.on('notification', (msg) => {
+                try {
+                    const notification = JSON.parse(msg.payload);
+                    if (global.io) {
+                        global.io.emit('new_notification', notification);
+                    }
+                    // Broadcast to SSE clients
+                    sseClients.forEach(res => {
+                        res.write(`data: ${JSON.stringify(notification)}\n\n`);
+                    });
+                } catch (err) {
+                    console.error('Error parsing notification payload:', err);
+                }
+            });
+            console.log('📡 [PG Listener] Listening to new_notification channel...');
+        } catch (err) {
+            console.error('⚠️ [PG Listener] Failed to initialize listener:', err.message);
+        }
+    };
+    runPgListener();
 
     // 🌟 إطلاق المهام المجدولة فور عمل الخادم وتجهيزه
     startCronJobs();

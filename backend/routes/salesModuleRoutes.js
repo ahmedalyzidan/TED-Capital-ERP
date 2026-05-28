@@ -36,6 +36,20 @@ router.post('/invoices', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [customer_id||null, autoNum, total_amount||0, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username]
     );
+
+    // Integrate with system notifications
+    try {
+      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custName = custRes.rows[0]?.name || 'عميل نقدي';
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, severity, link) 
+         VALUES (NULL, $1, $2, 'SALES_INVOICE', 'strategic', '/sales')`,
+        [`فاتورة مبيعات جديدة: ${autoNum}`, `تم إصدار فاتورة مبيعات جديدة للعميل ${custName} بمبلغ ${total_amount || 0} EGP`]
+      );
+    } catch (nErr) {
+      console.error("Sales invoice notification error:", nErr);
+    }
+
     res.json({ success: true, data: rows[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -64,6 +78,20 @@ router.post('/pos-transactions', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [customer_id||null, payment_method||'نقدي', notes, JSON.stringify(items||[]), total_amount||0, company, req.user?.username]
     );
+
+    // Integrate with system notifications
+    try {
+      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custName = custRes.rows[0]?.name || 'عميل نقدي';
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, severity, link) 
+         VALUES (NULL, $1, $2, 'POS_TRANSACTION', 'warning', '/sales')`,
+        [`عملية بيع POS جديدة`, `تمت عملية بيع POS جديدة للعميل ${custName} بمبلغ ${total_amount || 0} EGP بالدفع ${payment_method}`]
+      );
+    } catch (nErr) {
+      console.error("POS transaction notification error:", nErr);
+    }
+
     res.json({ success: true, data: rows[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -196,6 +224,20 @@ router.post('/installments', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [customer_id||null, total_amount||0, installment_count||12, monthly_amount||0, start_date||null, status||'نشط', notes, company]
     );
+
+    // Integrate with system notifications
+    try {
+      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custName = custRes.rows[0]?.name || 'عميل';
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, severity, link) 
+         VALUES (NULL, $1, $2, 'INSTALLMENT_CREATED', 'strategic', '/sales')`,
+        [`جدولة أقساط جديدة`, `تم إعداد خطة أقساط جديدة للعميل ${custName} بقيمة إجمالية ${total_amount || 0} EGP على ${installment_count} شهور`]
+      );
+    } catch (nErr) {
+      console.error("Installment notification error:", nErr);
+    }
+
     res.json({ success: true, data: rows[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

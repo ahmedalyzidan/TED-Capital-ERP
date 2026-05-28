@@ -420,4 +420,63 @@ router.post('/record_payment', async (req, res) => {
     }
 });
 
+// --- DWG to DXF Conversion using LibreDWG ---
+const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+router.post('/convert-dwg', async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ error: "محتوى الملف غير موجود." });
+        }
+
+        let fileBuffer;
+        if (content.startsWith('data:')) {
+            const base64Part = content.split(',')[1];
+            fileBuffer = Buffer.from(base64Part, 'base64');
+        } else {
+            fileBuffer = Buffer.from(content, 'base64');
+        }
+
+        const scratchDir = path.join(__dirname, '../scratch');
+        if (!fs.existsSync(scratchDir)) {
+            fs.mkdirSync(scratchDir, { recursive: true });
+        }
+
+        const tempId = Date.now();
+        const tempDwgPath = path.join(scratchDir, `temp_${tempId}.dwg`);
+        const tempDxfPath = path.join(scratchDir, `temp_${tempId}.dxf`);
+
+        fs.writeFileSync(tempDwgPath, fileBuffer);
+
+        const exePath = path.join(__dirname, '../../libredwg_temp/dwg2dxf.exe');
+
+        // Command: dwg2dxf <input> <output>
+        const cmd = `"${exePath}" "${tempDwgPath}" "${tempDxfPath}"`;
+        exec(cmd, (error, stdout, stderr) => {
+            if (fs.existsSync(tempDwgPath)) {
+                try { fs.unlinkSync(tempDwgPath); } catch (e) {}
+            }
+
+            if (error) {
+                console.error("dwg2dxf execution error:", error, stderr);
+                return res.status(500).json({ error: "فشل تحويل ملف DWG. تأكد من أن الملف سليم وبصيغة AutoCAD صحيحة." });
+            }
+
+            if (fs.existsSync(tempDxfPath)) {
+                const dxfContent = fs.readFileSync(tempDxfPath, 'utf8');
+                try { fs.unlinkSync(tempDxfPath); } catch (e) {}
+                res.json({ success: true, dxfContent });
+            } else {
+                res.status(500).json({ error: "فشل العثور على مخرجات ملف DXF بعد التحويل." });
+            }
+        });
+    } catch (err) {
+        console.error("DWG endpoint error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
