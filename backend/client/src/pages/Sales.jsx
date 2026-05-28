@@ -1499,9 +1499,6 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
     </div>
   );
 }
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. CUSTOMER LEDGER TAB
