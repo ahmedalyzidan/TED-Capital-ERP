@@ -12,7 +12,8 @@ export default function NotificationCenter() {
     fetchNotifications();
 
     // Real-time EventSource listener
-    const eventSource = new EventSource('/api/notifications/stream');
+    const token = localStorage.getItem('token');
+    const eventSource = new EventSource(`/api/notifications/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`);
     eventSource.onmessage = (event) => {
       try {
         const newNotif = JSON.parse(event.data);

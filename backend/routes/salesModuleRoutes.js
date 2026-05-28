@@ -27,21 +27,25 @@ router.get('/invoices', async (req, res) => {
 });
 
 router.post('/invoices', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const { customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
     const autoNum = invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [customer_id||null, autoNum, total_amount||0, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username]
     );
 
+    const invoice = rows[0];
+
     // Integrate with system notifications
     try {
-      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custRes = await client.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
       const custName = custRes.rows[0]?.name || 'عميل نقدي';
-      await pool.query(
+      await client.query(
         `INSERT INTO notifications (user_id, title, message, type, severity, link) 
          VALUES (NULL, $1, $2, 'SALES_INVOICE', 'strategic', '/sales')`,
         [`فاتورة مبيعات جديدة: ${autoNum}`, `تم إصدار فاتورة مبيعات جديدة للعميل ${custName} بمبلغ ${total_amount || 0} EGP`]
@@ -50,8 +54,63 @@ router.post('/invoices', async (req, res) => {
       console.error("Sales invoice notification error:", nErr);
     }
 
-    res.json({ success: true, data: rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    // Automatic Accounting Entry Posting
+    if (status === 'مدفوعة' || status === 'مرسلة') {
+      const AccountingService = require('../services/accountingService');
+      const amt = parseFloat(total_amount) || 0;
+      const tax = parseFloat(tax_amount) || 0;
+      const disc = parseFloat(discount) || 0;
+      const baseRevenue = amt - tax + disc;
+
+      // Debit Cash/Bank or Accounts Receivable
+      const debitAcc = status === 'مدفوعة' ? '1101' : '1120'; // Cash (1101) or Receivables (1120)
+      
+      await AccountingService.recordDoubleEntry(client, {
+        debitAccount: debitAcc,
+        creditAccount: '4100', // Sales Revenue (4100)
+        amount: baseRevenue,
+        costCenter: 'General',
+        description: `إيراد مبيعات فاتورة رقم ${autoNum}`,
+        username: req.user?.username || 'System',
+        referenceNo: autoNum,
+        company: company
+      });
+
+      if (tax > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: debitAcc,
+          creditAccount: '2150', // VAT (2150)
+          amount: tax,
+          costCenter: 'General',
+          description: `ضريبة القيمة المضافة فاتورة رقم ${autoNum}`,
+          username: req.user?.username || 'System',
+          referenceNo: autoNum,
+          company: company
+        });
+      }
+
+      if (disc > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: '4100',
+          creditAccount: debitAcc,
+          amount: disc,
+          costCenter: 'General',
+          description: `خصم مبيعات فاتورة رقم ${autoNum}`,
+          username: req.user?.username || 'System',
+          referenceNo: autoNum,
+          company: company
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: invoice });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
 });
 
 // ─── POS TRANSACTIONS ────────────────────────────────────────────────────────
@@ -70,20 +129,24 @@ router.get('/pos-transactions', async (req, res) => {
 });
 
 router.post('/pos-transactions', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const { customer_id, payment_method, notes, items, total_amount } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `INSERT INTO sales_pos_transactions (customer_id, payment_method, notes, items, total_amount, company, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [customer_id||null, payment_method||'نقدي', notes, JSON.stringify(items||[]), total_amount||0, company, req.user?.username]
     );
 
+    const posTx = rows[0];
+
     // Integrate with system notifications
     try {
-      const custRes = await pool.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
+      const custRes = await client.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
       const custName = custRes.rows[0]?.name || 'عميل نقدي';
-      await pool.query(
+      await client.query(
         `INSERT INTO notifications (user_id, title, message, type, severity, link) 
          VALUES (NULL, $1, $2, 'POS_TRANSACTION', 'warning', '/sales')`,
         [`عملية بيع POS جديدة`, `تمت عملية بيع POS جديدة للعميل ${custName} بمبلغ ${total_amount || 0} EGP بالدفع ${payment_method}`]
@@ -92,8 +155,77 @@ router.post('/pos-transactions', async (req, res) => {
       console.error("POS transaction notification error:", nErr);
     }
 
-    res.json({ success: true, data: rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    // Deduct stock levels and post cost of goods sold (COGS)
+    const parsedItems = Array.isArray(items) ? items : [];
+    const AccountingService = require('../services/accountingService');
+
+    for (const item of parsedItems) {
+      const qty = parseFloat(item.qty) || 0;
+      if (qty <= 0) continue;
+
+      const itemRes = await client.query(
+        `SELECT id, remaining_qty, buy_price, avg_cost, item_name FROM inventory_items 
+         WHERE item_name ILIKE $1 AND remaining_qty >= $2 LIMIT 1`,
+        [item.name, qty]
+      );
+
+      if (itemRes.rows.length > 0) {
+        const invItem = itemRes.rows[0];
+        const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
+        const cogsAmount = qty * buyPrice;
+
+        // 1. Deduct Stock
+        await client.query(
+          "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
+          [qty, invItem.id]
+        );
+
+        // 2. Post COGS entry: Debit COGS (5100), Credit Inventory (1130)
+        if (cogsAmount > 0) {
+          await AccountingService.recordDoubleEntry(client, {
+            debitAccount: '5100',
+            creditAccount: '1130',
+            amount: cogsAmount,
+            costCenter: 'General',
+            description: `تكلفة مبيعات POS - صنف ${invItem.item_name} - حركة POS-${posTx.id}`,
+            username: req.user?.username || 'System',
+            referenceNo: `POS-${posTx.id}`,
+            company: company
+          });
+        }
+      }
+    }
+
+    // Post Revenue Accounting Entry
+    const totalAmt = parseFloat(total_amount) || 0;
+    if (totalAmt > 0) {
+      let debitAcc = '1101'; // Default Cash
+      if (payment_method === 'بطاقة' || payment_method === 'تحويل بنكي') {
+        debitAcc = '1111'; // Bank
+      } else if (payment_method === 'آجل') {
+        debitAcc = '1120'; // Receivables
+      }
+
+      await AccountingService.recordDoubleEntry(client, {
+        debitAccount: debitAcc,
+        creditAccount: '4100',
+        amount: totalAmt,
+        costCenter: 'General',
+        description: `إيراد مبيعات POS جديدة - حركة POS-${posTx.id}`,
+        username: req.user?.username || 'System',
+        referenceNo: `POS-${posTx.id}`,
+        company: company
+      });
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: posTx });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
 });
 
 // ─── OFFERS ──────────────────────────────────────────────────────────────────

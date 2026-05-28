@@ -14,9 +14,12 @@ COPY backend/ ./backend/
 FROM node:20-alpine
 WORKDIR /app
 
-# Install postgresql16-client and pre-compiled libredwg from Alpine edge testing repo
-RUN apk add --no-cache postgresql16-client && \
-    apk add --no-cache libredwg --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+# Install postgresql16-client
+RUN apk add --no-cache postgresql16-client
+
+# Copy pre-compiled dwg2dxf binary
+COPY backend/dwg2dxf /usr/local/bin/dwg2dxf
+RUN chmod +x /usr/local/bin/dwg2dxf
 
 # Add a non-root user for security
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
