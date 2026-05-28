@@ -78,6 +78,8 @@ const applySchemaFixes = async () => {
     )`);
 
     await runQuery("Notifications Severity Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'info'`);
+    await runQuery("Notifications Type Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50)`);
+    await runQuery("Notifications Link Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(255)`);
 
     // --- IAM Infrastructure ---
     await runQuery("Permissions Table", `CREATE TABLE IF NOT EXISTS permissions (
