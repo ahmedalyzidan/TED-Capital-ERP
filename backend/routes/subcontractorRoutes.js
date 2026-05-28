@@ -451,10 +451,15 @@ router.post('/convert-dwg', async (req, res) => {
 
         fs.writeFileSync(tempDwgPath, fileBuffer);
 
-        const exePath = path.join(__dirname, '../../libredwg_temp/dwg2dxf.exe');
+        const isWin = process.platform === 'win32';
+        const exePath = isWin
+            ? path.join(__dirname, '../../libredwg_temp/dwg2dxf.exe')
+            : 'dwg2dxf';
 
         // Command: dwg2dxf <input> <output>
-        const cmd = `"${exePath}" "${tempDwgPath}" "${tempDxfPath}"`;
+        const cmd = isWin
+            ? `"${exePath}" "${tempDwgPath}" "${tempDxfPath}"`
+            : `dwg2dxf "${tempDwgPath}" "${tempDxfPath}"`;
         exec(cmd, (error, stdout, stderr) => {
             if (fs.existsSync(tempDwgPath)) {
                 try { fs.unlinkSync(tempDwgPath); } catch (e) {}
