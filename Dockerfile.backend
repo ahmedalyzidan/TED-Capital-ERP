@@ -2,16 +2,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install build dependencies + libredwg compile dependencies
-RUN apk add --no-cache python3 make g++ git autoconf automake libtool gcc texinfo
-
-# Clone and compile libredwg to get dwg2dxf
-RUN git clone --depth=1 https://github.com/LibreDWG/libredwg.git && \
-    cd libredwg && \
-    sh ./autogen.sh && \
-    ./configure --disable-shared && \
-    make && \
-    make install
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 RUN npm install --omit=dev
@@ -22,11 +14,9 @@ COPY backend/ ./backend/
 FROM node:20-alpine
 WORKDIR /app
 
-# Install postgresql16-client for pg_dump and pg_restore
-RUN apk add --no-cache postgresql16-client
-
-# Copy compiled dwg2dxf binary from builder
-COPY --from=builder /usr/local/bin/dwg2dxf /usr/local/bin/dwg2dxf
+# Install postgresql16-client and pre-compiled libredwg from Alpine edge testing repo
+RUN apk add --no-cache postgresql16-client && \
+    apk add --no-cache libredwg --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 # Add a non-root user for security
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
