@@ -440,10 +440,8 @@ router.post('/convert-dwg', async (req, res) => {
             fileBuffer = Buffer.from(content, 'base64');
         }
 
-        const scratchDir = path.join(__dirname, '../scratch');
-        if (!fs.existsSync(scratchDir)) {
-            fs.mkdirSync(scratchDir, { recursive: true });
-        }
+        const os = require('os');
+        const scratchDir = os.tmpdir();
 
         const tempId = Date.now();
         const tempDwgPath = path.join(scratchDir, `temp_${tempId}.dwg`);
