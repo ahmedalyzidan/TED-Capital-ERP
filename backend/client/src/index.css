@@ -341,3 +341,136 @@
     border-radius: 0 !important;
   }
 }
+
+/* ==========================================================================
+   🌟 PREMIUM DARK / GLASSMORPHIC THEME ENGINE (ATTACHMENT 2 STYLE) 🌟
+   ========================================================================== */
+.dark {
+  --bg-main: #0c0f16;
+  --bg-surface: rgba(22, 28, 41, 0.85);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border-subtle: rgba(51, 65, 85, 0.6);
+}
+
+.dark body {
+  background-color: #0c0f16 !important;
+  color: #f8fafc !important;
+}
+
+.dark .min-h-screen {
+  background-color: #0c0f16 !important;
+}
+
+/* Luxury Glassmorphic Cards */
+.dark .bg-white,
+.dark .enterprise-card,
+.dark div[class*="bg-[#1e2530]"],
+.dark div[class*="bg-[#1c222e]"] {
+  background-color: rgba(22, 28, 41, 0.85) !important;
+  border: 1px solid rgba(45, 55, 72, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  color: #f8fafc !important;
+}
+
+/* Tab bar container */
+.dark div[class*="bg-[#1e2530]/80"] {
+  background-color: rgba(18, 22, 32, 0.9) !important;
+  border-color: rgba(45, 55, 72, 0.8) !important;
+}
+
+/* Table styling */
+.dark table {
+  background-color: transparent !important;
+}
+
+.dark thead, 
+.dark tr[class*="bg-slate-50"] {
+  background-color: rgba(14, 18, 27, 0.9) !important;
+  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+}
+
+.dark th {
+  color: #94a3b8 !important;
+  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+  font-weight: 800 !important;
+}
+
+.dark tr {
+  border-bottom: 1px solid rgba(45, 55, 72, 0.4) !important;
+}
+
+.dark tr:hover {
+  background-color: rgba(32, 41, 56, 0.45) !important;
+}
+
+.dark td {
+  color: #e2e8f0 !important;
+}
+
+/* Modals */
+.dark div[role="dialog"] > div,
+.dark .fixed > div {
+  background-color: rgba(20, 26, 38, 0.98) !important;
+  border: 1px solid rgba(45, 55, 72, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark div[role="dialog"] .sticky,
+.dark .fixed .sticky {
+  background-color: rgba(20, 26, 38, 1) !important;
+  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+}
+
+.dark div[role="dialog"] h3 {
+  color: #f8fafc !important;
+}
+
+/* Inputs & Form Elements (Gold/Amber & Neon Blue Accent Glows) */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: rgba(12, 15, 22, 0.9) !important;
+  border: 1.5px solid rgba(45, 55, 72, 0.8) !important;
+  color: #f8fafc !important;
+  transition: all 0.3s ease !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02) !important;
+  outline: none !important;
+}
+
+/* Stat Cards & KPI details */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: rgba(45, 55, 72, 0.6) !important;
+}
+
+/* Progress bars & sliders */
+.dark div[class*="bg-slate-800"] {
+  background-color: rgba(14, 18, 27, 0.9) !important;
+}
+
+/* Specific Badge and status indicator adjustments to prevent neon clipping */
+.dark span[class*="bg-slate-100"] {
+  background-color: rgba(45, 55, 72, 0.4) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(45, 55, 72, 0.8) !important;
+}

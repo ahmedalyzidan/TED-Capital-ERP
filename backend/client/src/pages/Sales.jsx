@@ -2114,6 +2114,14 @@ export default function Sales() {
     api.get('/table/staff?limit=1000').then(r => setStaff(r.data.data || [])).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';
   const defaultCurrency = activeCompany?.toLowerCase().includes('primemed') ? 'ILS' : 'EGP';
 
@@ -2154,10 +2162,12 @@ export default function Sales() {
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200
                 ${activeTab === tab.id
-                  ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-sm shadow-indigo-200'
-                  : darkMode 
-                    ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+                  ? (darkMode
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.45)] border border-blue-400/20'
+                      : 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-sm shadow-indigo-200')
+                  : (darkMode 
+                      ? 'text-slate-400 hover:bg-[#20293a]/60 hover:text-slate-200' 
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800')}`}>
               <span>{tab.icon}</span>
               <span className="hidden sm:inline">{ar ? tab.ar : tab.en}</span>
             </button>
