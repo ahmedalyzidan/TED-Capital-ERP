@@ -461,7 +461,7 @@ router.post('/quotations/:id/convert', async (req, res) => {
     const { rows } = await client.query(
       `INSERT INTO sales_orders (order_number, quotation_id, customer_id, items, total_amount, tax_amount, discount, status, company, notes, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'Pending',$8,$9,$10) RETURNING *`,
-      [soNum, q.id, q.customer_id, q.items, q.total_amount, q.tax_amount, q.discount, q.company, q.notes, req.user?.username]
+      [soNum, q.id, q.customer_id, typeof q.items === 'string' ? q.items : JSON.stringify(q.items || []), q.total_amount, q.tax_amount, q.discount, q.company, q.notes, req.user?.username]
     );
 
     // 3. Update Quotation Status
