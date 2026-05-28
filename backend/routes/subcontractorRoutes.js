@@ -459,7 +459,7 @@ router.post('/convert-dwg', async (req, res) => {
         // Command: dwg2dxf <input> <output>
         const cmd = isWin
             ? `"${exePath}" "${tempDwgPath}" "${tempDxfPath}"`
-            : `dwg2dxf "${tempDwgPath}" "${tempDxfPath}"`;
+            : `dwg2dxf -o "${tempDxfPath}" "${tempDwgPath}"`;
         exec(cmd, (error, stdout, stderr) => {
             if (fs.existsSync(tempDwgPath)) {
                 try { fs.unlinkSync(tempDwgPath); } catch (e) {}
