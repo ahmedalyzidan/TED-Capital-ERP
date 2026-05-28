@@ -386,13 +386,13 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `(${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}company IS NULL)`;
     }
     if (type === 'real_estate_units') {
-        return `(${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList})`;
+        return `(${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'real_estate_contracts') {
-        return `(${prefix}project_name IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}unit_id IN (SELECT id FROM real_estate_units WHERE project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})))`;
+        return `(${prefix}unit_id IN (SELECT id FROM real_estate_units WHERE project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})))`;
     }
     if (type === 'real_estate_installments') {
-        return `(${prefix}contract_id IN (SELECT id FROM real_estate_contracts WHERE project_name IN ${namesSqlList} OR company IN ${namesSqlList}))`;
+        return `(${prefix}contract_id IN (SELECT id FROM real_estate_contracts WHERE unit_id IN (SELECT id FROM real_estate_units WHERE project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))))`;
     }
     if (type === 're_project_costs' || type === 're_unit_costs') {
         return `(${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
