@@ -16,6 +16,7 @@ export default function Clients() {
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('ALL'); // ALL, Contractor, Pharma, Real Estate, Supplier, Individual
 
   // Interaction Form State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +29,7 @@ export default function Clients() {
 
   // Client Modal State
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [clientForm, setClientForm] = useState({ name: '', company_name: '', phone: '', email: '', credit_limit: 0 });
+  const [clientForm, setClientForm] = useState({ name: '', company_name: '', phone: '', email: '', credit_limit: 0, customer_type: 'Contractor' });
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState('');
 
@@ -142,7 +143,7 @@ export default function Clients() {
       };
       await api.post('/add/customers', payload);
       setIsClientModalOpen(false);
-      setClientForm({ name: '', company_name: '', phone: '', email: '', credit_limit: 0 });
+      setClientForm({ name: '', company_name: '', phone: '', email: '', credit_limit: 0, customer_type: 'Contractor' });
       setCompanyId('');
       fetchClients();
     } catch (error) {
@@ -152,10 +153,12 @@ export default function Clients() {
     }
   };
 
-  const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.company_name && c.company_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = clients.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.company_name && c.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchType = filterType === 'ALL' || c.customer_type === filterType;
+    return matchSearch && matchType;
+  });
 
   // ================= RENDER FULL 360 DASHBOARD =================
   if (selectedClient && client360) {
@@ -555,6 +558,47 @@ export default function Clients() {
           ))}
         </div>
 
+        {/* Classification Filter Bar --- */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
+          <span className="text-xs font-black text-slate-400 ml-3 uppercase tracking-widest">{language === 'ar' ? 'تصنيف الشركاء:' : 'Entity Classification:'}</span>
+          <button 
+            onClick={() => setFilterType('ALL')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border ${filterType === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            {language === 'ar' ? 'الكل' : 'All Entities'} ({clients.length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Contractor')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Contractor' ? 'bg-violet-600 border-violet-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🏗️ {language === 'ar' ? 'مقاولين' : 'Contractors'} ({clients.filter(c => c.customer_type === 'Contractor').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Pharma')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Pharma' ? 'bg-teal-600 border-teal-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            💊 {language === 'ar' ? 'عملاء أدوية' : 'Pharma Clients'} ({clients.filter(c => c.customer_type === 'Pharma').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Real Estate')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Real Estate' ? 'bg-amber-600 border-amber-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🏢 {language === 'ar' ? 'عقارات' : 'Real Estate'} ({clients.filter(c => c.customer_type === 'Real Estate').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Supplier')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Supplier' ? 'bg-rose-600 border-rose-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            🚛 {language === 'ar' ? 'موردين' : 'Suppliers'} ({clients.filter(c => c.customer_type === 'Supplier').length})
+          </button>
+          <button 
+            onClick={() => setFilterType('Individual')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border flex items-center gap-2 ${filterType === 'Individual' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            👤 {language === 'ar' ? 'أفراد' : 'Individuals'} ({clients.filter(c => c.customer_type === 'Individual').length})
+          </button>
+        </div>
+
         {/* Client Data Table --- */}
         <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 animate-fade-in">
           <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-white">
@@ -604,6 +648,19 @@ export default function Clients() {
                               🏢 {c.company}
                             </span>
                           )}
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
+                            c.customer_type === 'Pharma' 
+                              ? 'bg-teal-50 text-teal-700 border-teal-200' 
+                              : c.customer_type === 'Contractor' 
+                              ? 'bg-violet-50 text-violet-750 border-violet-200' 
+                              : c.customer_type === 'Real Estate'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : c.customer_type === 'Supplier'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            🏷️ {c.customer_type === 'Pharma' ? (language === 'ar' ? 'عميل أدوية' : 'Pharma') : c.customer_type === 'Contractor' ? (language === 'ar' ? 'مقاول' : 'Contractor') : c.customer_type === 'Real Estate' ? (language === 'ar' ? 'عقارات' : 'Real Estate') : c.customer_type === 'Supplier' ? (language === 'ar' ? 'مورد' : 'Supplier') : (language === 'ar' ? 'أفراد' : 'Individual')}
+                          </span>
                         </div>
                       </td>
                       <td className="px-10 py-7 text-center">
@@ -672,9 +729,24 @@ export default function Clients() {
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'عنوان المراسلات الرقمية' : 'Primary Email Correspondence'}</label>
                   <input type="email" name="email" value={clientForm.email} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm" />
                 </div>
-                <div className="col-span-1 md:col-span-2 space-y-3">
+                <div className="space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'الحد الائتماني المعتمد (Credit Limit)' : 'Authorized Credit Facility'}</label>
-                  <input type="number" name="credit_limit" value={clientForm.credit_limit} onChange={handleClientChange} className="w-full px-10 py-6 bg-slate-50 border border-slate-200 rounded-2xl text-3xl font-black text-slate-900 font-mono focus:bg-white focus:border-violet-600 transition-all outline-none text-center shadow-inner" />
+                  <input type="number" name="credit_limit" value={clientForm.credit_limit} onChange={handleClientChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 font-mono focus:bg-white focus:border-violet-600 transition-all outline-none shadow-inner" />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">{language === 'ar' ? 'تصنيف العميل' : 'Client Classification'}</label>
+                  <select
+                    name="customer_type"
+                    value={clientForm.customer_type}
+                    onChange={handleClientChange}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm cursor-pointer"
+                  >
+                    <option value="Contractor">{language === 'ar' ? 'مقاول' : 'Contractor'}</option>
+                    <option value="Pharma">{language === 'ar' ? 'عميل أدوية' : 'Pharma Client'}</option>
+                    <option value="Real Estate">{language === 'ar' ? 'عقارات' : 'Real Estate'}</option>
+                    <option value="Supplier">{language === 'ar' ? 'مورد' : 'Supplier'}</option>
+                    <option value="Individual">{language === 'ar' ? 'أفراد' : 'Individual'}</option>
+                  </select>
                 </div>
               </div>
 

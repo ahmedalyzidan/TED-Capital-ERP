@@ -277,6 +277,15 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
 
     const selectedComp = companies.find(c => Number(c.id) === Number(newCustomerCompanyId));
 
+    const activeComp = localStorage.getItem('active_company') || '';
+    let customerType = 'Contractor';
+    const compLower = activeComp.toLowerCase();
+    if (compLower.includes('prime') || compLower.includes('pharma') || compLower.includes('بريم') || compLower.includes('فارما')) {
+      customerType = 'Pharma';
+    } else if (compLower.includes('design') || compLower.includes('ديزاين') || compLower.includes('ted') || compLower.includes('تيد') || compLower.includes('عقار')) {
+      customerType = 'Real Estate';
+    }
+
     try {
       const payload = {
         name: newCustomerName,
@@ -285,6 +294,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         email: newCustomerEmail || '',
         company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
         company: selectedComp ? selectedComp.name : null,
+        customer_type: customerType,
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
@@ -317,7 +327,8 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         company_name: selectedComp ? selectedComp.name : '',
         email: newCustomerEmail || '',
         company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
-        company: selectedComp ? selectedComp.name : null
+        company: selectedComp ? selectedComp.name : null,
+        customer_type: customerType
       };
       setCustomers(prev => [fallbackCust, ...prev]);
       setSelectedCustomer(String(fallbackCust.id));

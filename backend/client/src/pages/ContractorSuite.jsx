@@ -1945,6 +1945,7 @@ export default function ContractorSuite() {
         email: newCustomerEmail.trim() || '',
         company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
         company: selectedComp ? selectedComp.name : null,
+        customer_type: 'Contractor',
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
@@ -1973,7 +1974,8 @@ export default function ContractorSuite() {
         company_name: selectedComp ? selectedComp.name : '',
         email: newCustomerEmail.trim() || '',
         company_id: newCustomerCompanyId ? Number(newCustomerCompanyId) : null,
-        company: selectedComp ? selectedComp.name : null
+        company: selectedComp ? selectedComp.name : null,
+        customer_type: 'Contractor'
       };
       setCustomers(prev => [fallbackCust, ...prev]);
       if (showEditProject) {

@@ -370,11 +370,19 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
               targetCompanyId = companyNameToIdMap[targetCompany.toLowerCase().trim()] || null;
             }
 
+            let autoCustType = 'Contractor';
+            if (targetCompany && (targetCompany.toLowerCase().includes('prime') || targetCompany.toLowerCase().includes('pharma') || targetCompany.toLowerCase().includes('بريم') || targetCompany.toLowerCase().includes('فارما'))) {
+              autoCustType = 'Pharma';
+            } else if (targetCompany && (targetCompany.toLowerCase().includes('design') || targetCompany.toLowerCase().includes('ديزاين') || targetCompany.toLowerCase().includes('ted') || targetCompany.toLowerCase().includes('تيد') || targetCompany.toLowerCase().includes('عقار'))) {
+              autoCustType = 'Real Estate';
+            }
+
             // Dynamically create database customer record
             const createRes = await api.post('/dynamic/add/customers', {
               name: clientName,
               company: targetCompany,
-              company_id: targetCompanyId
+              company_id: targetCompanyId,
+              customer_type: autoCustType
             });
             const newCustId = createRes.data?.data?.id || createRes.data?.id;
             if (newCustId) {
