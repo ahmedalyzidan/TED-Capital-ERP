@@ -1561,6 +1561,14 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    await runQuery("CRM Appointments customer_id Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
+    await runQuery("CRM Appointments title Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS title VARCHAR(255)`);
+    await runQuery("CRM Appointments appointment_date Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS appointment_date TIMESTAMP`);
+    await runQuery("CRM Appointments duration_minutes Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60`);
+    await runQuery("CRM Appointments assigned_to Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(255)`);
+    await runQuery("CRM Appointments company Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+    await runQuery("CRM Appointments created_by Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
+
     await runQuery("CRM Memberships Table", `CREATE TABLE IF NOT EXISTS crm_memberships (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
@@ -1570,6 +1578,13 @@ const applySchemaFixes = async () => {
         end_date DATE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    await runQuery("CRM Memberships customer_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
+    await runQuery("CRM Memberships plan_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS plan_id INTEGER REFERENCES crm_membership_plans(id) ON DELETE SET NULL`);
+    await runQuery("CRM Memberships sessions_used Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS sessions_used INTEGER DEFAULT 0`);
+    await runQuery("CRM Memberships notes Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS notes TEXT`);
+    await runQuery("CRM Memberships company Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+    await runQuery("CRM Memberships created_by Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
 
     await runQuery("CRM Loyalty Ledger Table", `CREATE TABLE IF NOT EXISTS crm_loyalty_ledger (
         id SERIAL PRIMARY KEY,
