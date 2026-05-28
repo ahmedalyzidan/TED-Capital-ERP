@@ -73,17 +73,17 @@ const Btn = ({ children, variant = 'primary', size = 'md', className = '', ...pr
   return <button {...props} className={`font-bold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${v[variant]} ${s[size]} ${className}`}>{children}</button>;
 };
 
-const StatCard = ({ icon, label, value, sub, color = 'indigo', trend }) => {
+const StatCard = ({ icon, label, value, sub, color = 'indigo', trend, darkMode }) => {
   const bg = { indigo: 'from-indigo-500 to-indigo-600', emerald: 'from-emerald-500 to-emerald-600', amber: 'from-amber-500 to-amber-600', rose: 'from-rose-500 to-rose-600', blue: 'from-blue-500 to-blue-600', purple: 'from-purple-500 to-purple-600' };
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all">
+    <div className={`rounded-2xl border p-5 transition-all duration-300 ${darkMode ? 'bg-[#1e2530]/80 border-[#2e3748] text-white shadow-xl shadow-black/10' : 'bg-white border-slate-100 shadow-sm hover:shadow-md'}`}>
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${bg[color] || bg.indigo} flex items-center justify-center text-white text-lg shadow-sm`}>{icon}</div>
-        {trend !== undefined && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${trend >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%</span>}
+        {trend !== undefined && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${trend >= 0 ? (darkMode ? 'bg-emerald-950/40 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (darkMode ? 'bg-rose-950/40 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>{trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%</span>}
       </div>
-      <p className="text-2xl font-black text-slate-900 mb-0.5">{value}</p>
-      <p className="text-xs font-bold text-slate-500">{label}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      <p className="text-2xl font-black mb-0.5">{value}</p>
+      <p className={`text-xs font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+      {sub && <p className={`text-xs mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>}
     </div>
   );
 };
@@ -316,7 +316,7 @@ function MiniBarChart({ data = [], color = '#6366f1' }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. ANALYTICS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function AnalyticsTab({ language }) {
+function AnalyticsTab({ language, darkMode }) {
   const ar = language === 'ar';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -336,29 +336,29 @@ function AnalyticsTab({ language }) {
     <div className="space-y-6">
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon="💰" label={ar ? 'إيراد الشهر' : 'Monthly Revenue'} value={fmt(revenue?.total) + ' EGP'} sub={`${revenue?.count || 0} ${ar ? 'فاتورة' : 'invoices'}`} color="emerald" />
-        <StatCard icon="📄" label={ar ? 'عروض الأسعار' : 'Quotations'} value={pipeline?.total_quotations || 0} sub={`${fmt(pipeline?.quotations_value)} EGP ${ar ? 'قيد المعالجة' : 'in pipeline'}`} color="indigo" />
-        <StatCard icon="📦" label={ar ? 'أوامر البيع' : 'Sales Orders'} value={pipeline?.total_orders || 0} sub={`${fmt(pipeline?.orders_value)} EGP`} color="blue" />
-        <StatCard icon="🎯" label={ar ? 'معدل التحويل' : 'Conversion Rate'} value={`${conversionRate}%`} sub={ar ? 'عروض → أوامر' : 'Quotations → Orders'} color={conversionRate >= 50 ? 'emerald' : conversionRate >= 25 ? 'amber' : 'rose'} />
+        <StatCard icon="💰" label={ar ? 'إيراد الشهر' : 'Monthly Revenue'} value={fmt(revenue?.total) + ' EGP'} sub={`${revenue?.count || 0} ${ar ? 'فاتورة' : 'invoices'}`} color="emerald" darkMode={darkMode} />
+        <StatCard icon="📄" label={ar ? 'عروض الأسعار' : 'Quotations'} value={pipeline?.total_quotations || 0} sub={`${fmt(pipeline?.quotations_value)} EGP ${ar ? 'قيد المعالجة' : 'in pipeline'}`} color="indigo" darkMode={darkMode} />
+        <StatCard icon="📦" label={ar ? 'أوامر البيع' : 'Sales Orders'} value={pipeline?.total_orders || 0} sub={`${fmt(pipeline?.orders_value)} EGP`} color="blue" darkMode={darkMode} />
+        <StatCard icon="🎯" label={ar ? 'معدل التحويل' : 'Conversion Rate'} value={`${conversionRate}%`} sub={ar ? 'عروض → أوامر' : 'Quotations → Orders'} color={conversionRate >= 50 ? 'emerald' : conversionRate >= 25 ? 'amber' : 'rose'} darkMode={darkMode} />
       </div>
 
       {/* Pipeline Funnel + Revenue Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <h3 className="text-sm font-black text-slate-800 mb-4">📊 {ar ? 'اتجاه الإيرادات — آخر 6 أشهر' : 'Revenue Trend — Last 6 Months'}</h3>
+        <div className={darkMode ? "lg:col-span-2 bg-[#1e2530]/80 border-[#2e3748] p-6 rounded-2xl border text-white shadow-xl shadow-black/10 transition-all duration-300" : "lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm transition-all duration-300"}>
+          <h3 className={`text-sm font-black mb-4 ${darkMode ? "text-slate-200" : "text-slate-800"}`}>📊 {ar ? 'اتجاه الإيرادات — آخر 6 أشهر' : 'Revenue Trend — Last 6 Months'}</h3>
           <MiniBarChart data={monthlyTrend || []} color="#6366f1" />
           <div className="flex gap-6 mt-3">
             {(monthlyTrend || []).map((m, i) => (
               <div key={i} className="flex-1 text-center">
-                <p className="text-xs font-bold text-slate-700">{fmt(m.revenue)}</p>
-                <p className="text-[10px] text-slate-400">{m.invoice_count} {ar ? 'فاتورة' : 'inv.'}</p>
+                <p className={`text-xs font-bold ${darkMode ? "text-slate-200" : "text-slate-700"}`}>{fmt(m.revenue)}</p>
+                <p className={`text-[10px] ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{m.invoice_count} {ar ? 'فاتورة' : 'inv.'}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <h3 className="text-sm font-black text-slate-800 mb-4">🔄 {ar ? 'خط الأنابيب' : 'Pipeline Funnel'}</h3>
+        <div className={darkMode ? "bg-[#1e2530]/80 border-[#2e3748] p-6 rounded-2xl border text-white shadow-xl shadow-black/10 transition-all duration-300" : "bg-white rounded-2xl border border-slate-100 p-6 shadow-sm transition-all duration-300"}>
+          <h3 className={`text-sm font-black mb-4 ${darkMode ? "text-slate-200" : "text-slate-800"}`}>🔄 {ar ? 'خط الأنابيب' : 'Pipeline Funnel'}</h3>
           <div className="space-y-3">
             {[
               { label: ar ? 'عروض الأسعار' : 'Quotations', count: pipeline?.total_quotations, value: pipeline?.quotations_value, color: 'bg-indigo-100', bar: 'bg-indigo-500', pct: 100 },
@@ -368,13 +368,13 @@ function AnalyticsTab({ language }) {
             ].map((s, i) => (
               <div key={i}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-bold text-slate-700">{s.label}</span>
-                  <span className="text-xs text-slate-500 font-bold">{s.count || 0}</span>
+                  <span className={`text-xs font-bold ${darkMode ? "text-slate-300" : "text-slate-700"}`}>{s.label}</span>
+                  <span className={`text-xs font-bold ${darkMode ? "text-slate-400" : "text-slate-500"}`}>{s.count || 0}</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className={`w-full rounded-full h-2 ${darkMode ? "bg-slate-800" : "bg-slate-100"}`}>
                   <div className={`h-2 rounded-full ${s.bar} transition-all duration-700`} style={{ width: `${s.pct}%` }} />
                 </div>
-                {s.value !== null && <p className="text-[10px] text-slate-400 mt-0.5">{fmt(s.value)} EGP</p>}
+                {s.value !== null && <p className={`text-[10px] mt-0.5 ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{fmt(s.value)} EGP</p>}
               </div>
             ))}
           </div>
@@ -383,8 +383,8 @@ function AnalyticsTab({ language }) {
 
       {/* Top Products + Team Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <h3 className="text-sm font-black text-slate-800 mb-4">🏆 {ar ? 'أفضل المنتجات' : 'Top Products'}</h3>
+        <div className={darkMode ? "bg-[#1e2530]/80 border-[#2e3748] p-6 rounded-2xl border text-white shadow-xl shadow-black/10 transition-all duration-300" : "bg-white rounded-2xl border border-slate-100 p-6 shadow-sm transition-all duration-300"}>
+          <h3 className={`text-sm font-black mb-4 ${darkMode ? "text-slate-200" : "text-slate-800"}`}>🏆 {ar ? 'أفضل المنتجات' : 'Top Products'}</h3>
           {(topProducts || []).length === 0 ? <p className="text-slate-400 text-sm text-center py-6">لا توجد بيانات بعد</p> : (
             <div className="space-y-3">
               {(topProducts || []).slice(0, 6).map((p, i) => {
@@ -395,10 +395,10 @@ function AnalyticsTab({ language }) {
                     <span className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-800 truncate">{p.product_name || '—'}</span>
+                        <span className={`text-xs font-bold truncate ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{p.product_name || '—'}</span>
                         <span className="text-xs font-bold text-indigo-600 shrink-0 mr-2">{fmt(p.revenue)} EGP</span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div className={`w-full rounded-full h-1.5 ${darkMode ? "bg-slate-800" : "bg-slate-100"}`}>
                         <div className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
@@ -409,8 +409,8 @@ function AnalyticsTab({ language }) {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <h3 className="text-sm font-black text-slate-800 mb-4">👥 {ar ? 'أداء فريق المبيعات' : 'Sales Team Performance'}</h3>
+        <div className={darkMode ? "bg-[#1e2530]/80 border-[#2e3748] p-6 rounded-2xl border text-white shadow-xl shadow-black/10 transition-all duration-300" : "bg-white rounded-2xl border border-slate-100 p-6 shadow-sm transition-all duration-300"}>
+          <h3 className={`text-sm font-black mb-4 ${darkMode ? "text-slate-200" : "text-slate-800"}`}>👥 {ar ? 'أداء فريق المبيعات' : 'Sales Team Performance'}</h3>
           {(teamTargets || []).length === 0 ? <p className="text-slate-400 text-sm text-center py-6">لا توجد أهداف محددة</p> : (
             <div className="space-y-3">
               {(teamTargets || []).slice(0, 5).map((t, i) => {
@@ -420,10 +420,10 @@ function AnalyticsTab({ language }) {
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-black shrink-0">{t.agent_name?.[0] || '?'}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-800">{t.agent_name}</span>
+                        <span className={`text-xs font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{t.agent_name}</span>
                         <span className={`text-xs font-black ${pct >= 100 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{pct}%</span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div className={`w-full rounded-full h-1.5 ${darkMode ? "bg-slate-800" : "bg-slate-100"}`}>
                         <div className={`h-1.5 rounded-full transition-all duration-700 ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
