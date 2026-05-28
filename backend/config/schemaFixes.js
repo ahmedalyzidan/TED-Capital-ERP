@@ -793,6 +793,8 @@ const applySchemaFixes = async () => {
     await runQuery("RE Projects linked_project_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS project_type_detail VARCHAR(50) DEFAULT 'Residential'`);
     await runQuery("RE Projects total_area", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS total_area NUMERIC(10,2) DEFAULT 0`);
     await runQuery("RE Projects land_cost", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS land_cost NUMERIC(20,2) DEFAULT 0`);
+    await runQuery("RE Projects company", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+    await runQuery("RE Projects company_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company_id INTEGER`);
     await runQuery("RE Units area_m2", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS area NUMERIC(10,2)`);
     await runQuery("RE Units cost_per_meter_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS cost_per_meter NUMERIC(15,2) DEFAULT 0`);
     await runQuery("RE Units suggested_price_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(20,2) DEFAULT 0`);

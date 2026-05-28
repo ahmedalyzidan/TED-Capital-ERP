@@ -7,12 +7,20 @@ const addProject = async (req, res) => {
     const { name, type, location, total_units } = req.body;
     try {
         if (!hasAccess(req.user, 'real_estate', 'create')) throw new Error("Access Denied.");
+        const company = req.selectedCompany || req.headers['x-selected-company'] || '';
+        
+        let companyId = 1;
+        const compLower = company.toLowerCase();
+        if (compLower.includes('design') || compLower.includes('ديزاين')) companyId = 2;
+        else if (compLower.includes('master') || compLower.includes('ماستر')) companyId = 3;
+        else if (compLower.includes('prime') || compLower.includes('فارما')) companyId = 4;
+
         const result = await pool.query(
-            "INSERT INTO real_estate_projects (name, type, location, total_units) VALUES ($1, $2, $3, $4) RETURNING id",
-            [name, type, location, total_units]
+            "INSERT INTO real_estate_projects (name, type, location, total_units, company, company_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            [name, type, location, total_units, company, companyId]
         );
         const username = req.user ? req.user.username : 'System';
-        await logAudit(username, 'CREATE', 'real_estate_projects', result.rows[0].id, `Created project: ${name}`);
+        await logAudit(username, 'CREATE', 'real_estate_projects', result.rows[0].id, `Created project: ${name} for company ${company}`);
         res.json({ success: true, message: "تمت إضافة المشروع بنجاح", id: result.rows[0].id });
     } catch (e) {
         res.status(500).json({ error: e.message });

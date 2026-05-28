@@ -381,6 +381,39 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
     }
     
+    // --- Real Estate Module Isolation ---
+    if (type === 'real_estate_projects') {
+        return `(${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}company IS NULL)`;
+    }
+    if (type === 'real_estate_units') {
+        return `(${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList})`;
+    }
+    if (type === 'real_estate_contracts') {
+        return `(${prefix}project_name IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}unit_id IN (SELECT id FROM real_estate_units WHERE project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})))`;
+    }
+    if (type === 'real_estate_installments') {
+        return `(${prefix}contract_id IN (SELECT id FROM real_estate_contracts WHERE project_name IN ${namesSqlList} OR company IN ${namesSqlList}))`;
+    }
+    if (type === 're_project_costs' || type === 're_unit_costs') {
+        return `(${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 're_rental_contracts') {
+        return `(${prefix}company IN ${namesSqlList} OR ${prefix}project_id IN (SELECT id FROM real_estate_projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    }
+    if (type === 're_rental_invoices' || type === 're_rental_payments') {
+        return `(${prefix}contract_id IN (SELECT id FROM re_rental_contracts WHERE company IN ${namesSqlList}))`;
+    }
+
+    // --- CRM Module Isolation ---
+    if (['crm_appointments', 'crm_membership_plans', 'crm_memberships', 'crm_points', 'crm_client_attendance', 'crm_campaigns', 'crm_templates'].includes(type)) {
+        return `${prefix}company IN ${namesSqlList}`;
+    }
+
+    // --- Sales Module Isolation ---
+    if (['sales_quotations', 'sales_orders', 'sales_invoices', 'sales_pos_transactions', 'sales_offers', 'sales_price_lists', 'sales_insurance', 'sales_targets', 'sales_commissions', 'sales_installments', 'sales_delivery_notes', 'sales_return_orders'].includes(type)) {
+        return `${prefix}company IN ${namesSqlList}`;
+    }
+
     return null;
 };
 

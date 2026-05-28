@@ -124,18 +124,27 @@ const enforceCompanyIsolation = async (req, res, next) => {
 
     // --- GET request filter normalization ---
     if (req.method === 'GET') {
-        if (req.headers['x-selected-company']) {
-            const comp = req.headers['x-selected-company'];
-            const isAllowed = allowedCompanies.some(ac => comp.toLowerCase().includes(ac.toLowerCase()));
+        const compHeader = req.headers['x-selected-company'] || '';
+        const isAll = !compHeader || compHeader === 'كل الشركات' || compHeader.toLowerCase() === 'all' || compHeader.toLowerCase() === 'all companies';
+        
+        if (isAll) {
+            req.headers['x-selected-company'] = allowedCompanies[0];
+            req.selectedCompany = allowedCompanies[0];
+        } else {
+            const isAllowed = allowedCompanies.some(ac => compHeader.toLowerCase().includes(ac.toLowerCase()));
             if (!isAllowed) {
-                delete req.headers['x-selected-company'];
+                req.headers['x-selected-company'] = allowedCompanies[0];
+                req.selectedCompany = allowedCompanies[0];
+            } else {
+                req.selectedCompany = compHeader;
             }
         }
+
         if (req.query.company) {
             const comp = req.query.company;
             const isAllowed = allowedCompanies.some(ac => comp.toLowerCase().includes(ac.toLowerCase()));
             if (!isAllowed) {
-                delete req.query.company;
+                req.query.company = allowedCompanies[0];
             }
         }
         return next();
