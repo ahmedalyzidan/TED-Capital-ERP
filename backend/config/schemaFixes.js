@@ -642,6 +642,24 @@ const applySchemaFixes = async () => {
     await runQuery("Sales Installments source_order_id", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
     await runQuery("Sales Installments source_module", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
 
+    await runQuery("Sales Orders salesperson_id", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
+    await runQuery("Sales Orders sales_type", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+    await runQuery("Sales Orders commission_rate", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
+    await runQuery("Sales Orders commission_amount", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
+
+    await runQuery("Sales Invoices salesperson_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
+    await runQuery("Sales Invoices sales_type", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+    await runQuery("Sales Invoices commission_rate", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
+    await runQuery("Sales Invoices commission_amount", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
+
+    await runQuery("Sales Commissions agent_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
+    await runQuery("Sales Commissions salesperson_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
+    await runQuery("Sales Commissions sales_type", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+    await runQuery("Sales Commissions status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Unpaid'`);
+    await runQuery("Sales Commissions payout_status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS payout_status VARCHAR(50) DEFAULT 'Unpaid'`);
+    await runQuery("Sales Commissions reference_no", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100)`);
+    await runQuery("Sales Commissions company", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+
     // --- Delivery Notes (مذكرات التسليم) ---
     await runQuery("Sales Delivery Notes Table", `CREATE TABLE IF NOT EXISTS sales_delivery_notes (
         id SERIAL PRIMARY KEY,

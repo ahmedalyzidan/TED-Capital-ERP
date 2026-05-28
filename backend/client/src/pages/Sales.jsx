@@ -813,13 +813,13 @@ function SalesReturnsTab({ clients, language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 6. INVOICING TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function InvoicingTab({ clients, language }) {
+function InvoicingTab({ clients, staff = [], language }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ customer_id: '', invoice_number: '', total_amount: 0, tax_amount: 0, discount: 0, due_date: '', status: 'مسودة', notes: '' });
+  const [form, setForm] = useState({ customer_id: '', invoice_number: '', total_amount: 0, tax_amount: 0, discount: 0, due_date: '', status: 'مسودة', notes: '', salesperson_id: '', sales_type: 'Inventory', commission_rate: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -890,6 +890,19 @@ function InvoicingTab({ clients, language }) {
             <Input label={ar ? 'المبلغ' : 'Amount'} type="number" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: +e.target.value }))} />
             <Input label={ar ? 'الضريبة' : 'Tax'} type="number" value={form.tax_amount} onChange={e => setForm(f => ({ ...f, tax_amount: +e.target.value }))} />
             <Input label={ar ? 'الخصم' : 'Discount'} type="number" value={form.discount} onChange={e => setForm(f => ({ ...f, discount: +e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Select label={ar ? 'المندوب / البائع' : 'Salesperson'} value={form.salesperson_id} onChange={e => setForm(f => ({ ...f, salesperson_id: e.target.value }))}>
+              <option value="">-- {ar ? 'اختر' : 'Select'} --</option>
+              {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
+            <Select label={ar ? 'نوع المبيعات' : 'Sales Type'} value={form.sales_type} onChange={e => setForm(f => ({ ...f, sales_type: e.target.value }))}>
+              <option value="Inventory">{ar ? 'مخزون' : 'Inventory'}</option>
+              <option value="Real Estate">{ar ? 'عقارات' : 'Real Estate'}</option>
+              <option value="Service">{ar ? 'خدمات' : 'Service'}</option>
+              <option value="Other">{ar ? 'أخرى' : 'Other'}</option>
+            </Select>
+            <Input label={ar ? 'العمولة %' : 'Commission %'} type="number" value={form.commission_rate} onChange={e => setForm(f => ({ ...f, commission_rate: +e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label={ar ? 'تاريخ الاستحقاق' : 'Due Date'} type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
@@ -1159,24 +1172,65 @@ function PriceListsTab({ language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 10. COMMISSIONS & TARGETS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function CommissionsTab({ language }) {
+function CommissionsTab({ staff = [], language }) {
   const ar = language === 'ar';
+  const [subTab, setSubTab] = useState('commissions'); // 'commissions' or 'targets'
   const [targets, setTargets] = useState([]);
+  const [commissions, setCommissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ agent_name: '', target_amount: 0, achieved_amount: 0, commission_rate: 0, period: '' });
-  const load = useCallback(async () => { setLoading(true); try { const { data } = await api.get('/sales/targets'); setTargets(data.data || []); } catch { } finally { setLoading(false); } }, []);
+  const [payingId, setPayingId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [tRes, cRes] = await Promise.all([
+        api.get('/sales/targets'),
+        api.get('/sales/commissions')
+      ]);
+      setTargets(tRes.data.data || []);
+      setCommissions(cRes.data.data || []);
+    } catch { } finally { setLoading(false); }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
-  const save = async () => { try { await api.post('/sales/targets', form); setModal(false); load(); } catch (e) { alert(e?.response?.data?.error || 'خطأ'); } };
+
+  const saveTarget = async () => {
+    try {
+      await api.post('/sales/targets', form);
+      setModal(false);
+      setForm({ agent_name: '', target_amount: 0, achieved_amount: 0, commission_rate: 0, period: '' });
+      load();
+    } catch (e) { alert(e?.response?.data?.error || 'خطأ'); }
+  };
+
+  const payout = async (id) => {
+    setPayingId(id);
+    try {
+      await api.post(`/sales/commissions/${id}/payout`);
+      alert(ar ? 'تم تأكيد صرف العمولة بنجاح!' : 'Commission payout confirmed!');
+      load();
+    } catch (e) {
+      alert(e?.response?.data?.error || 'خطأ');
+    } finally {
+      setPayingId(null);
+    }
+  };
+
   const totalCommission = targets.reduce((a, t) => a + ((t.achieved_amount / Math.max(t.target_amount, 1)) * t.commission_rate * t.achieved_amount / 100), 0);
+  const unpaidCommissionsSum = commissions.filter(c => c.payout_status !== 'Paid').reduce((a, c) => a + (parseFloat(c.commission_earned) || 0), 0);
+  const paidCommissionsSum = commissions.filter(c => c.payout_status === 'Paid').reduce((a, c) => a + (parseFloat(c.commission_earned) || 0), 0);
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Dynamic Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'مندوبون' : 'Agents', value: targets.length, icon: '👥', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
-          { label: ar ? 'تجاوزوا الهدف' : 'On Target', value: targets.filter(t => t.achieved_amount >= t.target_amount).length, icon: '🏆', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'دون الهدف' : 'Below Target', value: targets.filter(t => t.achieved_amount < t.target_amount).length, icon: '📉', color: 'bg-rose-50 text-rose-700 border-rose-100' },
-          { label: ar ? 'إجمالي العمولات' : 'Est. Commissions', value: fmt(totalCommission) + ' EGP', icon: '💎', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي مندوبي الأهداف' : 'Target Agents', value: targets.length, icon: '👥', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+          { label: ar ? 'عمولات مستحقة (غير مدفوعة)' : 'Unpaid Commissions', value: fmt(unpaidCommissionsSum) + ' EGP', icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'عمولات مدفوعة' : 'Paid Commissions', value: fmt(paidCommissionsSum) + ' EGP', icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          { label: ar ? 'تقدير عمولات المستهدفات' : 'Est. Target Commissions', value: fmt(totalCommission) + ' EGP', icon: '💎', color: 'bg-slate-50 text-slate-700 border-slate-100' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
             <div className="text-xl mb-1">{s.icon}</div>
@@ -1185,45 +1239,118 @@ function CommissionsTab({ language }) {
           </div>
         ))}
       </div>
-      <div className="flex justify-end"><Btn onClick={() => setModal(true)}>+ {ar ? 'هدف جديد' : 'New Target'}</Btn></div>
-      {loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div> : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {targets.map(t => {
-            const pct = t.target_amount > 0 ? Math.min(Math.round((t.achieved_amount / t.target_amount) * 100), 100) : 0;
-            const est = Math.round((t.achieved_amount * t.commission_rate) / 100);
-            return (
-              <div key={t.id} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm">{t.agent_name?.[0] || '?'}</div>
-                    <div><p className="font-black text-slate-900">{t.agent_name}</p><p className="text-xs text-slate-400">{t.period || '—'}</p></div>
+
+      {/* Sub tabs selector */}
+      <div className="flex justify-between items-center bg-slate-100/80 p-1 rounded-xl w-fit">
+        <button onClick={() => setSubTab('commissions')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${subTab === 'commissions' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+          💼 {ar ? 'سجل عمولات المبيعات' : 'Commissions Ledger'}
+        </button>
+        <button onClick={() => setSubTab('targets')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${subTab === 'targets' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+          🎯 {ar ? 'مستهدفات المندوبين (Targets)' : 'Sales Targets'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+      ) : subTab === 'commissions' ? (
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                {[
+                  ar ? 'المرجع' : 'Ref No',
+                  ar ? 'المندوب / موظف المبيعات' : 'Salesperson',
+                  ar ? 'مبلغ المبيعات' : 'Sales Amount',
+                  ar ? 'العمولة المستحقة' : 'Commission',
+                  ar ? 'نوع المبيعات' : 'Type',
+                  ar ? 'حالة الصرف' : 'Payout Status',
+                  ar ? 'التاريخ' : 'Date',
+                  ar ? 'إجراء' : 'Action'
+                ].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {commissions.map(c => (
+                <tr key={c.id} className="border-b border-slate-50 hover:bg-indigo-50/20 transition-colors">
+                  <td className="px-4 py-3 font-black text-xs text-indigo-600">{c.reference_no || `TX-${c.id}`}</td>
+                  <td className="px-4 py-3 font-bold text-slate-900">{c.salesperson_name || c.agent_name || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{fmt(c.sales_amount)} EGP</td>
+                  <td className="px-4 py-3 font-black text-emerald-700">{fmt(c.commission_earned)} EGP</td>
+                  <td className="px-4 py-3">
+                    <Badge color={c.sales_type === 'Real Estate' ? 'amber' : c.sales_type === 'Service' ? 'purple' : 'blue'}>
+                      {c.sales_type || 'Inventory'}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge color={c.payout_status === 'Paid' ? 'green' : 'amber'}>
+                      {c.payout_status === 'Paid' ? (ar ? 'مدفوعة' : 'Paid') : (ar ? 'غير مدفوعة' : 'Unpaid')}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-400">{fmtDate(c.created_at)}</td>
+                  <td className="px-4 py-3">
+                    {c.payout_status !== 'Paid' ? (
+                      <Btn size="xs" variant="success" onClick={() => payout(c.id)} disabled={payingId === c.id}>
+                        {payingId === c.id ? '⟳' : '💵'} {ar ? 'صرف' : 'Pay Out'}
+                      </Btn>
+                    ) : '—'}
+                  </td>
+                </tr>
+              ))}
+              {commissions.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                    {ar ? 'لا توجد سجلات عمولات' : 'No commission records'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex justify-end"><Btn onClick={() => setModal(true)}>+ {ar ? 'هدف جديد' : 'New Target'}</Btn></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {targets.map(t => {
+              const pct = t.target_amount > 0 ? Math.min(Math.round((t.achieved_amount / t.target_amount) * 100), 100) : 0;
+              const est = Math.round((t.achieved_amount * t.commission_rate) / 100);
+              return (
+                <div key={t.id} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-black text-sm">{t.agent_name?.[0] || '?'}</div>
+                      <div><p className="font-black text-slate-900">{t.agent_name}</p><p className="text-xs text-slate-400">{t.period || '—'}</p></div>
+                    </div>
+                    <Badge color={pct >= 100 ? 'green' : pct >= 50 ? 'amber' : 'rose'}>{pct}%</Badge>
                   </div>
-                  <Badge color={pct >= 100 ? 'green' : pct >= 50 ? 'amber' : 'rose'}>{pct}%</Badge>
+                  <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3">
+                    <div className={`h-2.5 rounded-full transition-all duration-700 ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center mt-3">
+                    <div><p className="text-xs text-slate-400">{ar ? 'محقق' : 'Achieved'}</p><p className="font-black text-sm text-slate-800">{fmt(t.achieved_amount)}</p></div>
+                    <div><p className="text-xs text-slate-400">{ar ? 'الهدف' : 'Target'}</p><p className="font-black text-sm text-slate-800">{fmt(t.target_amount)}</p></div>
+                    <div><p className="text-xs text-slate-400">{ar ? 'العمولة' : 'Commission'}</p><p className="font-black text-sm text-indigo-700">{fmt(est)} EGP</p></div>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3">
-                  <div className={`h-2.5 rounded-full transition-all duration-700 ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pct}%` }} />
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center mt-3">
-                  <div><p className="text-xs text-slate-400">{ar ? 'محقق' : 'Achieved'}</p><p className="font-black text-sm text-slate-800">{fmt(t.achieved_amount)}</p></div>
-                  <div><p className="text-xs text-slate-400">{ar ? 'الهدف' : 'Target'}</p><p className="font-black text-sm text-slate-800">{fmt(t.target_amount)}</p></div>
-                  <div><p className="text-xs text-slate-400">{ar ? 'العمولة' : 'Commission'}</p><p className="font-black text-sm text-indigo-700">{fmt(est)} EGP</p></div>
-                </div>
-              </div>
-            );
-          })}
-          {targets.length === 0 && <div className="col-span-3 text-center py-16 text-slate-400"><div className="text-5xl mb-3">🎯</div><p>{ar ? 'لا توجد أهداف' : 'No targets defined'}</p></div>}
+              );
+            })}
+            {targets.length === 0 && <div className="col-span-3 text-center py-16 text-slate-400"><div className="text-5xl mb-3">🎯</div><p>{ar ? 'لا توجد أهداف' : 'No targets defined'}</p></div>}
+          </div>
         </div>
       )}
+
       <Modal open={modal} onClose={() => setModal(false)} title={ar ? 'هدف مبيعات جديد' : 'New Sales Target'}>
         <div className="space-y-3">
-          <Input label={ar ? 'الموظف / المندوب' : 'Agent Name'} value={form.agent_name} onChange={e => setForm(f => ({ ...f, agent_name: e.target.value }))} />
+          <Select label={ar ? 'الموظف / المندوب' : 'Agent Name'} value={form.agent_name} onChange={e => setForm(f => ({ ...f, agent_name: e.target.value }))}>
+            <option value="">-- {ar ? 'اختر الموظف' : 'Select staff'} --</option>
+            {staff.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </Select>
           <div className="grid grid-cols-3 gap-2">
             <Input label={ar ? 'الهدف' : 'Target'} type="number" value={form.target_amount} onChange={e => setForm(f => ({ ...f, target_amount: +e.target.value }))} />
             <Input label={ar ? 'المحقق' : 'Achieved'} type="number" value={form.achieved_amount} onChange={e => setForm(f => ({ ...f, achieved_amount: +e.target.value }))} />
             <Input label={ar ? 'العمولة %' : 'Commission %'} type="number" value={form.commission_rate} onChange={e => setForm(f => ({ ...f, commission_rate: +e.target.value }))} />
           </div>
           <Input label={ar ? 'الفترة' : 'Period'} value={form.period} onChange={e => setForm(f => ({ ...f, period: e.target.value }))} placeholder={ar ? 'مثال: مايو 2026' : 'e.g. May 2026'} />
-          <div className="flex justify-end gap-2 pt-2"><Btn variant="ghost" onClick={() => setModal(false)}>{ar ? 'إلغاء' : 'Cancel'}</Btn><Btn variant="primary" onClick={save}>{ar ? 'حفظ' : 'Save'}</Btn></div>
+          <div className="flex justify-end gap-2 pt-2"><Btn variant="ghost" onClick={() => setModal(false)}>{ar ? 'إلغاء' : 'Cancel'}</Btn><Btn variant="primary" onClick={saveTarget}>{ar ? 'حفظ' : 'Save'}</Btn></div>
         </div>
       </Modal>
     </div>
@@ -1339,9 +1466,11 @@ export default function Sales() {
   const ar = language === 'ar';
   const [activeTab, setActiveTab] = useState('analytics');
   const [clients, setClients] = useState([]);
+  const [staff, setStaff] = useState([]);
 
   useEffect(() => {
     api.get('/table/customers?limit=500').then(r => setClients(r.data.data || [])).catch(() => {});
+    api.get('/table/staff?limit=1000').then(r => setStaff(r.data.data || [])).catch(() => {});
   }, []);
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';
@@ -1396,11 +1525,11 @@ export default function Sales() {
         {activeTab === 'orders'       && <OrdersTab       clients={clients} language={language} />}
         {activeTab === 'delivery'     && <DeliveryNotesTab language={language} />}
         {activeTab === 'returns'      && <SalesReturnsTab  clients={clients} language={language} />}
-        {activeTab === 'invoicing'    && <InvoicingTab    clients={clients} language={language} />}
+        {activeTab === 'invoicing'    && <InvoicingTab    clients={clients} staff={staff} language={language} />}
         {activeTab === 'pos'          && <POSTab          clients={clients} language={language} />}
         {activeTab === 'offers'       && <OffersTab       language={language} />}
         {activeTab === 'pricelists'   && <PriceListsTab   language={language} />}
-        {activeTab === 'commissions'  && <CommissionsTab  language={language} />}
+        {activeTab === 'commissions'  && <CommissionsTab  staff={staff} language={language} />}
         {activeTab === 'installments' && <InstallmentsTab clients={clients} language={language} />}
       </div>
     </div>

@@ -30,13 +30,17 @@ router.post('/invoices', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes } = req.body;
+    const { customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, salesperson_id, sales_type, commission_rate } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
     const autoNum = invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
+    const commRate = parseFloat(commission_rate) || 0;
+    const totalAmt = parseFloat(total_amount) || 0;
+    const commAmt = totalAmt * (commRate / 100);
+
     const { rows } = await client.query(
-      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [customer_id||null, autoNum, total_amount||0, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username]
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [customer_id||null, autoNum, totalAmt, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt]
     );
 
     const invoice = rows[0];
@@ -48,7 +52,7 @@ router.post('/invoices', async (req, res) => {
       await client.query(
         `INSERT INTO notifications (user_id, title, message, type, severity, link) 
          VALUES (NULL, $1, $2, 'SALES_INVOICE', 'strategic', '/sales')`,
-        [`فاتورة مبيعات جديدة: ${autoNum}`, `تم إصدار فاتورة مبيعات جديدة للعميل ${custName} بمبلغ ${total_amount || 0} EGP`]
+        [`فاتورة مبيعات جديدة: ${autoNum}`, `تم إصدار فاتورة مبيعات جديدة للعميل ${custName} بمبلغ ${totalAmt} EGP`]
       );
     } catch (nErr) {
       console.error("Sales invoice notification error:", nErr);
@@ -57,7 +61,7 @@ router.post('/invoices', async (req, res) => {
     // Automatic Accounting Entry Posting
     if (status === 'مدفوعة' || status === 'مرسلة') {
       const AccountingService = require('../services/accountingService');
-      const amt = parseFloat(total_amount) || 0;
+      const amt = parseFloat(totalAmt) || 0;
       const tax = parseFloat(tax_amount) || 0;
       const disc = parseFloat(discount) || 0;
       const baseRevenue = amt - tax + disc;
@@ -65,12 +69,19 @@ router.post('/invoices', async (req, res) => {
       // Debit Cash/Bank or Accounts Receivable
       const debitAcc = status === 'مدفوعة' ? '1101' : '1120'; // Cash (1101) or Receivables (1120)
       
+      let revenueAccount = '4100'; // Default Sales Revenue
+      if (sales_type === 'Real Estate') {
+        revenueAccount = 'إيرادات مبيعات عقارية';
+      } else if (sales_type === 'Service') {
+        revenueAccount = 'إيرادات تقديم خدمات';
+      }
+
       await AccountingService.recordDoubleEntry(client, {
         debitAccount: debitAcc,
-        creditAccount: '4100', // Sales Revenue (4100)
+        creditAccount: revenueAccount,
         amount: baseRevenue,
         costCenter: 'General',
-        description: `إيراد مبيعات فاتورة رقم ${autoNum}`,
+        description: `إيراد مبيعات (${sales_type || 'Inventory'}) فاتورة رقم ${autoNum}`,
         username: req.user?.username || 'System',
         referenceNo: autoNum,
         company: company
@@ -100,6 +111,15 @@ router.post('/invoices', async (req, res) => {
           referenceNo: autoNum,
           company: company
         });
+      }
+
+      // Generate Commission record
+      if (salesperson_id && commAmt > 0) {
+        await client.query(
+          `INSERT INTO sales_commissions (salesperson_id, agent_id, sales_amount, commission_earned, payout_status, sales_type, reference_no, company)
+           VALUES ($1, $1, $2, $3, 'Unpaid', $4, $5, $6)`,
+          [salesperson_id, totalAmt, commAmt, sales_type || 'Inventory', autoNum, company]
+        );
       }
     }
 
@@ -327,8 +347,27 @@ router.post('/targets', async (req, res) => {
 // ─── COMMISSIONS ─────────────────────────────────────────────────────────────
 router.get('/commissions', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM sales_commissions ORDER BY created_at DESC');
+    const cf = companyWhere(req, 'sc');
+    const { rows } = await pool.query(`
+      SELECT sc.*, s.name AS salesperson_name 
+      FROM sales_commissions sc
+      LEFT JOIN staff s ON s.id = sc.salesperson_id
+      WHERE 1=1 ${cf}
+      ORDER BY sc.created_at DESC
+    `);
     res.json({ success: true, data: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/commissions/:id/payout', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      `UPDATE sales_commissions SET payout_status = 'Paid', status = 'Paid' WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Commission record not found." });
+    res.json({ success: true, data: rows[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -460,6 +499,25 @@ router.get('/orders', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/orders', async (req, res) => {
+  try {
+    const { customer_id, items, total_amount, tax_amount, discount, notes, salesperson_id, sales_type, commission_rate } = req.body;
+    const company = req.selectedCompany || req.headers['x-selected-company'] || '';
+    const soNum = `SO-${Date.now().toString(36).toUpperCase()}`;
+    const commRate = parseFloat(commission_rate) || 0;
+    const totalAmt = parseFloat(total_amount) || 0;
+    const commAmt = totalAmt * (commRate / 100);
+
+    const { rows } = await pool.query(
+      `INSERT INTO sales_orders (order_number, customer_id, items, total_amount, tax_amount, discount, status, company, notes, created_by, salesperson_id, sales_type, commission_rate, commission_amount)
+       VALUES ($1,$2,$3,$4,$5,$6,'Pending',$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [soNum, customer_id||null, JSON.stringify(items||[]), totalAmt, tax_amount||0, discount||0, company, notes, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt]
+    );
+
+    res.json({ success: true, data: rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/orders/:id/invoice', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -474,65 +532,76 @@ router.post('/orders/:id/invoice', async (req, res) => {
 
     // 2. Create Sales Invoice (Paid by default)
     const invNum = `INV-${Date.now().toString(36).toUpperCase()}`;
+    const commRate = parseFloat(so.commission_rate) || 0;
+    const totalAmt = parseFloat(so.total_amount) || 0;
+    const commAmt = totalAmt * (commRate / 100);
+
     await client.query(
-      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by)
-       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'مدفوعة',$6,$7,$8)`,
-      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, so.notes, so.company, req.user?.username]
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount)
+       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'مدفوعة',$6,$7,$8,$9,$10,$11,$12)`,
+      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, so.notes, so.company, req.user?.username, so.salesperson_id||null, so.sales_type||'Inventory', commRate, commAmt]
     );
 
-    // 3. Deduct Stock Levels & Post COGS
+    // 3. Deduct Stock Levels & Post COGS (ONLY IF Inventory)
     const AccountingService = require('../services/accountingService');
-    const items = typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []);
+    if ((so.sales_type || 'Inventory') === 'Inventory') {
+      const items = typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []);
+      for (const item of items) {
+        const qty = parseFloat(item.qty) || 0;
+        if (qty <= 0) continue;
 
-    for (const item of items) {
-      const qty = parseFloat(item.qty) || 0;
-      if (qty <= 0) continue;
-
-      const itemRes = await client.query(
-        `SELECT id, remaining_qty, buy_price, avg_cost, item_name FROM inventory_items 
-         WHERE item_name ILIKE $1 AND remaining_qty >= $2 LIMIT 1`,
-        [item.name, qty]
-      );
-
-      if (itemRes.rows.length > 0) {
-        const invItem = itemRes.rows[0];
-        const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
-        const cogsAmount = qty * buyPrice;
-
-        // Deduct Stock
-        await client.query(
-          "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
-          [qty, invItem.id]
+        const itemRes = await client.query(
+          `SELECT id, remaining_qty, buy_price, avg_cost, item_name FROM inventory_items 
+           WHERE item_name ILIKE $1 AND remaining_qty >= $2 LIMIT 1`,
+          [item.name, qty]
         );
 
-        // Post COGS
-        if (cogsAmount > 0) {
-          await AccountingService.recordDoubleEntry(client, {
-            debitAccount: '5100',
-            creditAccount: '1130',
-            amount: cogsAmount,
-            costCenter: 'General',
-            description: `تكلفة مبيعات أمر بيع - صنف ${invItem.item_name} - فاتورة ${invNum}`,
-            username: req.user?.username || 'System',
-            referenceNo: invNum,
-            company: so.company
-          });
+        if (itemRes.rows.length > 0) {
+          const invItem = itemRes.rows[0];
+          const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
+          const cogsAmount = qty * buyPrice;
+
+          // Deduct Stock
+          await client.query(
+            "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
+            [qty, invItem.id]
+          );
+
+          // Post COGS
+          if (cogsAmount > 0) {
+            await AccountingService.recordDoubleEntry(client, {
+              debitAccount: '5100',
+              creditAccount: '1130',
+              amount: cogsAmount,
+              costCenter: 'General',
+              description: `تكلفة مبيعات أمر بيع - صنف ${invItem.item_name} - فاتورة ${invNum}`,
+              username: req.user?.username || 'System',
+              referenceNo: invNum,
+              company: so.company
+            });
+          }
         }
       }
     }
 
-    // 4. Post Sales Revenue (Debit Cash 1101, Credit Revenue 4100)
-    const totalAmt = parseFloat(so.total_amount) || 0;
+    // 4. Post Sales Revenue
     const taxAmt = parseFloat(so.tax_amount) || 0;
     const discAmt = parseFloat(so.discount) || 0;
     const baseRevenue = totalAmt - taxAmt + discAmt;
 
+    let revenueAccount = '4100'; // Default Sales Revenue
+    if (so.sales_type === 'Real Estate') {
+      revenueAccount = 'إيرادات مبيعات عقارية';
+    } else if (so.sales_type === 'Service') {
+      revenueAccount = 'إيرادات تقديم خدمات';
+    }
+
     await AccountingService.recordDoubleEntry(client, {
       debitAccount: '1101', // Cash
-      creditAccount: '4100', // Sales Revenue
+      creditAccount: revenueAccount,
       amount: baseRevenue,
       costCenter: 'General',
-      description: `إيراد مبيعات أمر بيع رقم ${so.order_number}`,
+      description: `إيراد مبيعات (${so.sales_type || 'Inventory'}) أمر بيع رقم ${so.order_number}`,
       username: req.user?.username || 'System',
       referenceNo: invNum,
       company: so.company
@@ -562,6 +631,15 @@ router.post('/orders/:id/invoice', async (req, res) => {
         referenceNo: invNum,
         company: so.company
       });
+    }
+
+    // 4.5 Generate Commission
+    if (so.salesperson_id && commAmt > 0) {
+      await client.query(
+        `INSERT INTO sales_commissions (salesperson_id, agent_id, sales_amount, commission_earned, payout_status, sales_type, reference_no, company)
+         VALUES ($1, $1, $2, $3, 'Unpaid', $4, $5, $6)`,
+        [so.salesperson_id, totalAmt, commAmt, so.sales_type || 'Inventory', so.order_number, so.company]
+      );
     }
 
     // 5. Update Sales Order Status
