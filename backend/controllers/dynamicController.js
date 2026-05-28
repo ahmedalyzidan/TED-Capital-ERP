@@ -101,7 +101,7 @@ class DynamicController {
                 countStr = `SELECT COUNT(*) FROM subcontractor_invoices si`;
             } else if (type === 'installments') {
                 prefix = "i.";
-                queryStr = `SELECT i.*, cu.name AS customer_name, pu.project_name,
+                queryStr = `SELECT i.*, cu.name AS customer_name, pu.project_name, c.customer_id,
                     CASE 
                         WHEN i.status = 'Paid' THEN 'Paid'
                         WHEN (SELECT COALESCE(SUM(amount), 0) FROM payment_receipts WHERE installment_id = i.id) > 0 

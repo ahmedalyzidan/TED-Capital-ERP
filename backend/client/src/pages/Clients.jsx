@@ -34,8 +34,25 @@ export default function Clients() {
   const [companyId, setCompanyId] = useState('');
 
   useEffect(() => {
-    fetchClients();
-    fetchCompanies();
+    const loadInitial = async () => {
+      await fetchClients();
+      fetchCompanies();
+      const params = new URLSearchParams(window.location.search);
+      const clientId = params.get('clientId');
+      if (clientId) {
+        try {
+          const response = await api.get('/table/customers?limit=100');
+          const list = response.data?.data || [];
+          const found = list.find(c => String(c.id) === String(clientId));
+          if (found) {
+            openClient360(found);
+          }
+        } catch (err) {
+          console.error("Error loading deep-linked client 360:", err);
+        }
+      }
+    };
+    loadInitial();
   }, []);
 
   const fetchClients = async () => {

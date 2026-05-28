@@ -298,7 +298,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
-      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      const newCust = { id: res.data?.id || res.data?.data?.id || Date.now(), ...payload };
       
       // Update customers list
       setCustomers(prev => [newCust, ...prev]);

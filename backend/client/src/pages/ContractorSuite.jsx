@@ -1949,7 +1949,7 @@ export default function ContractorSuite() {
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
-      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      const newCust = { id: res.data?.id || res.data?.data?.id || Date.now(), ...payload };
 
       setCustomers(prev => [newCust, ...prev]);
 

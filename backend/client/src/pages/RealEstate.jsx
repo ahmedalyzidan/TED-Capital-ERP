@@ -301,6 +301,26 @@ export default function RealEstate() {
         project_id: unitForm.project_id === '' ? null : Number(unitForm.project_id)
       };
 
+      if (sanitizedForm.project_id) {
+        const targetProj = projects.find(p => Number(p.id) === Number(sanitizedForm.project_id));
+        if (targetProj) {
+          const limit = Number(targetProj.total_units || 0);
+          const isNew = !editingUnit;
+          const isProjectChanged = editingUnit && Number(editingUnit.project_id) !== Number(sanitizedForm.project_id);
+          if (isNew || isProjectChanged) {
+            const currentCount = units.filter(u => Number(u.project_id) === Number(sanitizedForm.project_id)).length;
+            if (currentCount >= limit) {
+              const errMsg = language === 'ar' 
+                ? `خطأ: تم الوصول للحد الأقصى لعدد الوحدات في هذا المشروع (${limit} وحدة) ولا يمكن إضافة المزيد.`
+                : `Error: The maximum limit of units for this project (${limit}) has been reached.`;
+              alert(errMsg);
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        }
+      }
+
       if (editingUnit) {
         await api.put(`/real-estate/units/${editingUnit.id}`, sanitizedForm);
       } else {
@@ -339,7 +359,7 @@ export default function RealEstate() {
         created_at: new Date().toISOString()
       };
       const res = await api.post('/dynamic/add/customers', payload);
-      const newCust = res.data?.data || { id: Date.now(), ...payload };
+      const newCust = { id: res.data?.id || res.data?.data?.id || Date.now(), ...payload };
       setCustomers(prev => [...prev, newCust]);
       setContractForm(prev => ({ ...prev, customer_id: String(newCust.id) }));
     } catch (error) {
@@ -713,7 +733,19 @@ export default function RealEstate() {
                       .map(c => (
                       <tr key={c.id} className="bg-white border-2 border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-500 group">
                         <td className="px-8 py-6 first:rounded-r-[2rem] last:rounded-l-[2rem] font-black text-slate-400 text-xs tracking-widest border-y border-r border-slate-100 group-hover:border-slate-200">CONT-#{c.id}</td>
-                        <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 font-extrabold text-slate-900 text-base">{c.customer_name}</td>
+                        <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 font-extrabold text-slate-900 text-base">
+                          {c.customer_name}
+                          {c.customer_id && (
+                            <a 
+                              href={`/clients?clientId=${c.customer_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-[10px] text-violet-600 hover:text-slate-900 transition-colors mt-1 font-black"
+                            >
+                              👤 {language === 'ar' ? 'عرض ملف 360°' : 'View 360° Profile'}
+                            </a>
+                          )}
+                        </td>
                         <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200">
                           <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-4 py-1.5 rounded-xl border border-slate-200 shadow-inner">
                             {units.find(u => u.id === c.unit_id)?.unit_number || '---'}
@@ -778,7 +810,19 @@ export default function RealEstate() {
                       .map(i => (
                       <tr key={i.id} className="bg-white border-2 border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-500 group">
                         <td className="px-8 py-6 first:rounded-r-[2rem] last:rounded-l-[2rem] font-black text-slate-900 text-base border-y border-r border-slate-100 group-hover:border-slate-200">{i.unit_number || '---'}</td>
-                        <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 font-extrabold text-slate-500 text-sm">{i.customer_name || '---'}</td>
+                        <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 font-extrabold text-slate-500 text-sm">
+                          {i.customer_name || '---'}
+                          {i.customer_id && (
+                            <a 
+                              href={`/clients?clientId=${i.customer_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-[10px] text-violet-600 hover:text-slate-900 transition-colors mt-1 font-black"
+                            >
+                              👤 {language === 'ar' ? 'عرض ملف 360°' : 'View 360° Profile'}
+                            </a>
+                          )}
+                        </td>
                         <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 font-mono text-xs font-black text-slate-400 tracking-widest">{new Date(i.due_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</td>
                         <td className="px-8 py-6 border-y border-slate-100 group-hover:border-slate-200 text-center">
                           <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm ${i.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'}`}>

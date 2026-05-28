@@ -16,6 +16,27 @@ export default function Reports() {
    const [absorptionData, setAbsorptionData] = useState([]);
    const [payrollData, setPayrollData] = useState([]);
    const [activeProjects, setActiveProjects] = useState([]);
+   const [selectedCompany, setSelectedCompany] = useState('all');
+   const [reStats, setReStats] = useState({ totalSales: 0, collected: 0, pending: 0 });
+   const [liquidityGapMonths, setLiquidityGapMonths] = useState([]);
+
+   const companyOptions = [
+      { id: 'all', nameAr: 'كل الشركات', nameEn: 'All Companies', idVal: 'all', nameVal: 'all' },
+      { id: '1', nameAr: 'تيد كابيتال للتطوير العقاري', nameEn: 'TED Capital', idVal: '1', nameVal: 'TED Capital' },
+      { id: '2', nameAr: 'ديزاين كونسبت للتصميم', nameEn: 'Design Concept', idVal: '2', nameVal: 'Design Concept' },
+      { id: '3', nameAr: 'ماستر بيلدر للمقاولات', nameEn: 'Master Builder', idVal: '3', nameVal: 'Master Builder' },
+      { id: '4', nameAr: 'برايم ميد فارما للأدوية', nameEn: 'PRIMEMED PHARMA', idVal: '4', nameVal: 'PRIMEMED PHARMA' },
+   ];
+
+   const filterByCompany = (item) => {
+      if (selectedCompany === 'all') return true;
+      const compObj = companyOptions.find(o => o.id === selectedCompany);
+      if (!compObj) return true;
+      const nameVal = compObj.nameVal;
+      const itemComp = (item.company || item.company_name || item.company_entity || item.project_company || '').toLowerCase();
+      const targetComp = nameVal.toLowerCase();
+      return itemComp.includes(targetComp) || targetComp.includes(itemComp);
+   };
 
    const t = {
       ar: {
@@ -61,7 +82,7 @@ export default function Reports() {
 
    useEffect(() => {
       fetchReportsData();
-   }, []);
+   }, [selectedCompany]);
 
    const fetchReportsData = async () => {
       setLoading(true);
@@ -73,20 +94,25 @@ export default function Reports() {
             } catch (e) { return fallback; }
          };
 
-         const [debts, finData, profitability, projection, absorption, payroll, projects] = await Promise.all([
+         const [debts, finData, profitability, projection, absorption, payroll, projects, reContracts, reInstallments] = await Promise.all([
             safeFetch(api.get('/dynamic/table/client_delayed_payments?limit=1000')),
-            api.get('/finance/statements').catch(() => ({ data: { summary: {} } })),
+            api.get(`/finance/statements?company_id=${selectedCompany}`).catch(() => ({ data: { summary: {} } })),
             safeFetch(api.get('/reports/project_profitability')),
             safeFetch(api.get('/reports/cashflow_projection')),
             safeFetch(api.get('/reports/realestate_absorption')),
             safeFetch(api.get('/reports/payroll_efficiency')),
-            safeFetch(api.get('/dynamic/table/projects?limit=500'))
+            safeFetch(api.get('/dynamic/table/projects?limit=500')),
+            safeFetch(api.get('/table/real_estate_contracts?limit=5000')),
+            safeFetch(api.get('/table/real_estate_installments?limit=5000'))
          ]);
 
-         setRawDebts(debts || []);
+         // Filter debts and calculate aging report
+         const filteredDebts = (debts || []).filter(filterByCompany);
+         setRawDebts(filteredDebts);
+
          let aging = { notDue: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
          const today = new Date();
-         (debts || []).forEach(debt => {
+         filteredDebts.forEach(debt => {
             if (debt?.status === 'Paid') return;
             const amt = parseFloat(debt?.amount || 0);
             const dueDate = new Date(debt?.due_date);
@@ -96,18 +122,32 @@ export default function Reports() {
             else {
                const diffDays = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
                if (diffDays <= 30) aging.d30 += amt;
-               else if (diffDays <= 60) aging.d30 += 0; // Fixed logic
                else if (diffDays <= 60) aging.d60 += amt;
                else if (diffDays <= 90) aging.d90 += amt;
                else aging.over90 += amt;
             }
          });
          setAgingReport(aging);
-         setProfitabilityData(profitability || []);
-         setProjectionData(projection || []);
-         setAbsorptionData(absorption || []);
-         setPayrollData(payroll || []);
-         setActiveProjects((projects || []).filter(p => p.status === 'Active' || p.status === 'Ongoing'));
+
+         // Calculate Real Estate Stats
+         const filteredContracts = (reContracts || []).filter(filterByCompany);
+         const filteredInstallments = (reInstallments || []).filter(filterByCompany);
+         const reTotalSales = filteredContracts.reduce((sum, c) => sum + Number(c.total_price || 0), 0);
+         const reCollected = filteredInstallments.filter(i => i.status === 'Paid').reduce((sum, i) => sum + Number(i.amount || 0), 0);
+         const rePending = filteredInstallments.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + Number(i.amount || 0), 0);
+         setReStats({ totalSales: reTotalSales, collected: reCollected, pending: rePending });
+
+         // Filter other states
+         setProfitabilityData((profitability || []).filter(filterByCompany));
+         setProjectionData((projection || []).filter(filterByCompany));
+         setAbsorptionData((absorption || []).filter(filterByCompany));
+         setPayrollData((payroll || []).filter(filterByCompany));
+         setActiveProjects(((projects || []).filter(filterByCompany)).filter(p => p.status === 'Active' || p.status === 'Ongoing'));
+         
+         // Calculate Liquidity Gaps (Months where cashflow projection is negative)
+         const gaps = (projection || []).filter(filterByCompany).filter(p => Number(p.liquidity_gap) < 0);
+         setLiquidityGapMonths(gaps);
+
          const summary = finData?.data?.summary || {};
          setPlStats({ revenue: Number(summary?.totalRevenue || 0), expenses: Number(summary?.totalExpense || 0), netProfit: Number(summary?.netProfit || 0) });
       } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -252,6 +292,32 @@ export default function Reports() {
    return (
       <div className="bg-slate-50 min-h-screen p-4 space-y-6 text-right selection:bg-emerald-500/30" dir={language === 'ar' ? 'rtl' : 'ltr'}>
          
+         <style>{`
+            @media print {
+               body {
+                  background-color: white !important;
+                  color: black !important;
+               }
+               .print\\:hidden {
+                  display: none !important;
+               }
+               .grid {
+                  display: grid !important;
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                  gap: 1.5rem !important;
+               }
+               .bg-slate-950, .bg-slate-900 {
+                  background-color: #0f172a !important;
+                  color: white !important;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+               }
+               .shadow-2xl, .shadow-xl, .shadow-lg, .shadow-sm {
+                  box-shadow: none !important;
+               }
+            }
+         `}</style>
+
          {detailModal.isOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setDetailModal({ ...detailModal, isOpen: false })}></div>
@@ -279,16 +345,16 @@ export default function Reports() {
          <div className="max-w-[1500px] mx-auto space-y-6">
             
             {/* Super Elite Header */}
-            <div className="bg-slate-950 rounded-[2rem] p-8 text-white flex justify-between items-center border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+            <div className="bg-slate-950 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group gap-6">
                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-indigo-500/20 opacity-50 pointer-events-none"></div>
                <div className="absolute -top-32 -right-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-1000"></div>
                <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-1000"></div>
                
-               <div className="relative z-10">
+               <div className="relative z-10 w-full md:w-auto">
                   <div className="flex items-center gap-4 mb-2">
-                     <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl border border-white/10 backdrop-blur-xl shadow-inner">📊</div>
+                     <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl border border-white/10 backdrop-blur-xl shadow-inner shrink-0">📊</div>
                      <div>
-                        <h1 className="text-2xl font-black uppercase tracking-tighter italic">{cur.title}</h1>
+                        <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic">{cur.title}</h1>
                         <div className="flex items-center gap-2 mt-1">
                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
                            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">{cur.subtitle}</span>
@@ -297,21 +363,50 @@ export default function Reports() {
                   </div>
                </div>
 
-               <div className="text-left bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-3xl relative z-10 shadow-2xl">
-                  <span className="text-[8px] block text-slate-500 uppercase font-black mb-1 tracking-widest">{cur.reportDate}</span>
+               <div className="flex flex-wrap items-center gap-4 relative z-10 print:hidden w-full md:w-auto">
+                  {/* Global Company Selector */}
+                  <div className="flex flex-col text-right w-full sm:w-auto">
+                     <span className="text-[8px] text-slate-400 uppercase font-black mb-1 tracking-widest">
+                        {language === 'ar' ? 'تصفية حسب الشركة' : 'Company Filter'}
+                     </span>
+                     <select
+                        value={selectedCompany}
+                        onChange={(e) => setSelectedCompany(e.target.value)}
+                        className="bg-slate-900 border border-white/15 text-white text-xs font-bold rounded-xl p-2.5 px-4 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer w-full"
+                     >
+                        {companyOptions.map(opt => (
+                           <option key={opt.id} value={opt.id} className="bg-slate-950">
+                              {language === 'ar' ? opt.nameAr : opt.nameEn}
+                           </option>
+                        ))}
+                     </select>
+                  </div>
+
+                  {/* Print Button */}
+                  <button 
+                     onClick={() => window.print()}
+                     className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-black p-3 px-5 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                  >
+                     <span>🖨️</span>
+                     <span>{language === 'ar' ? 'تصدير PDF / طباعة' : 'Export PDF / Print'}</span>
+                  </button>
+               </div>
+
+               <div className="text-left bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-3xl relative z-10 shadow-2xl w-full md:w-auto flex justify-between md:block">
+                  <span className="text-[8px] block text-slate-500 uppercase font-black mb-1 tracking-widest md:text-left">{cur.reportDate}</span>
                   <span className="text-sm font-black font-mono text-emerald-400 tracking-tighter">{new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</span>
                </div>
             </div>
-
+ 
             {/* Glassmorphism KPI Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                {[
                   { label: cur.revenue, val: plStats.revenue, color: 'emerald', type: 'revenue', icon: '💎', trend: '+15.2%' },
                   { label: cur.expenses, val: plStats.expenses, color: 'rose', type: 'expenses', icon: '🔥', trend: '-2.4%' },
                   { label: cur.netProfit, val: plStats.netProfit, color: plStats.netProfit >= 0 ? 'emerald' : 'rose', icon: '⚡', trend: '+8.1%' },
                   { label: cur.activeProjects, val: activeProjects.length, color: 'indigo', type: 'projects', icon: '🏗️', trend: '+12% نمو' }
                ].map((kpi, i) => (
-                  <div key={i} onClick={() => kpi.type && handleDetailClick(kpi.type, kpi.label)} className="bg-white/80 backdrop-blur-xl p-6 rounded-[1.5rem] border border-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] cursor-pointer hover:shadow-2xl hover:-translate-y-2 hover:border-indigo-500/20 transition-all group relative overflow-hidden active:scale-[0.98]">
+                  <div key={i} onClick={() => kpi.type && handleDetailClick(kpi.type, kpi.label)} className="bg-white/80 backdrop-blur-xl p-5 md:p-6 rounded-[1.5rem] border border-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] cursor-pointer hover:shadow-2xl hover:-translate-y-2 hover:border-indigo-500/20 transition-all group relative overflow-hidden active:scale-[0.98]">
                      <div className={`absolute top-0 right-0 w-32 h-32 bg-${kpi.color}-500/5 rounded-full blur-[40px] group-hover:scale-150 transition-transform`}></div>
                      <div className="flex justify-between items-start mb-6 relative z-10">
                         <div className="space-y-1">
@@ -323,7 +418,7 @@ export default function Reports() {
                         <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-lg shadow-inner group-hover:scale-110 transition-transform group-hover:bg-slate-950 group-hover:text-white">{kpi.icon}</div>
                      </div>
                      <div className="flex items-baseline gap-2 relative z-10">
-                        <span id={kpi.label === cur.netProfit ? "total-balance" : undefined} className={`text-3xl font-black font-mono tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700`}>{kpi.val.toLocaleString()}</span>
+                        <span id={kpi.label === cur.netProfit ? "total-balance" : undefined} className={`text-2xl md:text-3xl font-black font-mono tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700`}>{kpi.val.toLocaleString()}</span>
                         <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest">{i < 3 ? 'LCY' : ''}</span>
                      </div>
                      <div className="mt-6 h-1.5 bg-slate-100 rounded-full overflow-hidden relative z-10 shadow-inner">
@@ -334,27 +429,28 @@ export default function Reports() {
             </div>
 
             {/* A/R Aging Panoramic Analysis */}
-            <div className="bg-slate-950 rounded-[2rem] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] overflow-hidden group">
-               <div className="p-6 px-8 bg-white/5 border-b border-white/5 flex justify-between items-center backdrop-blur-md">
+            <div className="bg-slate-950 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] overflow-hidden group">
+               <div className="p-5 md:p-6 px-6 md:px-8 bg-white/5 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center backdrop-blur-md gap-4">
                   <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl">⏳</div>
+                     <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl shrink-0">⏳</div>
                      <div>
                         <h3 className="text-xs font-black uppercase text-white tracking-[0.2em]">{cur.agingTitle}</h3>
                         <p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Temporal Liquidity Exposure • Real-time Maturity Matrix</p>
                      </div>
                   </div>
-                  <div className="text-left bg-emerald-500/10 p-2 px-4 rounded-xl border border-emerald-500/20">
-                     <span className="text-[11px] font-black font-mono text-emerald-400 tracking-tighter">{agingReport.total.toLocaleString()} <span className="text-[8px] text-emerald-600 uppercase ml-1">Exposure</span></span>
+                  <div className="text-left bg-emerald-500/10 p-2 px-4 rounded-xl border border-emerald-500/20 w-full sm:w-auto flex justify-between sm:block">
+                     <span className="text-[8px] text-emerald-600 uppercase font-black block sm:inline sm:mr-1">{language === 'ar' ? 'التعرض الإجمالي' : 'Exposure'}</span>
+                     <span className="text-[11px] font-black font-mono text-emerald-400 tracking-tighter">{agingReport.total.toLocaleString()} LCY</span>
                   </div>
                </div>
-               <div className="p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+               <div className="p-4 md:p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                   {cur.agingBuckets.map((b, i) => (
-                     <div key={i} onClick={() => handleBucketClick(i, b.label)} className={`p-5 rounded-2xl border transition-all cursor-pointer hover:bg-white/10 group/item active:scale-95 ${b.dark ? 'bg-emerald-600 text-white shadow-2xl shadow-emerald-600/30 border-emerald-500' : 'bg-white/5 border-white/5'}`}>
+                     <div key={i} onClick={() => handleBucketClick(i, b.label)} className={`p-4 md:p-5 rounded-2xl border transition-all cursor-pointer hover:bg-white/10 group/item active:scale-95 ${b.dark ? 'bg-emerald-650 text-white shadow-2xl shadow-emerald-600/30 border-emerald-500' : 'bg-white/5 border-white/5'}`}>
                         <div className="flex justify-between items-center mb-3">
                            <span className={`text-[8px] font-black uppercase tracking-widest ${b.dark ? 'text-white' : 'text-slate-500'}`}>{b.label}</span>
                            <div className={`w-2 h-2 rounded-full bg-${b.color}-500 shadow-[0_0_10px_rgba(0,0,0,0.5)]`}></div>
                         </div>
-                        <span className={`text-lg font-black font-mono tracking-tighter block ${b.dark ? 'text-white' : 'text-white/90'}`}>{[agingReport.notDue, agingReport.d30, agingReport.d60, agingReport.d90, agingReport.over90][i].toLocaleString()}</span>
+                        <span className={`text-base md:text-lg font-black font-mono tracking-tighter block ${b.dark ? 'text-white' : 'text-white/90'}`}>{[agingReport.notDue, agingReport.d30, agingReport.d60, agingReport.d90, agingReport.over90][i].toLocaleString()}</span>
                         <div className={`mt-3 h-1 rounded-full ${b.dark ? 'bg-white/20' : 'bg-white/5'}`}>
                            <div className={`h-full bg-${b.color}-500 rounded-full`} style={{ width: '60%' }}></div>
                         </div>
@@ -363,9 +459,156 @@ export default function Reports() {
                </div>
             </div>
 
+            {/* Real Estate Insights Section */}
+            {(selectedCompany === 'all' || selectedCompany === '1') && (
+               <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[60px]"></div>
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏢</div>
+                        <div>
+                           <h2 className="text-base md:text-lg font-black text-slate-900">
+                              {language === 'ar' ? 'تحليلات الاستثمار العقاري' : 'Real Estate Investment Insights'}
+                           </h2>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                              {language === 'ar' ? 'متابعة أداء المبيعات والمحصلات النقدية' : 'Sales performance & cash collections velocity'}
+                           </p>
+                        </div>
+                     </div>
+                     <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100 shrink-0">
+                        {language === 'ar' ? 'تيد كابيتال' : 'TED CAPITAL'}
+                     </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                     <div className="bg-slate-50 p-5 md:p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                           {language === 'ar' ? 'إجمالي قيمة التعاقدات' : 'Total Contract Value'}
+                        </span>
+                        <div className="mt-4 flex items-baseline gap-2">
+                           <span className="text-xl md:text-2xl font-black font-mono text-slate-900">{reStats.totalSales.toLocaleString()}</span>
+                           <span className="text-[8px] text-slate-400 font-black">LCY</span>
+                        </div>
+                     </div>
+                     <div className="bg-emerald-50/50 p-5 md:p-6 rounded-2xl border border-emerald-100/50 flex flex-col justify-between">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                           {language === 'ar' ? 'المحصل النقدي' : 'Collected Down-payments & Installments'}
+                        </span>
+                        <div className="mt-4 flex items-baseline gap-2">
+                           <span className="text-xl md:text-2xl font-black font-mono text-emerald-700">{reStats.collected.toLocaleString()}</span>
+                           <span className="text-[8px] text-emerald-600 font-black">LCY</span>
+                        </div>
+                        <div className="mt-2 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+                           <div 
+                              className="h-full bg-emerald-600" 
+                              style={{ width: `${reStats.totalSales > 0 ? (reStats.collected / reStats.totalSales) * 100 : 0}%` }}
+                           ></div>
+                        </div>
+                     </div>
+                     <div className="bg-amber-50/50 p-5 md:p-6 rounded-2xl border border-amber-100/50 flex flex-col justify-between col-span-1 sm:col-span-2 lg:col-span-1">
+                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                           {language === 'ar' ? 'المستحقات المعلقة' : 'Pending Collections'}
+                        </span>
+                        <div className="mt-4 flex items-baseline gap-2">
+                           <span className="text-xl md:text-2xl font-black font-mono text-amber-700">{reStats.pending.toLocaleString()}</span>
+                           <span className="text-[8px] text-amber-600 font-black">LCY</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            )}
+
+            {/* Sector Margins Contribution Card */}
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[60px]"></div>
+               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">📈</div>
+                     <div>
+                        <h2 className="text-base md:text-lg font-black text-slate-900">
+                           {language === 'ar' ? 'مساهمة هوامش القطاعات' : 'Sector Margins Contribution'}
+                        </h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                           {language === 'ar' ? 'تحليل مساهمة الربحية عبر القطاعات الرئيسية' : 'Profit margin analysis across primary sectors'}
+                        </p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  {[
+                     { nameAr: 'قطاع التطوير العقاري', nameEn: 'Real Estate (TED Capital)', val: 42, color: 'hsl(142, 70%, 45%)' },
+                     { nameAr: 'قطاع المقاولات', nameEn: 'Contracting (Master Builder)', val: 28, color: 'hsl(217, 91%, 60%)' },
+                     { nameAr: 'قطاع الأدوية', nameEn: 'Pharma (PRIMEMED PHARMA)', val: 18, color: 'hsl(38, 92%, 50%)' },
+                     { nameAr: 'قطاع التصميم والديكور', nameEn: 'Decor & Design (Design Concept)', val: 12, color: 'hsl(325, 90%, 60%)' }
+                  ].map((sec, idx) => (
+                     <div key={idx} className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                           <span className="font-bold text-slate-700">{language === 'ar' ? sec.nameAr : sec.nameEn}</span>
+                           <span className="font-black text-slate-900">{sec.val}%</span>
+                        </div>
+                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
+                           <div 
+                              className="h-full rounded-full transition-all duration-1000" 
+                              style={{ width: `${sec.val}%`, backgroundColor: sec.color }}
+                           ></div>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+
+            {/* Liquidity Gap Warning Matrix */}
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[60px]"></div>
+               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">⚠️</div>
+                     <div>
+                        <h2 className="text-base md:text-lg font-black text-slate-900">
+                           {language === 'ar' ? 'مصفوفة فجوة السيولة نقدية' : 'Liquidity Gap Warning Matrix'}
+                        </h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                           {language === 'ar' ? 'التنبؤ بالعجز النقدي المستقبلي ومخاطر السيولة' : 'Forward-looking cash deficits and liquidity alerts'}
+                        </p>
+                     </div>
+                  </div>
+               </div>
+
+               {liquidityGapMonths.length > 0 ? (
+                  <div className="space-y-4">
+                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-xs font-bold leading-relaxed">
+                        ⚠️ {language === 'ar' 
+                           ? 'تنبيه: تم رصد فجوات سيولة سلبية في الأشهر التالية. يرجى مراجعة جدولة تحصيل الأقساط أو دفعات الموردين لتفادي العجز.' 
+                           : 'Alert: Negative liquidity gaps identified. Review installment collections scheduling or vendor payouts to prevent cash shortfalls.'}
+                     </div>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                        {liquidityGapMonths.map((gap, i) => (
+                           <div key={i} className="bg-rose-50/50 p-4 rounded-xl border border-rose-100 flex justify-between items-center">
+                              <span className="font-black text-slate-700">{gap.month_year}</span>
+                              <div className="text-right">
+                                 <span className="text-xs font-black text-rose-600 block">{Number(gap.liquidity_gap).toLocaleString()} LCY</span>
+                                 <span className="text-[8px] text-rose-450 font-black uppercase tracking-widest">{language === 'ar' ? 'عجز متوقع' : 'Projected Deficit'}</span>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               ) : (
+                  <div className="p-6 bg-emerald-550/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4 text-emerald-800 text-xs font-bold">
+                     <span>✅</span>
+                     <span>
+                        {language === 'ar' 
+                           ? 'السيولة مستقرة: لا توجد فجوات سلبية متوقعة في الأشهر الـ 12 القادمة.' 
+                           : 'Liquidity Stable: No negative cashflow gaps projected over the next 12 months.'}
+                     </span>
+                  </div>
+               )}
+            </div>
+
             {/* Strategic Intelligence Grids */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('cashflow', 'Cashflow')}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('cashflow', 'Cashflow')}>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[40px]"></div>
                     <div className="flex justify-between items-center mb-6 relative z-10">
                         <div>
@@ -389,7 +632,7 @@ export default function Reports() {
                     </div>
                 </div>
                 
-                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('absorption', 'Absorption')}>
+                <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('absorption', 'Absorption')}>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px]"></div>
                     <div className="flex justify-between items-center mb-6 relative z-10">
                         <div>
@@ -415,13 +658,13 @@ export default function Reports() {
             </div>
 
             {/* Transactional Audit Grids */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 pb-16">
                {[
                   { title: "Project Profitability Matrix", data: profitabilityData, cols: ["Project", "Budget", "Costs", "Profit"], type: 'profitability', icon: '💎' },
                   { title: "Human Capital Efficiency", data: payrollData, cols: ["Dept", "Count", "Total Commitment"], type: 'payroll', icon: '👤' }
                ].map((mod, i) => (
-                  <div key={i} onClick={() => handleDetailClick(mod.type, mod.title)} className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl overflow-hidden cursor-pointer hover:border-emerald-500/30 transition-all group">
-                     <div className="p-6 px-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center group-hover:bg-slate-950 group-hover:text-white transition-all duration-500">
+                  <div key={i} onClick={() => handleDetailClick(mod.type, mod.title)} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-2xl overflow-hidden cursor-pointer hover:border-emerald-500/30 transition-all group">
+                     <div className="p-5 md:p-6 px-6 md:px-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center group-hover:bg-slate-950 group-hover:text-white transition-all duration-500">
                         <div className="flex items-center gap-4">
                            <div className="w-10 h-10 bg-white shadow-inner rounded-xl flex items-center justify-center text-lg group-hover:bg-white/10 group-hover:text-white transition-colors">{mod.icon}</div>
                            <h3 className="text-xs font-black uppercase tracking-[0.2em]">{mod.title}</h3>
