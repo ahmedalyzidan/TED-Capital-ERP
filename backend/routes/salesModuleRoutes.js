@@ -891,11 +891,14 @@ router.get('/analytics', async (req, res) => {
         (SELECT COUNT(*) FROM sales_invoices WHERE 1=1 ${cf}) AS total_invoices,
         (SELECT COUNT(*) FROM sales_delivery_notes WHERE 1=1 ${cf}) AS total_deliveries`),
 
-      // Top products from POS + orders (by revenue)
+      // Top products from POS + orders (by revenue) - Robust cast logic
       pool.query(`SELECT
         elem->>'name' AS product_name,
-        SUM((elem->>'qty')::numeric * (elem->>'price')::numeric) AS revenue,
-        SUM((elem->>'qty')::numeric) AS qty_sold
+        SUM(
+          (CASE WHEN elem->>'qty' ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (elem->>'qty')::numeric ELSE 0 END) * 
+          (CASE WHEN elem->>'price' ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (elem->>'price')::numeric ELSE 0 END)
+        ) AS revenue,
+        SUM(CASE WHEN elem->>'qty' ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (elem->>'qty')::numeric ELSE 0 END) AS qty_sold
         FROM sales_pos_transactions p, jsonb_array_elements(p.items) elem
         WHERE 1=1 ${cf}
         GROUP BY elem->>'name'
@@ -941,7 +944,10 @@ router.get('/analytics', async (req, res) => {
         conversionRate
       }
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("🔥 Error in /sales/analytics:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── INVENTORY LOOKUP (Cross-Module Product Search) ──────────────────────────
