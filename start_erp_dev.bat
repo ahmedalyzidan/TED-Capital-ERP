@@ -2,9 +2,9 @@
 title TED ERP Development Environment
 echo [INFO] Starting TED ERP Servers...
 
-:: 1. Start AI Proxy (LiteLLM with Qwen2.5-coder via Ollama)
-echo [INFO] Starting Local AI Model (Port 4040)...
-start "AI Proxy - LiteLLM" cmd /k "chcp 65001 && call .\venv\Scripts\activate && set PYTHONIOENCODING=utf-8 && litellm --model ollama/qwen2.5-coder:32b --port 4040 --drop_params"
+:: 1. Start AI Proxy (LiteLLM with Gemini 1.5 Flash)
+echo [INFO] Starting Gemini AI Proxy (Port 4040)...
+start "AI Proxy - LiteLLM" cmd /k "chcp 65001 && call .\venv\Scripts\activate && set PYTHONIOENCODING=utf-8 && set GEMINI_API_KEY=AIzaSyA_wxN3JtRjWK9YKIBovvx5UkjbHAWSR9A && litellm --model gemini/gemini-2.5-flash --port 4040 --drop_params"
 
 :: 2. Start Frontend (Vite) in a separate window
 echo [INFO] Starting Vite Frontend...
@@ -15,7 +15,7 @@ echo [INFO] Starting Backend Server...
 start "TED ERP - Backend" cmd /k "npm start"
 
 :: 4. Verify AI Proxy Status
-echo [INFO] Waiting 10 seconds for Qwen2.5-coder to load into memory...
+echo [INFO] Waiting 10 seconds for Gemini Proxy to load...
 timeout /t 10 /nobreak >nul
 
 echo [INFO] Verifying AI Server on Port 4040...
@@ -24,7 +24,7 @@ if %errorlevel% equ 0 (
     echo.
     echo ==============================================================
     echo [VERIFIED SUCCESS] AI Proxy is ACTIVELY LISTENING on Port 4040!
-    echo [VERIFIED SUCCESS] Antigravity is safely connected to Qwen.
+    echo [VERIFIED SUCCESS] Antigravity is safely connected to Gemini.
     echo ==============================================================
     echo.
 ) else (
@@ -36,4 +36,4 @@ if %errorlevel% equ 0 (
 
 echo [SUCCESS] Environment startup complete!
 echo [NOTE] Backend auto-restart is active. Run "python orchestrator.py" manually for testing.
-pause
+if "%~1" neq "--no-pause" pause

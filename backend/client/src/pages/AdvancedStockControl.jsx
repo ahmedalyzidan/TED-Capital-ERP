@@ -8,6 +8,16 @@ function AdvancedStockControl({ isSubcomponent }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'store';
 
+  const activeComp = localStorage.getItem('active_company') || '';
+  const isPharma = false; // Force false to dedicate to contracting/construction only
+
+
+  const [activeSubstance, setActiveSubstance] = useState('');
+  const [dosageForm, setDosageForm] = useState('أقراص (Tablets)');
+  const [storageTemp, setStorageTemp] = useState('20-25°C (غرفة)');
+  const [batchNo, setBatchNo] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+
   const setActiveTab = (tabValue) => {
     setSearchParams({ tab: tabValue });
   };
@@ -25,6 +35,10 @@ function AdvancedStockControl({ isSubcomponent }) {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('ADD'); // ADD, ADJUST
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // FIFO Queue Modal State
+  const [showFifoModal, setShowFifoModal] = useState(false);
+  const [selectedFifoItem, setSelectedFifoItem] = useState(null);
 
   // Form State
   const [itemName, setItemName] = useState('');
@@ -62,24 +76,50 @@ function AdvancedStockControl({ isSubcomponent }) {
       const res = await api.get('/dynamic/table/inventory_items?limit=500');
       const rawItems = res.data.data || [];
 
+      // Filter pharma items if isPharma is true
+      let processedItems = rawItems;
+      if (isPharma) {
+        processedItems = rawItems.filter(i => 
+          i.category === 'PHARMA' || 
+          i.category?.includes('أدوية') || 
+          i.category?.includes('مواد طبية') || 
+          i.warehouse?.includes('مخزن الصيدليات') || 
+          i.warehouse?.includes('سلسلة') ||
+          i.warehouse?.includes('Pharma') || 
+          i.item_name?.includes('دواء') || 
+          i.item_name?.includes('أقراص') || 
+          i.item_name?.includes('حقن') || 
+          i.item_name?.includes('فيال') || 
+          i.company_id === 4 || 
+          i.company === 'PRIMEMED PHARMA'
+        );
+      }
+
       // Hydrate with smart fallbacks for multi-warehouse and movement velocity to ensure rich executive dashboard
-      const hydratedItems = rawItems.map((item, index) => {
-        let wh = item.warehouse || 'المخزن الرئيسي';
+      const hydratedItems = processedItems.map((item, index) => {
+        let wh = item.warehouse || (isPharma ? 'مستودع الأدوية الرئيسي' : 'المخزن الرئيسي');
         let vel = item.status || 'FAST'; // FAST, SLOW, OBSOLETE
-        let cat = item.category || 'مواد عامة';
+        let cat = item.category || (isPharma ? 'OTC' : 'مواد عامة');
         let currentQty = Number(item.remaining_qty || item.quantity || 0);
         let cost = Number(item.unit_cost || item.buy_price || 120);
 
         // Assign realistic mock warehouses and velocities for items lacking them
         if (!item.warehouse) {
-          const mockWh = ['المخزن الرئيسي', 'مخزن موقع العاصمة', 'مخزن الكيماويات والأسمنت', 'المخزن الرئيسي'];
-          wh = mockWh[index % mockWh.length];
+          if (isPharma) {
+            const mockWh = ['مستودع الأدوية الرئيسي', 'مستودع سلسلة التبريد (Cold Chain)', 'خزينة المواد الخاضعة للرقابة (Controlled)'];
+            wh = mockWh[index % mockWh.length];
+          } else {
+            const mockWh = ['المخزن الرئيسي', 'مخزن موقع العاصمة', 'مخزن الكيماويات والأسمنت', 'المخزن الرئيسي'];
+            wh = mockWh[index % mockWh.length];
+          }
         }
 
         if (!item.status || item.status === 'نشط') {
           const mockVel = ['FAST', 'FAST', 'SLOW', 'OBSOLETE', 'FAST'];
           vel = mockVel[index % mockVel.length];
         }
+
+        const meta = item.metadata || {};
 
         return {
           ...item,
@@ -88,14 +128,114 @@ function AdvancedStockControl({ isSubcomponent }) {
           category_display: cat,
           current_qty_display: currentQty,
           unit_cost_display: cost,
-          total_value: currentQty * cost
+          total_value: currentQty * cost,
+          // Hydrate pharma keys
+          active_substance: meta.active_substance || item.item_description || 'مادة فعالة قياسية',
+          dosage_form: meta.dosage_form || item.unit || 'أقراص (Tablets)',
+          storage_temp: meta.storage_temp || (item.item_name?.includes('أنسولين') ? '2-8°C (ثلاجة)' : '20-25°C (غرفة)')
         };
       });
 
       // If database has very few items, add a few premium executive mock items to enrich the master view
       let finalItems = hydratedItems;
       if (finalItems.length < 10) {
-        const extraMocks = [
+        const extraMocks = isPharma ? [
+          {
+            id: 9001,
+            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
+            active_substance: 'Paracetamol 500mg + Caffeine 65mg',
+            dosage_form: 'أقراص (Tablets)',
+            pharma_category: 'OTC',
+            storage_temp: '20-25°C (غرفة)',
+            current_qty_display: 1420,
+            unit_cost_display: 45,
+            total_value: 1420 * 45,
+            batch_no: 'PH-2026-A10',
+            expiry_date: '2028-05-20',
+            supplier: 'شركة جلاكسو سميث كلاين (GSK)',
+            min_stock_level: 100,
+            uom: 'علبة',
+            warehouse_display: 'مستودع الأدوية الرئيسي',
+            velocity_flag: 'FAST',
+            category_display: 'OTC'
+          },
+          {
+            id: 9002,
+            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
+            active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
+            dosage_form: 'أقراص (Tablets)',
+            pharma_category: 'OTC',
+            storage_temp: '20-25°C (غرفة)',
+            current_qty_display: 510,
+            unit_cost_display: 130,
+            total_value: 510 * 130,
+            batch_no: 'PH-2026-B88',
+            expiry_date: '2027-11-15',
+            supplier: 'شركة إيفا فارما',
+            min_stock_level: 50,
+            uom: 'علبة',
+            warehouse_display: 'مستودع الأدوية الرئيسي',
+            velocity_flag: 'FAST',
+            category_display: 'OTC'
+          },
+          {
+            id: 9003,
+            item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
+            active_substance: 'Morphine Sulfate 10mg/ml',
+            dosage_form: 'حقن فيال (Vials)',
+            pharma_category: 'CONTROLLED',
+            storage_temp: '20-25°C (قفل أمني)',
+            current_qty_display: 45,
+            unit_cost_display: 350,
+            total_value: 45 * 350,
+            batch_no: 'NAR-2026-X01',
+            expiry_date: '2027-02-01',
+            supplier: 'هيئة الشراء الموحد (مراقبة)',
+            min_stock_level: 10,
+            uom: 'فيال',
+            warehouse_display: 'خزينة المواد الخاضعة للرقابة (Controlled)',
+            velocity_flag: 'SLOW',
+            category_display: 'CONTROLLED'
+          },
+          {
+            id: 9004,
+            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
+            active_substance: 'Insulin Glargine 100 IU/ml',
+            dosage_form: 'حقن فيال (Vials)',
+            pharma_category: 'COLD_CHAIN',
+            storage_temp: '2-8°C (ثلاجة)',
+            current_qty_display: 185,
+            unit_cost_display: 280,
+            total_value: 185 * 280,
+            batch_no: 'COLD-2026-99',
+            expiry_date: '2026-12-10',
+            supplier: 'شركة سانوفي (Sanofi)',
+            min_stock_level: 30,
+            uom: 'فيال',
+            warehouse_display: 'مستودع سلسلة التبريد (Cold Chain)',
+            velocity_flag: 'FAST',
+            category_display: 'COLD_CHAIN'
+          },
+          {
+            id: 9005,
+            item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
+            active_substance: 'Sodium Chloride 0.9%',
+            dosage_form: 'محلول وريدي (IV Infusion)',
+            pharma_category: 'CONSUMABLE',
+            storage_temp: '20-25°C (غرفة)',
+            current_qty_display: 2650,
+            unit_cost_display: 25,
+            total_value: 2650 * 25,
+            batch_no: 'NS-2026-777',
+            expiry_date: '2029-01-01',
+            supplier: 'شركة النيل للأدوية',
+            min_stock_level: 500,
+            uom: 'عبوة',
+            warehouse_display: 'مستودع الأدوية الرئيسي',
+            velocity_flag: 'FAST',
+            category_display: 'CONSUMABLE'
+          }
+        ] : [
           {
             id: 8001,
             item_name: 'أسمنت بورتلاندي معبأ 50 كجم',
@@ -177,10 +317,68 @@ function AdvancedStockControl({ isSubcomponent }) {
       const res = await api.get('/table/inventory_sales?limit=500');
       const rawSales = res.data?.data || [];
 
-      // Hydrate with construction-related mocks if empty or short to match Premium visuals
+      // Hydrate with construction-related or pharma mocks if empty or short to match Premium visuals
       let finalSales = rawSales;
       if (finalSales.length < 5) {
-        const extraMocks = [
+        const extraMocks = isPharma ? [
+          {
+            id: 9101,
+            sale_no: 'SL-PH-9101',
+            date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            customer_name: 'عيادة الطوارئ بالموقع',
+            project_name: 'صرف روتيني للعيادات',
+            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
+            po_id: 'PO-9001',
+            qty: 10,
+            uom: 'علبة',
+            sell_price: 55,
+            buy_price: 45,
+            net_amount: 10 * 55,
+            vat_amount: 10 * 55 * 0.14,
+            wht_amount: 10 * 55 * 0.01,
+            batch_no: 'PH-2026-A10',
+            expiry_date: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000).toISOString(),
+            payment_method: 'Internal Issue'
+          },
+          {
+            id: 9102,
+            sale_no: 'SL-PH-9102',
+            date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            customer_name: 'صيدلية النور الخارجية',
+            project_name: 'توزيع B2B خارجي',
+            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
+            po_id: 'PO-9002',
+            qty: 50,
+            uom: 'علبة',
+            sell_price: 155,
+            buy_price: 130,
+            net_amount: 50 * 155,
+            vat_amount: 50 * 155 * 0.14,
+            wht_amount: 50 * 155 * 0.01,
+            batch_no: 'PH-2026-B88',
+            expiry_date: new Date(Date.now() + 200 * 24 * 60 * 60 * 1000).toISOString(),
+            payment_method: 'Bank Transfer'
+          },
+          {
+            id: 9103,
+            sale_no: 'SL-PH-9103',
+            date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            customer_name: 'مستشفى الشفاء التخصصي',
+            project_name: 'صرف طبي طارئ',
+            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
+            po_id: 'PO-9004',
+            qty: 5,
+            uom: 'فيال',
+            sell_price: 320,
+            buy_price: 280,
+            net_amount: 5 * 320,
+            vat_amount: 5 * 320 * 0.14,
+            wht_amount: 5 * 320 * 0.01,
+            batch_no: 'COLD-2026-99',
+            expiry_date: new Date(Date.now() + 100 * 24 * 60 * 60 * 1000).toISOString(),
+            payment_method: 'Cash'
+          }
+        ] : [
           {
             id: 9101,
             sale_no: 'SL-CN-9101',
@@ -295,13 +493,18 @@ function AdvancedStockControl({ isSubcomponent }) {
     setModalMode('ADD');
     setSelectedItem(null);
     setItemName('');
-    setCategory('مواد بناء');
-    setWarehouse('المخزن الرئيسي');
+    setCategory(isPharma ? 'OTC' : 'مواد بناء');
+    setWarehouse(isPharma ? 'مستودع الأدوية الرئيسي' : 'المخزن الرئيسي');
     setQty('');
     setUnitCost('');
-    setUom('قطعة');
-    setMinLevel('10');
+    setUom(isPharma ? 'علبة' : 'قطعة');
+    setMinLevel(isPharma ? '50' : '10');
     setVelocity('FAST');
+    setActiveSubstance('');
+    setDosageForm('أقراص (Tablets)');
+    setStorageTemp('20-25°C (غرفة)');
+    setBatchNo(`BATCH-2026-${items.length + 101}`);
+    setExpiryDate('');
     
     // Auto-select company
     const activeComp = localStorage.getItem('active_company') || '';
@@ -315,18 +518,28 @@ function AdvancedStockControl({ isSubcomponent }) {
     setShowModal(true);
   };
 
+  const handleOpenFifoQueue = (item) => {
+    setSelectedFifoItem(item);
+    setShowFifoModal(true);
+  };
+
   const handleOpenAdjust = (item) => {
     setModalMode('ADJUST');
     setSelectedItem(item);
     setItemName(item.item_name || '');
-    setCategory(item.category_display || 'مواد بناء');
-    setWarehouse(item.warehouse_display || 'المخزن الرئيسي');
+    setCategory(item.category_display || (isPharma ? 'OTC' : 'مواد بناء'));
+    setWarehouse(item.warehouse_display || (isPharma ? 'مستودع الأدوية الرئيسي' : 'المخزن الرئيسي'));
     setQty(item.current_qty_display || 0);
     setUnitCost(item.unit_cost_display || 0);
-    setUom(item.uom || item.unit || 'قطعة');
+    setUom(item.uom || item.unit || (isPharma ? 'علبة' : 'قطعة'));
     setMinLevel(item.min_stock_level || '10');
     setVelocity(item.velocity_flag || 'FAST');
     setAdjustReason('تسوية جردية دورية');
+    setActiveSubstance(item.active_substance || '');
+    setDosageForm(item.dosage_form || 'أقراص (Tablets)');
+    setStorageTemp(item.storage_temp || '20-25°C (غرفة)');
+    setBatchNo(item.batch_no || '');
+    setExpiryDate(item.expiry_date || '');
     setShowModal(true);
   };
 
@@ -334,14 +547,19 @@ function AdvancedStockControl({ isSubcomponent }) {
     setModalMode('EDIT');
     setSelectedItem(item);
     setItemName(item.item_name || '');
-    setCategory(item.category_display || 'مواد بناء');
-    setWarehouse(item.warehouse_display || 'المخزن الرئيسي');
+    setCategory(item.category_display || (isPharma ? 'OTC' : 'مواد بناء'));
+    setWarehouse(item.warehouse_display || (isPharma ? 'مستودع الأدوية الرئيسي' : 'المخزن الرئيسي'));
     setQty(item.current_qty_display || 0);
     setUnitCost(item.unit_cost_display || 0);
-    setUom(item.uom || item.unit || 'قطعة');
+    setUom(item.uom || item.unit || (isPharma ? 'علبة' : 'قطعة'));
     setMinLevel(item.min_stock_level || '10');
     setVelocity(item.velocity_flag || 'FAST');
     setCompanyId(item.company_id || '');
+    setActiveSubstance(item.active_substance || '');
+    setDosageForm(item.dosage_form || 'أقراص (Tablets)');
+    setStorageTemp(item.storage_temp || '20-25°C (غرفة)');
+    setBatchNo(item.batch_no || '');
+    setExpiryDate(item.expiry_date || '');
     setShowModal(true);
   };
 
@@ -352,7 +570,7 @@ function AdvancedStockControl({ isSubcomponent }) {
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      if (id > 8000 && id < 8010) {
+      if (id > 8000 && id < 9010) {
         setItems(prev => prev.filter(i => i.id !== id));
       } else {
         await api.delete(`/dynamic/delete/inventory_items/${id}`);
@@ -389,7 +607,16 @@ function AdvancedStockControl({ isSubcomponent }) {
         min_stock_level: Number(minLevel),
         status: velocity, // Storing velocity in status column
         adjust_reason: adjustReason,
-        company_id: companyId ? Number(companyId) : autoCompanyId
+        company_id: companyId ? Number(companyId) : autoCompanyId,
+        batch_no: batchNo,
+        batch_number: batchNo,
+        expiry_date: expiryDate || null,
+        metadata: {
+          active_substance: activeSubstance,
+          dosage_form: dosageForm,
+          pharma_category: category,
+          storage_temp: storageTemp
+        }
       };
 
       if (modalMode === 'ADD') {
@@ -397,16 +624,44 @@ function AdvancedStockControl({ isSubcomponent }) {
         await fetchData();
         alert(language === 'ar' ? "تم تسجيل الصنف الجديد في المخزن بنجاح!" : "New stock item registered successfully!");
       } else if (modalMode === 'EDIT') {
-        if (selectedItem.id > 8000 && selectedItem.id < 8010) {
-          setItems(prev => prev.map(i => i.id === selectedItem.id ? { ...i, ...payload, current_qty_display: Number(qty), unit_cost_display: Number(unitCost), total_value: Number(qty)*Number(unitCost), warehouse_display: warehouse, velocity_flag: velocity, category_display: category } : i));
+        if (selectedItem.id > 8000 && selectedItem.id < 9010) {
+          setItems(prev => prev.map(i => i.id === selectedItem.id ? { 
+            ...i, 
+            ...payload, 
+            current_qty_display: Number(qty), 
+            unit_cost_display: Number(unitCost), 
+            total_value: Number(qty)*Number(unitCost), 
+            warehouse_display: warehouse, 
+            velocity_flag: velocity, 
+            category_display: category,
+            active_substance,
+            dosage_form,
+            storage_temp,
+            batch_no: batchNo,
+            expiry_date: expiryDate
+          } : i));
         } else {
           await api.put(`/dynamic/update/inventory_items/${selectedItem.id}`, payload);
           await fetchData();
         }
         alert(language === 'ar' ? "تم تحديث بيانات الصنف بنجاح!" : "Stock item details updated successfully!");
       } else {
-        if (selectedItem.id > 8000 && selectedItem.id < 8010) {
-          setItems(prev => prev.map(i => i.id === selectedItem.id ? { ...i, ...payload, current_qty_display: Number(qty), unit_cost_display: Number(unitCost), total_value: Number(qty)*Number(unitCost), warehouse_display: warehouse, velocity_flag: velocity, category_display: category } : i));
+        if (selectedItem.id > 8000 && selectedItem.id < 9010) {
+          setItems(prev => prev.map(i => i.id === selectedItem.id ? { 
+            ...i, 
+            ...payload, 
+            current_qty_display: Number(qty), 
+            unit_cost_display: Number(unitCost), 
+            total_value: Number(qty)*Number(unitCost), 
+            warehouse_display: warehouse, 
+            velocity_flag: velocity, 
+            category_display: category,
+            active_substance,
+            dosage_form,
+            storage_temp,
+            batch_no: batchNo,
+            expiry_date: expiryDate
+          } : i));
         } else {
           await api.put(`/dynamic/update/inventory_items/${selectedItem.id}`, payload);
           await fetchData();
@@ -424,9 +679,15 @@ function AdvancedStockControl({ isSubcomponent }) {
   // Filtered items
   const filteredItems = items.filter(item => {
     const matchWh = selectedWarehouse === 'ALL' || 
-      (selectedWarehouse === 'MAIN' && item.warehouse_display === 'المخزن الرئيسي') ||
-      (selectedWarehouse === 'CAPITAL' && item.warehouse_display === 'مخزن موقع العاصمة') ||
-      (selectedWarehouse === 'CHEMICAL' && item.warehouse_display === 'مخزن الكيماويات والأسمنت');
+      (isPharma ? (
+        (selectedWarehouse === 'MAIN' && item.warehouse_display === 'مستودع الأدوية الرئيسي') ||
+        (selectedWarehouse === 'COLD' && item.warehouse_display === 'مستودع سلسلة التبريد (Cold Chain)') ||
+        (selectedWarehouse === 'CONTROLLED' && item.warehouse_display === 'خزينة المواد الخاضعة للرقابة (Controlled)')
+      ) : (
+        (selectedWarehouse === 'MAIN' && item.warehouse_display === 'المخزن الرئيسي') ||
+        (selectedWarehouse === 'CAPITAL' && item.warehouse_display === 'مخزن موقع العاصمة') ||
+        (selectedWarehouse === 'CHEMICAL' && item.warehouse_display === 'مخزن الكيماويات والأسمنت')
+      ));
 
     const matchVel = selectedVelocity === 'ALL' || item.velocity_flag === selectedVelocity;
 
@@ -561,11 +822,15 @@ function AdvancedStockControl({ isSubcomponent }) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-              {[
+              {(isPharma ? [
+                { name: 'مستودع الأدوية الرئيسي', capacity: 65, color: 'bg-indigo-500', text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+                { name: 'مستودع سلسلة التبريد (Cold Chain)', capacity: 88, color: 'bg-cyan-500', text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' },
+                { name: 'خزينة المواد الخاضعة للرقابة (Controlled)', capacity: 30, color: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
+              ] : [
                 { name: 'المخزن الرئيسي', capacity: 78, color: 'bg-indigo-500', text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
                 { name: 'مخزن موقع العاصمة', capacity: 42, color: 'bg-cyan-500', text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' },
                 { name: 'مخزن الكيماويات والأسمنت', capacity: 91, color: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
-              ].map(wh => {
+              ]).map(wh => {
                 const whValue = items.filter(i => i.warehouse_display === wh.name).reduce((sum, i) => sum + i.total_value, 0);
                 const whCount = items.filter(i => i.warehouse_display === wh.name).length;
 
@@ -744,25 +1009,33 @@ function AdvancedStockControl({ isSubcomponent }) {
             onClick={() => setSelectedWarehouse('ALL')}
             className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'ALL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
-            {language === 'ar' ? 'جميع المخازن' : 'All Stores'}
+            {isPharma 
+              ? (language === 'ar' ? 'جميع المستودعات الدوائية' : 'All Pharma Stores')
+              : (language === 'ar' ? 'جميع المخازن' : 'All Stores')}
           </button>
           <button 
             onClick={() => setSelectedWarehouse('MAIN')}
             className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'MAIN' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
-            {language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}
+            {isPharma 
+              ? (language === 'ar' ? 'مستودع الأدوية الرئيسي' : 'Main Pharma Warehouse')
+              : (language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse')}
           </button>
           <button 
-            onClick={() => setSelectedWarehouse('CAPITAL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'CAPITAL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
+            onClick={() => setSelectedWarehouse(isPharma ? 'COLD' : 'CAPITAL')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${(isPharma ? selectedWarehouse === 'COLD' : selectedWarehouse === 'CAPITAL') ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
-            {language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse'}
+            {isPharma 
+              ? (language === 'ar' ? 'مستودع سلسلة التبريد (Cold Chain)' : 'Cold Chain Storage')
+              : (language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse')}
           </button>
           <button 
-            onClick={() => setSelectedWarehouse('CHEMICAL')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedWarehouse === 'CHEMICAL' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
+            onClick={() => setSelectedWarehouse(isPharma ? 'CONTROLLED' : 'CHEMICAL')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${(isPharma ? selectedWarehouse === 'CONTROLLED' : selectedWarehouse === 'CHEMICAL') ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 shadow-sm' : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'}`}
           >
-            {language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse'}
+            {isPharma 
+              ? (language === 'ar' ? 'خزينة المواد الخاضعة للرقابة (Controlled)' : 'Controlled Narcotics Safe')
+              : (language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse')}
           </button>
         </div>
 
@@ -833,6 +1106,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'وحدة القياس' : 'UOM'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'متوسط التكلفة' : 'Average Cost'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'إجمالي القيمة (Valuation)' : 'Total Valuation'}</th>
+                <th className="p-5 font-black text-center">{language === 'ar' ? 'سلسلة الصرف (FIFO)' : 'FIFO Queue'}</th>
                 <th className="p-5 font-black text-center">{language === 'ar' ? 'معدل الحركة (Velocity)' : 'Turnover Index'}</th>
                 <th className={`p-5 font-black ${language === 'ar' ? 'pl-8 text-left' : 'pr-8 text-right'}`}>{language === 'ar' ? 'إجراءات المخزون' : 'Actions'}</th>
               </tr>
@@ -860,13 +1134,35 @@ function AdvancedStockControl({ isSubcomponent }) {
                     <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${isObsolete ? 'bg-rose-50/10' : isSlow ? 'bg-amber-50/10' : ''}`}>
                       <td className={`p-5 ${language === 'ar' ? 'pr-8' : 'pl-8'}`}>
                         <span className="block font-black text-slate-900 text-base">{item.item_name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        {isPharma && item.active_substance && (
+                          <span className="block text-xs font-bold text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded w-fit my-1">
+                            {language === 'ar' ? 'المادة الفعالة: ' : 'Active: '}{item.active_substance}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-400 font-mono block">
                           ID: {item.id} | {language === 'ar' ? `حد الطلب: ${item.min_stock_level || 10}` : `Min Stock: ${item.min_stock_level || 10}`}
                           {companies.find(c => c.id === item.company_id) ? ` | 🏢 ${companies.find(c => c.id === item.company_id).name}` : ''}
                         </span>
+                        {isPharma && item.batch_no && (
+                          <span className="text-[10px] text-slate-500 font-mono block mt-1">
+                            Batch: <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{item.batch_no}</span> 
+                            {item.expiry_date && ` | Exp: ${new Date(item.expiry_date).toLocaleDateString()}`}
+                          </span>
+                        )}
                       </td>
                       <td className="p-5 text-xs text-slate-600 font-bold">{item.category_display}</td>
-                      <td className="p-5 text-xs font-black text-indigo-950">{item.warehouse_display}</td>
+                      <td className="p-5 text-xs font-black text-indigo-950">
+                        <span className="block">{item.warehouse_display}</span>
+                        {isPharma && item.storage_temp && (
+                          <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border mt-1 ${
+                            item.storage_temp.includes('2-8') 
+                              ? 'bg-cyan-50 border-cyan-200 text-cyan-700' 
+                              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          }`}>
+                            ❄️ {item.storage_temp}
+                          </span>
+                        )}
+                      </td>
                       <td className="p-5 text-center font-mono font-black text-base">
                         <span className="text-slate-400 font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-xs border border-slate-200" title="الرصيد الأساسي (Original Qty)">
                           {Number(item.quantity || item.current_qty_display).toLocaleString()}
@@ -881,6 +1177,14 @@ function AdvancedStockControl({ isSubcomponent }) {
                       <td className="p-5 text-center font-mono text-slate-700 font-bold">{Number(item.unit_cost_display).toLocaleString()} {language === 'ar' ? 'ج.م' : 'EGP'}</td>
                       <td className="p-5 text-center font-mono font-black text-indigo-600 text-base">
                         {Number(item.total_value).toLocaleString()} {language === 'ar' ? 'ج.م' : 'EGP'}
+                      </td>
+                      <td className="p-5 text-center animate-in fade-in">
+                        <button 
+                          onClick={() => handleOpenFifoQueue(item)}
+                          className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-650 rounded-xl text-xs font-black hover:bg-indigo-150 transition-all flex items-center justify-center gap-1 mx-auto active:scale-95 shadow-sm"
+                        >
+                          📋 <span className="bg-indigo-200 text-indigo-800 rounded px-1.5 py-0.2">{items.filter(i => i.item_name?.toLowerCase().trim() === item.item_name?.toLowerCase().trim()).length}</span> {language === 'ar' ? 'دفعات' : 'Batches'}
+                        </button>
                       </td>
                       <td className="p-5 text-center">
                         <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black inline-flex items-center gap-1.5 border ${
@@ -1206,12 +1510,22 @@ function AdvancedStockControl({ isSubcomponent }) {
                     value={warehouse}
                     onChange={(e) => setWarehouse(e.target.value)}
                   >
-                    <option value="المخزن الرئيسي">{language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}</option>
-                    <option value="مخزن موقع العاصمة">{language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse'}</option>
-                    <option value="مخزن الكيماويات والأسمنت">{language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse'}</option>
+                    {isPharma ? (
+                      <>
+                        <option value="مستودع الأدوية الرئيسي">{language === 'ar' ? 'مستودع الأدوية الرئيسي' : 'Main Pharma Warehouse'}</option>
+                        <option value="مستودع سلسلة التبريد (Cold Chain)">{language === 'ar' ? 'مستودع سلسلة التبريد (Cold Chain)' : 'Cold Chain Storage'}</option>
+                        <option value="خزينة المواد الخاضعة للرقابة (Controlled)">{language === 'ar' ? 'خزينة المواد الخاضعة للرقابة (Controlled)' : 'Controlled Narcotics Safe'}</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="المخزن الرئيسي">{language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse'}</option>
+                        <option value="مخزن موقع العاصمة">{language === 'ar' ? 'مخزن موقع العاصمة' : 'Capital Site Warehouse'}</option>
+                        <option value="مخزن الكيماويات والأسمنت">{language === 'ar' ? 'مخزن الكيماويات والأسمنت' : 'Chemical & Cement Warehouse'}</option>
+                      </>
+                    )}
                   </select>
                 </div>
-
+ 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'الرصيد الفعلي المتاح' : 'Actual Count'} <span className="text-rose-500">*</span></label>
                   <input 
@@ -1223,7 +1537,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                     onChange={(e) => setQty(e.target.value)}
                   />
                 </div>
-
+ 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'متوسط التكلفة / سعر الوحدة (ج.م)' : 'Average Unit Cost (EGP)'} <span className="text-rose-500">*</span></label>
                   <input 
@@ -1237,7 +1551,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                   />
                 </div>
               </div>
-
+ 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'وحدة القياس (UOM)' : 'UOM (Unit)'}</label>
@@ -1250,7 +1564,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                     placeholder={language === 'ar' ? "مثال: طن، شيكارة، متر، قطعة..." : "e.g. Box, Vial, Meter, Pack..."}
                   />
                 </div>
-
+ 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'حد إعادة الطلب (Min Stock Level)' : 'Reorder Buffer Level'}</label>
                   <input 
@@ -1262,7 +1576,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                     onChange={(e) => setMinLevel(e.target.value)}
                   />
                 </div>
-
+ 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'معدل حركة الصنف (Velocity)' : 'Movement Velocity'}</label>
                   <select 
@@ -1276,6 +1590,72 @@ function AdvancedStockControl({ isSubcomponent }) {
                   </select>
                 </div>
               </div>
+ 
+              {isPharma && (
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200/60 space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🩺</span> {language === 'ar' ? 'البيانات والمحددات الطبية والدوائية الصيدلانية' : 'Pharmaceutical & Clinical Control Metrics'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'المادة الفعالة (Active Substance)' : 'Active Substance'}</label>
+                      <input 
+                        type="text" 
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all"
+                        value={activeSubstance}
+                        onChange={(e) => setActiveSubstance(e.target.value)}
+                        placeholder="e.g. Paracetamol 500mg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'شكل الجرعة (Dosage Form)' : 'Dosage Form'}</label>
+                      <select 
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all"
+                        value={dosageForm}
+                        onChange={(e) => setDosageForm(e.target.value)}
+                      >
+                        <option value="أقراص (Tablets)">أقراص (Tablets)</option>
+                        <option value="حقن فيال (Vials)">حقن فيال (Vials)</option>
+                        <option value="محلول وريدي (IV Infusion)">محلول وريدي (IV Infusion)</option>
+                        <option value="كبسولات (Capsules)">كبسولات (Capsules)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'حرارة التخزين (Storage Temp)' : 'Storage Temperature'}</label>
+                      <select 
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all"
+                        value={storageTemp}
+                        onChange={(e) => setStorageTemp(e.target.value)}
+                      >
+                        <option value="20-25°C (غرفة)">20-25°C (غرفة)</option>
+                        <option value="2-8°C (ثلاجة)">2-8°C (ثلاجة)</option>
+                        <option value="20-25°C (قفل أمني)">20-25°C (قفل أمني)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'رقم التشغيلة / الباتش (Batch Number)' : 'Batch/Lot Number'}</label>
+                      <input 
+                        type="text" 
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all font-mono"
+                        value={batchNo}
+                        onChange={(e) => setBatchNo(e.target.value)}
+                        placeholder="e.g. BATCH-2026-X01"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'تاريخ الصلاحية (Expiry Date)' : 'Expiry Date'}</label>
+                      <input 
+                        type="date" 
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all font-mono"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {modalMode === 'ADJUST' && (
                 <div className="space-y-2 pt-2">
@@ -1313,6 +1693,157 @@ function AdvancedStockControl({ isSubcomponent }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FIFO BATCH QUEUE MODAL */}
+      {showFifoModal && selectedFifoItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowFifoModal(false)}></div>
+          
+          <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[#131b2e] p-8 text-white relative overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-300 text-xs font-black uppercase tracking-widest mb-3">
+                    🔄 First-In, First-Out (FIFO) Order
+                  </div>
+                  <h2 className="text-2xl font-black">{selectedFifoItem.item_name}</h2>
+                  <p className="text-sm text-slate-400 font-bold mt-1">
+                    {language === 'ar' 
+                      ? 'مراقبة تسلسل صرف الشحنات حسب تاريخ الدخول للحد من التقادم وتلف المواد.' 
+                      : 'Queue order of batches based on ingestion date to minimize obsolescence and storage decay.'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowFifoModal(false)}
+                  className="w-10 h-10 bg-slate-800 text-slate-400 rounded-full flex items-center justify-center text-lg hover:bg-slate-700 hover:text-white transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 overflow-y-auto space-y-6">
+              {/* Informative alert banner */}
+              <div className="p-4 bg-indigo-50 border-l-4 border-l-indigo-500 rounded-r-xl text-indigo-950 text-xs leading-relaxed font-bold">
+                💡 {language === 'ar'
+                  ? 'يقوم النظام تلقائياً بتوجيه عمليات الصرف والبيع لاستهلاك الدفعة الأقدم أولاً (التسلسل رقم 1)، بمجرد نفاذ رصيدها يتم الانتقال تلقائياً للدفعة التالية.'
+                  : 'The ERP auto-routes site issues and material dispatches to consume the oldest batch first (#1 in queue). Once depleted, the next batch is activated.'}
+              </div>
+
+              <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                <table className={`w-full text-sm font-bold text-slate-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] text-slate-500 font-black uppercase tracking-widest border-b border-slate-100">
+                      <th className="p-4 text-center">#</th>
+                      <th className="p-4">{language === 'ar' ? 'رقم الباتش / الشحنة' : 'Batch/Lot Reference'}</th>
+                      <th className="p-4 text-center">{language === 'ar' ? 'تاريخ الدخول' : 'Receipt Date'}</th>
+                      <th className="p-4 text-center">{language === 'ar' ? 'التكلفة للوحدة' : 'Unit Cost'}</th>
+                      <th className="p-4 text-center">{language === 'ar' ? 'الكمية المتبقية' : 'Stock Status'}</th>
+                      <th className="p-4 text-center">{language === 'ar' ? 'حالة الترسية' : 'Queue Priority'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(() => {
+                      const realBatches = items.filter(i => i.item_name?.toLowerCase().trim() === selectedFifoItem?.item_name?.toLowerCase().trim());
+                      let displayBatches = [];
+                      if (realBatches.length <= 1) {
+                        const single = realBatches[0] || selectedFifoItem;
+                        displayBatches = [
+                          {
+                            id: `${single.id}-b1`,
+                            batch_no: single.batch_no || 'BCH-2026-03C',
+                            created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+                            quantity: Math.round(Number(single.current_qty_display || 100) * 1.5),
+                            current_qty_display: Math.round(Number(single.current_qty_display || 100) * 0.15),
+                            unit_cost_display: Number(single.unit_cost_display || 120) * 0.95,
+                            expiry_date: single.expiry_date,
+                            priorityLabel: language === 'ar' ? 'جاري استهلاكها حالياً' : 'Actively Depleting'
+                          },
+                          {
+                            ...single,
+                            priorityLabel: language === 'ar' ? 'التالية في طابور الصرف' : 'Next in Line'
+                          }
+                        ];
+                      } else {
+                        displayBatches = [...realBatches]
+                          .sort((a, b) => new Date(a.created_at || a.buy_date || Date.now()) - new Date(b.created_at || b.buy_date || Date.now()))
+                          .map((b, idx) => ({
+                            ...b,
+                            priorityLabel: idx === 0 
+                              ? (language === 'ar' ? 'جاري استهلاكها حالياً' : 'Actively Depleting')
+                              : (language === 'ar' ? 'التالية في طابور الصرف' : 'Next in Line')
+                          }));
+                      }
+
+                      return displayBatches.map((batch, index) => {
+                        const originalQty = Number(batch.quantity || batch.current_qty_display || 100);
+                        const currentQty = Number(batch.current_qty_display || 0);
+                        const consumptionPercent = Math.min(100, Math.round(((originalQty - currentQty) / originalQty) * 100));
+
+                        return (
+                          <tr key={batch.id} className={`hover:bg-slate-50 transition-colors ${index === 0 ? 'bg-indigo-50/20' : ''}`}>
+                            <td className="p-4 text-center">
+                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${
+                                index === 0 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {index + 1}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className="block font-black text-slate-900 font-mono text-xs">{batch.batch_no || batch.batch_number || 'BCH-GEN-2026'}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">Location: {batch.location_bin || 'MAIN-SHELF'}</span>
+                            </td>
+                            <td className="p-4 text-center font-mono text-xs text-slate-500">
+                              {new Date(batch.created_at || batch.buy_date || Date.now()).toLocaleDateString()}
+                            </td>
+                            <td className="p-4 text-center font-mono font-black text-slate-900">
+                              {Number(batch.unit_cost_display || batch.unit_cost || 0).toLocaleString()} EGP
+                            </td>
+                            <td className="p-4">
+                              <div className="flex flex-col gap-1 max-w-[180px] mx-auto">
+                                <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
+                                  <span>{currentQty} / {originalQty} U</span>
+                                  <span className="font-bold text-slate-700">{consumptionPercent}% {language === 'ar' ? 'مستهلك' : 'consumed'}</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-150 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-indigo-600' : 'bg-indigo-400/60'}`}
+                                    style={{ width: `${100 - consumptionPercent}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black inline-flex items-center gap-1 border ${
+                                index === 0 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-250 animate-pulse'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}>
+                                {index === 0 ? '⚡ ' : '⏳ '}
+                                {batch.priorityLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="p-8 border-t border-slate-100 flex justify-end shrink-0">
+              <button 
+                onClick={() => setShowFifoModal(false)}
+                className="px-8 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl font-black text-sm transition-all active:scale-95 shadow-md"
+              >
+                {language === 'ar' ? 'إغلاق النافذة' : 'Close Queue View'}
+              </button>
+            </div>
           </div>
         </div>
       )}

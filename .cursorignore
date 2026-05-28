@@ -1,0 +1,28 @@
+# Dependency & Environment folders
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+.venv/
+venv/
+libredwg_temp/
+rclone-temp/
+uploads/
+backups/
+
+# Database dumps and large documents
+*.sql
+*.zip
+*.docx
+file_list.txt
+query_log.txt
+
+# Root-level utility, migration, and scratch scripts
+/*.js
+/*.py
+/scratch*
+/migrate_*
+/check_*
+/seed_*
+/test_*
+/upgrade_*
+/v29_*

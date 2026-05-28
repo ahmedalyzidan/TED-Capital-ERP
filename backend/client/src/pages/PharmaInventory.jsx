@@ -37,6 +37,8 @@ function PharmaInventory() {
   const [minLevel, setMinLevel] = useState('20');
   const [companyId, setCompanyId] = useState('');
   const [companies, setCompanies] = useState([]);
+  const [shelfLocation, setShelfLocation] = useState('');
+  const [rasadStatus, setRasadStatus] = useState('مسودة (Draft)');
 
   // Dispense Drug Modal
   const [showDispenseModal, setShowDispenseModal] = useState(false);
@@ -264,7 +266,9 @@ function PharmaInventory() {
           remaining_qty: Number(item.remaining_qty || item.quantity || 0),
           unit_cost: Number(item.unit_cost || item.buy_price || 50),
           batch_no: item.batch_no || item.batch_number || 'PH-BATCH-001',
-          expiry_date: item.expiry_date || '2027-12-31'
+          expiry_date: item.expiry_date || '2027-12-31',
+          shelf_location: meta.shelf_location || item.shelf_location || 'الرف A-1',
+          rasad_status: meta.rasad_status || item.rasad_status || 'مسودة (Draft)'
         };
       });
 
@@ -358,7 +362,11 @@ function PharmaInventory() {
       ];
       const existingNames = new Set(mappedPharma.map(i => i.item_name?.toLowerCase().trim()));
       const newMocks = mockPharma.filter(m => !existingNames.has(m.item_name?.toLowerCase().trim()));
-      pharmaItems = [...mappedPharma, ...newMocks];
+      pharmaItems = [...mappedPharma, ...newMocks].map(i => ({
+        ...i,
+        shelf_location: i.shelf_location || 'الرف A-1',
+        rasad_status: i.rasad_status || 'مسودة (Draft)'
+      }));
 
       setItems(pharmaItems);
 
@@ -649,6 +657,8 @@ function PharmaInventory() {
     setExpiryDate('');
     setSupplier('');
     setMinLevel('20');
+    setShelfLocation('');
+    setRasadStatus('مسودة (Draft)');
     
     // Auto-select company
     const activeComp = localStorage.getItem('active_company') || '';
@@ -677,6 +687,8 @@ function PharmaInventory() {
     setSupplier(drug.supplier || '');
     setMinLevel(drug.min_stock_level || '20');
     setCompanyId(drug.company_id || '');
+    setShelfLocation(drug.shelf_location || '');
+    setRasadStatus(drug.rasad_status || 'مسودة (Draft)');
     setShowModal(true);
   };
 
@@ -712,11 +724,15 @@ function PharmaInventory() {
         category: 'PHARMA',
         uom: dosageForm.includes('أقراص') ? 'علبة' : dosageForm.includes('فيال') ? 'فيال' : 'عبوة',
         company_id: companyId ? Number(companyId) : activeCompId,
+        shelf_location: shelfLocation,
+        rasad_status: rasadStatus,
         metadata: {
           active_substance: activeSubstance,
           dosage_form: dosageForm,
           pharma_category: category,
-          storage_temp: storageTemp
+          storage_temp: storageTemp,
+          shelf_location: shelfLocation,
+          rasad_status: rasadStatus
         }
       };
 
@@ -1251,6 +1267,8 @@ function PharmaInventory() {
                         <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد الأساسي' : 'Orig Qty'}</th>
                         <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرصيد المتاح' : 'Stock Qty'}</th>
                         <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'سعر الوحدة' : 'Unit Cost'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الرف / الموقع' : 'Shelf/Bin'}</th>
+                        <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'رصد التتبع' : 'Rasad status'}</th>
                         <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الباتش والصلاحية' : 'Batch & Expiry'}</th>
                         <th className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                       </tr>
@@ -1259,14 +1277,14 @@ function PharmaInventory() {
                       {isLoading ? (
                         [...Array(3)].map((_, i) => (
                           <tr key={i} className="animate-pulse">
-                            <td colSpan="10" className="p-6">
+                            <td colSpan="12" className="p-6">
                               <div className="h-4 bg-slate-100 rounded-full w-full"></div>
                             </td>
                           </tr>
                         ))
                       ) : filteredItems.length === 0 ? (
                         <tr>
-                          <td colSpan="10" className="text-center py-12 text-slate-400 font-medium">
+                          <td colSpan="12" className="text-center py-12 text-slate-400 font-medium">
                             {language === 'ar' ? 'لا توجد أدوية تطابق بحثك حالياً.' : 'No pharmaceuticals match your search.'}
                           </td>
                         </tr>
@@ -1308,6 +1326,20 @@ function PharmaInventory() {
                               </td>
                               <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-slate-900">
                                 {Number(drug.unit_cost).toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ILS</span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center text-xs font-mono font-bold text-slate-700">
+                                {drug.shelf_location || 'A-1'}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  drug.rasad_status?.includes('رسمياً') || drug.rasad_status?.includes('Reported')
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : drug.rasad_status?.includes('مرفوض')
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {drug.rasad_status || 'مسودة (Draft)'}
+                                </span>
                               </td>
                               <td className="px-4 py-3.5 text-center">
                                 <span className="block font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-[10px] mb-1 truncate max-w-[100px] mx-auto">{drug.batch_no}</span>

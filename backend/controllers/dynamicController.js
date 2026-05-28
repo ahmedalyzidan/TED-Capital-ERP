@@ -304,13 +304,18 @@ class DynamicController {
                 delete data.budget_lcy;
             } else if (type === 'inventory' || type === 'inventory_items') {
                 if (!data.remaining_qty) data.remaining_qty = data.qty || data.quantity;
-                const newQty = parseFloat(data.qty) || 0;
-                const newPrice = parseFloat(data.buy_price) || 0;
+                const newQty = parseFloat(data.qty || data.quantity) || 0;
+                const newPrice = parseFloat(data.buy_price || data.unit_cost) || 0;
                 const itemName = data.item_name || data.name;
                 if (newQty > 0 && newPrice > 0 && itemName) {
-                    const checkInv = await client.query("SELECT remaining_qty, buy_price FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [itemName]);
+                    const checkInv = await client.query("SELECT remaining_qty, buy_price, unit_cost FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [itemName]);
                     if (checkInv.rows.length > 0) {
-                        data.buy_price = calculateMovingAverage(parseFloat(checkInv.rows[0].remaining_qty), parseFloat(checkInv.rows[0].buy_price), newQty, newPrice);
+                        const currentQty = parseFloat(checkInv.rows[0].remaining_qty) || 0;
+                        const currentPrice = parseFloat(checkInv.rows[0].buy_price || checkInv.rows[0].unit_cost) || 0;
+                        const computedPrice = calculateMovingAverage(currentQty, currentPrice, newQty, newPrice);
+                        data.buy_price = computedPrice;
+                        data.unit_cost = computedPrice;
+                        data.avg_cost = computedPrice;
                     }
                 }
             }

@@ -957,20 +957,22 @@ router.post('/add/:type', async (req, res) => {
             if (!data.remaining_qty) data.remaining_qty = data.qty || data.quantity;
 
             // 🌟 السحر المحاسبي: تطبيق خوارزمية المتوسط المرجح (Moving Average) عند الإضافة اليدوية
-            const newQty = parseFloat(data.qty) || parseFloat(data.quantity) || 0;
-            const newPrice = parseFloat(data.buy_price) || 0;
+            const newQty = parseFloat(data.qty || data.quantity) || 0;
+            const newPrice = parseFloat(data.buy_price || data.unit_cost) || 0;
             const itemName = data.item_name || data.name;
 
             if (newQty > 0 && newPrice > 0 && itemName) {
                 // البحث عما إذا كان الصنف موجوداً مسبقاً في المخزن بنفس الاسم
-                const checkInv = await client.query("SELECT remaining_qty, buy_price FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [itemName]);
+                const checkInv = await client.query("SELECT remaining_qty, buy_price, unit_cost FROM inventory_items WHERE item_name = $1 OR name = $1 LIMIT 1", [itemName]);
                 if (checkInv.rows.length > 0) {
                     const currentQty = parseFloat(checkInv.rows[0].remaining_qty) || 0;
-                    const currentPrice = parseFloat(checkInv.rows[0].buy_price) || 0;
+                    const currentPrice = parseFloat(checkInv.rows[0].buy_price || checkInv.rows[0].unit_cost) || 0;
 
                     // حساب السعر الجديد وتحديث البيانات قبل الحفظ
-                    data.buy_price = calculateMovingAverage(currentQty, currentPrice, newQty, newPrice);
-                    data.avg_cost = data.buy_price;
+                    const computedPrice = calculateMovingAverage(currentQty, currentPrice, newQty, newPrice);
+                    data.buy_price = computedPrice;
+                    data.unit_cost = computedPrice;
+                    data.avg_cost = computedPrice;
                 }
             }
         }
