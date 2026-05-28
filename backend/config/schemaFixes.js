@@ -485,6 +485,319 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // --- Enterprise Sales Upgrades (Odoo & SAP Workflow) ---
+    await runQuery("Sales Quotations Table", `CREATE TABLE IF NOT EXISTS sales_quotations (
+        id SERIAL PRIMARY KEY,
+        quotation_number VARCHAR(100) UNIQUE NOT NULL,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        valid_until DATE,
+        items JSONB DEFAULT '[]'::jsonb,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        tax_amount NUMERIC(20,6) DEFAULT 0,
+        discount NUMERIC(20,6) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Draft',
+        company VARCHAR(255),
+        notes TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await runQuery("Sales Orders Table", `CREATE TABLE IF NOT EXISTS sales_orders (
+        id SERIAL PRIMARY KEY,
+        order_number VARCHAR(100) UNIQUE NOT NULL,
+        quotation_id INTEGER REFERENCES sales_quotations(id) ON DELETE SET NULL,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        items JSONB DEFAULT '[]'::jsonb,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        tax_amount NUMERIC(20,6) DEFAULT 0,
+        discount NUMERIC(20,6) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Pending',
+        company VARCHAR(255),
+        notes TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Invoices ---
+    await runQuery("Sales Invoices Table", `CREATE TABLE IF NOT EXISTS sales_invoices (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        invoice_number VARCHAR(100) UNIQUE NOT NULL,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        tax_amount NUMERIC(20,6) DEFAULT 0,
+        discount NUMERIC(20,6) DEFAULT 0,
+        due_date DATE,
+        status VARCHAR(50) DEFAULT 'مسودة',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- POS Transactions ---
+    await runQuery("Sales POS Transactions Table", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        payment_method VARCHAR(50) DEFAULT 'نقدي',
+        notes TEXT,
+        items JSONB DEFAULT '[]'::jsonb,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Offers ---
+    await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        discount_type VARCHAR(50) DEFAULT 'نسبة',
+        discount_value NUMERIC(10,4) DEFAULT 0,
+        min_purchase NUMERIC(20,6) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        description TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Price Lists ---
+    await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        product_name VARCHAR(255),
+        base_price NUMERIC(20,6) DEFAULT 0,
+        selling_price NUMERIC(20,6) DEFAULT 0,
+        category VARCHAR(100),
+        effective_date DATE,
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Insurance ---
+    await runQuery("Sales Insurance Table", `CREATE TABLE IF NOT EXISTS sales_insurance (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        provider VARCHAR(255),
+        policy_number VARCHAR(100),
+        coverage_amount NUMERIC(20,6) DEFAULT 0,
+        premium NUMERIC(20,6) DEFAULT 0,
+        start_date DATE,
+        end_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Targets ---
+    await runQuery("Sales Targets Table", `CREATE TABLE IF NOT EXISTS sales_targets (
+        id SERIAL PRIMARY KEY,
+        agent_name VARCHAR(255),
+        target_amount NUMERIC(20,6) DEFAULT 0,
+        achieved_amount NUMERIC(20,6) DEFAULT 0,
+        commission_rate NUMERIC(8,4) DEFAULT 0,
+        period VARCHAR(100),
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Commissions ---
+    await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
+        id SERIAL PRIMARY KEY,
+        agent_name VARCHAR(255),
+        commission_amount NUMERIC(20,6) DEFAULT 0,
+        reference_no VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'Pending',
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Installments ---
+    await runQuery("Sales Installments Table", `CREATE TABLE IF NOT EXISTS sales_installments (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        installment_count INTEGER DEFAULT 12,
+        monthly_amount NUMERIC(20,6) DEFAULT 0,
+        paid_count INTEGER DEFAULT 0,
+        start_date DATE,
+        status VARCHAR(50) DEFAULT 'نشط',
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // --- Sales Module Upgrades: New Columns on existing tables ---
+    await runQuery("Sales Quotations currency", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP'`);
+    await runQuery("Sales Quotations source_crm_lead_id", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS source_crm_lead_id INTEGER`);
+    await runQuery("Sales Quotations sent_at", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP`);
+    await runQuery("Sales Orders delivery_status", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(50) DEFAULT 'Not Shipped'`);
+    await runQuery("Sales Orders source_module", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
+    await runQuery("Sales Orders delivery_date", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_date DATE`);
+    await runQuery("Sales Invoices items", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb`);
+    await runQuery("Sales Invoices source_order_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
+    await runQuery("Sales Installments source_order_id", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
+    await runQuery("Sales Installments source_module", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
+
+    // --- Delivery Notes (مذكرات التسليم) ---
+    await runQuery("Sales Delivery Notes Table", `CREATE TABLE IF NOT EXISTS sales_delivery_notes (
+        id SERIAL PRIMARY KEY,
+        delivery_number VARCHAR(100) UNIQUE NOT NULL,
+        order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي',
+        delivered_by VARCHAR(255),
+        items JSONB DEFAULT '[]'::jsonb,
+        status VARCHAR(50) DEFAULT 'Pending',
+        delivery_date DATE,
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("Sales Delivery Notes idx order", `CREATE INDEX IF NOT EXISTS idx_sdn_order ON sales_delivery_notes(order_id)`);
+    await runQuery("Sales Delivery Notes idx status", `CREATE INDEX IF NOT EXISTS idx_sdn_status ON sales_delivery_notes(status)`);
+
+    // --- Sales Return Orders (مردودات المبيعات) ---
+    await runQuery("Sales Return Orders Table", `CREATE TABLE IF NOT EXISTS sales_return_orders (
+        id SERIAL PRIMARY KEY,
+        return_number VARCHAR(100) UNIQUE NOT NULL,
+        source_invoice_id INTEGER REFERENCES sales_invoices(id) ON DELETE SET NULL,
+        source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        items JSONB DEFAULT '[]'::jsonb,
+        total_amount NUMERIC(20,6) DEFAULT 0,
+        reason VARCHAR(255),
+        reason_code VARCHAR(50) DEFAULT 'CUSTOMER_REQUEST',
+        refund_method VARCHAR(50) DEFAULT 'Credit',
+        restock_warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي',
+        auto_restock BOOLEAN DEFAULT TRUE,
+        status VARCHAR(50) DEFAULT 'Pending',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("Sales Return Orders idx invoice", `CREATE INDEX IF NOT EXISTS idx_sro_invoice ON sales_return_orders(source_invoice_id)`);
+    await runQuery("Sales Return Orders idx status", `CREATE INDEX IF NOT EXISTS idx_sro_status ON sales_return_orders(status)`);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REAL ESTATE — COST TRACKING + RENTAL MODULE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // 1. تكاليف المشروع العقاري (Cost Entries per Project)
+    await runQuery("RE Project Costs Table", `CREATE TABLE IF NOT EXISTS re_project_costs (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE CASCADE,
+        cost_category VARCHAR(100) DEFAULT 'بناء',
+        description TEXT,
+        amount NUMERIC(20,2) DEFAULT 0,
+        supplier VARCHAR(255),
+        invoice_ref VARCHAR(100),
+        cost_date DATE DEFAULT CURRENT_DATE,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("RE Project Costs idx project", `CREATE INDEX IF NOT EXISTS idx_rpc_project ON re_project_costs(project_id)`);
+
+    // 2. تكلفة الوحدات المحسوبة (Allocated Unit Costs)
+    await runQuery("RE Unit Costs Table", `CREATE TABLE IF NOT EXISTS re_unit_costs (
+        id SERIAL PRIMARY KEY,
+        unit_id INTEGER REFERENCES real_estate_units(id) ON DELETE CASCADE,
+        project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE CASCADE,
+        total_project_cost NUMERIC(20,2) DEFAULT 0,
+        unit_area NUMERIC(10,2) DEFAULT 0,
+        total_project_area NUMERIC(10,2) DEFAULT 0,
+        allocated_cost NUMERIC(20,2) DEFAULT 0,
+        cost_per_meter NUMERIC(15,2) DEFAULT 0,
+        selling_price NUMERIC(20,2) DEFAULT 0,
+        margin_amount NUMERIC(20,2) DEFAULT 0,
+        margin_pct NUMERIC(8,2) DEFAULT 0,
+        suggested_price NUMERIC(20,2) DEFAULT 0,
+        target_margin_pct NUMERIC(5,2) DEFAULT 30,
+        last_calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(unit_id)
+    )`);
+    await runQuery("RE Unit Costs idx unit", `CREATE INDEX IF NOT EXISTS idx_ruc_unit ON re_unit_costs(unit_id)`);
+    await runQuery("RE Unit Costs idx project", `CREATE INDEX IF NOT EXISTS idx_ruc_project ON re_unit_costs(project_id)`);
+
+    // 3. عقود الإيجار (Rental Contracts)
+    await runQuery("RE Rental Contracts Table", `CREATE TABLE IF NOT EXISTS re_rental_contracts (
+        id SERIAL PRIMARY KEY,
+        contract_number VARCHAR(100) UNIQUE NOT NULL,
+        project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE SET NULL,
+        unit_id INTEGER REFERENCES real_estate_units(id) ON DELETE SET NULL,
+        tenant_name VARCHAR(255) NOT NULL,
+        tenant_phone VARCHAR(50),
+        tenant_id_no VARCHAR(100),
+        monthly_rent NUMERIC(15,2) DEFAULT 0,
+        annual_increment_pct NUMERIC(5,2) DEFAULT 10,
+        security_deposit NUMERIC(15,2) DEFAULT 0,
+        deposit_paid BOOLEAN DEFAULT FALSE,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        duration_months INTEGER DEFAULT 12,
+        payment_day INTEGER DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'Active',
+        notes TEXT,
+        company VARCHAR(255),
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("RE Rental Contracts idx unit", `CREATE INDEX IF NOT EXISTS idx_rrc_unit ON re_rental_contracts(unit_id)`);
+    await runQuery("RE Rental Contracts idx status", `CREATE INDEX IF NOT EXISTS idx_rrc_status ON re_rental_contracts(status)`);
+
+    // 4. فواتير الإيجار (Rental Invoices — Auto-generated monthly)
+    await runQuery("RE Rental Invoices Table", `CREATE TABLE IF NOT EXISTS re_rental_invoices (
+        id SERIAL PRIMARY KEY,
+        invoice_number VARCHAR(100) UNIQUE NOT NULL,
+        contract_id INTEGER REFERENCES re_rental_contracts(id) ON DELETE CASCADE,
+        unit_id INTEGER REFERENCES real_estate_units(id) ON DELETE SET NULL,
+        tenant_name VARCHAR(255),
+        period_month INTEGER NOT NULL,
+        period_year INTEGER NOT NULL,
+        amount NUMERIC(15,2) DEFAULT 0,
+        penalty_amount NUMERIC(15,2) DEFAULT 0,
+        due_date DATE,
+        paid_date DATE,
+        status VARCHAR(50) DEFAULT 'Pending',
+        notes TEXT,
+        company VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("RE Rental Invoices idx contract", `CREATE INDEX IF NOT EXISTS idx_rri_contract ON re_rental_invoices(contract_id)`);
+    await runQuery("RE Rental Invoices idx status", `CREATE INDEX IF NOT EXISTS idx_rri_status ON re_rental_invoices(status)`);
+    await runQuery("RE Rental Invoices unique period", `CREATE UNIQUE INDEX IF NOT EXISTS idx_rri_unique_period ON re_rental_invoices(contract_id, period_month, period_year)`);
+
+    // 5. مدفوعات الإيجار (Rental Payments)
+    await runQuery("RE Rental Payments Table", `CREATE TABLE IF NOT EXISTS re_rental_payments (
+        id SERIAL PRIMARY KEY,
+        invoice_id INTEGER REFERENCES re_rental_invoices(id) ON DELETE CASCADE,
+        contract_id INTEGER REFERENCES re_rental_contracts(id) ON DELETE CASCADE,
+        amount_paid NUMERIC(15,2) DEFAULT 0,
+        payment_date DATE DEFAULT CURRENT_DATE,
+        payment_method VARCHAR(50) DEFAULT 'Cash',
+        reference_no VARCHAR(100),
+        notes TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await runQuery("RE Rental Payments idx invoice", `CREATE INDEX IF NOT EXISTS idx_rrp_invoice ON re_rental_payments(invoice_id)`);
+
+    // Column upgrades on existing RE tables
+    await runQuery("RE Projects linked_project_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS project_type_detail VARCHAR(50) DEFAULT 'Residential'`);
+    await runQuery("RE Projects total_area", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS total_area NUMERIC(10,2) DEFAULT 0`);
+    await runQuery("RE Projects land_cost", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS land_cost NUMERIC(20,2) DEFAULT 0`);
+    await runQuery("RE Units area_m2", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS area NUMERIC(10,2)`);
+    await runQuery("RE Units cost_per_meter_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS cost_per_meter NUMERIC(15,2) DEFAULT 0`);
+    await runQuery("RE Units suggested_price_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(20,2) DEFAULT 0`);
+    await runQuery("RE Units rental_status", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS rental_status VARCHAR(50) DEFAULT 'Available'`);
+
     await runQuery("RFQ Table", `CREATE TABLE IF NOT EXISTS rfq (
         id SERIAL PRIMARY KEY,
         project_name VARCHAR(255),

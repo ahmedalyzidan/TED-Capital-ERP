@@ -198,4 +198,89 @@ router.patch('/client-attendance/:id/checkout', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── SALES CROSS-MODULE: CRM Lead → Sales Quotation ──────────────────────────
+router.post('/leads/:id/to-quotation', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const leadId = req.params.id;
+    const company = req.selectedCompany || req.headers['x-selected-company'] || '';
+
+    // Try to get lead from crm_leads (soft fallback if table doesn't exist)
+    let lead = null;
+    try {
+      const lr = await client.query(`SELECT * FROM crm_leads WHERE id=$1 LIMIT 1`, [leadId]);
+      lead = lr.rows[0];
+    } catch (_) {}
+
+    // Try to match customer
+    let customerId = null;
+    if (lead?.client_name || lead?.name) {
+      const cr = await client.query(
+        `SELECT id FROM customers WHERE name ILIKE $1 LIMIT 1`,
+        [`%${(lead.client_name || lead.name).trim()}%`]
+      );
+      customerId = cr.rows[0]?.id || null;
+    }
+
+    const qNum = `QT-CRM-${Date.now().toString(36).toUpperCase()}`;
+    const { items = [], notes } = req.body;
+
+    const { rows } = await client.query(
+      `INSERT INTO sales_quotations (quotation_number, customer_id, source_crm_lead_id, items, total_amount, status, company, notes, created_by)
+       VALUES ($1,$2,$3,$4,0,'Draft',$5,$6,$7) RETURNING *`,
+      [qNum, customerId, leadId, JSON.stringify(items), company,
+       notes || (lead ? `من فرصة CRM: ${lead.client_name || lead.name || leadId}` : `من CRM Lead #${leadId}`),
+       req.user?.username]
+    );
+
+    // Notify
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type, severity, link) VALUES (NULL,$1,$2,'SALES_QUOTATION','info','/sales')`,
+      [`عرض سعر من CRM: ${qNum}`, `تم إنشاء عرض سعر جديد من فرصة CRM رقم ${leadId}`]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: rows[0], quotation_number: qNum });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
+// ─── SALES CROSS-MODULE: CRM Member → Auto Sales Invoice ─────────────────────
+router.post('/memberships/:id/create-invoice', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const membershipId = req.params.id;
+    const company = req.selectedCompany || req.headers['x-selected-company'] || '';
+
+    const { rows: mRows } = await client.query(
+      `SELECT m.*, c.id AS customer_fk, c.name AS customer_name, p.name AS plan_name, p.price AS plan_price
+       FROM crm_memberships m
+       LEFT JOIN customers c ON c.id = m.customer_id
+       LEFT JOIN crm_membership_plans p ON p.id = m.plan_id
+       WHERE m.id = $1 LIMIT 1`, [membershipId]
+    );
+    if (mRows.length === 0) throw new Error('الاشتراك غير موجود');
+    const m = mRows[0];
+
+    const invNum = `INV-MEM-${Date.now().toString(36).toUpperCase()}`;
+    const { rows } = await client.query(
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by)
+       VALUES ($1,$2,$3,0,0,CURRENT_DATE,'مدفوعة',$4,$5,$6) RETURNING *`,
+      [m.customer_fk || null, invNum, m.plan_price || 0,
+       `فاتورة اشتراك ${m.plan_name || ''} — عضو: ${m.customer_name || ''}`,
+       company, req.user?.username]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: rows[0], invoice_number: invNum });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
 module.exports = router;

@@ -16,6 +16,22 @@ export default function RealEstate() {
   const [staffList, setStaffList] = useState([]);
   const [customers, setCustomers] = useState([]);
 
+  // New: Cost + Rental States
+  const [selectedCostProject, setSelectedCostProject] = useState('');
+  const [projectCosts, setProjectCosts] = useState([]);
+  const [costSummary, setCostSummary] = useState([]);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [unitCosts, setUnitCosts] = useState([]);
+  const [rentalContracts, setRentalContracts] = useState([]);
+  const [rentalInvoices, setRentalInvoices] = useState([]);
+  const [costForm, setCostForm] = useState({ project_id: '', cost_category: 'أرض', description: '', amount: '', supplier: '', invoice_ref: '', cost_date: new Date().toISOString().split('T')[0] });
+  const [rentalForm, setRentalForm] = useState({ project_id: '', unit_id: '', tenant_name: '', tenant_phone: '', monthly_rent: '', annual_increment_pct: 10, security_deposit: '', deposit_paid: false, start_date: '', end_date: '', payment_day: 1, notes: '' });
+  const [isCostFormOpen, setIsCostFormOpen] = useState(false);
+  const [isRentalFormOpen, setIsRentalFormOpen] = useState(false);
+  const [allocating, setAllocating] = useState(false);
+  const [targetMargin, setTargetMargin] = useState(30);
+
+
   // Modals
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
@@ -257,6 +273,17 @@ export default function RealEstate() {
       setInstallments(instRes.data?.data || instRes.data || []);
       setStaffList(staffRes.data?.data || staffRes.data || []);
       setCustomers(custRes.data?.data || custRes.data || []);
+
+      // Fetch rental contracts & invoices
+      try {
+        const [rcRes, riRes] = await Promise.all([
+          api.get('/real-estate/rental-contracts').catch(()=>({data:{data:[]}})),
+          api.get('/real-estate/rental-invoices').catch(()=>({data:{data:[]}})),
+        ]);
+        setRentalContracts(rcRes.data?.data || []);
+        setRentalInvoices(riRes.data?.data || []);
+      } catch(_) {}
+
     } catch (error) {
       console.error("Error fetching Real Estate Data", error);
     } finally {
@@ -495,7 +522,11 @@ export default function RealEstate() {
               { id: 'projects', label: cur.projects, icon: '🏗️' },
               { id: 'units', label: cur.units, icon: '🗺️' },
               { id: 'contracts', label: cur.sales, icon: '📝' },
-              { id: 'installments', label: cur.collection, icon: '💰' }
+              { id: 'installments', label: cur.collection, icon: '💰' },
+              { id: 'costs', label: 'تكاليف المشروع', icon: '📊' },
+              { id: 'unit-costs', label: 'تكلفة الوحدات', icon: '📐' },
+              { id: 'rentals', label: 'عقود الإيجار', icon: '🏭' },
+
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -871,6 +902,417 @@ export default function RealEstate() {
               </div>
             </div>
           )}
+
+          {/* ═══ PROJECT COSTS TAB ══════════════════════════════════════════════ */}
+          {activeTab === 'costs' && (
+            <div className="animate-fade-in p-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white border border-slate-200 rounded-[1.5rem] text-3xl flex items-center justify-center shadow-md">📊</div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900">تكاليف المشروع العقاري</h3>
+                    <p className="text-slate-400 text-sm font-medium">أدخل كل بنود التكلفة — النظام يوزعها على الوحدات تلقائياً</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <select
+                    value={selectedCostProject}
+                    onChange={async (e) => {
+                      setSelectedCostProject(e.target.value);
+                      if (e.target.value) {
+                        try {
+                          const r = await api.get(`/real-estate/project-costs/${e.target.value}`);
+                          setProjectCosts(r.data?.data || []);
+                          setCostSummary(r.data?.summary || []);
+                          setGrandTotal(r.data?.grand_total || 0);
+                        } catch(_) {}
+                      }
+                    }}
+                    className="px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 outline-none focus:border-slate-900 min-w-[220px]"
+                  >
+                    <option value="">-- اختر المشروع --</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <button
+                    onClick={() => setIsCostFormOpen(true)}
+                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:-translate-y-1 transition-all shadow-xl shadow-slate-900/20"
+                  >+ إضافة بند تكلفة</button>
+                </div>
+              </div>
+
+              {/* Cost Summary Cards */}
+              {costSummary.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                  {['أرض','بناء','تشطيب','تراخيص','مصاريف عمومية','أخرى'].map(cat => {
+                    const found = costSummary.find(s => s.cost_category === cat);
+                    const amt = parseFloat(found?.total || 0);
+                    const pct = grandTotal > 0 ? ((amt/grandTotal)*100).toFixed(1) : 0;
+                    const colors = { 'أرض':'from-amber-500 to-orange-500', 'بناء':'from-blue-500 to-cyan-500', 'تشطيب':'from-emerald-500 to-teal-500', 'تراخيص':'from-violet-500 to-purple-500', 'مصاريف عمومية':'from-pink-500 to-rose-500', 'أخرى':'from-slate-500 to-slate-400' };
+                    return (
+                      <div key={cat} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{cat}</p>
+                        <p className="text-lg font-black text-slate-900 font-mono">{amt > 0 ? (amt/1000).toFixed(0)+'K' : '—'}</p>
+                        <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full bg-gradient-to-r ${colors[cat]} rounded-full`} style={{width:`${pct}%`}}></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1">{pct}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {grandTotal > 0 && (
+                <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white rounded-2xl p-6 flex justify-between items-center mb-8">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">إجمالي تكاليف المشروع</p>
+                    <p className="text-3xl font-black font-mono">{Number(grandTotal).toLocaleString()} <span className="text-sm text-slate-400">EGP</span></p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="text-center">
+                      <p className="text-xs text-slate-400 mb-1">هامش مستهدف</p>
+                      <input type="number" value={targetMargin} onChange={e=>setTargetMargin(e.target.value)} className="w-16 text-center bg-white/10 border border-white/20 rounded-xl py-1 font-black text-white text-sm outline-none"/>
+                      <span className="text-xs text-slate-400 mr-1">%</span>
+                    </div>
+                    <button
+                      disabled={!selectedCostProject || allocating}
+                      onClick={async () => {
+                        if (!selectedCostProject) return;
+                        setAllocating(true);
+                        try {
+                          const r = await api.post(`/real-estate/project-costs/${selectedCostProject}/allocate`, { target_margin_pct: targetMargin });
+                          const uc = await api.get(`/real-estate/unit-costs-by-project/${selectedCostProject}`);
+                          setUnitCosts(uc.data?.data || []);
+                          setActiveTab('unit-costs');
+                          alert(`✅ ${r.data?.message}`);
+                        } catch(err) { alert(err?.response?.data?.error || 'خطأ في التوزيع'); }
+                        finally { setAllocating(false); }
+                      }}
+                      className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-black text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {allocating ? '⏳ جاري...' : '📐 وزّع على الوحدات'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cost Entries Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-right border-separate border-spacing-y-2">
+                  <thead><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-4 py-3">الفئة</th><th className="px-4 py-3">الوصف</th><th className="px-4 py-3">المورد</th>
+                    <th className="px-4 py-3">التاريخ</th><th className="px-4 py-3 text-left">المبلغ</th><th className="px-4 py-3"></th>
+                  </tr></thead>
+                  <tbody>
+                    {projectCosts.map(c => (
+                      <tr key={c.id} className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
+                        <td className="px-4 py-4"><span className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-black text-slate-700">{c.cost_category}</span></td>
+                        <td className="px-4 py-4 text-sm font-bold text-slate-700">{c.description || '—'}</td>
+                        <td className="px-4 py-4 text-sm text-slate-500">{c.supplier || '—'}</td>
+                        <td className="px-4 py-4 text-xs text-slate-400">{c.cost_date?.split('T')[0] || '—'}</td>
+                        <td className="px-4 py-4 font-black text-slate-900 font-mono text-left">{Number(c.amount).toLocaleString()}</td>
+                        <td className="px-4 py-4">
+                          <button onClick={async()=>{await api.delete(`/real-estate/project-costs/${c.id}`);setProjectCosts(prev=>prev.filter(x=>x.id!==c.id));}} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center text-sm transition-all">🗑</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {projectCosts.length === 0 && (
+                      <tr><td colSpan="6" className="text-center py-16 text-slate-400 font-black text-sm">اختر مشروعاً ثم أضف بنود التكاليف</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add Cost Form */}
+              {isCostFormOpen && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl flex items-center justify-center z-[100] p-4">
+                  <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl p-10">
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-xl font-black text-slate-900">إضافة بند تكلفة</h3>
+                      <button onClick={()=>setIsCostFormOpen(false)} className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all">✕</button>
+                    </div>
+                    <form onSubmit={async(e)=>{
+                      e.preventDefault();
+                      try {
+                        const payload = {...costForm, project_id: selectedCostProject||costForm.project_id};
+                        await api.post('/real-estate/project-costs', payload);
+                        const r = await api.get(`/real-estate/project-costs/${payload.project_id}`);
+                        setProjectCosts(r.data?.data||[]);setCostSummary(r.data?.summary||[]);setGrandTotal(r.data?.grand_total||0);
+                        setIsCostFormOpen(false);
+                        setCostForm({project_id:'',cost_category:'أرض',description:'',amount:'',supplier:'',invoice_ref:'',cost_date:new Date().toISOString().split('T')[0]});
+                      } catch(err){alert(err?.response?.data?.error||'خطأ');}
+                    }} className="space-y-4">
+                      <select required value={costForm.project_id||selectedCostProject} onChange={e=>setCostForm({...costForm,project_id:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900">
+                        <option value="">-- اختر المشروع --</option>
+                        {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <select value={costForm.cost_category} onChange={e=>setCostForm({...costForm,cost_category:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900">
+                        {['أرض','بناء','تشطيب','تراخيص','مصاريف عمومية','أخرى'].map(c=><option key={c}>{c}</option>)}
+                      </select>
+                      <input required placeholder="الوصف" value={costForm.description} onChange={e=>setCostForm({...costForm,description:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input required type="number" placeholder="المبلغ (EGP)" value={costForm.amount} onChange={e=>setCostForm({...costForm,amount:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input placeholder="المورد" value={costForm.supplier} onChange={e=>setCostForm({...costForm,supplier:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input type="date" value={costForm.cost_date} onChange={e=>setCostForm({...costForm,cost_date:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-xl font-black hover:bg-slate-800 transition-all">حفظ البند</button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ UNIT COSTS TAB ═════════════════════════════════════════════════ */}
+          {activeTab === 'unit-costs' && (
+            <div className="animate-fade-in p-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white border border-slate-200 rounded-[1.5rem] text-3xl flex items-center justify-center shadow-md">📐</div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900">تكلفة الوحدات</h3>
+                    <p className="text-slate-400 text-sm font-medium">التكلفة المخصصة لكل وحدة — التكلفة/م² — هامش الربح — السعر المقترح</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <select
+                    onChange={async(e)=>{
+                      if(!e.target.value) return;
+                      const r = await api.get(`/real-estate/unit-costs-by-project/${e.target.value}`).catch(()=>({data:{data:[]}}));
+                      setUnitCosts(r.data?.data||[]);
+                    }}
+                    className="px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 outline-none focus:border-slate-900 min-w-[220px]"
+                  >
+                    <option value="">-- اختر المشروع --</option>
+                    {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {unitCosts.length > 0 && (
+                <div className="bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-2xl p-6 mb-8 grid grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <p className="text-xs font-black text-slate-400 uppercase mb-1">إجمالي تكلفة المشروع</p>
+                    <p className="text-2xl font-black text-slate-900 font-mono">{Number(unitCosts[0]?.total_project_cost||0).toLocaleString()}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-black text-slate-400 uppercase mb-1">إجمالي المساحة</p>
+                    <p className="text-2xl font-black text-slate-900 font-mono">{Number(unitCosts[0]?.total_project_area||0).toLocaleString()} م²</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-black text-slate-400 uppercase mb-1">تكلفة م² للمشروع</p>
+                    <p className="text-2xl font-black text-emerald-600 font-mono">{Number(unitCosts[0]?.cost_per_meter||0).toLocaleString()} EGP</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-right border-separate border-spacing-y-2">
+                  <thead><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-4 py-3">الوحدة</th><th className="px-4 py-3">م²</th>
+                    <th className="px-4 py-3">التكلفة الإجمالية</th><th className="px-4 py-3">التكلفة/م²</th>
+                    <th className="px-4 py-3">سعر البيع</th><th className="px-4 py-3">هامش الربح</th>
+                    <th className="px-4 py-3">السعر المقترح</th><th className="px-4 py-3">آخر حساب</th>
+                  </tr></thead>
+                  <tbody>
+                    {unitCosts.map(uc => {
+                      const marginColor = uc.margin_pct >= 30 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : uc.margin_pct >= 10 ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-rose-600 bg-rose-50 border-rose-200';
+                      const marginEmoji = uc.margin_pct >= 30 ? '🟢' : uc.margin_pct >= 10 ? '🟡' : '🔴';
+                      return (
+                        <tr key={uc.id} className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
+                          <td className="px-4 py-4 font-black text-slate-900">{uc.unit_number} <span className="text-xs text-slate-400 font-normal">({uc.unit_type})</span></td>
+                          <td className="px-4 py-4 font-mono font-bold text-slate-700">{Number(uc.unit_area).toLocaleString()}</td>
+                          <td className="px-4 py-4 font-mono font-black text-slate-900">{Number(uc.allocated_cost).toLocaleString()}</td>
+                          <td className="px-4 py-4 font-mono font-black text-blue-600">{Number(uc.cost_per_meter).toLocaleString()}</td>
+                          <td className="px-4 py-4 font-mono font-bold text-slate-700">{Number(uc.selling_price).toLocaleString()}</td>
+                          <td className="px-4 py-4">
+                            <span className={`px-3 py-1 rounded-xl text-xs font-black border ${marginColor}`}>
+                              {marginEmoji} {Number(uc.margin_pct).toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 font-mono font-black text-emerald-700">{Number(uc.suggested_price).toLocaleString()}</td>
+                          <td className="px-4 py-4 text-xs text-slate-400">{uc.last_calculated_at ? new Date(uc.last_calculated_at).toLocaleDateString('ar-EG') : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                    {unitCosts.length === 0 && (
+                      <tr><td colSpan="8" className="text-center py-16 text-slate-400 font-black text-sm">اختر مشروعاً لعرض تكاليف وحداته — تأكد من تنفيذ "توزيع التكاليف" أولاً</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ RENTALS TAB ════════════════════════════════════════════════════ */}
+          {activeTab === 'rentals' && (
+            <div className="animate-fade-in p-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white border border-slate-200 rounded-[1.5rem] text-3xl flex items-center justify-center shadow-md">🏭</div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900">عقود الإيجار</h3>
+                    <p className="text-slate-400 text-sm font-medium">إدارة عقود الإيجار + توليد الفواتير الشهرية + تسجيل المدفوعات</p>
+                  </div>
+                </div>
+                <button onClick={()=>setIsRentalFormOpen(true)} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:-translate-y-1 transition-all shadow-xl shadow-slate-900/20">+ عقد إيجار جديد</button>
+              </div>
+
+              {/* Rental KPIs */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label:'عقود نشطة', val: rentalContracts.filter(r=>r.status==='Active').length, color:'emerald', icon:'📋' },
+                  { label:'إجمالي الإيجار الشهري', val: rentalContracts.filter(r=>r.status==='Active').reduce((s,r)=>s+parseFloat(r.monthly_rent||0),0).toLocaleString()+' EGP', color:'blue', icon:'💰' },
+                  { label:'فواتير معلقة', val: rentalInvoices.filter(r=>r.status==='Pending').length, color:'amber', icon:'📄' },
+                  { label:'إجمالي محصل (الشهر)', val: rentalInvoices.filter(r=>r.status==='Paid').reduce((s,r)=>s+parseFloat(r.amount||0),0).toLocaleString()+' EGP', color:'violet', icon:'✅' },
+                ].map(kpi=>(
+                  <div key={kpi.label} className={`bg-white border border-slate-200 rounded-2xl p-6 shadow-sm`}>
+                    <p className="text-2xl mb-2">{kpi.icon}</p>
+                    <p className="text-xs font-black text-slate-400 uppercase mb-1">{kpi.label}</p>
+                    <p className="text-xl font-black text-slate-900 font-mono">{kpi.val}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Rental Contracts */}
+              <h4 className="text-base font-black text-slate-700 mb-4 border-b border-slate-100 pb-3">عقود الإيجار النشطة</h4>
+              <div className="space-y-3 mb-10">
+                {rentalContracts.filter(r=>r.status==='Active').map(rc=>(
+                  <div key={rc.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4 hover:shadow-lg transition-all">
+                    <div>
+                      <p className="text-xs text-slate-400 font-black uppercase mb-1">{rc.contract_number}</p>
+                      <p className="font-black text-slate-900 text-base">{rc.tenant_name}</p>
+                      <p className="text-sm text-slate-500">{rc.unit_number} — {rc.project_name}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-slate-400 font-black uppercase mb-1">الإيجار الشهري</p>
+                      <p className="text-xl font-black text-emerald-600 font-mono">{Number(rc.monthly_rent).toLocaleString()} EGP</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-slate-400 font-black uppercase mb-1">المدة</p>
+                      <p className="text-sm font-bold text-slate-700">{rc.start_date?.split('T')[0]} → {rc.end_date?.split('T')[0]}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async()=>{
+                          try {
+                            const now = new Date();
+                            await api.post(`/real-estate/rental-contracts/${rc.id}/generate-invoice`,{period_month:now.getMonth()+1,period_year:now.getFullYear()});
+                            const r2 = await api.get('/real-estate/rental-invoices');
+                            setRentalInvoices(r2.data?.data||[]);
+                            alert('✅ تم توليد فاتورة الشهر الحالي');
+                          } catch(err){alert(err?.response?.data?.error||'خطأ');}
+                        }}
+                        className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all"
+                      >📄 توليد فاتورة</button>
+                      <button
+                        onClick={async()=>{if(!window.confirm('إنهاء العقد؟'))return;await api.patch(`/real-estate/rental-contracts/${rc.id}/terminate`);fetchData();}}
+                        className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-black hover:bg-rose-600 hover:text-white transition-all"
+                      >إنهاء</button>
+                    </div>
+                  </div>
+                ))}
+                {rentalContracts.filter(r=>r.status==='Active').length === 0 && (
+                  <p className="text-center text-slate-400 font-black text-sm py-10">لا توجد عقود إيجار نشطة — أضف عقداً جديداً</p>
+                )}
+              </div>
+
+              {/* Rental Invoices */}
+              <h4 className="text-base font-black text-slate-700 mb-4 border-b border-slate-100 pb-3">فواتير الإيجار</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right border-separate border-spacing-y-2">
+                  <thead><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-4 py-3">رقم الفاتورة</th><th className="px-4 py-3">المستأجر</th>
+                    <th className="px-4 py-3">الشهر</th><th className="px-4 py-3">المبلغ</th>
+                    <th className="px-4 py-3">تاريخ الاستحقاق</th><th className="px-4 py-3 text-center">الحالة</th>
+                    <th className="px-4 py-3 text-center">إجراء</th>
+                  </tr></thead>
+                  <tbody>
+                    {rentalInvoices.slice(0,30).map(inv=>(
+                      <tr key={inv.id} className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
+                        <td className="px-4 py-4 text-xs font-black text-slate-400">{inv.invoice_number}</td>
+                        <td className="px-4 py-4 font-bold text-slate-900">{inv.tenant_name}</td>
+                        <td className="px-4 py-4 text-sm text-slate-600">{inv.period_month}/{inv.period_year}</td>
+                        <td className="px-4 py-4 font-black font-mono text-slate-900">{Number(inv.amount).toLocaleString()}</td>
+                        <td className="px-4 py-4 text-xs text-slate-500">{inv.due_date?.split('T')[0]}</td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`px-3 py-1 rounded-xl text-xs font-black border ${inv.status==='Paid'?'bg-emerald-50 text-emerald-700 border-emerald-200':inv.status==='Overdue'?'bg-rose-50 text-rose-700 border-rose-200':'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                            {inv.status==='Paid'?'✅ مدفوع':inv.status==='Overdue'?'⚠️ متأخر':'⏳ معلق'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {inv.status !== 'Paid' && (
+                            <button
+                              onClick={async()=>{
+                                const method = prompt('طريقة الدفع؟ (Cash/Transfer/Cheque)', 'Cash');
+                                if(!method) return;
+                                try {
+                                  await api.post(`/real-estate/rental-invoices/${inv.id}/pay`, { payment_method: method });
+                                  const r2 = await api.get('/real-estate/rental-invoices');
+                                  setRentalInvoices(r2.data?.data||[]);
+                                  alert('✅ تم تسجيل الدفع والقيد المحاسبي');
+                                } catch(err){alert(err?.response?.data?.error||'خطأ');}
+                              }}
+                              className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black hover:bg-emerald-600 transition-all"
+                            >تحصيل</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {rentalInvoices.length===0 && <tr><td colSpan="7" className="text-center py-10 text-slate-400 font-black text-sm">لا توجد فواتير — اضغط "توليد فاتورة" من قائمة العقود</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add Rental Contract Form */}
+              {isRentalFormOpen && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl flex items-center justify-center z-[100] p-4 overflow-y-auto">
+                  <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl p-10 my-8">
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-xl font-black text-slate-900">عقد إيجار جديد</h3>
+                      <button onClick={()=>setIsRentalFormOpen(false)} className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all">✕</button>
+                    </div>
+                    <form onSubmit={async(e)=>{
+                      e.preventDefault();
+                      try {
+                        await api.post('/real-estate/rental-contracts', rentalForm);
+                        fetchData();
+                        setIsRentalFormOpen(false);
+                        setRentalForm({project_id:'',unit_id:'',tenant_name:'',tenant_phone:'',monthly_rent:'',annual_increment_pct:10,security_deposit:'',deposit_paid:false,start_date:'',end_date:'',payment_day:1,notes:''});
+                      } catch(err){alert(err?.response?.data?.error||'خطأ');}
+                    }} className="space-y-4">
+                      <select required value={rentalForm.project_id} onChange={e=>setRentalForm({...rentalForm,project_id:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900">
+                        <option value="">-- المشروع --</option>
+                        {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <select value={rentalForm.unit_id} onChange={e=>setRentalForm({...rentalForm,unit_id:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900">
+                        <option value="">-- الوحدة (اختياري) --</option>
+                        {units.filter(u=>!rentalForm.project_id||u.project_id==rentalForm.project_id).map(u=><option key={u.id} value={u.id}>{u.unit_number} ({u.area} م²)</option>)}
+                      </select>
+                      <input required placeholder="اسم المستأجر" value={rentalForm.tenant_name} onChange={e=>setRentalForm({...rentalForm,tenant_name:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input placeholder="رقم الهاتف" value={rentalForm.tenant_phone} onChange={e=>setRentalForm({...rentalForm,tenant_phone:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input required type="number" placeholder="الإيجار الشهري (EGP)" value={rentalForm.monthly_rent} onChange={e=>setRentalForm({...rentalForm,monthly_rent:e.target.value})} className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                        <input type="number" placeholder="ضمان (EGP)" value={rentalForm.security_deposit} onChange={e=>setRentalForm({...rentalForm,security_deposit:e.target.value})} className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input required type="date" placeholder="تاريخ البداية" value={rentalForm.start_date} onChange={e=>setRentalForm({...rentalForm,start_date:e.target.value})} className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                        <input required type="date" placeholder="تاريخ النهاية" value={rentalForm.end_date} onChange={e=>setRentalForm({...rentalForm,end_date:e.target.value})} className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input type="number" placeholder="زيادة سنوية %" value={rentalForm.annual_increment_pct} onChange={e=>setRentalForm({...rentalForm,annual_increment_pct:e.target.value})} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                        <label className="flex items-center gap-2 text-sm font-black text-slate-600 cursor-pointer">
+                          <input type="checkbox" checked={rentalForm.deposit_paid} onChange={e=>setRentalForm({...rentalForm,deposit_paid:e.target.checked})} className="w-4 h-4"/>
+                          الضمان محصل
+                        </label>
+                      </div>
+                      <textarea placeholder="ملاحظات" value={rentalForm.notes} onChange={e=>setRentalForm({...rentalForm,notes:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900 h-20 resize-none"/>
+                      <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-xl font-black hover:bg-slate-800 transition-all">حفظ عقد الإيجار</button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
