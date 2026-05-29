@@ -227,7 +227,7 @@ router.get('/cashflow_projection', async (req, res) => {
             instFilter += ` AND contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE ${projectCond}))`;
             reInstFilter += ` AND contract_id IN (SELECT id FROM real_estate_contracts WHERE project_name IN (SELECT name FROM projects WHERE ${projectCond}))`;
             arFilter += ` AND project_id IN (SELECT id FROM projects WHERE ${projectCond})`;
-            subFilter += ` AND project_name IN (SELECT name FROM projects WHERE ${projectCond})`;
+            subFilter += ` AND project_id IN (SELECT id FROM projects WHERE ${projectCond})`;
             poFilter += ` AND project_name IN (SELECT name FROM projects WHERE ${projectCond})`;
             staffFilter += ` AND company IN (${allowed.names.map(n => `'${n}'`).join(',')})`;
         }
