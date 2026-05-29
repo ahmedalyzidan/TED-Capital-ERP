@@ -46,8 +46,9 @@ router.get('/public/companies', async (req, res) => {
 
 router.post('/public/forgot-password', async (req, res) => {
     const { username, recoveryType, email, phone } = req.body;
+    const trimmedUsername = username ? username.trim() : '';
     try {
-        const userRes = await pool.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND status = 'Active'", [username]);
+        const userRes = await pool.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND status = 'Active'", [trimmedUsername]);
         if (userRes.rows.length === 0) {
             return res.status(404).json({ success: false, error: "اسم المستخدم غير موجود أو الحساب غير فعال." });
         }
@@ -109,9 +110,10 @@ const generateAccessToken = (user, isPartial = false) => {
 // 🌟 1. مسار تسجيل الدخول المُحدث (يدعم الـ 2FA)
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    console.log(`📥 [LOGIN REQUEST] User: ${username}, Password Length: ${password?.length}`);
+    const trimmedUsername = username ? username.trim() : '';
+    console.log(`📥 [LOGIN REQUEST] User: ${trimmedUsername}, Password Length: ${password?.length}`);
     try {
-        const userRes = await pool.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND status = 'Active'", [username]);
+        const userRes = await pool.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND status = 'Active'", [trimmedUsername]);
         if (userRes.rows.length === 0) {
             console.warn(`❌ [LOGIN FAIL] User not found or inactive: ${username}`);
             return res.status(401).json({ success: false, error: "Invalid credentials or inactive account." });

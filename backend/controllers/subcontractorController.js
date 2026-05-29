@@ -305,8 +305,9 @@ class SubcontractorController {
 
     async portalLogin(req, res) {
         const { username, password } = req.body;
+        const trimmedUsername = username ? username.trim() : '';
         try {
-            const userRes = await pool.query("SELECT * FROM subcontractors WHERE username = $1 AND portal_access_active = true", [username]);
+            const userRes = await pool.query("SELECT * FROM subcontractors WHERE LOWER(username) = LOWER($1) AND portal_access_active = true", [trimmedUsername]);
             if (userRes.rows.length === 0) return res.status(401).json({ error: "Invalid credentials or access disabled" });
 
             const sub = userRes.rows[0];
