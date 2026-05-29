@@ -7,9 +7,11 @@ const tenantContextMiddleware = (req, res, next) => {
     if (
         path === '/login' ||
         path === '/refresh' ||
+        path === '/health' ||
         path.startsWith('/public/') ||
         originalUrl.includes('/login') ||
         originalUrl.includes('/refresh') ||
+        originalUrl.includes('/health') ||
         originalUrl.includes('/public/')
     ) {
         return tenantStorage.run(null, () => {

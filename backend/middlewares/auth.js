@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const authenticateToken = (req, res, next) => {
     console.log(`🔒 [AUTH] Checking: ${req.method} ${req.path}`);
     // 🚀 تجاوز مسارات الدخول، التجديد، الخروج، ومسار التحقق من الـ 2FA
-    if (['/login', '/api/login', '/refresh', '/api/refresh', '/logout', '/api/logout', '/2fa/validate', '/api/2fa/validate', '/public/companies', '/api/public/companies', '/public/forgot-password', '/api/public/forgot-password'].includes(req.path)) {
+    if (['/login', '/api/login', '/refresh', '/api/refresh', '/logout', '/api/logout', '/2fa/validate', '/api/2fa/validate', '/public/companies', '/api/public/companies', '/public/forgot-password', '/api/public/forgot-password', '/health', '/api/health'].includes(req.path)) {
         console.log("🔓 [AUTH] Skipping (Public Route)");
         return next();
     }
