@@ -1123,6 +1123,46 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
   const [search, setSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [attachModal, setAttachModal] = useState({ isOpen: false, invoice: null, attachments: [], uploading: false });
+
+  const handleAttachClick = (inv, e) => {
+    if (e) e.stopPropagation();
+    setAttachModal({ isOpen: true, invoice: inv, attachments: [], uploading: false });
+    fetchAttachments(inv.id);
+  };
+
+  const fetchAttachments = async (id) => {
+    try {
+      const { data } = await api.get(`/files/attachments/sales_invoices/${id}`);
+      setAttachModal(prev => ({ ...prev, attachments: data || [] }));
+    } catch (err) { console.error("Fetch attachments error:", err); }
+  };
+
+  const handleFileUpload = async (e, id) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setAttachModal(prev => ({ ...prev, uploading: true }));
+    try {
+      await api.post(`/files/upload/sales_invoices/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      fetchAttachments(id);
+    } catch (err) { alert(err.response?.data?.error || err.message); }
+    finally { setAttachModal(prev => ({ ...prev, uploading: false })); }
+  };
+
+  const handleDeleteAttachment = async (attId, invId) => {
+    if (window.confirm(ar ? "هل أنت متأكد من حذف هذا المرفق؟" : "Are you sure you want to delete this attachment?")) {
+      try {
+        await api.delete(`/files/delete_attachment/${attId}`);
+        fetchAttachments(invId);
+      } catch (err) { alert(err.response?.data?.error || err.message); }
+    }
+  };
 
   const [cartItems, setCartItems] = useState([]);
   const [applyTax, setApplyTax] = useState(false);
@@ -1258,7 +1298,7 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
         <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>{[ar ? 'رقم' : '#', ar ? 'العميل' : 'Client', ar ? 'المبلغ' : 'Amount', ar ? 'المسدد' : 'Paid', ar ? 'المتبقي' : 'Remaining', ar ? 'طريقة الدفع' : 'Payment', ar ? 'الحالة' : 'Status'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
+              <tr>{[ar ? 'رقم' : '#', ar ? 'العميل' : 'Client', ar ? 'المبلغ' : 'Amount', ar ? 'المسدد' : 'Paid', ar ? 'المتبقي' : 'Remaining', ar ? 'طريقة الدفع' : 'Payment', ar ? 'الحالة' : 'Status', ar ? 'المرفقات' : 'Attachments'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtered.map(item => {
@@ -1273,10 +1313,19 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
                     <td className="px-4 py-3 text-rose-700 font-bold">{fmt(remainingVal)}</td>
                     <td className="px-4 py-3 text-slate-600 text-xs">{item.payment_method || (ar ? 'نقدي' : 'Cash')}</td>
                     <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{item.status}</Badge></td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <button 
+                        onClick={(e) => handleAttachClick(item, e)}
+                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-600 flex items-center justify-center text-xs transition-all shadow-sm active:scale-95"
+                        title={ar ? 'المرفقات' : 'Attachments'}
+                      >
+                        📎
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
-              {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-slate-400">{ar ? 'لا توجد فواتير' : 'No invoices'}</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-slate-400">{ar ? 'لا توجد فواتير' : 'No invoices'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1549,6 +1598,9 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
               <Btn variant="outline" onClick={() => exportInvoiceCSV(viewingInvoice)}>
                 📊 {ar ? 'تصدير إلى Excel' : 'Export to CSV'}
               </Btn>
+              <Btn variant="outline" onClick={(e) => handleAttachClick(viewingInvoice, e)}>
+                📎 {ar ? 'المرفقات' : 'Attachments'}
+              </Btn>
               <Btn variant="primary" onClick={() => {
                 const printContents = document.getElementById('printable-invoice').innerHTML;
                 const originalContents = document.body.innerHTML;
@@ -1563,6 +1615,87 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* --- ATTACHMENTS MODAL --- */}
+      {attachModal.isOpen && attachModal.invoice && (
+         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl animate-fade-in" dir={ar ? 'rtl' : 'ltr'}>
+            <div className="absolute inset-0 cursor-pointer" onClick={() => setAttachModal({ isOpen: false, invoice: null, attachments: [], uploading: false })}></div>
+            <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10 flex flex-col max-h-[90vh]">
+               <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div className="flex items-center gap-6">
+                     <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-slate-900/30">📎</div>
+                     <div>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">{ar ? 'مرفقات ومستندات الفاتورة' : 'Invoice Documents & Attachments'}</h3>
+                        <p className="text-xs font-bold text-slate-400 mt-1">{attachModal.invoice.invoice_number} | {attachModal.invoice.customer_name || 'N/A'}</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setAttachModal({ isOpen: false, invoice: null, attachments: [], uploading: false })} className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xl hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm active:scale-90">✕</button>
+               </div>
+
+               <div className="p-10 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                  {/* Upload Area */}
+                  <div className="border-2 border-dashed border-slate-200 rounded-[2.5rem] p-8 text-center bg-slate-50/50 hover:border-slate-900 transition-colors relative group cursor-pointer">
+                     <input 
+                        type="file" 
+                        id="invoice-file-upload" 
+                        onChange={e => handleFileUpload(e, attachModal.invoice.id)} 
+                        disabled={attachModal.uploading}
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                     />
+                     <div className="flex flex-col items-center gap-3">
+                        <span className="text-4xl">📤</span>
+                        <p className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                           {attachModal.uploading ? (ar ? 'جاري الرفع...' : 'Uploading...') : (ar ? 'رفع مستند جديد' : 'Upload New Document')}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400">PDF, JPG, PNG, DOCX (Max 50MB)</p>
+                     </div>
+                  </div>
+
+                  {/* Attachments List */}
+                  <div className="space-y-4">
+                     {attachModal.attachments.length === 0 ? (
+                        <p className="text-center py-10 text-xs font-bold text-slate-400 italic">{ar ? 'لا توجد ملفات مرفقة بهذه الفاتورة' : 'No documents attached to this invoice'}</p>
+                     ) : attachModal.attachments.map(att => (
+                        <div key={att.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-slate-300 transition-all">
+                           <div className="flex items-center gap-4 overflow-hidden">
+                              <span className="text-2xl">📄</span>
+                              <div className="flex flex-col overflow-hidden">
+                                 <a 
+                                    href={att.file_path?.startsWith('/uploads') ? att.file_path : `/uploads/${att.file_name}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs font-black text-slate-900 hover:text-emerald-600 truncate transition-colors"
+                                 >
+                                    {att.original_name || att.file_name}
+                                 </a>
+                                 <span className="text-[9px] font-bold text-slate-400 font-mono mt-0.5">{new Date(att.upload_date || att.created_at).toLocaleString()}</span>
+                              </div>
+                           </div>
+                           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                              <a 
+                                 href={att.file_path?.startsWith('/uploads') ? att.file_path : `/uploads/${att.file_name}`} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-xs hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                                 title="Download / View"
+                              >
+                                 👁️
+                              </a>
+                              <button 
+                                 onClick={() => handleDeleteAttachment(att.id, attachModal.invoice.id)}
+                                 className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-xs hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                                 title="Delete Attachment"
+                              >
+                                 🗑️
+                              </button>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+         </div>
       )}
     </div>
   );

@@ -1891,13 +1891,27 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       ))}
                     </select>
                     {activeTab === 'return' && selectedCustomer && (
-                      <button
-                        type="button"
-                        onClick={() => setShowInvoiceSelectModal(true)}
-                        className="mt-2 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 px-3 py-2 rounded-xl border border-amber-200 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
-                      >
-                        📂 {language === 'ar' ? 'اختر صنفاً مرتجعاً من فواتير العميل' : 'Select return item from client invoices'}
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowInvoiceSelectModal(true)}
+                          className="mt-2 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 px-3 py-2 rounded-xl border border-amber-200 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm cursor-pointer w-full"
+                        >
+                          📂 {language === 'ar' ? 'اختر من فواتير العميل' : 'Select from client invoices'}
+                        </button>
+                        {selectedInvoiceForReturn && (
+                          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-250/60 px-3 py-2 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+                            <span>🔗 {language === 'ar' ? `مرتبط بالفاتورة: ${selectedInvoiceForReturn.invoice_number}` : `Linked to: ${selectedInvoiceForReturn.invoice_number}`}</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedInvoiceForReturn(null)}
+                              className="text-rose-500 hover:text-rose-700 font-bold px-1.5"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2001,7 +2015,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                         <td className="py-4 pr-1">
                           <select
                             required
-                            value={line.inventory_id || ''}
+                            value={line.inventory_id ? String(line.inventory_id) : ''}
                             onChange={(e) => handleLineChange(line.key, 'inventory_id', e.target.value)}
                             className={`w-full bg-slate-50 border border-slate-100 group-hover/row:bg-white rounded-xl p-2.5 text-xs font-bold text-slate-700 outline-none transition-all ${focusBorderClass}`}
                           >
@@ -2009,7 +2023,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                             {filteredInventoryItems
                               .filter(i => activeTab === 'issue' ? Number(i.remaining_qty) > 0 : true)
                               .map(i => (
-                                <option key={i.id} value={i.id}>
+                                <option key={i.id} value={String(i.id)}>
                                   {i.item_name} {i.batch_no ? `(باتش: ${i.batch_no})` : ''} - [{Number(i.remaining_qty).toLocaleString()} {i.uom || 'علبة'}]
                                 </option>
                               ))}
@@ -3808,8 +3822,71 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                           key={inv.id}
                           type="button"
                           onClick={() => {
+                            // 1. Parse items from the invoice
+                            let parsedItems = [];
+                            try {
+                              if (inv.items) {
+                                parsedItems = typeof inv.items === 'string'
+                                  ? JSON.parse(inv.items)
+                                  : inv.items;
+                              }
+                            } catch (e) {
+                              console.error("Error parsing items", e);
+                            }
+                            if (!Array.isArray(parsedItems)) {
+                              parsedItems = [];
+                            }
+
+                            // 2. Fallback to salesRecords if invoice items is empty
+                            if (parsedItems.length === 0 && inv.invoice_number) {
+                              const matchedSales = salesRecords.filter(r => r.reference_no === inv.invoice_number);
+                              parsedItems = matchedSales.map(r => ({
+                                inventory_id: r.inventory_id,
+                                name: r.item_name,
+                                item_name: r.item_name,
+                                qty: Math.abs(r.qty),
+                                price: r.sell_price || 0,
+                                batch_no: r.batch_no || 'N/A',
+                                uom: r.uom || 'وحدة'
+                              }));
+                            }
+
+                            // 3. Map to returned items table structure
+                            const returnLines = parsedItems.map((pi, idx) => {
+                              const invItem = inventoryItems.find(i => {
+                                const matchId = pi.inventory_id && String(i.id) === String(pi.inventory_id);
+                                const piName = String(pi.name || pi.item_name || '').trim().toLowerCase();
+                                const iName = String(i.item_name || '').trim().toLowerCase();
+                                const matchName = piName && iName && iName === piName;
+                                return matchId || matchName;
+                              });
+                              return {
+                                key: Date.now() + idx,
+                                inventory_id: invItem ? String(invItem.id) : (pi.inventory_id ? String(pi.inventory_id) : ''),
+                                item_name: pi.name || pi.item_name || pi.description || 'صنف غير مسمى',
+                                batch_no: pi.batch_no || 'N/A',
+                                uom: pi.uom || 'وحدة',
+                                max_qty: pi.qty || pi.quantity || 999999,
+                                qty: pi.qty || pi.quantity || 1,
+                                buy_price: invItem ? Number(invItem.buy_price || invItem.unit_cost || 0) : Number(pi.price || pi.unit_price || 0),
+                                unit_price: Number(pi.price || pi.unit_price || 0),
+                                total: ((pi.qty || pi.quantity || 1) * Number(pi.price || pi.unit_price || 0)).toFixed(2),
+                                engineering_classification: ''
+                              };
+                            });
+
+                            if (returnLines.length > 0) {
+                              setInvoiceLines(returnLines);
+                            } else {
+                              alert(language === 'ar' 
+                                ? `⚠️ تنبيه: الفاتورة رقم ${inv.invoice_number} لا تحتوي على أصناف مسجلة في قاعدة البيانات. تم ربط الفاتورة، يرجى اختيار الأصناف المراد إرجاعها يدوياً.`
+                                : `⚠️ Notice: Invoice ${inv.invoice_number} has no items stored in the database. The invoice has been linked; please select return items manually.`
+                              );
+                              setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: 999999, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }]);
+                            }
                             setSelectedInvoiceForReturn(inv);
                             setSelectedInvoiceItemForReturn(null);
+                            setShowInvoiceSelectModal(false);
                           }}
                           className={`w-full text-right p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col gap-1 ${selectedInvoiceForReturn?.id === inv.id ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'}`}
                         >
@@ -3847,11 +3924,43 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       parsedItems = [];
                     }
 
+                    // Fallback to salesRecords if invoice items is empty
+                    if (parsedItems.length === 0 && selectedInvoiceForReturn.invoice_number) {
+                      const matchedSales = salesRecords.filter(r => r.reference_no === selectedInvoiceForReturn.invoice_number);
+                      parsedItems = matchedSales.map(r => ({
+                        inventory_id: r.inventory_id,
+                        name: r.item_name,
+                        item_name: r.item_name,
+                        qty: Math.abs(r.qty),
+                        price: r.sell_price || 0,
+                        batch_no: r.batch_no || 'N/A',
+                        uom: r.uom || 'وحدة'
+                      }));
+                    }
+
+                    if (parsedItems.length === 0) {
+                      return (
+                        <div className="text-xs text-slate-400 font-bold p-4 space-y-2 text-right">
+                          <p>{language === 'ar' ? 'لا توجد أصناف مسجلة في هذه الفاتورة أو لم يتم تحميلها.' : 'No items found or loaded in this invoice.'}</p>
+                          <details className="mt-2 bg-slate-100 p-2 rounded-xl text-[10px] font-mono text-slate-600 block">
+                            <summary className="cursor-pointer font-bold">Debug Info (معلومات التشخيص)</summary>
+                            <pre className="mt-1 overflow-x-auto text-left">{JSON.stringify({
+                              id: selectedInvoiceForReturn.id,
+                              invoice_number: selectedInvoiceForReturn.invoice_number,
+                              raw_items_type: typeof selectedInvoiceForReturn.items,
+                              raw_items: selectedInvoiceForReturn.items,
+                              keys: Object.keys(selectedInvoiceForReturn)
+                            }, null, 2)}</pre>
+                          </details>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div className="space-y-4">
                         <div className="space-y-2">
                           {parsedItems.map((pi, index) => {
-                            const name = pi.name || pi.item_name;
+                            const name = pi.name || pi.item_name || pi.description || 'صنف غير مسمى';
                             const isSelected = selectedInvoiceItemForReturn?.index === index;
                             return (
                               <button
@@ -3892,10 +4001,13 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                             <button
                               type="button"
                               onClick={() => {
-                                const invItem = inventoryItems.find(i => 
-                                  i.id === selectedInvoiceItemForReturn.inventory_id || 
-                                  i.item_name === selectedInvoiceItemForReturn.name
-                                );
+                                const invItem = inventoryItems.find(i => {
+                                  const matchId = selectedInvoiceItemForReturn.inventory_id && String(i.id) === String(selectedInvoiceItemForReturn.inventory_id);
+                                  const selName = String(selectedInvoiceItemForReturn.name || '').trim().toLowerCase();
+                                  const iName = String(i.item_name || '').trim().toLowerCase();
+                                  const matchName = selName && iName && iName === selName;
+                                  return matchId || matchName;
+                                });
 
                                 const newLine = {
                                   key: Date.now(),
