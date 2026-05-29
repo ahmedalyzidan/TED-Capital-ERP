@@ -206,22 +206,22 @@ export default function Reports() {
 
    const renderModalContent = () => {
       const { data, type } = detailModal;
-      if (!data || data.length === 0) return <div className="p-16 text-center text-slate-400 font-black uppercase text-[10px] tracking-[0.5em]">Sector Devoid of Transmissions</div>;
+      if (!data || data.length === 0) return <div className={`p-16 text-center font-black uppercase text-[10px] tracking-[0.5em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Sector Devoid of Transmissions</div>;
 
       if (type === 'revenue' || type === 'expenses') {
          const headers = ["Ref", "Entity", "Date", "Amount"];
          return (
             <table className="w-full text-[10px] text-right border-collapse">
-               <thead className="bg-slate-950 text-white font-black uppercase tracking-widest sticky top-0 z-20">
-                  <tr>{headers.map(h => <th key={h} className="p-4 border-b border-white/10">{h}</th>)}</tr>
+               <thead className={`font-black uppercase tracking-widest sticky top-0 z-20 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                  <tr>{headers.map(h => <th key={h} className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>{h}</th>)}</tr>
                </thead>
-               <tbody className="divide-y divide-slate-100 font-mono">
+               <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-700' : 'divide-slate-100'}`}>
                   {data.map((item, i) => (
-                     <tr key={i} className="hover:bg-slate-50 transition-all group">
-                        <td className="p-4 text-slate-400">#{item?.id || item?.invoice_number}</td>
-                        <td className="p-4 font-sans font-black text-slate-900 group-hover:text-emerald-600 transition-colors">{item?.client_name || item?.vendor_name || '---'}</td>
-                        <td className="p-4 text-slate-500 font-bold">{item?.date || '---'}</td>
-                        <td className={`p-4 font-black ${type === 'expenses' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                     <tr key={i} className={`transition-all group ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
+                        <td className={`p-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>#{item?.id || item?.invoice_number}</td>
+                        <td className={`p-4 font-sans font-black transition-colors ${isDark ? 'text-slate-200 group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'}`}>{item?.client_name || item?.vendor_name || '---'}</td>
+                        <td className={`p-4 font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item?.date || '---'}</td>
+                        <td className={`p-4 font-black ${type === 'expenses' ? (isDark ? 'text-rose-400' : 'text-rose-600') : (isDark ? 'text-emerald-400' : 'text-emerald-600')}`}>
                            {Number(item?.amount || item?.total_amount || 0).toLocaleString()}
                         </td>
                      </tr>
@@ -235,15 +235,15 @@ export default function Reports() {
          const headers = ["Counterparty", "Maturity", "Exposure"];
          return (
             <table className="w-full text-[10px] text-right border-collapse">
-               <thead className="bg-slate-950 text-white font-black uppercase tracking-widest sticky top-0 z-20">
-                  <tr>{headers.map(h => <th key={h} className="p-4 border-b border-white/10">{h}</th>)}</tr>
+               <thead className={`font-black uppercase tracking-widest sticky top-0 z-20 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                  <tr>{headers.map(h => <th key={h} className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>{h}</th>)}</tr>
                </thead>
-               <tbody className="divide-y divide-slate-100 font-mono">
+               <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-700' : 'divide-slate-100'}`}>
                   {data.map((item, i) => (
-                     <tr key={i} className="hover:bg-slate-50 transition-all group">
-                        <td className="p-4 font-sans font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{item?.client_name || item?.customer_name}</td>
-                        <td className="p-4 text-slate-500 font-bold">{item?.due_date}</td>
-                        <td className="p-4 font-black text-slate-900">{Number(item?.amount || 0).toLocaleString()}</td>
+                     <tr key={i} className={`transition-all group ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
+                        <td className={`p-4 font-sans font-black transition-colors ${isDark ? 'text-slate-200 group-hover:text-indigo-400' : 'text-slate-900 group-hover:text-indigo-600'}`}>{item?.client_name || item?.customer_name}</td>
+                        <td className={`p-4 font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item?.due_date}</td>
+                        <td className={`p-4 font-black ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{Number(item?.amount || 0).toLocaleString()}</td>
                      </tr>
                   ))}
                </tbody>
@@ -255,15 +255,15 @@ export default function Reports() {
          const headers = [language === 'ar' ? "الشركة" : "Company", language === 'ar' ? "المشروع" : "Project", language === 'ar' ? "تاريخ البدء" : "Start Date"];
          return (
             <table className="w-full text-[10px] text-right border-collapse">
-               <thead className="bg-slate-950 text-white font-black uppercase tracking-widest sticky top-0 z-20">
-                  <tr>{headers.map(h => <th key={h} className="p-4 border-b border-white/10">{h}</th>)}</tr>
+               <thead className={`font-black uppercase tracking-widest sticky top-0 z-20 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                  <tr>{headers.map(h => <th key={h} className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>{h}</th>)}</tr>
                </thead>
-               <tbody className="divide-y divide-slate-100 font-mono">
+               <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-700' : 'divide-slate-100'}`}>
                   {data.map((item, i) => (
-                     <tr key={i} className="hover:bg-slate-50 transition-all group">
-                        <td className="p-4 font-sans font-black text-slate-900">{item?.company_name || 'TED Capital'}</td>
-                        <td className="p-4 font-sans font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{item?.name || item?.project_name}</td>
-                        <td className="p-4 text-emerald-600 font-black">{item?.start_date || '---'}</td>
+                     <tr key={i} className={`transition-all group ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
+                        <td className={`p-4 font-sans font-black ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{item?.company_name || 'TED Capital'}</td>
+                        <td className={`p-4 font-sans font-bold transition-colors ${isDark ? 'text-slate-300 group-hover:text-indigo-400' : 'text-slate-600 group-hover:text-indigo-600'}`}>{item?.name || item?.project_name}</td>
+                        <td className={`p-4 font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{item?.start_date || '---'}</td>
                      </tr>
                   ))}
                </tbody>
@@ -276,13 +276,13 @@ export default function Reports() {
       const keys = Object.keys(first).filter(k => typeof first[k] !== 'object' && !k.includes('id')).slice(0, 5);
       return (
          <table className="w-full text-[10px] text-right border-collapse">
-            <thead className="bg-slate-950 text-white font-black uppercase tracking-widest sticky top-0 z-20">
-               <tr>{keys.map(k => <th key={k} className="p-4 border-b border-white/10 uppercase">{k.replace('_', ' ')}</th>)}</tr>
+            <thead className={`font-black uppercase tracking-widest sticky top-0 z-20 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+               <tr>{keys.map(k => <th key={k} className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'} uppercase`}>{k.replace('_', ' ')}</th>)}</tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-mono">
+            <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-700' : 'divide-slate-100'}`}>
                {data.map((item, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-all">
-                     {keys.map(k => <td key={k} className="p-4 truncate max-w-[120px] text-slate-700">{String(item[k] || '---')}</td>)}
+                  <tr key={i} className={`transition-all ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
+                     {keys.map(k => <td key={k} className={`p-4 truncate max-w-[120px] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{String(item[k] || '---')}</td>)}
                   </tr>
                ))}
             </tbody>
@@ -324,22 +324,30 @@ export default function Reports() {
          {detailModal.isOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setDetailModal({ ...detailModal, isOpen: false })}></div>
-               <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-[0_32px_128px_-12px_rgba(0,0,0,0.6)] relative z-10 overflow-hidden flex flex-col max-h-[85vh] border border-white/20">
-                  <div className="p-6 bg-slate-950 border-b border-white/5 flex justify-between items-center relative">
+               <div className={`w-full max-w-5xl rounded-[2.5rem] shadow-[0_32px_128px_-12px_rgba(0,0,0,0.6)] relative z-10 overflow-hidden flex flex-col max-h-[85vh] border border-white/20 ${
+                  isDark ? 'bg-[#272a33]' : 'bg-white'
+               }`}>
+                  <div className={`p-6 border-b flex justify-between items-center relative ${
+                     isDark ? 'bg-slate-950 border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}>
                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none"></div>
                      <div className="relative z-10">
-                        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">{detailModal.title}</h3>
-                        <p className="text-[8px] text-emerald-400 font-black uppercase tracking-widest mt-1">Real-time Strategic Node • Transactional Audit</p>
+                        <h3 className={`text-sm font-black uppercase tracking-[0.3em] ${isDark ? 'text-white' : 'text-slate-900'}`}>{detailModal.title}</h3>
+                        <p className={`text-[8px] font-black uppercase tracking-widest mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Real-time Strategic Node • Transactional Audit</p>
                      </div>
-                     <button onClick={() => setDetailModal({ ...detailModal, isOpen: false })} className="w-10 h-10 rounded-full bg-white/5 hover:bg-rose-500 text-white flex items-center justify-center transition-all group relative z-10">
+                     <button onClick={() => setDetailModal({ ...detailModal, isOpen: false })} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all group relative z-10 ${
+                        isDark ? 'bg-white/5 text-white hover:bg-rose-500' : 'bg-slate-100 text-slate-900 hover:bg-rose-500 hover:text-white'
+                     }`}>
                         <span className="text-sm group-hover:rotate-90 transition-transform">✕</span>
                      </button>
                   </div>
-                  <div className="overflow-y-auto custom-scrollbar flex-1 bg-white">
+                  <div className={`overflow-y-auto custom-scrollbar flex-1 ${isDark ? 'bg-[#272a33]' : 'bg-white'}`}>
                      {renderModalContent()}
                   </div>
-                  <div className="p-3 bg-slate-50 border-t flex justify-center items-center">
-                     <p className="text-[8px] text-slate-400 font-black uppercase tracking-[0.4em]">TED Capital • Infrastructure Protocol v4.0</p>
+                  <div className={`p-3 border-t flex justify-center items-center ${
+                     isDark ? 'bg-slate-950 border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                     <p className={`text-[8px] font-black uppercase tracking-[0.4em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>TED Capital • Infrastructure Protocol v4.0</p>
                   </div>
                </div>
             </div>

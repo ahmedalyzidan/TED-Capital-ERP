@@ -235,7 +235,7 @@ export default function Layout() {
       title: t.menuGroups.ops,
       items: [
         { path: '/projects', icon: '🏗️', label: t.menu.projects, perm: 'INV_MANAGE_STOCK' },
-        { path: '/inventory/direct-issue', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
+        { path: '/sales', icon: '🚚', label: t.menu.directIssue, perm: 'INV_MANAGE_STOCK' },
         {
           path: '/inventory/master-stock',
           icon: '🧱',
@@ -510,6 +510,7 @@ export default function Layout() {
                         '/projects',
                         '/inventory',
                         '/inventory/direct-issue',
+                        '/sales',
                         '/inventory/pharma',
                         '/inventory/supply-chain',
                         '/subcontractors',
@@ -532,6 +533,7 @@ export default function Layout() {
                         if (isMtayem) {
                           const allowedMtayemPaths = [
                             '/inventory/direct-issue',
+                            '/sales',
                             '/inventory/pharma',
                             '/inventory/supply-chain'
                           ];

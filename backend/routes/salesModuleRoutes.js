@@ -481,14 +481,17 @@ router.get('/quotations', async (req, res) => {
 
 router.post('/quotations', async (req, res) => {
   try {
-    const { customer_id, valid_until, items, total_amount, tax_amount, discount, notes } = req.body;
+    const { customer_id, valid_until, items, total_amount, tax_amount, discount, notes, booking_duration, amount_paid, is_partial, payment_method, project_id } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
     const qNum = `QT-${Date.now().toString(36).toUpperCase()}`;
 
     const { rows } = await pool.query(
-      `INSERT INTO sales_quotations (quotation_number, customer_id, valid_until, items, total_amount, tax_amount, discount, status, company, notes, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'Draft',$8,$9,$10) RETURNING *`,
-      [qNum, customer_id||null, valid_until||null, JSON.stringify(items||[]), total_amount||0, tax_amount||0, discount||0, company, notes, req.user?.username]
+      `INSERT INTO sales_quotations (quotation_number, customer_id, valid_until, items, total_amount, tax_amount, discount, status, company, notes, created_by, booking_duration, amount_paid, is_partial, payment_method, project_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'Draft',$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [
+        qNum, customer_id||null, valid_until||null, JSON.stringify(items||[]), total_amount||0, tax_amount||0, discount||0, company, notes, req.user?.username,
+        booking_duration||0, amount_paid||0, is_partial||false, payment_method||'On Account', project_id||null
+      ]
     );
 
     res.json({ success: true, data: rows[0] });
@@ -510,9 +513,12 @@ router.post('/quotations/:id/convert', async (req, res) => {
     // 2. Create Sales Order
     const soNum = `SO-${Date.now().toString(36).toUpperCase()}`;
     const { rows } = await client.query(
-      `INSERT INTO sales_orders (order_number, quotation_id, customer_id, items, total_amount, tax_amount, discount, status, company, notes, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'Pending',$8,$9,$10) RETURNING *`,
-      [soNum, q.id, q.customer_id, typeof q.items === 'string' ? q.items : JSON.stringify(q.items || []), q.total_amount, q.tax_amount, q.discount, q.company, q.notes, req.user?.username]
+      `INSERT INTO sales_orders (order_number, quotation_id, customer_id, items, total_amount, tax_amount, discount, status, company, notes, created_by, booking_duration, amount_paid, is_partial, payment_method, project_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'Pending',$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [
+        soNum, q.id, q.customer_id, typeof q.items === 'string' ? q.items : JSON.stringify(q.items || []), q.total_amount, q.tax_amount, q.discount, q.company, q.notes, req.user?.username,
+        q.booking_duration||0, q.amount_paid||0, q.is_partial||false, q.payment_method||'On Account', q.project_id||null
+      ]
     );
 
     // 3. Update Quotation Status
@@ -581,16 +587,21 @@ router.post('/orders/:id/invoice', async (req, res) => {
     const so = soRes.rows[0];
     if (so.status === 'Invoiced') throw new Error("تم إصدار فاتورة لأمر البيع هذا بالفعل.");
 
-    // 2. Create Sales Invoice (Paid by default)
+    // 2. Create Sales Invoice
     const invNum = `INV-${Date.now().toString(36).toUpperCase()}`;
     const commRate = parseFloat(so.commission_rate) || 0;
     const totalAmt = parseFloat(so.total_amount) || 0;
     const commAmt = totalAmt * (commRate / 100);
 
+    const isPartial = so.is_partial || false;
+    const amountPaid = isPartial ? (parseFloat(so.amount_paid) || 0) : (['Cash', 'Bank'].includes(so.payment_method) ? totalAmt : 0);
+    const remainingBalance = totalAmt - amountPaid;
+    const invoiceStatus = remainingBalance <= 0 ? 'مدفوعة' : (amountPaid > 0 ? 'مدفوعة جزئياً' : 'غير مدفوعة');
+
     await client.query(
-      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount)
-       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'مدفوعة',$6,$7,$8,$9,$10,$11,$12)`,
-      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, so.notes, so.company, req.user?.username, so.salesperson_id||null, so.sales_type||'Inventory', commRate, commAmt]
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount, payment_method, amount_paid, remaining_balance)
+       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, invoiceStatus, so.notes, so.company, req.user?.username, so.salesperson_id||null, so.sales_type||'Inventory', commRate, commAmt, so.payment_method||'On Account', amountPaid, remainingBalance]
     );
 
     // 3. Deduct Stock Levels & Post COGS (ONLY IF Inventory)
@@ -635,7 +646,7 @@ router.post('/orders/:id/invoice', async (req, res) => {
       }
     }
 
-    // 4. Post Sales Revenue
+    // 4. Post Sales Revenue (Proper multi-debit allocation for partial payments)
     const taxAmt = parseFloat(so.tax_amount) || 0;
     const discAmt = parseFloat(so.discount) || 0;
     const baseRevenue = totalAmt - taxAmt + discAmt;
@@ -647,41 +658,88 @@ router.post('/orders/:id/invoice', async (req, res) => {
       revenueAccount = 'إيرادات تقديم خدمات';
     }
 
-    await AccountingService.recordDoubleEntry(client, {
-      debitAccount: '1101', // Cash
-      creditAccount: revenueAccount,
-      amount: baseRevenue,
-      costCenter: 'General',
-      description: `إيراد مبيعات (${so.sales_type || 'Inventory'}) أمر بيع رقم ${so.order_number}`,
-      username: req.user?.username || 'System',
-      referenceNo: invNum,
-      company: so.company
-    });
+    const paidRatio = totalAmt > 0 ? (amountPaid / totalAmt) : 0;
+    const unpaidRatio = 1 - paidRatio;
+    const cashBankAcc = so.payment_method === 'Bank' ? '1111' : '1101';
 
-    if (taxAmt > 0) {
+    // 4.1 Post Paid Portion (Cash / Bank)
+    if (amountPaid > 0) {
       await AccountingService.recordDoubleEntry(client, {
-        debitAccount: '1101',
-        creditAccount: '2150', // VAT
-        amount: taxAmt,
+        debitAccount: cashBankAcc,
+        creditAccount: revenueAccount,
+        amount: baseRevenue * paidRatio,
         costCenter: 'General',
-        description: `ضريبة القيمة المضافة لأمر بيع رقم ${so.order_number}`,
+        description: `إيراد مبيعات محصل (${so.sales_type || 'Inventory'}) أمر بيع رقم ${so.order_number}`,
         username: req.user?.username || 'System',
         referenceNo: invNum,
         company: so.company
       });
+
+      if (taxAmt > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: cashBankAcc,
+          creditAccount: '2150', // VAT
+          amount: taxAmt * paidRatio,
+          costCenter: 'General',
+          description: `ضريبة مخرجات محصلة لأمر بيع رقم ${so.order_number}`,
+          username: req.user?.username || 'System',
+          referenceNo: invNum,
+          company: so.company
+        });
+      }
+
+      if (discAmt > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: '4100', // Sales Revenue (for discount debit)
+          creditAccount: cashBankAcc,
+          amount: discAmt * paidRatio,
+          costCenter: 'General',
+          description: `خصم مبيعات لأمر بيع رقم ${so.order_number}`,
+          username: req.user?.username || 'System',
+          referenceNo: invNum,
+          company: so.company
+        });
+      }
     }
 
-    if (discAmt > 0) {
+    // 4.2 Post Unpaid Portion (Accounts Receivable)
+    if (remainingBalance > 0) {
       await AccountingService.recordDoubleEntry(client, {
-        debitAccount: '4100',
-        creditAccount: '1101',
-        amount: discAmt,
+        debitAccount: '1120', // Accounts Receivable
+        creditAccount: revenueAccount,
+        amount: baseRevenue * unpaidRatio,
         costCenter: 'General',
-        description: `خصم مبيعات لأمر بيع رقم ${so.order_number}`,
+        description: `إيراد مبيعات آجل (${so.sales_type || 'Inventory'}) أمر بيع رقم ${so.order_number}`,
         username: req.user?.username || 'System',
         referenceNo: invNum,
         company: so.company
       });
+
+      if (taxAmt > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: '1120', // Accounts Receivable
+          creditAccount: '2150', // VAT
+          amount: taxAmt * unpaidRatio,
+          costCenter: 'General',
+          description: `ضريبة مخرجات آجلة لأمر بيع رقم ${so.order_number}`,
+          username: req.user?.username || 'System',
+          referenceNo: invNum,
+          company: so.company
+        });
+      }
+
+      if (discAmt > 0) {
+        await AccountingService.recordDoubleEntry(client, {
+          debitAccount: '4100', // Sales Revenue
+          creditAccount: '1120', // Accounts Receivable
+          amount: discAmt * unpaidRatio,
+          costCenter: 'General',
+          description: `خصم مبيعات آجل لأمر بيع رقم ${so.order_number}`,
+          username: req.user?.username || 'System',
+          referenceNo: invNum,
+          company: so.company
+        });
+      }
     }
 
     // 4.5 Generate Commission

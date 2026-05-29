@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import DirectStockIssue from './DirectStockIssue';
 
 // ─── DARK MODE COLORS (Strict Palette) ───────────────────────────────────────
 const DK = {
@@ -481,6 +483,8 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick, d
   const [filterStatus, setFilterStatus] = useState('all');
   const [clientSearch, setClientSearch] = useState('');
   const [applyTax, setApplyTax] = useState(false);
+  const [directIssueOpen, setDirectIssueOpen] = useState(false);
+  const [directReturnOpen, setDirectReturnOpen] = useState(false);
 
   useEffect(() => {
     setForm(f => ({ ...f, currency: defaultCurrency || 'EGP' }));
@@ -551,22 +555,64 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick, d
             {['Draft', 'Sent', 'Accepted', 'Converted', 'Rejected'].map(s => <option key={s} value={s}>{statusAr(s)}</option>)}
           </select>
         </div>
-        <Btn onClick={() => { setModal(true); setCartItems([{ inventory_id: null, name: '', qty: 1, price: 0, uom: 'وحدة', stock: null }]); }}>+ {ar ? 'عرض سعر جديد' : 'New Quotation'}</Btn>
+        <div className="flex gap-2">
+          <Btn onClick={() => setDirectIssueOpen(true)}>+ {ar ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}</Btn>
+          <Btn variant="outline" onClick={() => setDirectReturnOpen(true)}>+ {ar ? 'مرتجع صرف مباشر' : 'Direct Returns'}</Btn>
+        </div>
       </div>
 
       {loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div> : (
         <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>{[ar ? 'الرقم' : 'Number', ar ? 'العميل' : 'Client', ar ? 'الإجمالي' : 'Total', ar ? 'الضريبة' : 'Tax', ar ? 'الصلاحية' : 'Valid Until', ar ? 'الحالة' : 'Status', ar ? 'إجراء' : 'Action'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
+              <tr>{[ar ? 'الرقم' : 'Number', ar ? 'العميل' : 'Client', ar ? 'الإجمالي' : 'Total', ar ? 'المدفوع / المتبقي' : 'Paid / Due', ar ? 'طريقة السداد / الحجز' : 'Method / Booking', ar ? 'الصلاحية' : 'Valid Until', ar ? 'الحالة' : 'Status', ar ? 'إجراء' : 'Action'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtered.map(item => (
                 <tr key={item.id} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors">
                   <td className="px-4 py-3 font-black text-indigo-700 text-xs">{item.quotation_number}</td>
-                  <td className="px-4 py-3 font-bold text-slate-900">{item.customer_name || '—'}</td>
+                  <td className="px-4 py-3 font-bold text-slate-900">
+                    <div>{item.customer_name || '—'}</div>
+                    {item.notes && <div className="text-[10px] text-slate-400 font-normal">{item.notes}</div>}
+                  </td>
                   <td className="px-4 py-3 font-black text-emerald-700">{fmt(item.total_amount)} {item.currency || 'EGP'}</td>
-                  <td className="px-4 py-3 text-slate-500">{fmt(item.tax_amount)}</td>
+                  
+                  {/* Paid / Due column */}
+                  <td className="px-4 py-3 text-slate-700 text-xs">
+                    {item.is_partial ? (
+                      <div>
+                        <div className="font-bold text-emerald-600">{ar ? 'تم سداد:' : 'Paid:'} {fmt(item.amount_paid)}</div>
+                        <div className="text-[10px] text-rose-500 font-bold">{ar ? 'متبقي:' : 'Due:'} {fmt(Number(item.total_amount) - Number(item.amount_paid))}</div>
+                      </div>
+                    ) : (
+                      item.payment_method === 'Booking' ? (
+                        <span className="text-slate-400">—</span>
+                      ) : (
+                        ['Cash', 'Bank'].includes(item.payment_method) ? (
+                          <span className="text-emerald-600 font-bold">{ar ? 'مسدد بالكامل' : 'Fully Paid'}</span>
+                        ) : (
+                          <span className="text-rose-500 font-bold">{ar ? 'على الحساب (آجل)' : 'On Account'}</span>
+                        )
+                      )
+                    )}
+                  </td>
+                  
+                  {/* Method / Booking column */}
+                  <td className="px-4 py-3 text-slate-700 text-xs font-bold">
+                    {item.payment_method === 'Booking' ? (
+                      <div>
+                        <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-black">📦 {ar ? 'حجز مؤقت' : 'Booking'}</span>
+                        <div className="text-[10px] text-amber-600 mt-0.5">{ar ? `المدة: ${item.booking_duration} أيام` : `Duration: ${item.booking_duration} days`}</div>
+                      </div>
+                    ) : (
+                      <span>
+                        {item.payment_method === 'Cash' ? (ar ? 'نقدي / صندوق' : 'Cash') :
+                         item.payment_method === 'Bank' ? (ar ? 'تحويل بنكي' : 'Bank Transfer') :
+                         (ar ? 'على الحساب' : 'On Account')}
+                      </span>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(item.valid_until)}</td>
                   <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{statusAr(item.status)}</Badge></td>
                   <td className="px-4 py-3">
@@ -578,7 +624,7 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick, d
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-slate-400">{ar ? 'لا توجد عروض أسعار' : 'No quotations'}</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-12 text-slate-400">{ar ? 'لا توجد عروض أسعار' : 'No quotations'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -699,6 +745,14 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick, d
             <Btn variant="success" onClick={save}>💾 {ar ? 'حفظ عرض السعر' : 'Save Quotation'}</Btn>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={directIssueOpen} onClose={() => setDirectIssueOpen(false)} title={ar ? 'صرف مخزني مباشر ومبيعات' : 'Direct Stock Issue & Sales'} maxW="max-w-7xl">
+        <DirectStockIssue defaultTab="issue" embedded={true} hideModeSwitcher={true} onSuccess={() => { setDirectIssueOpen(false); load(); }} />
+      </Modal>
+
+      <Modal open={directReturnOpen} onClose={() => setDirectReturnOpen(false)} title={ar ? 'مرتجع صرف مباشر ومبيعات' : 'Direct Returns & Sales'} maxW="max-w-7xl">
+        <DirectStockIssue defaultTab="return" embedded={true} hideModeSwitcher={true} onSuccess={() => { setDirectReturnOpen(false); load(); }} />
       </Modal>
     </div>
   );
@@ -2088,8 +2142,16 @@ const TABS = [
 export default function Sales() {
   const { language, theme } = useLanguage();
   const { user } = useAuth();
+  const { search } = useLocation();
+  const queryTab = new URLSearchParams(search).get('tab');
   const ar = language === 'ar';
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState(queryTab || 'analytics');
+
+  useEffect(() => {
+    if (queryTab) {
+      setActiveTab(queryTab);
+    }
+  }, [queryTab]);
   const [clients, setClients] = useState([]);
   const [staff, setStaff] = useState([]);
   const [newClientOpen, setNewClientOpen] = useState(false);

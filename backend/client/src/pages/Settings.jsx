@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -188,6 +189,7 @@ export default function Settings() {
           </div>
 
           <div className="flex gap-4 relative z-10">
+             <ThemeToggle />
              <button onClick={handleManualBackup} disabled={isSubmitting} className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 transform active:scale-95">
                 💾 {t.manualBackup}
              </button>

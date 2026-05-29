@@ -65,7 +65,7 @@ const boqCategories = [
   "مصروفات أخرى"
 ];
 
-export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '' }) {
+export default function DirectStockIssue({ defaultTab = 'issue', embedded = false, projectId = '', hideModeSwitcher = false, onSuccess }) {
   const { language } = useLanguage();
   const activeComp = localStorage.getItem('active_company') || '';
   const isPharma = !activeComp || activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
@@ -249,6 +249,9 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   const [walletDepositAmount, setWalletDepositAmount] = useState(0);
   const [walletPayAmount, setWalletPayAmount] = useState(0);
   const [showVat, setShowVat] = useState(true); // VAT 14% Toggle
+  const [isPartial, setIsPartial] = useState(false);
+  const [amountPaid, setAmountPaid] = useState(0);
+  const [bookingDuration, setBookingDuration] = useState(7);
   
   // 🏗️ Linked Construction Project Integration States
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
@@ -383,6 +386,12 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   // Invoice / Credit Note Modal Overlay
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [activeInvoiceData, setActiveInvoiceData] = useState(null);
+  
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setActiveInvoiceData(null);
+    if (onSuccess) onSuccess();
+  };
 
   // 1. Fetch data on load and when mode switches
   useEffect(() => {
@@ -869,6 +878,60 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     setSuccessMsg('');
 
     try {
+      if (activeTab === 'issue') {
+        const cartItems = invoiceLines.map(line => ({
+          inventory_id: parseInt(line.inventory_id),
+          name: line.item_name,
+          qty: Number(line.qty),
+          price: parseFloat(line.unit_price) || 0,
+          uom: line.uom || 'وحدة',
+          stock: Number(line.max_qty),
+          discount_pct: 0,
+          batch_no: line.batch_no || 'N/A',
+          engineering_classification: line.engineering_classification || ''
+        }));
+
+        const payload = {
+          customer_id: selectedCustomer ? parseInt(selectedCustomer) : null,
+          valid_until: invoiceDate || new Date().toISOString().split('T')[0],
+          items: cartItems,
+          total_amount: parseFloat(totals.grandTotal),
+          tax_amount: parseFloat(totals.taxAmount),
+          discount: parseFloat(discount || 0),
+          notes: selectedProjectId ? `المشروع: ${selectedProjectId}` : '',
+          currency: isPharma ? 'ILS' : 'EGP',
+          booking_duration: paymentMethod === 'Booking' ? bookingDuration : 0,
+          amount_paid: isPartial ? parseFloat(amountPaid) : (paymentMethod === 'Cash' || paymentMethod === 'Bank' ? parseFloat(totals.grandTotal) : 0),
+          is_partial: isPartial,
+          payment_method: paymentMethod,
+          project_id: selectedProjectId || null
+        };
+
+        await api.post('/sales/quotations', payload);
+
+        const opMsg = language === 'ar' 
+          ? 'تم بنجاح حفظ عرض السعر (مسودة) وسيظهر في جدول عروض الأسعار للمتابعة!' 
+          : 'Quotation (Draft) created successfully and will appear in the Quotations list!';
+        setSuccessMsg(`🎉 ${opMsg}`);
+        
+        // Reset form fields
+        setInvoiceLines([{ key: Date.now(), inventory_id: '', item_name: '', batch_no: '', uom: '', max_qty: 0, qty: 1, buy_price: 0, unit_price: 0, total: 0, engineering_classification: '' }]);
+        setDiscount(0);
+        setSelectedCustomer('');
+        setSelectedProjectId('');
+        setWalletAction('none');
+        setWalletPayAmount(0);
+        setWalletDepositAmount(0);
+        fetchInitialData(); // refresh stock balances
+        
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
+        }
+        return;
+      }
+
       const custObj = customers.find(c => c.id === parseInt(selectedCustomer));
       const customerName = custObj?.name || 'عميل مباشر';
       const docNoSuffix = Date.now().toString().slice(-6);
@@ -1639,61 +1702,62 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         `}} />
       )}
       
-      {/* MODE SWITCHER TABS (4 Strategic Tabs) */}
-      <div className={`flex flex-wrap p-1.5 rounded-2xl max-w-4xl border shadow-inner gap-1.5 no-print ${
-        embedded 
-          ? 'bg-[#1b2336] border-slate-800' 
-          : 'bg-slate-100 border-slate-200/60'
-      }`}>
-        <button
-          type="button"
-          onClick={() => handleModeSwitch('issue')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-            activeTab === 'issue' 
-              ? (embedded ? 'bg-[#1e293b] border border-cyan-500/30 text-cyan-400 shadow-md' : 'bg-indigo-600 text-white shadow-md') 
-              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
-          }`}
-        >
-          <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleModeSwitch('return')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-            activeTab === 'return' 
-              ? (embedded ? 'bg-[#1e293b] border border-amber-500/30 text-amber-400 shadow-md' : 'bg-amber-600 text-white shadow-md') 
-              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
-          }`}
-        >
-          <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('invoice_list')}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-            activeTab === 'invoice_list' 
-              ? (embedded ? 'bg-[#1e293b] border border-slate-700/30 text-slate-200 shadow-md' : 'bg-slate-900 text-white shadow-md') 
-              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
-          }`}
-        >
-          <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('customer_statement');
-            setCustomerSearchQuery('');
-            setSelectedStatementCustomer('');
-          }}
-          className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-            activeTab === 'customer_statement' 
-              ? (embedded ? 'bg-[#1e293b] border border-emerald-500/30 text-emerald-400 shadow-md' : 'bg-emerald-600 text-white shadow-md') 
-              : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
-          }`}
-        >
-          <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
-        </button>
-      </div>
+      {!hideModeSwitcher && (
+        <div className={`flex flex-wrap p-1.5 rounded-2xl max-w-4xl border shadow-inner gap-1.5 no-print ${
+          embedded 
+            ? 'bg-[#1b2336] border-slate-800' 
+            : 'bg-slate-100 border-slate-200/60'
+        }`}>
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('issue')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'issue' 
+                ? (embedded ? 'bg-[#1e293b] border border-cyan-500/30 text-cyan-400 shadow-md' : 'bg-indigo-600 text-white shadow-md') 
+                : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+            }`}
+          >
+            <span>🚚</span> {language === 'ar' ? 'صرف مباشر ومبيعات' : 'Direct Stock Issue'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('return')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'return' 
+                ? (embedded ? 'bg-[#1e293b] border border-amber-500/30 text-amber-400 shadow-md' : 'bg-amber-600 text-white shadow-md') 
+                : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+            }`}
+          >
+            <span>🔄</span> {language === 'ar' ? 'مرتجع صرف ومبيعات' : 'Direct Returns'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('invoice_list')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'invoice_list' 
+                ? (embedded ? 'bg-[#1e293b] border border-slate-700/30 text-slate-200 shadow-md' : 'bg-slate-900 text-white shadow-md') 
+                : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+            }`}
+          >
+            <span>📊</span> {language === 'ar' ? 'قائمة فواتير العملاء' : 'Invoice Records'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('customer_statement');
+              setCustomerSearchQuery('');
+              setSelectedStatementCustomer('');
+            }}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'customer_statement' 
+                ? (embedded ? 'bg-[#1e293b] border border-emerald-500/30 text-emerald-400 shadow-md' : 'bg-emerald-600 text-white shadow-md') 
+                : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+            }`}
+          >
+            <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
+          </button>
+        </div>
+      )}
 
       {/* HEADER SECTION */}
       {!embedded && (
@@ -2158,6 +2222,61 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       </div>
                     );
                   })()
+                )}                {/* Partial Payment Toggle and Input */}
+                {paymentMethod !== 'Booking' && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 transition-all">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isPartialCheck"
+                        checked={isPartial}
+                        onChange={(e) => {
+                          setIsPartial(e.target.checked);
+                          if (!e.target.checked) setAmountPaid(0);
+                        }}
+                        className="w-4.5 h-4.5 rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <label htmlFor="isPartialCheck" className="text-xs font-black text-slate-800">
+                        {language === 'ar' ? 'سداد جزئي (دفعة مقدمة)' : 'Partial Payment / Advance Deposit'}
+                      </label>
+                    </div>
+
+                    {isPartial && (
+                      <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                        <label className="text-[10px] font-black text-slate-500 block">
+                          {language === 'ar' ? `المبلغ المدفوع حالياً (${currencySymbol}):` : `Amount Paid Now (${currencySymbol}):`}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={totals.grandTotal}
+                          value={amountPaid || ''}
+                          onChange={(e) => setAmountPaid(Math.min(Number(e.target.value), Number(totals.grandTotal)))}
+                          placeholder="0.00"
+                          className="w-full p-2.5 text-xs font-black text-slate-800 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500"
+                        />
+                        <div className="text-[10px] font-bold text-rose-500">
+                          {language === 'ar' ? 'المبلغ المتبقي (المديونية):' : 'Remaining Balance:'} {Math.max(0, Number(totals.grandTotal) - amountPaid).toLocaleString()} {currencySymbol}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Booking Duration Input */}
+                {paymentMethod === 'Booking' && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3.5 transition-all">
+                    <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      ⏳ {language === 'ar' ? 'مدة صلاحية الحجز (بالأيام):' : 'Booking Expiry Duration (Days):'}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={bookingDuration}
+                      onChange={(e) => setBookingDuration(parseInt(e.target.value) || 7)}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-black text-slate-800 outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 )}
 
                 {/* Discount / Penalty value input */}
@@ -3328,7 +3447,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 </div>
                 <button 
                   type="button"
-                  onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
+                  onClick={closeInvoiceModal}
                   className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center font-black text-sm transition-all"
                 >
                   ✕
@@ -3465,7 +3584,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
               <div className="bg-slate-50 border-t border-slate-100 p-6 flex justify-end gap-4 no-print">
                 <button
                   type="button"
-                  onClick={() => { setShowInvoiceModal(false); setActiveInvoiceData(null); }}
+                  onClick={closeInvoiceModal}
                   className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs transition-all active:scale-95 cursor-pointer"
                 >
                   {language === 'ar' ? 'إغلاق النافذة' : 'Close Window'}

@@ -849,3 +849,162 @@
 }
 .dark input::placeholder { color: #4a5568 !important; }
 .dark label { color: #94a3b8 !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🌟 COMPREHENSIVE DARK MODE - ALL REMAINING COMPONENTS 🌟
+   Modal bodies, dialogs, form elements, and all edge cases
+═══════════════════════════════════════════════════════════════ */
+
+/* --- Modal/Dialog bodies (Reports page modals) --- */
+.dark .rounded-3xl.bg-white.shadow-2xl,
+.dark .rounded-2xl.bg-white.shadow-lg,
+.dark .rounded-xl.bg-white.shadow-md,
+.dark .rounded-lg.bg-white,
+.dark .bg-white.shadow-2xl {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- All modals and popups in dark mode --- */
+.dark .absolute.bg-white.shadow-xl,
+.dark .absolute.bg-white.border,
+.dark .fixed.bg-white,
+.dark .relative.bg-white {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Form control styling (Reports, Sales forms) --- */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="search"],
+.dark textarea,
+.dark select,
+.dark [role="combobox"] {
+  background-color: #22252e !important;
+  border: 1px solid #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input[type="text"]:focus,
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="number"]:focus,
+.dark input[type="date"]:focus,
+.dark input[type="time"]:focus,
+.dark input[type="search"]:focus,
+.dark textarea:focus,
+.dark select:focus,
+.dark [role="combobox"]:focus {
+  border-color: #d9a770 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(217, 167, 112, 0.1) !important;
+}
+
+/* --- Reports page specific: Report titles and containers --- */
+.dark h2[class*="text-2xl"],
+.dark h3[class*="text-xl"] {
+  color: #f1f5f9 !important;
+}
+
+/* --- All remaining white backgrounds caught by attribute selectors --- */
+.dark [style*="background: white"],
+.dark [style*="background-color: white"],
+.dark [style*="backgroundColor: white"] {
+  background-color: #272a33 !important !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Specific: Any div with white background class --- */
+.dark [class*="bg-white/"],
+.dark [class*="bg-white/5"],
+.dark [class*="bg-white/10"],
+.dark [class*="bg-white/20"] {
+  background-color: rgba(39, 42, 51, var(--tw-bg-opacity, 1)) !important;
+}
+
+/* --- Real Estate card backgrounds (Reports) --- */
+.dark [class*="bg-emerald"],
+.dark [class*="bg-slate"],
+.dark [class*="bg-blue"],
+.dark [class*="bg-rose"],
+.dark [class*="bg-amber"],
+.dark [class*="bg-indigo"] {
+  /* Keep these, just adjust opacity/contrast */
+}
+
+/* --- Sales page tab content --- */
+.dark .space-y-6 > .bg-white,
+.dark .space-y-8 > .bg-white,
+.dark .space-y-4 > .bg-white {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- All card containers in grids --- */
+.dark .grid > .rounded-2xl,
+.dark .grid > .rounded-3xl,
+.dark .grid > [class*="shadow"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Stat cards and metric displays --- */
+.dark [class*="stat"],
+.dark [class*="metric"],
+.dark [class*="kpi"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Section headers in Reports/Sales --- */
+.dark .border-b {
+  border-color: #2e323d !important;
+}
+
+/* --- Buttons in dark mode (if not already styled) --- */
+.dark button:not([class*="bg-"]) {
+  background-color: #29384e !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Checkboxes and radio buttons --- */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  accent-color: #d9a770 !important;
+  background-color: #22252e !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Dropdown menu items --- */
+.dark [role="option"],
+.dark [role="menuitem"],
+.dark option {
+  background-color: #272a33 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Focus states for accessibility --- */
+.dark *:focus-visible {
+  outline-color: #d9a770 !important;
+}
+
+/* --- Any remaining paragraph/text elements --- */
+.dark p {
+  color: #f1f5f9 !important;
+}
+
+/* --- Code blocks (if any) --- */
+.dark code,
+.dark pre {
+  background-color: #22252e !important;
+  color: #cbd5e1 !important;
+  border-color: #3e4452 !important;
+}

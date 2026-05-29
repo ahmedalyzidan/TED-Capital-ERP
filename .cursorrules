@@ -1,8 +1,8 @@
 # AI Execution, Safety & Token-Optimized Protocols (CRITICAL)
 
-## 0. AUTONOMOUS EXECUTION & HEALING
-- **No Permission Needed:** Execute commands, code fixes, and server restarts autonomously, EXCEPT for Rule 7 gates. Do NOT ask for "Run" or "Accept" confirmations.
-- **Zero Error Tolerance:** Check browser/server logs after every change. Fix red/yellow errors autonomously immediately.
+## 0. NO AUTONOMOUS COMMAND EXECUTION (MANUAL RUN ONLY)
+- **Manual Commands:** Do NOT execute any terminal commands autonomously. Output the exact command to the user so they can run it manually from the terminal.
+- **Zero Error Tolerance:** Check browser/server logs after every change. Ask the user to run commands to inspect/fix logs if needed.
 - **Manual Orchestrator:** Do NOT run `orchestrator.py` in the background. When the user runs it manually and reports an error, autonomously apply fixes.
 
 ## 1. STRICT TOKEN CONSERVATION & SNIPPET-ONLY OUTPUT (CRITICAL)
