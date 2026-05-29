@@ -26,7 +26,7 @@ router.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date
 router.get('/public/companies', async (req, res) => {
     try {
         const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
-        const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != ''");
+        const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != '' AND is_deleted = false");
         const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
         
         let baseCompanies = legalComps.rows.map(r => r.name);

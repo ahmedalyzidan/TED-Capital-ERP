@@ -68,7 +68,8 @@ class IntelligenceEngine {
             SELECT p.id, p.name, p.budget, 
                    COALESCE(SUM(l.debit - l.credit), 0) as current_spend
             FROM projects p
-            LEFT JOIN ledger l ON l.cost_center = p.name
+            LEFT JOIN ledger l ON l.cost_center = p.name AND l.is_deleted = false
+            WHERE p.is_deleted = false
             GROUP BY p.id, p.name, p.budget
             HAVING p.budget > 0
         `);

@@ -58,7 +58,7 @@ router.get('/dropdowns', async (req, res) => {
 
         // =========================================================================
 
-        const projects = await pool.query("SELECT id, name, company FROM projects");
+                const projects = await pool.query("SELECT id, name, company FROM projects WHERE is_deleted = false");
         const staff = await pool.query("SELECT name, salary FROM staff");
         const subs = await pool.query("SELECT id, name FROM subcontractors");
         const accs = await pool.query("SELECT account_name FROM chart_of_accounts");
@@ -68,7 +68,7 @@ router.get('/dropdowns', async (req, res) => {
         const committees = await pool.query("SELECT id, name FROM committees");
         const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
 
-        const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != ''");
+        const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != '' AND is_deleted = false");
         const jobTitlesQuery = await pool.query("SELECT title FROM job_titles");
         const existingStaffTitles = await pool.query("SELECT DISTINCT job_title FROM staff WHERE job_title IS NOT NULL AND job_title != ''");
         const allJobTitles = [...new Set([
@@ -521,8 +521,9 @@ router.get('/table/:type', async (req, res) => {
 
         if (type === 'projects') {
             prefix = "p.";
-            queryStr = `SELECT p.*, (SELECT COUNT(*) FROM partners WHERE project_name = p.name) AS partners_count FROM projects p`;
-            countStr = `SELECT COUNT(*) FROM projects p`;
+            queryStr = `SELECT p.*, (SELECT COUNT(*) FROM partners WHERE project_name = p.name) AS partners_count FROM projects p WHERE p.is_deleted = false`;
+            countStr = `SELECT COUNT(*) FROM projects p WHERE p.is_deleted = false`;
+            hasMainWhere = true;
         } else if (type === 'partners') {
             prefix = "p.";
             queryStr = `SELECT p.*, pr.company AS project_company, pr.budget AS proj_budget, (pr.budget * pr.expected_profit_percent / 100) AS proj_exp_amt, (pr.budget * pr.actual_profit_percent / 100) AS proj_act_amt, COALESCE((SELECT SUM(amount) FROM partner_deposits WHERE partner_id = p.id), 0) AS deposits, COALESCE((SELECT SUM(amount) FROM partner_withdrawals WHERE partner_id = p.id), 0) AS withdrawals FROM partners p LEFT JOIN projects pr ON p.project_name = pr.name`;
@@ -1750,11 +1751,25 @@ router.delete('/delete/:type/:id', async (req, res) => {
                     await client.query("UPDATE installments SET status = $1, paid_amount = $2 WHERE id = $3", [newStatus, totalPaid, installment_id]);
                 }
             }
+        } else if (type === 'projects') {
+            // Soft delete the project
+            await client.query(`UPDATE projects SET is_deleted = true, deleted_at = NOW(), deleted_by = $1 WHERE id = $2`, [req.user.username, id]);
+
+            // Soft delete all ledger entries associated with this project (cost_center = project name OR cost_center = project ID)
+            if (oldData.name) {
+                await client.query(`UPDATE ledger SET is_deleted = true, deleted_at = NOW(), deleted_by = $1 WHERE cost_center = $2 OR cost_center = $3`, [req.user.username, oldData.name, id.toString()]);
+            }
+
+            // Trigger project deletion notification
+            await client.query(
+                "INSERT INTO notifications (category, title, message) VALUES ($1, $2, $3)",
+                [`DELETED_${type.toUpperCase()}`, 'حذف سجل', `تم حذف ${deletedItemName} من ${type} بواسطة ${req.user.username}`]
+            );
         } else {
             await client.query(`DELETE FROM ${type} WHERE id = $1`, [id]);
 
             // تنبيه بالحذف
-            if (['inventory', 'projects'].includes(type)) {
+            if (['inventory'].includes(type)) {
                 await client.query(
                     "INSERT INTO notifications (category, title, message) VALUES ($1, $2, $3)",
                     [`DELETED_${type.toUpperCase()}`, 'حذف سجل', `تم حذف ${deletedItemName} من ${type} بواسطة ${req.user.username}`]
