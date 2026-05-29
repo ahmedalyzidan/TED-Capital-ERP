@@ -400,6 +400,7 @@ const buildCompanyFilter = async (type, scope, prefix = "") => {
     }
     if (type === 'property_units') {
         return `project_name IN ${projNamesSqlList}`;
+    }
     
     // --- Real Estate Module Isolation ---
     if (type === 'real_estate_projects') {
