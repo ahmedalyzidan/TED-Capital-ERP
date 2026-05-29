@@ -29,9 +29,9 @@ io.on('connection', (socket) => {
 
 // 1. الأساسيات (Basics)
 app.use(cors({ 
-    origin: '*', 
+    origin: true, 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-    allowedHeaders: ['Content-Type', 'Authorization'], 
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Selected-Company'], 
     credentials: true 
 }));
 app.use(express.json({ limit: '50mb' }));

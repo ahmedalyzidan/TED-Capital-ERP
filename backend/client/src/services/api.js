@@ -1,13 +1,8 @@
 import axios from 'axios';
 
-const isApp = window.Capacitor ||
-              window.location.origin.includes('capacitor://') ||
-              window.location.origin.includes('localhost') ||
-              window.location.host === '';
-
 const api = axios.create({
-  baseURL: isApp ? 'http://46.224.144.166/api' : '/api',
-  timeout: 15000,
+  baseURL: 'http://46.224.144.166/api',
+  timeout: 20000,
 });
 
 api.interceptors.request.use(
