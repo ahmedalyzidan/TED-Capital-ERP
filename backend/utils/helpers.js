@@ -350,14 +350,17 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
     if (type === 'subcontractor_invoices') {
         return `(project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
-    if (type === 'partners' || type === 'tasks' || type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
-        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+    if (type === 'partners' || type === 'tasks') {
+        return `${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+    }
+    if (type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
+        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'chart_of_accounts') {
         return `(company_entity IN ${namesSqlList} OR company_entity = 'All' OR company_id IN ${idsSqlList})`;
     }
     if (type === 'contracts') {
-        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'installments') {
         return `contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;

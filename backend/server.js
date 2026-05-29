@@ -144,6 +144,9 @@ initDB();
 
 // ================= تسجيل المسارات (Routes) =================
 
+const tenantContext = require('./middlewares/tenantContext');
+app.use('/api', tenantContext);
+
 app.use('/api', authRoutes);
 
 app.use('/api', authenticateToken);
