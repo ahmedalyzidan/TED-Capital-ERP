@@ -22,6 +22,8 @@ const tenantContextMiddleware = (req, res, next) => {
     // 1. Identify company from header, query, or JWT claims
     let companyName = req.headers['x-selected-company'] || req.query.company || (req.user && req.user.linkedCompany) || '';
 
+    console.log(`🔍 [TenantContext] Path: ${req.path}, Header: ${req.headers['x-selected-company']}, UserCompany: ${req.user?.linkedCompany}, Selected: ${companyName}`);
+
     // If company is empty, "all", or "كل الشركات", route to central/default database
     const centralNames = ['all', 'all companies', 'كل الشركات', ''];
     const isCentral = centralNames.includes(companyName.trim().toLowerCase());
