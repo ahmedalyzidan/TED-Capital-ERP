@@ -257,6 +257,11 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [contractorProjects, setContractorProjects] = useState([]);
 
+  const [showInvoiceSelectModal, setShowInvoiceSelectModal] = useState(false);
+  const [selectedInvoiceForReturn, setSelectedInvoiceForReturn] = useState(null);
+  const [selectedInvoiceItemForReturn, setSelectedInvoiceItemForReturn] = useState(null);
+  const [returnQtyInput, setReturnQtyInput] = useState(1);
+
   useEffect(() => {
     if (projectId) {
       setSelectedProjectId(projectId);
@@ -382,6 +387,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   // Reports Data
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [salesRecords, setSalesRecords] = useState([]);
+  const [invoices, setInvoices] = useState([]);
 
   // Invoice / Credit Note Modal Overlay
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -399,7 +405,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'invoice_list' || activeTab === 'customer_statement') {
+    if (activeTab === 'invoice_list' || activeTab === 'customer_statement' || activeTab === 'return') {
       fetchReportsData();
     }
   }, [activeTab]);
@@ -667,12 +673,14 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
 
   const fetchReportsData = async () => {
     try {
-      const [ledgerRes, salesRes] = await Promise.all([
+      const [ledgerRes, salesRes, invoicesRes] = await Promise.all([
         api.get('/dynamic/table/ledger?limit=2000').catch(() => ({ data: { data: [] } })),
-        api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } }))
+        api.get('/dynamic/table/inventory_sales?limit=2000').catch(() => ({ data: { data: [] } })),
+        api.get('/sales/invoices').catch(() => ({ data: { data: [] } }))
       ]);
       setLedgerEntries(ledgerRes.data?.data || []);
       setSalesRecords(salesRes.data?.data || []);
+      setInvoices(invoicesRes.data?.data || invoicesRes.data || []);
     } catch (err) {
       console.error("Error fetching reports data", err);
     }
@@ -1199,9 +1207,9 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       } else {
         // --- RETURN POSTINGS (Perfect Reverse) ---
         
-        // If we are reversing a transaction that deposited to/used the wallet:
-        if (selectedCustomer && (walletAction === 'use_balance' || walletAction === 'deposit_change')) {
-          // If they used the wallet, we return it to the wallet!
+        // If we are reversing a transaction that deposited to/used the wallet or refund to wallet is active:
+        if (selectedCustomer && (walletAction === 'use_balance' || walletAction === 'deposit_change' || walletAction === 'refund_to_wallet')) {
+          // If they used the wallet or refund to wallet is active, we return it to the wallet!
           const walletRefund = Number(totals.grandTotal);
           ledgerPosts.push({
             date: invoiceDate,
@@ -1882,6 +1890,15 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                         <option key={c.id} value={c.id}>{c.name} {c.company_name ? `(${c.company_name})` : ''}</option>
                       ))}
                     </select>
+                    {activeTab === 'return' && selectedCustomer && (
+                      <button
+                        type="button"
+                        onClick={() => setShowInvoiceSelectModal(true)}
+                        className="mt-2 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 px-3 py-2 rounded-xl border border-amber-200 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
+                      >
+                        📂 {language === 'ar' ? 'اختر صنفاً مرتجعاً من فواتير العميل' : 'Select return item from client invoices'}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2174,6 +2191,34 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                             >
                               ➕ {language === 'ar' ? 'إيداع بالمحفظة' : 'Wallet Deposit'}
                             </button>
+                          </div>
+                        )}
+
+                        {activeTab === 'return' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (walletAction === 'refund_to_wallet') {
+                                setWalletAction('none');
+                              } else {
+                                setWalletAction('refund_to_wallet');
+                              }
+                            }}
+                            className={`w-full py-2 px-3 rounded-xl text-[10px] font-black border transition-all active:scale-95 flex items-center justify-center gap-1.5 ${walletAction === 'refund_to_wallet' ? 'bg-amber-600 border-amber-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'}`}
+                          >
+                            👛 {language === 'ar' ? 'إيداع قيمة المرتجع بالمحفظة' : 'Refund to Wallet'}
+                          </button>
+                        )}
+
+                        {walletAction === 'refund_to_wallet' && activeTab === 'return' && (
+                          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                            <div className="flex justify-between items-center text-[10px] font-bold text-amber-800">
+                              <span>{language === 'ar' ? 'المبلغ المسترد للمحفظة:' : 'Refunded to Wallet:'}</span>
+                              <span className="font-black text-xs text-amber-600">+{Number(totals.grandTotal).toLocaleString()} {currencySymbol}</span>
+                            </div>
+                            <p className="text-[9px] text-amber-600 font-bold leading-relaxed">
+                              {language === 'ar' ? 'سيقوم النظام تلقائياً بإضافة هذا المبلغ إلى رصيد محفظة العميل عند الحفظ.' : 'The system will automatically add this refund amount to the customer\'s wallet balance upon saving.'}
+                            </p>
                           </div>
                         )}
                         
@@ -2562,40 +2607,28 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-xs font-bold text-slate-700">
                   {(() => {
-                    const list = ledgerEntries
-                      .filter(entry => entry.account_name === 'عملاء (حسابات مدينة - AR)')
-                      .map(parseLedgerInvoice)
-                      .filter(Boolean)
-                      .filter(item => {
-                        // Filter by active logged in company
-                        const activeComp = localStorage.getItem('active_company') || '';
-                        const activeLower = activeComp.toLowerCase();
-                        if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
-                          const customerObj = customers.find(c => c.name === item.customer);
-                          if (customerObj) {
-                            const cCompLower = (customerObj.company_name || '').toLowerCase();
-                            const isMatch = (activeLower.includes('ted') && cCompLower.includes('ted')) ||
-                                            (activeLower.includes('design') && cCompLower.includes('design')) ||
-                                            (activeLower.includes('master') && cCompLower.includes('master')) ||
-                                            (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) ||
-                                            cCompLower.includes(activeLower) || 
-                                            activeLower.includes(cCompLower);
-                            if (!isMatch) return false;
-                          } else {
-                            const custLower = item.customer.toLowerCase();
-                            const isPharmaCust = custLower.includes('أبو تيم') || custLower.includes('حسن') || custLower.includes('محمود') || custLower.includes('صيدلية') || custLower.includes('pharma') || custLower.includes('prime');
-                            const activeIsPharma = activeLower.includes('prime') || activeLower.includes('pharma') || activeLower.includes('بريم') || activeLower.includes('فارما');
-                            if (activeIsPharma !== isPharmaCust) return false;
-                          }
-                        }
+                    const list = invoices.filter(item => {
+                      // Filter by active logged in company
+                      const activeComp = localStorage.getItem('active_company') || '';
+                      const activeLower = activeComp.toLowerCase();
+                      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+                        const cCompLower = (item.company || '').toLowerCase();
+                        const isMatch = (activeLower.includes('ted') && cCompLower.includes('ted')) ||
+                                        (activeLower.includes('design') && cCompLower.includes('design')) ||
+                                        (activeLower.includes('master') && cCompLower.includes('master')) ||
+                                        (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) ||
+                                        cCompLower.includes(activeLower) || 
+                                        activeLower.includes(cCompLower);
+                        if (!isMatch) return false;
+                      }
 
-                        const q = invoiceListSearch.toLowerCase();
-                        return (
-                          item.docNo.toLowerCase().includes(q) ||
-                          item.customer.toLowerCase().includes(q) ||
-                          item.date.includes(q)
-                        );
-                      });
+                      const q = invoiceListSearch.toLowerCase();
+                      return (
+                        (item.invoice_number || '').toLowerCase().includes(q) ||
+                        (item.customer_name || '').toLowerCase().includes(q) ||
+                        (item.created_at || '').includes(q)
+                      );
+                    });
 
                     if (list.length === 0) {
                       return (
@@ -2609,81 +2642,60 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
 
                     return list.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/50 transition-all">
-                        <td className="py-4">{item.date}</td>
+                        <td className="py-4">{item.created_at?.split('T')[0]}</td>
                         <td className="py-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black ${item.docType === 'issue' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {item.docType === 'issue' ? (language === 'ar' ? 'فاتورة مبيعات' : 'Sales Invoice') : (language === 'ar' ? 'إشعار مرتجع' : 'Credit Note')}
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700">
+                            {language === 'ar' ? 'فاتورة مبيعات' : 'Sales Invoice'}
                           </span>
                         </td>
-                        <td className="py-4 font-mono font-black">{item.docNo}</td>
-                        <td className="py-4 font-black">{item.customer}</td>
-                        <td className={`py-4 ${language === 'ar' ? 'text-left pr-4' : 'text-right pl-4'} font-black text-slate-900`}>{Number(item.grandTotal).toLocaleString()} {currencySymbol}</td>
+                        <td className="py-4 font-mono font-black">{item.invoice_number}</td>
+                        <td className="py-4 font-black">{item.customer_name || 'عميل مباشر'}</td>
+                        <td className={`py-4 ${language === 'ar' ? 'text-left pr-4' : 'text-right pl-4'} font-black text-slate-900`}>
+                          <div>{Number(item.total_amount).toLocaleString()} {currencySymbol}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {language === 'ar' ? 'المسدد:' : 'Paid:'} {Number(item.amount_paid || 0).toLocaleString()} | {language === 'ar' ? 'المتبقي:' : 'Due:'} {Number(item.remaining_balance || 0).toLocaleString()}
+                          </div>
+                        </td>
                         <td className="py-4 text-center">
                           <div className="flex items-center justify-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => {
-                              const lines = salesRecords
-                                .filter(r => {
-                                  if (r.reference_no && r.reference_no === item.docNo) {
-                                    return true;
-                                  }
-                                  if (!r.reference_no && r.customer_name === item.customer) {
-                                    const rDate = r.date?.split('T')[0];
-                                    const itemDate = item.date;
-                                    if (rDate && itemDate) {
-                                      const diffDays = Math.abs((new Date(rDate) - new Date(itemDate)) / (1000 * 60 * 60 * 24));
-                                      return diffDays <= 1;
-                                    }
-                                  }
-                                  return false;
-                                })
-                                .map((r, index) => ({
-                                  key: index,
-                                  item_name: r.item_name,
-                                  batch_no: r.batch_no || 'N/A',
-                                  uom: r.uom || 'متر',
-                                  qty: Math.abs(r.qty),
-                                  unit_price: r.sell_price,
-                                  total: (Math.abs(r.qty) * r.sell_price).toFixed(2)
-                                }));
+                              const parsedItems = typeof item.items === 'string' ? JSON.parse(item.items) : (item.items || []);
+                              const lines = parsedItems.map((pi, index) => ({
+                                key: index,
+                                item_name: pi.name || pi.item_name,
+                                batch_no: pi.batch_no || 'N/A',
+                                uom: pi.uom || 'وحدة',
+                                qty: pi.qty,
+                                unit_price: pi.price || pi.unit_price,
+                                total: (pi.qty * (pi.price || pi.unit_price)).toFixed(2)
+                              }));
 
-                              const subtotal = lines.reduce((sum, l) => sum + Number(l.total), 0);
-                              const taxAmount = subtotal * 0.14;
-                              
                               setActiveInvoiceData({
-                                type: item.docType,
-                                invoiceNo: item.docNo,
-                                date: item.date,
-                                customerName: item.customer,
+                                id: item.id,
+                                type: 'issue',
+                                invoiceNo: item.invoice_number,
+                                date: item.created_at?.split('T')[0],
+                                customerName: item.customer_name || (language === 'ar' ? 'عميل مباشر' : 'Direct Customer'),
                                 warehouse: language === 'ar' ? 'المخزن الرئيسي' : 'Main Warehouse',
-                                paymentMethod: item.ledgerEntry.description?.includes('نقدي') ? (language === 'ar' ? 'نقدي / صندوق' : 'Cash Box') : item.ledgerEntry.description?.includes('بنكي') ? (language === 'ar' ? 'بنكي / شيك' : 'Bank Transfer') : (language === 'ar' ? 'آجل / على الحساب' : 'On Account'),
+                                paymentMethod: item.payment_method || 'On Account',
                                 lines,
-                                subtotal: subtotal.toFixed(2),
-                                taxAmount: taxAmount.toFixed(2),
-                                discount: 0,
-                                grandTotal: Number(item.grandTotal || 0).toFixed(2),
-                                companyId: item.ledgerEntry?.company_id,
-                                companyName: item.ledgerEntry?.company
+                                subtotal: (item.total_amount - (item.tax_amount || 0) + (item.discount || 0)).toFixed(2),
+                                taxAmount: Number(item.tax_amount || 0).toFixed(2),
+                                discount: Number(item.discount || 0).toFixed(2),
+                                grandTotal: Number(item.total_amount || 0).toFixed(2),
+                                amountPaid: Number(item.amount_paid || 0).toFixed(2),
+                                remainingBalance: Number(item.remaining_balance || 0).toFixed(2),
+                                status: item.status,
+                                companyId: item.company_id,
+                                companyName: item.company
                               });
                               setShowInvoiceModal(true);
                             }}
                             className="px-4 py-2 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all font-black text-[10px] cursor-pointer"
                           >
                             👁️ {language === 'ar' ? 'عرض وتدقيق الفاتورة' : 'View & Audit Invoice'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteInvoice(item)}
-                            disabled={isDeletingInvoice === item.docNo}
-                            className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border border-red-100 rounded-xl transition-all font-black text-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            title={language === 'ar' ? 'حذف الفاتورة وعكس القيود المحاسبية وإعادة المخزون' : 'Delete invoice, reverse ledger entries & restore inventory'}
-                          >
-                            {isDeletingInvoice === item.docNo
-                              ? <span className="animate-spin inline-block">⏳</span>
-                              : '🗑️'
-                            }
-                            {language === 'ar' ? 'حذف وعكس' : 'Delete & Reverse'}
                           </button>
                           </div>
                         </td>
@@ -3555,10 +3567,58 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                         {Number(activeInvoiceData.grandTotal).toLocaleString()} {currencySymbol}
                       </span>
                     </div>
+                    {activeInvoiceData.type === 'issue' && (
+                      <>
+                        <div className="flex justify-between text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-xs font-bold">
+                          <span>{language === 'ar' ? 'المبلغ المسدد:' : 'Amount Paid:'}</span>
+                          <span className="font-black">{Number(activeInvoiceData.amountPaid || 0).toLocaleString()} {currencySymbol}</span>
+                        </div>
+                        <div className="flex justify-between text-rose-700 bg-rose-50 p-2 rounded-xl border border-rose-100 text-xs font-bold">
+                          <span>{language === 'ar' ? 'المبلغ المتبقي:' : 'Remaining Balance:'}</span>
+                          <span className="font-black">{Number(activeInvoiceData.remainingBalance || 0).toLocaleString()} {currencySymbol}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-2 flex justify-between">
                       <span>{activeInvoiceData.type === 'issue' ? (language === 'ar' ? 'طريقة السداد:' : 'Payment Mode:') : (language === 'ar' ? 'طريقة تسوية المردودات:' : 'Refund Settlement Mode:')}</span>
                       <span>{activeInvoiceData.paymentMethod}</span>
                     </div>
+                    {activeInvoiceData.type === 'issue' && activeInvoiceData.status !== 'مدفوعة' && Number(activeInvoiceData.remainingBalance || 0) > 0 && (
+                      <div className="bg-slate-100 border border-slate-300 rounded-2xl p-4 space-y-2 mt-4 text-slate-800 no-print">
+                        <p className="font-black text-slate-800 text-xs">{language === 'ar' ? 'تسجيل سداد دفعة:' : 'Record Installment / Payment:'}</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max={activeInvoiceData.remainingBalance}
+                            id="directPayAmountInput"
+                            placeholder={language === 'ar' ? 'أدخل مبلغ السداد...' : 'Enter payment amount...'}
+                            className="w-full border border-slate-350 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 bg-white text-slate-900 font-bold"
+                          />
+                          <button 
+                            type="button"
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all active:scale-95 whitespace-nowrap cursor-pointer border-none"
+                            onClick={async () => {
+                              const val = parseFloat(document.getElementById('directPayAmountInput').value);
+                              if (!val || val <= 0 || val > parseFloat(activeInvoiceData.remainingBalance)) {
+                                alert(language === 'ar' ? 'الرجاء إدخال مبلغ صحيح' : 'Please enter a valid amount');
+                                return;
+                              }
+                              try {
+                                await api.post(`/sales/invoices/${activeInvoiceData.id}/pay`, { amount: val });
+                                alert(language === 'ar' ? 'تم تسجيل السداد بنجاح وتحديث الحسابات!' : 'Payment registered successfully!');
+                                closeInvoiceModal();
+                                fetchReportsData();
+                              } catch (e) {
+                                alert(e?.response?.data?.error || 'خطأ في السداد');
+                              }
+                            }}
+                          >
+                            {language === 'ar' ? 'اعتماد الدفع' : 'Authorize Pay'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3699,6 +3759,198 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 Select Return Item from Customer Invoices Modal 🌟 */}
+      {showInvoiceSelectModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white flex justify-between items-center shadow-md">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-white/10 rounded-2xl text-2xl backdrop-blur-md border border-white/20 shadow-inner">📂</span>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{language === 'ar' ? 'فواتير العميل المتاحة للمرتجع' : 'Client Invoices for Return'}</h3>
+                  <p className="text-xs text-amber-100 font-bold">{language === 'ar' ? 'اختر الفاتورة ثم حدد الصنف والكمية المراد إرجاعها' : 'Select invoice, item, and return quantity'}</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowInvoiceSelectModal(false);
+                  setSelectedInvoiceForReturn(null);
+                  setSelectedInvoiceItemForReturn(null);
+                }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              {/* Left Column: Invoices List */}
+              <div className="border border-slate-200 rounded-3xl p-4 space-y-4 max-h-[400px] overflow-y-auto">
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">{language === 'ar' ? 'قائمة الفواتير' : 'Invoices List'}</h4>
+                {(() => {
+                  const customerInvoices = invoices.filter(inv => 
+                    (selectedCustomer && Number(inv.customer_id) === Number(selectedCustomer)) ||
+                    (selectedCustomer && inv.customer_name === customers.find(c => String(c.id) === selectedCustomer)?.name)
+                  );
+                  if (customerInvoices.length === 0) {
+                    return <p className="text-xs text-slate-400 font-bold text-center py-8">{language === 'ar' ? 'لا توجد فواتير مسجلة لهذا العميل' : 'No invoices found for this customer'}</p>;
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {customerInvoices.map(inv => (
+                        <button
+                          key={inv.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedInvoiceForReturn(inv);
+                            setSelectedInvoiceItemForReturn(null);
+                          }}
+                          className={`w-full text-right p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col gap-1 ${selectedInvoiceForReturn?.id === inv.id ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'}`}
+                        >
+                          <div className="flex justify-between items-center w-full">
+                            <span className="font-mono font-black">{inv.invoice_number}</span>
+                            <span className="text-[10px] text-slate-400">{inv.created_at?.split('T')[0]}</span>
+                          </div>
+                          <div className="flex justify-between items-center w-full mt-1">
+                            <span>{language === 'ar' ? 'الإجمالي:' : 'Total:'} {Number(inv.total_amount).toLocaleString()} {currencySymbol}</span>
+                            <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full">{inv.payment_method}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Right Column: Invoice Items & Selection */}
+              <div className="border border-slate-200 rounded-3xl p-4 space-y-4 max-h-[400px] overflow-y-auto">
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">{language === 'ar' ? 'أصناف الفاتورة المحددة' : 'Selected Invoice Items'}</h4>
+                {selectedInvoiceForReturn ? (
+                  (() => {
+                    let parsedItems = [];
+                    try {
+                      if (selectedInvoiceForReturn.items) {
+                        parsedItems = typeof selectedInvoiceForReturn.items === 'string'
+                          ? JSON.parse(selectedInvoiceForReturn.items)
+                          : selectedInvoiceForReturn.items;
+                      }
+                    } catch (e) {
+                      console.error("Error parsing items", e);
+                    }
+                    if (!Array.isArray(parsedItems)) {
+                      parsedItems = [];
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          {parsedItems.map((pi, index) => {
+                            const name = pi.name || pi.item_name;
+                            const isSelected = selectedInvoiceItemForReturn?.index === index;
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedInvoiceItemForReturn({ ...pi, index, name });
+                                  setReturnQtyInput(1);
+                                }}
+                                className={`w-full text-right p-3 rounded-2xl border text-xs font-bold transition-all flex justify-between items-center ${isSelected ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'}`}
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="font-black">{name}</div>
+                                  <div className="text-[10px] text-slate-400">{language === 'ar' ? `السعر: ${pi.price || pi.unit_price} | الباتش: ${pi.batch_no || 'N/A'}` : `Price: ${pi.price || pi.unit_price} | Batch: ${pi.batch_no || 'N/A'}`}</div>
+                                </div>
+                                <span className="bg-slate-200/80 px-2 py-1 rounded-lg text-[10px] font-black">{pi.qty} {pi.uom || 'وحدة'}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {selectedInvoiceItemForReturn && (
+                          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 animate-in slide-in-from-top-2">
+                            <div className="text-xs font-black text-slate-800">{language === 'ar' ? 'تحديد الكمية المرتجعة:' : 'Select Return Quantity:'}</div>
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="number"
+                                min="1"
+                                max={selectedInvoiceItemForReturn.qty}
+                                value={returnQtyInput}
+                                onChange={(e) => setReturnQtyInput(Math.min(selectedInvoiceItemForReturn.qty, Math.max(1, Number(e.target.value))))}
+                                className="w-24 p-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-center focus:border-amber-500 outline-none"
+                              />
+                              <span className="text-xs text-slate-400 font-bold">
+                                {language === 'ar' ? `أقصى كمية مسموح بها: ${selectedInvoiceItemForReturn.qty}` : `Max allowed: ${selectedInvoiceItemForReturn.qty}`}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const invItem = inventoryItems.find(i => 
+                                  i.id === selectedInvoiceItemForReturn.inventory_id || 
+                                  i.item_name === selectedInvoiceItemForReturn.name
+                                );
+
+                                const newLine = {
+                                  key: Date.now(),
+                                  inventory_id: invItem ? String(invItem.id) : (selectedInvoiceItemForReturn.inventory_id ? String(selectedInvoiceItemForReturn.inventory_id) : ''),
+                                  item_name: selectedInvoiceItemForReturn.name,
+                                  batch_no: selectedInvoiceItemForReturn.batch_no || 'N/A',
+                                  uom: selectedInvoiceItemForReturn.uom || 'وحدة',
+                                  max_qty: selectedInvoiceItemForReturn.qty,
+                                  qty: returnQtyInput,
+                                  buy_price: invItem ? Number(invItem.buy_price || invItem.unit_cost || 0) : Number(selectedInvoiceItemForReturn.price || selectedInvoiceItemForReturn.unit_price || 0),
+                                  unit_price: Number(selectedInvoiceItemForReturn.price || selectedInvoiceItemForReturn.unit_price || 0),
+                                  total: (returnQtyInput * Number(selectedInvoiceItemForReturn.price || selectedInvoiceItemForReturn.unit_price || 0)).toFixed(2),
+                                  engineering_classification: ''
+                                };
+
+                                setInvoiceLines(prev => {
+                                  if (prev.length === 1 && !prev[0].inventory_id) {
+                                    return [newLine];
+                                  }
+                                  return [...prev, newLine];
+                                });
+
+                                setShowInvoiceSelectModal(false);
+                                setSelectedInvoiceForReturn(null);
+                                setSelectedInvoiceItemForReturn(null);
+                              }}
+                              className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all active:scale-95"
+                            >
+                              {language === 'ar' ? 'إضافة إلى جدول المرتجعات' : 'Add to Returns Table'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <p className="text-xs text-slate-400 font-bold text-center py-8">{language === 'ar' ? 'الرجاء اختيار الفاتورة من القائمة أولاً' : 'Please select an invoice first'}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="bg-slate-50 border-t border-slate-100 p-6 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInvoiceSelectModal(false);
+                  setSelectedInvoiceForReturn(null);
+                  setSelectedInvoiceItemForReturn(null);
+                }}
+                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs transition-all active:scale-95 cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+            </div>
           </div>
         </div>
       )}

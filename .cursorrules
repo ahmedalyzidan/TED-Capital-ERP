@@ -1,7 +1,7 @@
 # AI Execution, Safety & Token-Optimized Protocols (CRITICAL)
 
 ## 0. NO AUTONOMOUS COMMAND EXECUTION (MANUAL RUN ONLY)
-- **Manual Commands:** Do NOT execute any terminal commands autonomously. Output the exact command to the user so they can run it manually from the terminal.
+- **Strict Manual Commands:** Do NOT execute ANY terminal commands autonomously. You must output the exact command to the user so they can run it manually from the terminal. This applies to all commands, background tasks, server startups, migrations, and test runs.
 - **Zero Error Tolerance:** Check browser/server logs after every change. Ask the user to run commands to inspect/fix logs if needed.
 - **Manual Orchestrator:** Do NOT run `orchestrator.py` in the background. When the user runs it manually and reports an error, autonomously apply fixes.
 

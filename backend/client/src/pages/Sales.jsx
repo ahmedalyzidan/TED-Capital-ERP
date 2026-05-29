@@ -958,6 +958,7 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick,
   const [returnItems, setReturnItems] = useState([{ inventory_id: null, name: '', qty: 1, price: 0 }]);
   const [form, setForm] = useState({ source_invoice_id: '', customer_id: '', reason: '', reason_code: 'CUSTOMER_REQUEST', refund_method: 'Credit', restock_warehouse: 'المخزن الرئيسي', auto_restock: true, notes: '' });
   const [clientSearch, setClientSearch] = useState('');
+  const [directReturnOpen, setDirectReturnOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -997,8 +998,9 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick,
         ))}
       </div>
 
-      <div className="flex justify-end">
-        <Btn variant="danger" onClick={() => setModal(true)}>↩ {ar ? 'تسجيل مردود' : 'New Return'}</Btn>
+      <div className="flex justify-end gap-2">
+        <Btn variant="outline" onClick={() => setDirectReturnOpen(true)}>↩ {ar ? 'مرتجع صرف مباشر' : 'Direct Returns'}</Btn>
+        <Btn variant="danger" onClick={() => setModal(true)}>↩ {ar ? 'مردود مبيعات' : 'Sales Returns'}</Btn>
       </div>
 
       {loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" /></div> : (
@@ -1101,6 +1103,10 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick,
             <Btn variant="success" onClick={save}>↩ {ar ? 'حفظ المردود' : 'Save Return'}</Btn>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={directReturnOpen} onClose={() => setDirectReturnOpen(false)} title={ar ? 'مرتجع صرف مباشر ومبيعات' : 'Direct Returns & Sales'} maxW="max-w-7xl">
+        <DirectStockIssue defaultTab="return" embedded={true} hideModeSwitcher={true} onSuccess={() => { setDirectReturnOpen(false); load(); }} />
       </Modal>
     </div>
   );

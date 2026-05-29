@@ -26,6 +26,57 @@ router.get('/invoices', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/invoices/:id/pay', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const { amount } = req.body;
+
+    // 1. Fetch Invoice
+    const invRes = await client.query("SELECT * FROM sales_invoices WHERE id = $1", [id]);
+    if (invRes.rows.length === 0) throw new Error("الفاتورة غير موجودة.");
+    const inv = invRes.rows[0];
+
+    const currentPaid = parseFloat(inv.amount_paid) || 0;
+    const totalAmt = parseFloat(inv.total_amount) || 0;
+    const newPaid = currentPaid + parseFloat(amount);
+    const newRemaining = Math.max(0, totalAmt - newPaid);
+    const newStatus = newRemaining <= 0 ? 'مدفوعة' : 'مدفوعة جزئياً';
+
+    // 2. Update Invoice
+    await client.query(
+      `UPDATE sales_invoices 
+       SET amount_paid = $1, remaining_balance = $2, status = $3 
+       WHERE id = $4`,
+      [newPaid, newRemaining, newStatus, id]
+    );
+
+    // 3. Post General Ledger Entry
+    const AccountingService = require('../services/accountingService');
+    const cashBankAcc = inv.payment_method === 'Bank' || inv.payment_method === 'Bank Transfer' ? '1111' : '1101';
+    
+    await AccountingService.recordDoubleEntry(client, {
+      debitAccount: cashBankAcc,
+      creditAccount: '1120', // Credit Accounts Receivable (AR)
+      amount: parseFloat(amount),
+      costCenter: 'General',
+      description: `سداد دفعة من فاتورة مبيعات رقم ${inv.invoice_number}`,
+      username: req.user?.username || 'System',
+      referenceNo: inv.invoice_number,
+      company: inv.company
+    });
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: "تم سداد الدفعة وتحديث الحسابات بنجاح!" });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
+});
+
 router.post('/invoices', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -599,9 +650,9 @@ router.post('/orders/:id/invoice', async (req, res) => {
     const invoiceStatus = remainingBalance <= 0 ? 'مدفوعة' : (amountPaid > 0 ? 'مدفوعة جزئياً' : 'غير مدفوعة');
 
     await client.query(
-      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount, payment_method, amount_paid, remaining_balance)
-       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, invoiceStatus, so.notes, so.company, req.user?.username, so.salesperson_id||null, so.sales_type||'Inventory', commRate, commAmt, so.payment_method||'On Account', amountPaid, remainingBalance]
+      `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount, payment_method, amount_paid, remaining_balance, items)
+       VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      [so.customer_id, invNum, so.total_amount, so.tax_amount, so.discount, invoiceStatus, so.notes, so.company, req.user?.username, so.salesperson_id||null, so.sales_type||'Inventory', commRate, commAmt, so.payment_method||'On Account', amountPaid, remainingBalance, typeof so.items === 'string' ? so.items : JSON.stringify(so.items || [])]
     );
 
     // 3. Deduct Stock Levels & Post COGS (ONLY IF Inventory)
@@ -901,6 +952,12 @@ router.post('/return-orders', async (req, res) => {
       const AccountingService = require('../services/accountingService');
       const totalAmt = parseFloat(total_amount) || 0;
       if (totalAmt > 0) {
+        if (customer_id && (refund_method === 'Customer Wallet' || refund_method === 'محفظة العميل')) {
+          await client.query(
+            `UPDATE customers SET credit_balance = credit_balance + $1 WHERE id = $2`,
+            [totalAmt, customer_id]
+          );
+        }
         const creditAcc = refund_method === 'Cash' ? '1101' : '1120';
         await AccountingService.recordDoubleEntry(client, {
           debitAccount: '4100',   // Sales Revenue
