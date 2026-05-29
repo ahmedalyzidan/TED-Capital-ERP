@@ -1,6 +1,7 @@
 const pg = require('pg');
 
 const tenantDbs = [
+    { db: 'erp_db', company: 'Central Database' },
     { db: 'erp_ted_capital', company: 'TED Capital' },
     { db: 'erp_design_concept', company: 'Design Concept' },
     { db: 'erp_primemed_pharma', company: 'PRIMEMED PHARMA' },
