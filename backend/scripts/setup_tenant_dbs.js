@@ -52,7 +52,7 @@ async function run() {
 
     // Read the SQL scripts
     console.log("\n📖 Reading SQL schema files...");
-    const rootDir = path.join(__dirname, '../../');
+    const rootDir = path.join(__dirname, '../');
     const sqlSchemaV29 = readAndCleanSqlFile(path.join(rootDir, 'full_schema_v29.sql'));
     const sqlSchemaV30 = readAndCleanSqlFile(path.join(rootDir, 'schema_fix_v30.sql'));
     const sqlSchemaV31 = readAndCleanSqlFile(path.join(rootDir, 'schema_fix_v31.sql'));
