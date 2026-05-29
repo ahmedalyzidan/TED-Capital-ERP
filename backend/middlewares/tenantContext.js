@@ -1,18 +1,30 @@
 const { tenantStorage, getOrCreatePool } = require('../config/db');
 
 const tenantContextMiddleware = (req, res, next) => {
-    // 0. Force central/default database for authentication and public endpoints
+    // 0. Force central/default database for authentication, IAM, and user management
     const path = (req.path || '').toLowerCase();
     const originalUrl = (req.originalUrl || '').toLowerCase();
     if (
         path === '/login' ||
         path === '/refresh' ||
+        path === '/logout' ||
         path === '/health' ||
+        path === '/change-password' ||
+        path.startsWith('/2fa') ||
         path.startsWith('/public/') ||
+        path.startsWith('/iam') ||
+        path.startsWith('/users') ||
+        path.startsWith('/table/users') ||
         originalUrl.includes('/login') ||
         originalUrl.includes('/refresh') ||
+        originalUrl.includes('/logout') ||
         originalUrl.includes('/health') ||
-        originalUrl.includes('/public/')
+        originalUrl.includes('/change-password') ||
+        originalUrl.includes('/2fa') ||
+        originalUrl.includes('/public/') ||
+        originalUrl.includes('/iam') ||
+        originalUrl.includes('/users') ||
+        originalUrl.includes('/table/users')
     ) {
         return tenantStorage.run(null, () => {
             next();

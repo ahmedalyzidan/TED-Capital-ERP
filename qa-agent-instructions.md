@@ -22,7 +22,7 @@ In this phase, you are STRICTLY FORBIDDEN from modifying any existing applicatio
 4. Performance Threshold: Add assertions to ensure critical API responses resolve in under 500ms.
 
 ### PHASE 2: Execution & Auto-Healing (SURGICAL EDIT MODE)
-*CRITICAL: Do NOT execute any terminal commands or test runs autonomously. Ask the user to run the tests and report the results/logs.* Once the user runs the tests and reports a failure, you must autonomously initiate the Auto-Healing protocol:
+*CRITICAL: Do NOT execute any terminal commands or test runs autonomously. Autonomous command execution is strictly forbidden. You must ask the user to run the tests and report the results/logs.* Once the user runs the tests and reports a failure, you must autonomously initiate the Auto-Healing protocol:
 
 1. Analyze: Read the terminal errors, network logs, or database logs to pinpoint the exact root cause.
 2. Surgical Fix: Apply a precise, non-destructive fix to the application codebase (Frontend or Backend). 
