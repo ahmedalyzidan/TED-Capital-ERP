@@ -112,7 +112,7 @@ router.get('/dropdowns', async (req, res) => {
         let resCompanies = allCompanies;
 
         const scope = resolveScope(req.user);
-        if (scope) {
+        if (scope && req.query.bypassScope !== 'true') {
             resCompanies = allCompanies.filter(c => 
                 scope.names.some(sn => c.toLowerCase().includes(sn.toLowerCase()) || sn.toLowerCase().includes(c.toLowerCase()))
             );

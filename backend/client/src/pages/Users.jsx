@@ -379,7 +379,7 @@ export default function Users() {
         setUsers(uRes.data.data || []);
         const rRes = await api.get('/iam/roles');
         setRoles(rRes.data || []);
-        const ddRes = await api.get('/dropdowns');
+        const ddRes = await api.get('/dropdowns?bypassScope=true');
         setProjectCompaniesList(ddRes.data.companies_dd || []);
         setProjectsList(ddRes.data.projects || []);
       } else if (activeTab === 'roles') {
