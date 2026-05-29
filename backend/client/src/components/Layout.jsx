@@ -450,28 +450,31 @@ export default function Layout() {
       )}
 
       <aside
-        style={{ zoom: '0.8' }}
         className={`
         flex flex-col transition-all duration-500 ease-in-out
         ${isSidebarCollapsed ? 'w-[7.5rem]' : 'w-[22.5rem]'} 
-        ${theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-50 border-slate-200'}
         ${language === 'ar' ? 'border-l' : 'border-r'} print:hidden
         fixed inset-y-0 z-40 lg:relative
         ${isMobileMenuOpen ? 'translate-x-0' : (language === 'ar' ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}
-      `}>
-        <div className={`p-8 flex items-center justify-between min-h-[100px] relative overflow-hidden`}>
+      `}
+        style={{ zoom: '0.8', backgroundColor: theme === 'dark' ? '#171920' : '#f8fafc', borderColor: theme === 'dark' ? '#2e323d' : '#e2e8f0' }}>
+        <div className={`p-8 flex items-center justify-between min-h-[100px] relative overflow-hidden`}
+          style={theme === 'dark' ? { borderBottom: '1px solid #2e323d' } : {}}>
           {theme === 'dark' && (
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/10 to-transparent opacity-30"></div>
+            <div className="absolute top-0 left-0 w-full h-full opacity-20" style={{ background: 'linear-gradient(135deg, #d9a77015 0%, transparent 60%)' }}></div>
           )}
           <div className={`flex items-center gap-4 transition-all duration-500 relative z-10 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-extrabold text-2xl shadow-2xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-extrabold text-2xl shadow-2xl`}
+              style={theme === 'dark' ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', color: '#d9a770', border: '1.5px solid #d9a770' } : { backgroundColor: '#0f172a', color: 'white' }}>
               {(user?.selectedCompany || localStorage.getItem('active_company') || 'ERP').charAt(0).toUpperCase()}
             </div>
             <div className="whitespace-nowrap">
-              <h1 className={`text-xl font-extrabold tracking-tight leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+              <h1 className={`text-xl font-extrabold tracking-tight leading-none`}
+                style={theme === 'dark' ? { color: '#f1f5f9' } : { color: '#0f172a' }}>
                 {user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات'}
               </h1>
-              <p className={`text-[11px] font-extrabold uppercase tracking-[0.25em] mt-2 opacity-80 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{t.enterprise}</p>
+              <p className={`text-[11px] font-extrabold uppercase tracking-[0.25em] mt-2`}
+                style={theme === 'dark' ? { color: '#d9a770', opacity: 0.9 } : { color: '#94a3b8', opacity: 0.8 }}>{t.enterprise}</p>
             </div>
           </div>
           <button
@@ -479,10 +482,11 @@ export default function Layout() {
             className={`
               w-10 h-10 rounded-xl border transition-all shadow-lg cursor-pointer hidden lg:flex items-center justify-center z-50
               ${theme === 'dark'
-                ? 'bg-white/5 border-white/10 text-white/40 hover:bg-emerald-500 hover:text-white'
+                ? 'hover:text-white'
                 : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white'}
               ${isSidebarCollapsed ? 'mx-auto' : ''}
             `}
+            style={theme === 'dark' ? { backgroundColor: '#272a33', border: '1px solid #3e4452', color: '#94a3b8' } : {}}
           >
             <svg
               className={`w-5 h-5 transition-transform duration-500 ${isSidebarCollapsed ? (language === 'ar' ? 'rotate-180' : 'rotate-0') : (language === 'ar' ? 'rotate-0' : 'rotate-180')}`}
@@ -545,7 +549,8 @@ export default function Layout() {
               .filter(group => group.items.length > 0)
               .map((group, gIdx) => (
                 <div key={gIdx} className="space-y-4">
-                  <h3 className={`px-5 text-[13px] font-bold uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-white/60' : 'text-slate-400'} ${isSidebarCollapsed ? 'text-center' : ''}`}>
+                  <h3 className={`px-5 text-[13px] font-bold uppercase tracking-[0.2em] ${isSidebarCollapsed ? 'text-center' : ''}`}
+                    style={theme === 'dark' ? { color: '#d9a770', opacity: 0.7, letterSpacing: '0.2em' } : { color: '#94a3b8' }}>
                     {isSidebarCollapsed ? '••' : group.title}
                   </h3>
                   <div className="space-y-1.5">
@@ -581,30 +586,46 @@ export default function Layout() {
                             onClick={(e) => handleItemClick(item, e)}
                             className={`
                               flex items-center gap-6 px-6 py-4 rounded-2xl transition-all duration-500 group relative overflow-hidden w-full text-left
-                              ${isReallyActive
-                                ? (theme === 'dark' ? 'bg-white/15 text-white shadow-lg border border-white/15 font-bold' : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 font-bold')
-                                : (theme === 'dark' ? 'text-white/90 font-semibold hover:bg-white/10 hover:text-white drop-shadow-sm' : 'text-slate-800 font-semibold hover:bg-slate-100 hover:text-slate-950')}
+                              ${!isReallyActive && theme !== 'dark' ? 'text-slate-800 font-semibold hover:bg-slate-100 hover:text-slate-950' : ''}
+                              ${!isReallyActive && theme === 'dark' ? 'font-semibold drop-shadow-sm' : ''}
                               ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                             `}
+                            style={theme === 'dark' ? {
+                              backgroundColor: isReallyActive ? '#29384e' : 'transparent',
+                              border: isReallyActive ? '1.5px solid rgba(217,167,112,0.5)' : '1.5px solid transparent',
+                              color: isReallyActive ? '#d9a770' : '#cbd5e1',
+                              boxShadow: isReallyActive ? '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)' : 'none',
+                              fontWeight: isReallyActive ? 700 : 600,
+                            } : {
+                              backgroundColor: isReallyActive ? '#0f172a' : 'transparent',
+                              color: isReallyActive ? 'white' : undefined,
+                              fontWeight: isReallyActive ? 700 : 600,
+                            }}
                           >
                             <>
                               {isReallyActive && (
-                                <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1.5 ${theme === 'dark' ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]' : 'bg-white'}`}></div>
+                                <div className={`absolute top-0 bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} w-1.5`}
+                                  style={theme === 'dark' ? { backgroundColor: '#d9a770', boxShadow: '0 0 15px rgba(217,167,112,0.8)' } : { backgroundColor: 'white' }}></div>
                               )}
                               <span className={`text-2xl transition-all duration-500 ${isReallyActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110 opacity-90 group-hover:opacity-100'}`}>
                                 {item.icon}
                               </span>
                               {!isSidebarCollapsed && (
                                 <span className={`font-bold text-[17px] tracking-normal transition-all duration-300 ${
-                                  isReallyActive 
-                                    ? 'translate-x-1 text-white drop-shadow-md font-extrabold' 
-                                    : (theme === 'dark' ? 'text-white/90 drop-shadow-sm' : 'text-slate-800 drop-shadow-none')
-                                }`}>
+                                  isReallyActive && theme !== 'dark' ? 'translate-x-1 text-white drop-shadow-md font-extrabold' : ''
+                                }`}
+                                  style={theme === 'dark' ? {
+                                    color: isReallyActive ? '#d9a770' : '#cbd5e1',
+                                    fontWeight: isReallyActive ? 700 : 600,
+                                  } : {}}>
                                   {item.label}
                                 </span>
                               )}
                               {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
-                                <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[20px] h-[20px] px-1.5 bg-rose-500 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-lg shadow-rose-500/40 animate-pulse border-2 ${theme === 'dark' ? 'border-slate-900' : 'border-white'}`}>
+                                <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center text-[11px] font-black animate-pulse border-2 
+                                  ${theme === 'dark' 
+                                    ? 'bg-[#d9a770] text-[#171920] border-[#171920] shadow-[0_0_10px_rgba(217,167,112,0.4)]' 
+                                    : 'bg-rose-500 text-white border-white shadow-lg shadow-rose-500/40'}`}>
                                   {sidebarStats[item.badgeKey]}
                                 </div>
                               )}
@@ -648,10 +669,15 @@ export default function Layout() {
                                     to={child.path}
                                     className={`
                                       flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 font-bold text-[14px] w-full text-left
-                                      ${isChildReallyActive
-                                        ? (theme === 'dark' ? 'bg-white/10 text-white shadow-md border border-white/5 font-extrabold' : 'bg-slate-200/60 text-slate-950 font-extrabold shadow-sm')
-                                        : (theme === 'dark' ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80')}
+                                      ${!isChildReallyActive && theme !== 'dark' ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80' : ''}
+                                      ${isChildReallyActive && theme !== 'dark' ? 'bg-slate-200/60 text-slate-950 font-extrabold shadow-sm' : ''}
                                     `}
+                                    style={theme === 'dark' ? {
+                                      backgroundColor: isChildReallyActive ? 'rgba(41,56,78,0.7)' : 'transparent',
+                                      color: isChildReallyActive ? '#d9a770' : '#94a3b8',
+                                      border: isChildReallyActive ? '1px solid rgba(217,167,112,0.3)' : '1px solid transparent',
+                                      fontWeight: isChildReallyActive ? 700 : 500,
+                                    } : {}}
                                   >
                                     <span className="text-lg">{child.icon}</span>
                                     <span>{child.label}</span>
@@ -670,15 +696,21 @@ export default function Layout() {
         </nav>
 
         <div className={`p-6 mt-auto transition-all duration-300 ${isSidebarCollapsed ? 'items-center' : ''}`}>
-          <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme !== 'dark' ? 'bg-white border-slate-200 shadow-sm' : ''}`}
+            style={theme === 'dark' ? { backgroundColor: '#272a33', border: '1px solid #3e4452' } : {}}>
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl ${theme === 'dark' ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl`}
+                  style={theme === 'dark'
+                    ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', color: '#d9a770', border: '1.5px solid rgba(217,167,112,0.5)' }
+                    : { backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>
                   {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="overflow-hidden">
-                  <p className={`text-[15px] font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.username || 'User'}</p>
-                  <p className={`text-[11px] font-bold uppercase tracking-widest mt-1 opacity-70 ${theme === 'dark' ? 'text-emerald-400' : 'text-slate-400'}`}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
+                  <p className={`text-[15px] font-bold truncate`}
+                    style={theme === 'dark' ? { color: '#f1f5f9' } : { color: '#0f172a' }}>{user?.username || 'User'}</p>
+                  <p className={`text-[11px] font-bold uppercase tracking-widest mt-1`}
+                    style={theme === 'dark' ? { color: '#d9a770', opacity: 0.8 } : { color: '#94a3b8', opacity: 0.7 }}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
                 </div>
               </div>
             )}
@@ -686,19 +718,22 @@ export default function Layout() {
             <div className={`flex ${isSidebarCollapsed ? 'flex-col gap-3 items-center' : 'gap-3'} transition-all`}>
               <button
                 onClick={() => updatePreferences({ theme: theme === 'dark' ? 'light' : 'dark' })}
-                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all ${theme !== 'dark' ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100' : ''} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+                style={theme === 'dark' ? { backgroundColor: '#22252e', border: '1px solid #3e4452', color: '#94a3b8' } : {}}
               >
                 {theme === 'dark' ? '🌙' : '☀️'}
               </button>
               <button
                 onClick={() => updatePreferences({ language: language === 'ar' ? 'en' : 'ar' })}
-                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all text-[11px] font-bold ${theme === 'dark' ? 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+                className={`flex-1 h-10 flex items-center justify-center rounded-xl border transition-all text-[11px] font-bold ${theme !== 'dark' ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100' : ''} ${isSidebarCollapsed ? 'w-12 h-12' : ''}`}
+                style={theme === 'dark' ? { backgroundColor: '#22252e', border: '1px solid #3e4452', color: '#94a3b8' } : {}}
               >
                 {language === 'ar' ? 'EN' : 'AR'}
               </button>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className={`h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border ${theme === 'dark' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500 hover:text-white' : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white'} ${isSidebarCollapsed ? 'w-12 h-12' : 'flex-[2]'}`}
+                className={`h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border ${theme !== 'dark' ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white' : ''} ${isSidebarCollapsed ? 'w-12 h-12' : 'flex-[2]'}`}
+                style={theme === 'dark' ? { backgroundColor: 'rgba(217,167,112,0.1)', color: '#d9a770', border: '1px solid rgba(217,167,112,0.3)' } : {}}
               >
                 {isSidebarCollapsed ? '🚪' : t.logout}
               </button>
@@ -707,12 +742,14 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden relative transition-colors duration-300">
-        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 z-50 print:hidden">
+      <main className={`flex-1 flex flex-col min-w-0 overflow-hidden relative transition-colors duration-300 ${theme !== 'dark' ? 'bg-white text-slate-900' : ''}`}
+        style={theme === 'dark' ? { backgroundColor: '#1d2026', color: '#f1f5f9' } : {}}>
+        <header className={`h-20 border-b flex items-center justify-between px-4 lg:px-10 z-50 print:hidden ${theme !== 'dark' ? 'bg-white border-slate-100 text-slate-900' : ''}`}
+          style={theme === 'dark' ? { backgroundColor: '#171920', borderColor: '#2e323d', color: '#f1f5f9' } : {}}>
           <div className="flex items-center gap-4 lg:gap-8 flex-1">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-100 text-slate-600 shadow-sm"
+              className={`lg:hidden w-10 h-10 flex items-center justify-center rounded-xl border shadow-sm ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-100 text-slate-600'}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
@@ -728,15 +765,15 @@ export default function Layout() {
                 onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
                 placeholder={t.searchPlaceholder}
                 className={`
-                    w-full bg-slate-50 border border-slate-100 
+                    w-full border outline-none transition-all py-2.5 lg:py-3 rounded-xl lg:rounded-2xl text-[12px] lg:text-[13px] font-bold placeholder:text-slate-400 placeholder:font-medium
                     ${language === 'ar' ? 'pr-10 lg:pr-12 pl-4 lg:pl-16' : 'pl-10 lg:pl-12 pr-4 lg:pr-16'} 
-                    py-2.5 lg:py-3 rounded-xl lg:rounded-2xl text-[12px] lg:text-[13px] font-bold text-slate-900
-                    focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-300 
-                    outline-none transition-all placeholder:text-slate-400 placeholder:font-medium
+                    ${theme === 'dark' 
+                      ? 'bg-white/5 border-white/10 text-white focus:bg-white/10 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50' 
+                      : 'bg-slate-50 border-slate-100 text-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-300'}
                    `}
               />
               {isSearchOpen && (searchQuery.length >= 2) && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className={`absolute left-0 right-0 top-full mt-2 rounded-2xl shadow-2xl border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200 ${theme === 'dark' ? 'bg-[#1a1f2c] border-white/10' : 'bg-white border-slate-100'}`}>
                   {isSearching ? (
                     <div className="p-8 text-center flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
@@ -787,17 +824,24 @@ export default function Layout() {
             <NotificationCenter />
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">{t.workspace}</span>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
-                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-tighter">{t.connected}</span>
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border`}
+                style={theme === 'dark'
+                  ? { backgroundColor: 'rgba(41,56,78,0.5)', border: '1px solid rgba(217,167,112,0.3)' }
+                  : { backgroundColor: '#f0fdf4', border: '1px solid #d1fae5' }}>
+                <span className={`text-[9px] font-black uppercase tracking-tighter`}
+                  style={theme === 'dark' ? { color: '#d9a770' } : { color: '#065f46' }}>{t.connected}</span>
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                    style={{ backgroundColor: theme === 'dark' ? '#d9a770' : '#34d399' }}></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5"
+                    style={{ backgroundColor: theme === 'dark' ? '#d9a770' : '#10b981' }}></span>
                 </span>
               </div>
             </div>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar print:p-0 print:overflow-visible bg-slate-50/50">
+        <div className={`flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar print:p-0 print:overflow-visible transition-colors duration-300 ${theme !== 'dark' ? 'bg-slate-50/50' : ''}`}
+          style={theme === 'dark' ? { backgroundColor: '#1d2026' } : {}}>
           <div className="max-w-full">
             <Outlet />
           </div>

@@ -3,7 +3,7 @@ import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function PharmaSupplyChain() {
-   const { language } = useLanguage();
+   const { language, theme } = useLanguage();
    const [activeTab, setActiveTab] = useState('shipments'); // shipments, items, expenses, currencies
    const [loading, setLoading] = useState(false);
 
@@ -706,8 +706,8 @@ export default function PharmaSupplyChain() {
    };
 
    return (
-      <div className="pharma-supply-light min-h-screen bg-slate-950 text-slate-100 pb-20 animate-fade-in font-sans" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-         <style dangerouslySetInnerHTML={{
+      <div className={`min-h-screen pb-20 animate-fade-in font-sans ${theme === 'dark' ? 'dark text-slate-100 bg-[#0c0f16]' : 'pharma-supply-light text-slate-900 bg-slate-950'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+         {theme !== 'dark' && <style dangerouslySetInnerHTML={{
             __html: `
             /* ═══════════════════════════════════════════════════════════
                PREMIUM WHITE THEME ENGINE — PharmaSupplyChain Scoped
@@ -842,7 +842,7 @@ export default function PharmaSupplyChain() {
                color: var(--ph-text-primary) !important;
             }
             `
-         }} />
+         }} />}
          {/* Premium Header */}
          <div className="bg-[#161e2f] border-b border-slate-800 sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
             <div className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-8">

@@ -3,7 +3,8 @@ import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Reports() {
-   const { language } = useLanguage();
+   const { language, theme } = useLanguage();
+   const isDark = theme === 'dark';
    const [loading, setLoading] = useState(true);
 
    // Data States
@@ -290,7 +291,9 @@ export default function Reports() {
    };
 
    return (
-      <div className="bg-slate-50 min-h-screen p-4 space-y-6 text-right selection:bg-emerald-500/30" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={`min-h-screen p-4 space-y-6 text-right selection:bg-emerald-500/30`}
+        style={{ backgroundColor: isDark ? '#1d2026' : '#f8fafc', color: isDark ? '#f1f5f9' : '#0f172a' }}
+        dir={language === 'ar' ? 'rtl' : 'ltr'}>
          
          <style>{`
             @media print {
@@ -406,7 +409,17 @@ export default function Reports() {
                   { label: cur.netProfit, val: plStats.netProfit, color: plStats.netProfit >= 0 ? 'emerald' : 'rose', icon: '⚡', trend: '+8.1%' },
                   { label: cur.activeProjects, val: activeProjects.length, color: 'indigo', type: 'projects', icon: '🏗️', trend: '+12% نمو' }
                ].map((kpi, i) => (
-                  <div key={i} onClick={() => kpi.type && handleDetailClick(kpi.type, kpi.label)} className="bg-white/80 backdrop-blur-xl p-5 md:p-6 rounded-[1.5rem] border border-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] cursor-pointer hover:shadow-2xl hover:-translate-y-2 hover:border-indigo-500/20 transition-all group relative overflow-hidden active:scale-[0.98]">
+               <div key={i} onClick={() => kpi.type && handleDetailClick(kpi.type, kpi.label)}
+                 className="backdrop-blur-xl p-5 md:p-6 rounded-[1.5rem] border cursor-pointer hover:-translate-y-2 transition-all group relative overflow-hidden active:scale-[0.98]"
+                 style={isDark ? {
+                   backgroundColor: '#272a33',
+                   borderColor: 'rgba(217,167,112,0.2)',
+                   boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)'
+                 } : {
+                   backgroundColor: 'rgba(255,255,255,0.8)',
+                   borderColor: 'white',
+                   boxShadow: '0 8px 32px rgba(0,0,0,0.05)'
+                 }}>
                      <div className={`absolute top-0 right-0 w-32 h-32 bg-${kpi.color}-500/5 rounded-full blur-[40px] group-hover:scale-150 transition-transform`}></div>
                      <div className="flex justify-between items-start mb-6 relative z-10">
                         <div className="space-y-1">
@@ -417,11 +430,16 @@ export default function Reports() {
                         </div>
                         <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-lg shadow-inner group-hover:scale-110 transition-transform group-hover:bg-slate-950 group-hover:text-white">{kpi.icon}</div>
                      </div>
-                     <div className="flex items-baseline gap-2 relative z-10">
-                        <span id={kpi.label === cur.netProfit ? "total-balance" : undefined} className={`text-2xl md:text-3xl font-black font-mono tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700`}>{kpi.val.toLocaleString()}</span>
+                      <div className="flex items-baseline gap-2 relative z-10">
+                         <span id={kpi.label === cur.netProfit ? "total-balance" : undefined}
+                           className={`text-2xl md:text-3xl font-black font-mono tracking-tighter`}
+                           style={{ color: isDark ? '#f1f5f9' : undefined, backgroundImage: isDark ? 'none' : 'linear-gradient(to right, #0f172a, #334155)', WebkitBackgroundClip: isDark ? 'unset' : 'text', WebkitTextFillColor: isDark ? 'unset' : 'transparent' }}>
+                           {kpi.val.toLocaleString()}
+                         </span>
                         <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest">{i < 3 ? 'LCY' : ''}</span>
                      </div>
-                     <div className="mt-6 h-1.5 bg-slate-100 rounded-full overflow-hidden relative z-10 shadow-inner">
+                      <div className="mt-6 h-1.5 rounded-full overflow-hidden relative z-10 shadow-inner"
+                        style={{ backgroundColor: isDark ? '#22252e' : '#f1f5f9' }}>
                         <div className={`h-full bg-gradient-to-r from-${kpi.color}-600 via-${kpi.color}-500 to-${kpi.color}-300 transition-all duration-1000 shadow-[0_0_8px_rgba(16,185,129,0.4)]`} style={{ width: i < 3 ? (i === 0 ? '100%' : (i === 1 ? `${expP}%` : `${prfP}%`)) : '85%' }}></div>
                      </div>
                   </div>
@@ -461,13 +479,15 @@ export default function Reports() {
 
             {/* Real Estate Insights Section */}
             {(selectedCompany === 'all' || selectedCompany === '1') && (
-               <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+               <div className="rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border shadow-xl space-y-6 relative overflow-hidden group"
+                 style={isDark ? { backgroundColor: '#272a33', borderColor: '#3e4452' } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}>
                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[60px]"></div>
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div className="flex justify-between items-center border-b pb-4"
+                    style={{ borderColor: isDark ? '#3e4452' : '#f1f5f9' }}>
                      <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏢</div>
                         <div>
-                           <h2 className="text-base md:text-lg font-black text-slate-900">
+                           <h2 className="text-base md:text-lg font-black text-slate-900" style={{ color: isDark ? '#f1f5f9' : '#0f172a' }}>
                               {language === 'ar' ? 'تحليلات الاستثمار العقاري' : 'Real Estate Investment Insights'}
                            </h2>
                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
@@ -480,13 +500,14 @@ export default function Reports() {
                      </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                     <div className="bg-slate-50 p-5 md:p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                      <div className="p-5 md:p-6 rounded-2xl border flex flex-col justify-between"
+                        style={isDark ? { backgroundColor: '#22252e', borderColor: '#3e4452' } : { backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }}>
+                         <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#94a3b8' : '#94a3b8' }}>
                            {language === 'ar' ? 'إجمالي قيمة التعاقدات' : 'Total Contract Value'}
                         </span>
                         <div className="mt-4 flex items-baseline gap-2">
-                           <span className="text-xl md:text-2xl font-black font-mono text-slate-900">{reStats.totalSales.toLocaleString()}</span>
+                           <span className="text-xl md:text-2xl font-black font-mono" style={{ color: isDark ? '#f1f5f9' : '#0f172a' }}>{reStats.totalSales.toLocaleString()}</span>
                            <span className="text-[8px] text-slate-400 font-black">LCY</span>
                         </div>
                      </div>
@@ -519,9 +540,11 @@ export default function Reports() {
             )}
 
             {/* Sector Margins Contribution Card */}
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border shadow-xl space-y-6 relative overflow-hidden group"
+              style={isDark ? { backgroundColor: '#272a33', borderColor: '#3e4452' } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}>
                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[60px]"></div>
-               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+               <div className="flex justify-between items-center border-b pb-4"
+                 style={{ borderColor: isDark ? '#3e4452' : '#f1f5f9' }}>
                   <div className="flex items-center gap-4">
                      <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">📈</div>
                      <div>
@@ -559,9 +582,11 @@ export default function Reports() {
             </div>
 
             {/* Liquidity Gap Warning Matrix */}
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 border shadow-xl space-y-6 relative overflow-hidden group"
+              style={isDark ? { backgroundColor: '#272a33', borderColor: '#3e4452' } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}>
                <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-[60px]"></div>
-               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+               <div className="flex justify-between items-center border-b pb-4"
+                 style={{ borderColor: isDark ? '#3e4452' : '#f1f5f9' }}>
                   <div className="flex items-center gap-4">
                      <div className="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center text-2xl shrink-0">⚠️</div>
                      <div>
@@ -608,7 +633,9 @@ export default function Reports() {
 
             {/* Strategic Intelligence Grids */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('cashflow', 'Cashflow')}>
+                <div className="rounded-[1.5rem] md:rounded-[2rem] border shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden"
+                  style={isDark ? { backgroundColor: '#272a33', borderColor: '#3e4452' } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}
+                  onClick={() => handleDetailClick('cashflow', 'Cashflow')}>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[40px]"></div>
                     <div className="flex justify-between items-center mb-6 relative z-10">
                         <div>
@@ -632,7 +659,9 @@ export default function Reports() {
                     </div>
                 </div>
                 
-                <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden" onClick={() => handleDetailClick('absorption', 'Absorption')}>
+                <div className="rounded-[1.5rem] md:rounded-[2rem] border shadow-xl p-5 md:p-8 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden"
+                  style={isDark ? { backgroundColor: '#272a33', borderColor: '#3e4452' } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}
+                  onClick={() => handleDetailClick('absorption', 'Absorption')}>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px]"></div>
                     <div className="flex justify-between items-center mb-6 relative z-10">
                         <div>

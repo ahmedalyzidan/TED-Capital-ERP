@@ -5,7 +5,8 @@ import Subcontractor360 from '../components/Subcontractor360';
 import SubcontractorAnalytics from '../components/SubcontractorAnalytics';
 
 export default function Subcontractors() {
-  const { language } = useLanguage();
+  const { language, theme } = useLanguage();
+  const isDark = theme === 'dark';
   const [activeTab, setActiveTab] = useState('subs');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -630,9 +631,68 @@ export default function Subcontractors() {
   };
 
   return (
-    <div className="subcontractors-light bg-[#f8fafc] min-h-screen p-6 sm:p-10 space-y-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`${isDark ? 'subcontractors-dark' : 'subcontractors-light'} min-h-screen p-6 sm:p-10 space-y-8`}
+      style={{ backgroundColor: isDark ? '#1d2026' : '#f8fafc', color: isDark ? '#f1f5f9' : '#0f172a' }}
+      dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <style dangerouslySetInnerHTML={{
-        __html: `
+        __html: isDark ? `
+        /* ═══════════════════════════════════════════════════════════
+           DARK THEME ENGINE — Subcontractors Scoped
+        ═══════════════════════════════════════════════════════════ */
+        .subcontractors-dark .bg-slate-900\/90 {
+          background-color: #272a33 !important;
+          border-color: #3e4452 !important;
+          color: #f1f5f9 !important;
+        }
+        .subcontractors-dark .bg-slate-950 {
+          background-color: #171920 !important;
+          border-color: #2e323d !important;
+          color: #f1f5f9 !important;
+        }
+        .subcontractors-dark .bg-white,
+        .subcontractors-dark [class*="bg-white"] {
+          background-color: #272a33 !important;
+          border-color: #3e4452 !important;
+          color: #f1f5f9 !important;
+        }
+        .subcontractors-dark .bg-slate-100 {
+          background-color: #22252e !important;
+        }
+        .subcontractors-dark .bg-slate-200 {
+          background-color: #2e323d !important;
+        }
+        .subcontractors-dark .bg-\\[\\#0b0f19\\]\/90 {
+          background-color: #171920 !important;
+          border-color: #2e323d !important;
+        }
+        .subcontractors-dark button.bg-\\[\\#1e293b\\]\/80 {
+          background-color: #29384e !important;
+          border: 1.8px solid rgba(217,167,112,0.6) !important;
+          color: #d9a770 !important;
+        }
+        .subcontractors-dark button.bg-\\[\\#131d31\\]\/50 {
+          background-color: #22252e !important;
+          border: 1px solid #3e4452 !important;
+          color: #94a3b8 !important;
+        }
+        .subcontractors-dark .text-slate-900 { color: #f1f5f9 !important; }
+        .subcontractors-dark .text-slate-700 { color: #cbd5e1 !important; }
+        .subcontractors-dark .text-slate-500,
+        .subcontractors-dark .text-slate-400 { color: #94a3b8 !important; }
+        .subcontractors-dark .border-slate-200,
+        .subcontractors-dark .border-slate-100 { border-color: #3e4452 !important; }
+        .subcontractors-dark input,
+        .subcontractors-dark select,
+        .subcontractors-dark textarea {
+          background-color: #22252e !important;
+          border-color: #3e4452 !important;
+          color: #f1f5f9 !important;
+        }
+        .subcontractors-dark tr:hover { background-color: rgba(41,56,78,0.3) !important; }
+        .subcontractors-dark thead { background-color: #171920 !important; }
+        .subcontractors-dark th { color: #94a3b8 !important; border-color: #3e4452 !important; }
+        .subcontractors-dark td { color: #f1f5f9 !important; border-color: #2e323d !important; }
+        ` : `
         /* ═══════════════════════════════════════════════════════════
            PREMIUM WHITE THEME ENGINE — Subcontractors Scoped
         ═══════════════════════════════════════════════════════════ */

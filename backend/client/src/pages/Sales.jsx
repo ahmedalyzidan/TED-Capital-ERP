@@ -3,6 +3,20 @@ import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 
+// ─── DARK MODE COLORS (Strict Palette) ───────────────────────────────────────
+const DK = {
+  bg:      '#1d2026',
+  surface: '#272a33',
+  surfaceAlt: '#22252e',
+  dark:    '#171920',
+  border:  '#3e4452',
+  borderDk:'#2e323d',
+  gold:    '#d9a770',
+  text:    '#f1f5f9',
+  textSec: '#94a3b8',
+  active:  '#29384e',
+};
+
 // ─── FORMATTERS ──────────────────────────────────────────────────────────────
 const fmt = (n) => (parseFloat(n) || 0).toLocaleString('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ar-EG') : '—';
@@ -23,14 +37,18 @@ const Badge = ({ color = 'slate', children }) => {
   return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${m[color] || m.slate}`}>{children}</span>;
 };
 
-const Modal = ({ open, onClose, title, children, maxW = 'max-w-lg' }) => {
+const Modal = ({ open, onClose, title, children, maxW = 'max-w-lg', darkMode }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <h3 className="text-base font-black text-slate-900">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 transition-colors text-xl font-light">×</button>
+      <div className={`rounded-2xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto`}
+        style={darkMode ? { backgroundColor: DK.surface, border: `1px solid ${DK.border}`, color: DK.text } : { backgroundColor: 'white' }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 z-10"
+          style={darkMode ? { backgroundColor: DK.dark, borderColor: DK.border } : { backgroundColor: 'white', borderColor: '#f1f5f9' }}>
+          <h3 className="text-base font-black" style={{ color: darkMode ? DK.text : '#0f172a' }}>{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-xl font-light"
+            style={{ color: darkMode ? DK.textSec : '#94a3b8' }}>×</button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -76,7 +94,17 @@ const Btn = ({ children, variant = 'primary', size = 'md', className = '', ...pr
 const StatCard = ({ icon, label, value, sub, color = 'indigo', trend, darkMode }) => {
   const bg = { indigo: 'from-indigo-500 to-indigo-600', emerald: 'from-emerald-500 to-emerald-600', amber: 'from-amber-500 to-amber-600', rose: 'from-rose-500 to-rose-600', blue: 'from-blue-500 to-blue-600', purple: 'from-purple-500 to-purple-600' };
   return (
-    <div className={`rounded-2xl border p-5 transition-all duration-300 ${darkMode ? 'bg-[#1e2530]/80 border-[#2e3748] text-white shadow-xl shadow-black/10' : 'bg-white border-slate-100 shadow-sm hover:shadow-md'}`}>
+    <div className="rounded-2xl border p-5 transition-all duration-300"
+      style={darkMode ? {
+        backgroundColor: DK.surface,
+        borderColor: DK.border,
+        color: DK.text,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+      } : {
+        backgroundColor: 'white',
+        borderColor: '#f1f5f9',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      }}>
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${bg[color] || bg.indigo} flex items-center justify-center text-white text-lg shadow-sm`}>{icon}</div>
         {trend !== undefined && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${trend >= 0 ? (darkMode ? 'bg-emerald-950/40 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (darkMode ? 'bg-rose-950/40 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>{trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%</span>}
@@ -441,7 +469,7 @@ function AnalyticsTab({ language, darkMode }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. QUOTATIONS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick }) {
+function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -505,16 +533,12 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick })
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي' : 'Total', value: items.length, icon: '📄', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
-          { label: ar ? 'مسودة' : 'Draft', value: items.filter(i => i.status === 'Draft').length, icon: '✏️', color: 'bg-slate-50 text-slate-700 border-slate-100' },
-          { label: ar ? 'محوّلة' : 'Converted', value: items.filter(i => i.status === 'Converted').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'قيمة مفتوحة' : 'Open Value', value: fmt(items.filter(i => !['Converted', 'Rejected'].includes(i.status)).reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💎', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي' : 'Total', value: items.length, icon: '📄', color: 'indigo' },
+          { label: ar ? 'مسودة' : 'Draft', value: items.filter(i => i.status === 'Draft').length, icon: '✏️', color: 'slate' },
+          { label: ar ? 'محوّلة' : 'Converted', value: items.filter(i => i.status === 'Converted').length, icon: '✅', color: 'emerald' },
+          { label: ar ? 'قيمة مفتوحة' : 'Open Value', value: fmt(items.filter(i => !['Converted', 'Rejected'].includes(i.status)).reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💎', color: 'amber' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color} darkMode={darkMode} />
         ))}
       </div>
 
@@ -683,7 +707,7 @@ function QuotationsTab({ clients, language, defaultCurrency, onNewClientClick })
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. ORDERS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function OrdersTab({ clients, language }) {
+function OrdersTab({ clients, language, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -728,16 +752,12 @@ function OrdersTab({ clients, language }) {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي الأوامر' : 'Total Orders', value: items.length, icon: '📦', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
-          { label: ar ? 'مفوترة' : 'Invoiced', value: items.filter(i => i.status === 'Invoiced').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💰', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+          { label: ar ? 'إجمالي الأوامر' : 'Total Orders', value: items.length, icon: '📦', color: 'blue' },
+          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'amber' },
+          { label: ar ? 'مفوترة' : 'Invoiced', value: items.filter(i => i.status === 'Invoiced').length, icon: '✅', color: 'emerald' },
+          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' EGP', icon: '💰', color: 'indigo' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color} darkMode={darkMode} />
         ))}
       </div>
 
@@ -798,7 +818,7 @@ function OrdersTab({ clients, language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 4. DELIVERY NOTES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function DeliveryNotesTab({ language }) {
+function DeliveryNotesTab({ language, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -824,16 +844,12 @@ function DeliveryNotesTab({ language }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي' : 'Total', value: items.length, icon: '📋', color: 'bg-slate-50 text-slate-700 border-slate-100' },
-          { label: ar ? 'في الطريق' : 'In Transit', value: items.filter(i => i.status === 'In Transit').length, icon: '🚚', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'مُسلَّمة' : 'Delivered', value: items.filter(i => i.status === 'Delivered').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي' : 'Total', value: items.length, icon: '📋', color: 'slate' },
+          { label: ar ? 'في الطريق' : 'In Transit', value: items.filter(i => i.status === 'In Transit').length, icon: '🚚', color: 'blue' },
+          { label: ar ? 'مُسلَّمة' : 'Delivered', value: items.filter(i => i.status === 'Delivered').length, icon: '✅', color: 'emerald' },
+          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'amber' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color} darkMode={darkMode} />
         ))}
       </div>
 
@@ -879,7 +895,7 @@ function DeliveryNotesTab({ language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. SALES RETURNS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick }) {
+function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -918,16 +934,12 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick 
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي' : 'Total Returns', value: items.length, icon: '↩️', color: 'bg-rose-50 text-rose-700 border-rose-100' },
-          { label: ar ? 'معتمدة' : 'Approved', value: items.filter(i => i.status === 'Approved').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
-          { label: ar ? 'إجمالي المردودات' : 'Total Refunded', value: fmt(items.filter(i => i.status === 'Approved').reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💸', color: 'bg-slate-50 text-slate-700 border-slate-100' },
+          { label: ar ? 'إجمالي' : 'Total Returns', value: items.length, icon: '↩️', color: 'rose' },
+          { label: ar ? 'معتمدة' : 'Approved', value: items.filter(i => i.status === 'Approved').length, icon: '✅', color: 'emerald' },
+          { label: ar ? 'معلقة' : 'Pending', value: items.filter(i => i.status === 'Pending').length, icon: '⏳', color: 'amber' },
+          { label: ar ? 'إجمالي المردودات' : 'Total Refunded', value: fmt(items.filter(i => i.status === 'Approved').reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💸', color: 'slate' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color} darkMode={darkMode} />
         ))}
       </div>
 
@@ -1043,7 +1055,7 @@ function SalesReturnsTab({ clients, language, defaultCurrency, onNewClientClick 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 6. INVOICING TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewClientClick, activeCompany }) {
+function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewClientClick, activeCompany, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1170,16 +1182,12 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي الفواتير' : 'Total Invoices', value: items.length, icon: '🧾', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'إجمالي الإيرادات' : 'Revenue', value: fmt(totalRevenue) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'المحصّل' : 'Collected', value: fmt(totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '✅', color: 'bg-green-50 text-green-700 border-green-100' },
-          { label: ar ? 'المعلّق' : 'Pending', value: fmt(totalRevenue - totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي الفواتير' : 'Total Invoices', value: items.length, icon: '🧾', color: 'blue' },
+          { label: ar ? 'إجمالي الإيرادات' : 'Revenue', value: fmt(totalRevenue) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'emerald' },
+          { label: ar ? 'المحصّل' : 'Collected', value: fmt(totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '✅', color: 'green' },
+          { label: ar ? 'المعلّق' : 'Pending', value: fmt(totalRevenue - totalPaid) + ' ' + (defaultCurrency || 'EGP'), icon: '⏳', color: 'amber' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color === 'green' ? 'emerald' : s.color} darkMode={darkMode} />
         ))}
       </div>
       <div className="flex flex-col sm:flex-row gap-3 justify-between">
@@ -1949,7 +1957,7 @@ function CommissionsTab({ staff = [], language }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 11. INSTALLMENTS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function InstallmentsTab({ clients, language, defaultCurrency, onNewClientClick }) {
+function InstallmentsTab({ clients, language, defaultCurrency, onNewClientClick, darkMode }) {
   const ar = language === 'ar';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1969,16 +1977,12 @@ function InstallmentsTab({ clients, language, defaultCurrency, onNewClientClick 
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: ar ? 'إجمالي الخطط' : 'Total Plans', value: items.length, icon: '📝', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { label: ar ? 'نشطة' : 'Active', value: items.filter(i => i.status === 'نشط').length, icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { label: ar ? 'متعثرة' : 'Defaulted', value: items.filter(i => i.status === 'متعثر').length, icon: '⚠️', color: 'bg-rose-50 text-rose-700 border-rose-100' },
-          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+          { label: ar ? 'إجمالي الخطط' : 'Total Plans', value: items.length, icon: '📝', color: 'blue' },
+          { label: ar ? 'نشطة' : 'Active', value: items.filter(i => i.status === 'نشط').length, icon: '✅', color: 'emerald' },
+          { label: ar ? 'متعثرة' : 'Defaulted', value: items.filter(i => i.status === 'متعثر').length, icon: '⚠️', color: 'rose' },
+          { label: ar ? 'إجمالي القيمة' : 'Total Value', value: fmt(items.reduce((a, i) => a + (parseFloat(i.total_amount) || 0), 0)) + ' ' + (defaultCurrency || 'EGP'), icon: '💰', color: 'amber' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.color}`}>
-            <div className="text-xl mb-1">{s.icon}</div>
-            <p className="text-xs font-bold opacity-70">{s.label}</p>
-            <p className="text-lg font-black">{s.value}</p>
-          </div>
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} color={s.color} darkMode={darkMode} />
         ))}
       </div>
       <div className="flex justify-end"><Btn onClick={() => setModal(true)}>+ {ar ? 'خطة تقسيط جديدة' : 'New Plan'}</Btn></div>
@@ -2082,7 +2086,7 @@ const TABS = [
 // MAIN SALES PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Sales() {
-  const { language } = useLanguage();
+  const { language, theme } = useLanguage();
   const { user } = useAuth();
   const ar = language === 'ar';
   const [activeTab, setActiveTab] = useState('analytics');
@@ -2090,15 +2094,11 @@ export default function Sales() {
   const [staff, setStaff] = useState([]);
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [prefilledClientName, setPrefilledClientName] = useState('');
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('sales_theme') === 'dark');
+  // Sync with global app theme instead of local storage
+  const darkMode = theme === 'dark';
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const newVal = !prev;
-      localStorage.setItem('sales_theme', newVal ? 'dark' : 'light');
-      return newVal;
-    });
-  };
+  const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';
+  const defaultCurrency = activeCompany?.toLowerCase().includes('primemed') ? 'ILS' : 'EGP';
 
   const refreshClients = () => {
     api.get('/table/customers?limit=500').then(r => setClients(r.data.data || [])).catch(() => {});
@@ -2114,41 +2114,34 @@ export default function Sales() {
     api.get('/table/staff?limit=1000').then(r => setStaff(r.data.data || [])).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';
-  const defaultCurrency = activeCompany?.toLowerCase().includes('primemed') ? 'ILS' : 'EGP';
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 p-4 md:p-6 space-y-5 ${darkMode ? 'bg-[#12151c] text-[#f8fafc]' : 'bg-slate-50/80 text-slate-900'}`} dir={ar ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen transition-colors duration-300 p-4 md:p-6 space-y-5"
+      style={darkMode
+        ? { backgroundColor: DK.bg, color: DK.text }
+        : { backgroundColor: '#f8fafc', color: '#0f172a' }}
+      dir={ar ? 'rtl' : 'ltr'}>
       {/* Premium Header */}
-      <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-900/20">
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 15% 85%, #818cf8 0%, transparent 55%), radial-gradient(circle at 85% 20%, #f472b6 0%, transparent 50%), radial-gradient(circle at 50% 50%, #0ea5e9 0%, transparent 70%)' }} />
-        <div className="absolute bottom-0 right-0 w-64 h-64 opacity-5">
-          <svg viewBox="0 0 200 200" className="w-full h-full"><circle cx="100" cy="100" r="80" fill="none" stroke="white" strokeWidth="2" /><circle cx="100" cy="100" r="50" fill="none" stroke="white" strokeWidth="2" /><circle cx="100" cy="100" r="20" fill="none" stroke="white" strokeWidth="2" /></svg>
-        </div>
+      <div className="rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl"
+        style={darkMode
+          ? { background: `linear-gradient(135deg, ${DK.dark} 0%, ${DK.active} 50%, ${DK.surface} 100%)`, border: `1px solid ${DK.border}`, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }
+          : { background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #0f172a 100%)', boxShadow: '0 8px 32px rgba(79,70,229,0.2)' }
+        }>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 15% 85%, #818cf8 0%, transparent 55%), radial-gradient(circle at 85% 20%, #f472b6 0%, transparent 50%)' }} />
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-2xl backdrop-blur-sm border border-white/10">💹</div>
               <div>
                 <h1 className="text-xl md:text-2xl font-black tracking-tight">{ar ? 'إدارة المبيعات' : 'Sales Management'}</h1>
-                <p className="text-xs text-white/50 font-medium">{activeCompany || (ar ? 'كل الشركات' : 'All Companies')}</p>
+                <p className="text-xs font-medium" style={{ color: darkMode ? DK.gold : 'rgba(255,255,255,0.6)' }}>{activeCompany || (ar ? 'كل الشركات' : 'All Companies')}</p>
               </div>
             </div>
             <p className="text-xs text-white/40 mt-1">{ar ? 'نظام ERP احترافي — عروض الأسعار · أوامر البيع · التسليم · المردودات · التحليلات' : 'Enterprise Sales — Quotations · Orders · Delivery · Returns · Analytics'}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={toggleDarkMode} className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10 text-lg shadow-sm" title={ar ? 'تغيير المظهر' : 'Toggle Theme'}>
-              {darkMode ? '☀️' : '🌙'}
-            </button>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-bold border border-white/10">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-bold border border-white/10"
+              style={darkMode ? { borderColor: `rgba(217,167,112,0.3)`, color: DK.gold } : {}}>
               {ar ? '🌐 متكامل مع: المخازن · العقارات · المحاسبة · CRM' : '🌐 Integrated: Inventory · Real Estate · Finance · CRM'}
             </div>
           </div>
@@ -2156,18 +2149,22 @@ export default function Sales() {
       </div>
 
       {/* Tab Bar */}
-      <div className={`rounded-2xl border shadow-sm p-1.5 overflow-x-auto transition-all duration-300 ${darkMode ? 'bg-[#1e2530]/80 border-[#2e3748]' : 'bg-white border-slate-100'}`}>
+      <div className="rounded-2xl border shadow-sm p-1.5 overflow-x-auto transition-all duration-300"
+        style={darkMode
+          ? { backgroundColor: DK.surface, borderColor: DK.border }
+          : { backgroundColor: 'white', borderColor: '#f1f5f9' }}>
         <div className="flex gap-1 min-w-max sm:min-w-0">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200
-                ${activeTab === tab.id
-                  ? (darkMode
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.45)] border border-blue-400/20'
-                      : 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-sm shadow-indigo-200')
-                  : (darkMode 
-                      ? 'text-slate-400 hover:bg-[#20293a]/60 hover:text-slate-200' 
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800')}`}>
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200"
+              style={activeTab === tab.id
+                ? darkMode
+                  ? { background: `linear-gradient(135deg, ${DK.active}, #1e3a5f)`, color: DK.gold, border: `1.5px solid rgba(217,167,112,0.4)`, boxShadow: `0 0 12px rgba(217,167,112,0.15)` }
+                  : { background: 'linear-gradient(135deg, #4f46e5, #4338ca)', color: 'white' }
+                : darkMode
+                  ? { color: DK.textSec }
+                  : { color: '#64748b' }
+              }>
               <span>{tab.icon}</span>
               <span className="hidden sm:inline">{ar ? tab.ar : tab.en}</span>
             </button>

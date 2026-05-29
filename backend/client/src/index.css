@@ -343,41 +343,84 @@
 }
 
 /* ==========================================================================
-   🌟 PREMIUM DARK / GLASSMORPHIC THEME ENGINE (ATTACHMENT 2 STYLE) 🌟
+   🌟 PREMIUM DARK / GLASSMORPHIC THEME ENGINE (STRICT ATTACHMENT 2 PALETTE) 🌟
+   Base Colors:
+     Background Main:    #1d2026
+     Background Surface: #272a33
+     Background Dark:    #171920
+     Active Item BG:     #29384e
+     Gold Accent:        #d9a770
+     Blue Accent:        #38bdf8
+     Border:             #3e4452
+     Border Dark:        #2e323d
+     Text Primary:       #f1f5f9
+     Text Secondary:     #94a3b8
    ========================================================================== */
 .dark {
-  --bg-main: #0c0f16;
-  --bg-surface: rgba(22, 28, 41, 0.85);
-  --text-primary: #f8fafc;
+  --bg-main: #1d2026;
+  --bg-surface: #272a33;
+  --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --border-subtle: rgba(51, 65, 85, 0.6);
+  --border-subtle: #3e4452;
 }
 
 .dark body {
-  background-color: #0c0f16 !important;
-  color: #f8fafc !important;
+  background-color: #1d2026 !important;
+  color: #f1f5f9 !important;
 }
 
-.dark .min-h-screen {
-  background-color: #0c0f16 !important;
+.dark .min-h-screen,
+.dark [class*="h-screen"] {
+  background-color: #1d2026 !important;
 }
 
-/* Luxury Glassmorphic Cards */
+/* Sidebar nav item hover in dark mode */
+.dark aside nav a:hover:not([class*="active"]) {
+  background-color: rgba(41, 56, 78, 0.35) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Luxury Glassmorphic Cards - covers all white/light backgrounds across all pages */
 .dark .bg-white,
+.dark [class*="bg-white/"],
 .dark .enterprise-card,
 .dark div[class*="bg-[#1e2530]"],
-.dark div[class*="bg-[#1c222e]"] {
-  background-color: rgba(22, 28, 41, 0.85) !important;
-  border: 1px solid rgba(45, 55, 72, 0.8) !important;
-  backdrop-filter: blur(12px) !important;
+.dark div[class*="bg-[#1c222e]"],
+.dark div[class*="bg-[#131b2e]"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-  color: #f8fafc !important;
+  color: #f1f5f9 !important;
 }
 
-/* Tab bar container */
-.dark div[class*="bg-[#1e2530]/80"] {
-  background-color: rgba(18, 22, 32, 0.9) !important;
-  border-color: rgba(45, 55, 72, 0.8) !important;
+/* Specific: Reports KPI cards use bg-white/80 - must be surface color */
+.dark [class~="bg-white\/80"],
+.dark [style*="background: rgba(255, 255, 255"] {
+  background-color: #272a33 !important;
+}
+
+/* Subcontractor white card header area */
+.dark [class*="bg-white"][class*="rounded"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Reports page: bg-slate-950 sections should stay dark  */
+.dark [class*="bg-slate-950"] {
+  background-color: #171920 !important;
+}
+
+.dark [class*="bg-slate-900"] {
+  background-color: #22252e !important;
+}
+
+/* Tab bar container & headers */
+.dark div[class*="bg-[#1e2530]/80"],
+.dark div[class*="bg-[#070a13]"],
+.dark header {
+  background-color: #171920 !important;
+  border-color: #2e323d !important;
 }
 
 /* Table styling */
@@ -386,63 +429,62 @@
 }
 
 .dark thead, 
-.dark tr[class*="bg-slate-50"] {
-  background-color: rgba(14, 18, 27, 0.9) !important;
-  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+.dark tr[class*="bg-slate-50"],
+.dark tr[class*="bg-[#070a13]"] {
+  background-color: #171920 !important;
+  border-bottom: 1.5px solid #3e4452 !important;
 }
 
 .dark th {
   color: #94a3b8 !important;
-  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+  border-bottom: 1.5px solid #3e4452 !important;
   font-weight: 800 !important;
 }
 
 .dark tr {
-  border-bottom: 1px solid rgba(45, 55, 72, 0.4) !important;
+  border-bottom: 1px solid #2e323d !important;
 }
 
 .dark tr:hover {
-  background-color: rgba(32, 41, 56, 0.45) !important;
+  background-color: rgba(62, 68, 82, 0.45) !important;
 }
 
 .dark td {
-  color: #e2e8f0 !important;
+  color: #f1f5f9 !important;
 }
 
 /* Modals */
 .dark div[role="dialog"] > div,
 .dark .fixed > div {
-  background-color: rgba(20, 26, 38, 0.98) !important;
-  border: 1px solid rgba(45, 55, 72, 0.9) !important;
-  backdrop-filter: blur(16px) !important;
+  background-color: #272a33 !important;
+  border: 1px solid #3e4452 !important;
   box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 .dark div[role="dialog"] .sticky,
 .dark .fixed .sticky {
-  background-color: rgba(20, 26, 38, 1) !important;
-  border-bottom: 1.5px solid rgba(45, 55, 72, 0.9) !important;
+  background-color: #171920 !important;
+  border-bottom: 1.5px solid #3e4452 !important;
 }
 
 .dark div[role="dialog"] h3 {
-  color: #f8fafc !important;
+  color: #f1f5f9 !important;
 }
 
-/* Inputs & Form Elements (Gold/Amber & Neon Blue Accent Glows) */
+/* Inputs & Form Elements */
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: rgba(12, 15, 22, 0.9) !important;
-  border: 1.5px solid rgba(45, 55, 72, 0.8) !important;
-  color: #f8fafc !important;
-  transition: all 0.3s ease !important;
+  background-color: #22252e !important;
+  border: 1.5px solid #3e4452 !important;
+  color: #f1f5f9 !important;
 }
 
 .dark input:focus,
 .dark select:focus,
 .dark textarea:focus {
-  border-color: rgba(59, 130, 246, 0.8) !important;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02) !important;
+  border-color: #d9a770 !important; /* Strict warm gold focus */
+  box-shadow: 0 0 12px rgba(217, 167, 112, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.02) !important;
   outline: none !important;
 }
 
@@ -450,7 +492,7 @@
 .dark .text-slate-900,
 .dark .text-slate-800,
 .dark .text-slate-700 {
-  color: #f8fafc !important;
+  color: #f1f5f9 !important;
 }
 
 .dark .text-slate-500,
@@ -459,18 +501,351 @@
 }
 
 .dark .border-slate-100,
-.dark .border-slate-200 {
-  border-color: rgba(45, 55, 72, 0.6) !important;
+.dark .border-slate-200,
+.dark .border-slate-800 {
+  border-color: #3e4452 !important;
 }
 
 /* Progress bars & sliders */
-.dark div[class*="bg-slate-800"] {
-  background-color: rgba(14, 18, 27, 0.9) !important;
+.dark div[class*="bg-slate-800"],
+.dark div[class*="bg-slate-100"] {
+  background-color: #171920 !important;
 }
 
-/* Specific Badge and status indicator adjustments to prevent neon clipping */
+/* Specific Badge and status indicator adjustments */
 .dark span[class*="bg-slate-100"] {
-  background-color: rgba(45, 55, 72, 0.4) !important;
+  background-color: rgba(62, 68, 82, 0.4) !important;
   color: #cbd5e1 !important;
-  border-color: rgba(45, 55, 72, 0.8) !important;
+  border-color: #3e4452 !important;
 }
+
+/* Highlight elements */
+.dark .text-indigo-700,
+.dark .text-indigo-600,
+.dark .text-cyan-400,
+.dark .text-cyan-500,
+.dark [class*="text-emerald-"],
+.dark [class*="text-green-"],
+.dark [class*="text-teal-"],
+.dark [class*="text-cyan-"] {
+  color: #38bdf8 !important; /* Strictly override green/emerald/cyan to Neon Blue */
+}
+
+.dark [class*="text-rose-"],
+.dark [class*="text-red-"] {
+  color: #94a3b8 !important; /* Strictly override red/rose to Neutral Warm Slate */
+}
+
+/* Override notification badges and status labels in dark mode to match gold/amber theme */
+.dark [class*="bg-rose-"],
+.dark [class*="bg-pink-"],
+.dark [class*="bg-red-"],
+.dark [class*="bg-rose-500"] {
+  background-color: #d9a770 !important;
+  color: #171920 !important;
+  border-color: #d9a770 !important;
+  box-shadow: 0 0 10px rgba(217, 167, 112, 0.4) !important;
+}
+
+/* Active sidebar item in dark mode - handled via inline styles in Layout.jsx */
+/* Fallback CSS for any sidebar links not caught by inline styles */
+.dark aside a[class*="bg-white/15"] {
+  background: linear-gradient(135deg, rgba(41, 56, 78, 0.8) 0%, rgba(30, 32, 37, 0.6) 100%) !important;
+  border: 1.5px solid rgba(217, 167, 112, 0.5) !important;
+  color: #d9a770 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark aside a[class*="bg-white/15"] span,
+.dark aside a[class*="bg-slate-900"] span {
+  color: #d9a770 !important;
+}
+
+/* Buttons active/primary glow */
+.dark .btn-solid,
+.dark button[class*="bg-slate-900"],
+.dark button[class*="bg-indigo-600"],
+.dark button[class*="bg-indigo-700"],
+.dark button[class*="bg-cyan-500"],
+.dark button[class*="bg-emerald-500"] {
+  background-color: #29384e !important;
+  border: 1.5px solid rgba(217, 167, 112, 0.6) !important;
+  color: #d9a770 !important;
+  box-shadow: 0 0 10px rgba(217, 167, 112, 0.15) !important;
+}
+
+.dark .btn-solid:hover,
+.dark button[class*="bg-slate-900"]:hover,
+.dark button[class*="bg-indigo-600"]:hover,
+.dark button[class*="bg-indigo-700"]:hover,
+.dark button[class*="bg-cyan-500"]:hover,
+.dark button[class*="bg-emerald-500"]:hover {
+  background-color: rgba(41, 56, 78, 0.9) !important;
+  border-color: #d9a770 !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 0 15px rgba(217, 167, 112, 0.35) !important;
+}
+
+.dark .btn-outline {
+  border-color: #3e4452 !important;
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+
+.dark .btn-outline:hover {
+  border-color: #d9a770 !important;
+  color: #d9a770 !important;
+}
+
+/* ==========================================================================
+   🌟 COMPREHENSIVE DARK MODE - ALL PAGES OVERRIDE ENGINE 🌟
+   Covers all backgrounds, cards, tables, forms in every page component
+   ========================================================================== */
+
+/* --- Background Overrides --- */
+.dark [class*="bg-slate-50"],
+.dark [class*="bg-gray-50"],
+.dark [class*="bg-zinc-50"] {
+  background-color: #1d2026 !important;
+}
+
+.dark [class*="bg-slate-100"],
+.dark [class*="bg-gray-100"],
+.dark [class*="bg-zinc-100"] {
+  background-color: #272a33 !important;
+}
+
+.dark [class*="bg-slate-200"],
+.dark [class*="bg-gray-200"] {
+  background-color: #2e323d !important;
+}
+
+/* --- Card & Surface Overrides --- */
+.dark [class*="rounded-2xl"][class*="shadow"],
+.dark [class*="rounded-3xl"][class*="shadow"],
+.dark [class*="rounded-xl"][class*="border"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Text Color Overrides (Page Content) --- */
+.dark [class*="text-gray-900"],
+.dark [class*="text-zinc-900"],
+.dark [class*="text-neutral-900"] {
+  color: #f1f5f9 !important;
+}
+
+.dark [class*="text-gray-700"],
+.dark [class*="text-gray-600"],
+.dark [class*="text-zinc-700"],
+.dark [class*="text-zinc-600"] {
+  color: #cbd5e1 !important;
+}
+
+.dark [class*="text-gray-500"],
+.dark [class*="text-gray-400"],
+.dark [class*="text-zinc-500"],
+.dark [class*="text-zinc-400"] {
+  color: #94a3b8 !important;
+}
+
+/* --- Border Overrides --- */
+.dark [class*="border-gray-200"],
+.dark [class*="border-gray-100"],
+.dark [class*="border-zinc-200"] {
+  border-color: #3e4452 !important;
+}
+
+/* --- Header/Top bar for pages --- */
+.dark [class*="bg-gradient-to-"] {
+  background-image: none !important;
+  background-color: #272a33 !important;
+}
+
+/* Exception: keep gradient on logo/brand areas */
+.dark aside [class*="bg-gradient-to-"] {
+  background-image: unset !important;
+  background-color: unset !important;
+}
+
+/* --- Tab Navigation --- */
+.dark [role="tablist"],
+.dark [class*="tab-bar"],
+.dark [class*="tabs-container"] {
+  background-color: #171920 !important;
+  border-color: #2e323d !important;
+}
+
+.dark [role="tab"][aria-selected="true"],
+.dark [class*="tab-active"] {
+  background-color: #29384e !important;
+  color: #d9a770 !important;
+  border-color: rgba(217, 167, 112, 0.4) !important;
+}
+
+/* --- Stats/KPI Cards --- */
+.dark [class*="stat-card"],
+.dark [class*="kpi-card"],
+.dark [class*="metric-card"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Badge / Status Pills --- */
+.dark span[class*="rounded-full"][class*="bg-green"],
+.dark span[class*="rounded-full"][class*="bg-teal"],
+.dark span[class*="rounded-full"][class*="bg-emerald"] {
+  background-color: rgba(41, 56, 78, 0.7) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+/* --- Scrollbar in dark mode --- */
+.dark ::-webkit-scrollbar-thumb {
+  background: #3e4452 !important;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4e5568 !important;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1d2026 !important;
+}
+
+/* --- Select dropdowns --- */
+.dark select option {
+  background-color: #272a33 !important;
+  color: #f1f5f9 !important;
+}
+
+/* --- Placeholder text --- */
+.dark ::placeholder {
+  color: #4e5568 !important;
+  opacity: 1 !important;
+}
+
+/* --- Login page --- */
+.dark .login-bg,
+.dark [class*="login"] [class*="bg-white"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Notification panel --- */
+.dark [class*="notification"] [class*="bg-white"],
+.dark [class*="notif-panel"] {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Hover states for interactive rows --- */
+.dark [class*="hover:bg-slate-50"]:hover,
+.dark [class*="hover:bg-gray-50"]:hover {
+  background-color: rgba(41, 56, 78, 0.25) !important;
+}
+
+/* --- Active/Focus ring in dark mode --- */
+.dark *:focus-visible {
+  outline-color: #d9a770 !important;
+  box-shadow: 0 0 0 3px rgba(217, 167, 112, 0.25) !important;
+}
+
+/* --- Dividers --- */
+.dark hr,
+.dark [class*="divider"] {
+  border-color: #2e323d !important;
+  opacity: 0.6 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SALES PAGE — Dark Mode Overrides
+   Scoped under .dark to avoid affecting light mode
+═══════════════════════════════════════════════════════════════ */
+
+/* --- Tables inside Sales tabs --- */
+.dark .overflow-x-auto.rounded-2xl {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+.dark .overflow-x-auto.rounded-2xl thead {
+  background-color: #171920 !important;
+  border-bottom-color: #3e4452 !important;
+}
+.dark .overflow-x-auto.rounded-2xl th {
+  color: #94a3b8 !important;
+  background-color: #171920 !important;
+}
+.dark .overflow-x-auto.rounded-2xl td {
+  color: #f1f5f9 !important;
+  border-color: #2e323d !important;
+}
+.dark .overflow-x-auto.rounded-2xl tr:hover {
+  background-color: rgba(41, 56, 78, 0.3) !important;
+}
+
+/* --- Cards bg-white in Sales --- */
+.dark .space-y-4 > .bg-white,
+.dark .space-y-5 > .bg-white,
+.dark .grid > .bg-white,
+.dark .space-y-3 > .bg-white {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+.dark .bg-white.rounded-2xl {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+.dark .bg-slate-50 {
+  background-color: #22252e !important;
+}
+.dark .bg-slate-50\/60 {
+  background-color: rgba(34, 37, 46, 0.6) !important;
+}
+
+/* --- Offer & Price list cards --- */
+.dark .grid .rounded-2xl.border.bg-white {
+  background-color: #272a33 !important;
+  border-color: #3e4452 !important;
+}
+.dark .bg-amber-50 {
+  background-color: rgba(217, 167, 112, 0.1) !important;
+}
+.dark .text-amber-600 { color: #d9a770 !important; }
+.dark .text-amber-700 { color: #d9a770 !important; }
+
+/* --- Stat mini-cards (installments / analytics) --- */
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; border-color: rgba(59,130,246,0.2) !important; }
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; border-color: rgba(16,185,129,0.2) !important; }
+.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.1) !important; border-color: rgba(244,63,94,0.2) !important; }
+
+/* --- Text colors in Sales dark mode --- */
+.dark .text-slate-800 { color: #f1f5f9 !important; }
+.dark .text-slate-900 { color: #f1f5f9 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600 { color: #94a3b8 !important; }
+.dark .text-slate-500 { color: #8892a4 !important; }
+.dark .text-slate-400 { color: #64748b !important; }
+
+/* --- Expanded rows (Customer Ledger) --- */
+.dark .bg-slate-50\/60.p-4 {
+  background-color: rgba(34, 37, 46, 0.6) !important;
+  border-color: #2e323d !important;
+}
+.dark .bg-white.rounded-xl.border.border-slate-100.p-3 {
+  background-color: #22252e !important;
+  border-color: #3e4452 !important;
+}
+
+/* --- Form inputs inside modals/Sales --- */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #22252e !important;
+  border-color: #3e4452 !important;
+  color: #f1f5f9 !important;
+}
+.dark input::placeholder { color: #4a5568 !important; }
+.dark label { color: #94a3b8 !important; }
