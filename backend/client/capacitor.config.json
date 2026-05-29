@@ -1,0 +1,9 @@
+{
+  "appId": "com.tedcapital.erp",
+  "appName": "Ted ERP",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true,
+    "androidScheme": "https"
+  }
+}

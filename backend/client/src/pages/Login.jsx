@@ -104,7 +104,12 @@ export default function Login() {
         setStep(3);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'بيانات الدخول غير صحيحة أو الحساب غير فعال.');
+      console.error("Login Error:", err);
+      if (!err.response) {
+        setError('لا يمكن الاتصال بالخادم. تأكد من اتصال الإنترنت أو أن عنوان الخادم صحيح.');
+      } else {
+        setError(err.response?.data?.error || 'بيانات الدخول غير صحيحة أو الحساب غير فعال.');
+      }
     } finally {
       setLoading(false);
     }

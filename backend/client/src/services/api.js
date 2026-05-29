@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+const isApp = window.Capacitor ||
+              window.location.origin.includes('capacitor://') ||
+              window.location.origin.includes('localhost') ||
+              window.location.host === '';
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000, 
+  baseURL: isApp ? 'http://46.224.144.166/api' : '/api',
+  timeout: 15000,
 });
 
 api.interceptors.request.use(
@@ -27,6 +32,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // 🌟 إضافة تفاصيل الخطأ للمساعدة في التشخيص
+    if (!error.response) {
+      console.error("Network Error - check your internet or API server:", error.message);
+    }
+
     if (error.response && error.response.status === 401) {
       // تنظيف الذاكرة فوراً عند رفض الباك إند للتوكن
       localStorage.removeItem('token');
