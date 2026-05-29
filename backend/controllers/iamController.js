@@ -260,6 +260,9 @@ const updateUser = async (req, res) => {
             await pool.query("INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)", [id, roleId]);
         }
 
+        // Force logout: Delete user's active sessions so they get new permissions JWT upon next login
+        await pool.query("DELETE FROM refresh_tokens WHERE user_id = $1", [id]);
+
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 };

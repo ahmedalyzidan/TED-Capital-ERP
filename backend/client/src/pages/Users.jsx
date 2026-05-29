@@ -960,12 +960,21 @@ export default function Users() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.username}</label>
                         <input type="text" value={isEditModalOpen ? selectedUser?.username : newUser.username} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, username: e.target.value}) : setNewUser({...newUser, username: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
                       </div>
-                      {!isEditModalOpen && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.password}</label>
-                          <input type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                          {isEditModalOpen 
+                            ? (language === 'ar' ? 'كلمة مرور جديدة (اختياري)' : 'New Password (Optional)')
+                            : cur.modal.password
+                          }
+                        </label>
+                        <input 
+                          type="password" 
+                          value={isEditModalOpen ? (selectedUser?.password || '') : newUser.password} 
+                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, password: e.target.value}) : setNewUser({...newUser, password: e.target.value})} 
+                          required={!isEditModalOpen} 
+                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" 
+                        />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
