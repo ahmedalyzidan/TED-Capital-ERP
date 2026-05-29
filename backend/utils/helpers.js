@@ -302,7 +302,7 @@ const resolveScope = (user) => {
     return null; // Unrestricted (super admins who didn't select a company)
 };
 
-const buildCompanyFilter = (type, scope, prefix = "") => {
+const buildCompanyFilter = async (type, scope, prefix = "") => {
     if (!scope || !scope.names || scope.names.length === 0 || !scope.ids || scope.ids.length === 0) {
         return null;
     }
@@ -320,59 +320,77 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
     if (type === 'customers') {
         return `(${prefix}company_id IN ${idsSqlList} OR ${prefix}company_id IS NULL OR ${prefix}company_name IN ${namesSqlList})`;
     }
+
+    // Query central DB for project names and IDs in scope to avoid empty local projects table filtering
+    const { centralPool } = require('../config/db');
+    let projectNames = [];
+    let projectIds = [];
+    try {
+        const projRes = await centralPool.query(`SELECT id, name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}`);
+        projectNames = projRes.rows.map(r => r.name);
+        projectIds = projRes.rows.map(r => r.id);
+    } catch (err) {
+        console.error("Error querying projects for company filter:", err.message);
+    }
+
+    const escapedProjNames = projectNames.map(p => p.replace(/'/g, "''"));
+    const projNamesSqlList = escapedProjNames.length > 0 ? `(${escapedProjNames.map(p => `'${p}'`).join(', ')})` : `('')`;
+    const projIdsSqlList = projectIds.length > 0 ? `(${projectIds.join(', ')})` : `(0)`;
+    const projIdsStrSqlList = projectIds.length > 0 ? `(${projectIds.map(id => `'${id}'`).join(', ')})` : `('')`;
+
     if (type === 'purchase_orders') {
-        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}supplier IN ${namesSqlList})`;
+        return `(${prefix}project_name IN ${projNamesSqlList} OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}supplier IN ${namesSqlList})`;
     }
     if (type === 'inventory_items' || type === 'inventory') {
-        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList})`;
+        return `(${prefix}project_name IN ${projNamesSqlList} OR ${prefix}warehouse IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList})`;
     }
     if (type === 'inventory_sales') {
-        return `(${prefix}project_id IN (SELECT CAST(id AS varchar) FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList} OR ${prefix}inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_name IN ${namesSqlList}))`;
+        return `(${prefix}project_id IN ${projIdsStrSqlList} OR ${prefix}company_id IN ${idsSqlList} OR ${prefix}project_name IN ${namesSqlList} OR ${prefix}inventory_id IN (SELECT id FROM inventory_items WHERE project_name IN ${projNamesSqlList} OR warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_name IN ${namesSqlList}))`;
     }
     if (type === 'ar_invoices') {
-        return `(${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(${prefix}project_id IN ${projIdsSqlList})`;
     }
     if (type === 'material_usage' || type === 'inventory_bookings') {
-        return `(project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(project_name IN ${projNamesSqlList} OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'boq') {
-        return `project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+        return `project_name IN ${projNamesSqlList}`;
     }
     if (type === 'subcontractor_items') {
-        return `boq_id IN (SELECT id FROM boq WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `boq_id IN (SELECT id FROM boq WHERE project_name IN ${projNamesSqlList})`;
     }
     if (type === 'ledger' || type === 'general_ledger') {
-        return `(${prefix}cost_center IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}cost_center IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList})`;
+        return `(${prefix}cost_center IN ${projNamesSqlList} OR ${prefix}cost_center IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList})`;
     }
     if (type === 'subcontractors') {
-        return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})) OR company IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(id IN (SELECT subcontractor_id FROM subcontractor_contracts WHERE project_id IN ${projIdsSqlList}) OR company IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN ${projIdsSqlList})`;
     }
     if (type === 'subcontractor_invoices') {
-        return `(project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(project_id IN ${projIdsSqlList})`;
     }
     if (type === 'partners' || type === 'tasks') {
-        return `${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
+        return `${prefix}project_name IN ${projNamesSqlList}`;
     }
     if (type === 'daily_reports' || type === 'work_orders' || type === 'vendor_bills') {
-        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(${prefix}project_name IN ${projNamesSqlList} OR ${prefix}project_id IN ${projIdsSqlList})`;
     }
     if (type === 'chart_of_accounts') {
         return `(company_entity IN ${namesSqlList} OR company_entity = 'All' OR company_id IN ${idsSqlList})`;
     }
     if (type === 'contracts') {
-        return `(${prefix}project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR ${prefix}project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(${prefix}project_name IN ${projNamesSqlList} OR ${prefix}project_id IN ${projIdsSqlList})`;
     }
     if (type === 'installments') {
-        return `contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `contract_id IN (SELECT id FROM contracts WHERE project_name IN ${projNamesSqlList} OR project_id IN ${projIdsSqlList})`;
     }
     if (type === 'payment_receipts') {
-        return `installment_id IN (SELECT id FROM installments WHERE contract_id IN (SELECT id FROM contracts WHERE project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}) OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})))`;
+        return `installment_id IN (SELECT id FROM installments WHERE contract_id IN (SELECT id FROM contracts WHERE project_name IN ${projNamesSqlList} OR project_id IN ${projIdsSqlList}))`;
     }
     if (type === 'expenses') {
-        return `(company_entity IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN (SELECT id FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(company_entity IN ${namesSqlList} OR company_id IN ${idsSqlList} OR project_id IN ${projIdsSqlList})`;
     }
     if (type === 'payroll') {
-        return `(company_id IN ${idsSqlList} OR project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
+        return `(company_id IN ${idsSqlList} OR project_name IN ${projNamesSqlList})`;
     }
     if (type === 'leaves' || type === 'staff_advances') {
         return `staff_id IN (SELECT id FROM staff WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
@@ -381,8 +399,7 @@ const buildCompanyFilter = (type, scope, prefix = "") => {
         return `(source_company_id IN ${idsSqlList} OR target_company_id IN ${idsSqlList})`;
     }
     if (type === 'property_units') {
-        return `project_name IN (SELECT name FROM projects WHERE company IN ${namesSqlList} OR company_id IN ${idsSqlList})`;
-    }
+        return `project_name IN ${projNamesSqlList}`;
     
     // --- Real Estate Module Isolation ---
     if (type === 'real_estate_projects') {

@@ -754,7 +754,7 @@ router.get('/table/:type', async (req, res) => {
 
         const scope = resolveScope(req.user);
         if (scope) {
-            const filterSql = buildCompanyFilter(type, scope, prefix);
+            const filterSql = await buildCompanyFilter(type, scope, prefix);
             if (filterSql) {
                 conditions.push(filterSql);
             }

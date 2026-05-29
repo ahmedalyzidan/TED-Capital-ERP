@@ -205,7 +205,7 @@ class DynamicController {
 
             const scope = resolveScope(req.user);
             if (scope) {
-                const isolationFilter = buildCompanyFilter(type, scope, prefix);
+                const isolationFilter = await buildCompanyFilter(type, scope, prefix);
                 if (isolationFilter) {
                     conditions.push(isolationFilter);
                 }
