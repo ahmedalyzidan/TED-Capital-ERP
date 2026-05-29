@@ -1,6 +1,22 @@
 const { tenantStorage, getOrCreatePool } = require('../config/db');
 
 const tenantContextMiddleware = (req, res, next) => {
+    // 0. Force central/default database for authentication and public endpoints
+    const path = (req.path || '').toLowerCase();
+    const originalUrl = (req.originalUrl || '').toLowerCase();
+    if (
+        path === '/login' ||
+        path === '/refresh' ||
+        path.startsWith('/public/') ||
+        originalUrl.includes('/login') ||
+        originalUrl.includes('/refresh') ||
+        originalUrl.includes('/public/')
+    ) {
+        return tenantStorage.run(null, () => {
+            next();
+        });
+    }
+
     // 1. Identify company from header, query, or JWT claims
     let companyName = req.headers['x-selected-company'] || req.query.company || (req.user && req.user.linkedCompany) || '';
 
