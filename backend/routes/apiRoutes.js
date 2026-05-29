@@ -3141,7 +3141,7 @@ router.get('/clients/:client_id/statement', authenticateToken, getClientStatemen
 const {
     getSecurityMetadata, createRole, terminateUserSessions,
     getAllRoles, getAllPermissions, updateRolePermissions,
-    assignUserToRole, getOrgUnits, getRolePermissions, createUser, updateUser
+    assignUserToRole, getOrgUnits, getRolePermissions, createUser, updateUser, resetUserPasswordEmail
 } = require('../controllers/iamController');
 
 router.get('/iam/metadata', authGuard, getSecurityMetadata);
@@ -3152,6 +3152,7 @@ router.get('/iam/org-units', authGuard, getOrgUnits);
 
 router.post('/iam/users', authGuard, checkPermission('IAM_MANAGE_USERS'), createUser);
 router.put('/iam/users/:id', authGuard, checkPermission('IAM_MANAGE_USERS'), updateUser);
+router.post('/iam/users/:id/reset-password', authGuard, checkPermission('IAM_MANAGE_USERS'), resetUserPasswordEmail);
 router.post('/iam/roles', authGuard, checkPermission('IAM_MANAGE_ROLES'), createRole);
 router.post('/iam/roles/permissions', authGuard, checkPermission('IAM_MANAGE_ROLES'), updateRolePermissions);
 router.post('/iam/users/assign-role', authGuard, checkPermission('IAM_MANAGE_ROLES'), assignUserToRole);

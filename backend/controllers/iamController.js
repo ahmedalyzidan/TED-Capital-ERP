@@ -282,6 +282,40 @@ const getRolePermissions = async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
+const resetUserPasswordEmail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userRes = await pool.query("SELECT username, email, full_name FROM users WHERE id = $1", [id]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        const user = userRes.rows[0];
+        if (!user.email) {
+            return res.status(400).json({ error: "هذا المستخدم ليس لديه بريد إلكتروني مسجل." });
+        }
+        
+        const randomPassword = 'TED' + Math.floor(100000 + Math.random() * 900000);
+        const hash = await bcrypt.hash(randomPassword, 10);
+        
+        await pool.query(
+            "UPDATE users SET password_hash = $1, must_change_password = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+            [hash, id]
+        );
+        
+        const { sendEmailNotification } = require('../config/mailer');
+        const emailBody = `مرحباً ${user.full_name || user.username}،\n\nتم إعادة تعيين كلمة المرور الخاصة بك على نظام TED ERP بنجاح.\n\nبيانات الدخول الجديدة الخاصة بك:\nاسم المستخدم: ${user.username}\nكلمة المرور المؤقتة: ${randomPassword}\n\nيرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك فوراً عند الدخول.\n\nشكراً لك،\nإدارة النظام`;
+        
+        await sendEmailNotification(user.email, "إعادة تعيين كلمة المرور - TED ERP", emailBody, true);
+        await logAudit(req.user.username, 'RESET_USER_PASSWORD_EMAIL', 'users', id, `Reset password and sent email for user: ${user.username}`);
+        
+        res.json({ success: true, message: "تم إعادة تعيين كلمة المرور بنجاح وإرسالها بالبريد الإلكتروني." });
+    } catch (err) {
+        console.error("❌ Reset Password Email Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports = { 
     getSecurityMetadata, 
     createRole, 
@@ -295,5 +329,7 @@ module.exports = {
     createUser,
     updateUser,
     getIAMStats,
-    getSecurityAuditTrail
+    getSecurityAuditTrail,
+    resetUserPasswordEmail
 };
+
