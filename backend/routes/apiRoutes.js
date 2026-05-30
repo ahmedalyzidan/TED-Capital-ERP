@@ -58,7 +58,7 @@ router.get('/dropdowns', async (req, res) => {
 
         // =========================================================================
 
-                const projects = await pool.query("SELECT id, name, company FROM projects WHERE is_deleted = false");
+        const projects = await pool.query("SELECT id, name, company FROM projects WHERE is_deleted = false");
         const staff = await pool.query("SELECT name, salary FROM staff");
         const subs = await pool.query("SELECT id, name FROM subcontractors");
         const accs = await pool.query("SELECT account_name FROM chart_of_accounts");
@@ -113,15 +113,15 @@ router.get('/dropdowns', async (req, res) => {
 
         const scope = resolveScope(req.user);
         if (scope && req.query.bypassScope !== 'true') {
-            resCompanies = allCompanies.filter(c => 
+            resCompanies = allCompanies.filter(c =>
                 scope.names.some(sn => c.toLowerCase().includes(sn.toLowerCase()) || sn.toLowerCase().includes(c.toLowerCase()))
             );
-            resProjectsData = allProjectsData.filter(p => 
+            resProjectsData = allProjectsData.filter(p =>
                 scope.names.some(sn => (p.company || '').toLowerCase().includes(sn.toLowerCase()) || sn.toLowerCase().includes((p.company || '').toLowerCase())) ||
                 (p.company_id && scope.ids.includes(p.company_id))
             );
             resProjects = resProjectsData.map(p => p.name);
-            resParamProjects = paramProjects.rows.filter(p => 
+            resParamProjects = paramProjects.rows.filter(p =>
                 scope.names.some(sn => (p.value || '').toLowerCase().includes(sn.toLowerCase()))
             );
         }
@@ -3061,13 +3061,22 @@ router.post('/hcm/leaves', authenticateToken, async (req, res) => {
 });
 
 // =========================================================================
-// 🌟 FIXED ASSETS MANAGEMENT
+// 🌟 FIXED ASSETS & EQUIPMENT MANAGEMENT
 // =========================================================================
 const { registerAsset, runDepreciation } = require('../controllers/fixedAssetsController');
+const { logOperation, scheduleMaintenance, completeMaintenance } = require('../controllers/equipmentController');
 router.post('/assets/register', authenticateToken, registerAsset);
 router.post('/assets/run-depreciation', authenticateToken, runDepreciation);
+router.post('/equipment/operations', authenticateToken, logOperation);
+router.post('/equipment/maintenance', authenticateToken, scheduleMaintenance);
+router.post('/equipment/maintenance/:id/complete', authenticateToken, completeMaintenance);
 
-router.post('/assets/run-depreciation', authenticateToken, runDepreciation);
+// =========================================================================
+// 🌟 E-INVOICING API & TAX PORTAL INTEGRATION
+// =========================================================================
+const { submitInvoice, checkInvoicePortalStatus } = require('../controllers/eInvoicingController');
+router.post('/e-invoice/submit/:id', authenticateToken, submitInvoice);
+router.get('/e-invoice/status/:id', authenticateToken, checkInvoicePortalStatus);
 
 // =========================================================================
 // 🌟 FINANCIAL INTEGRITY & CLOSING
@@ -3173,5 +3182,13 @@ router.post('/subcontractors/:id/performance', authenticateToken, SubcontractorC
 
 router.post('/subcontractors/portal/login', SubcontractorController.portalLogin);
 router.post('/subcontractors/:id/portal-credentials', authenticateToken, SubcontractorController.updatePortalCredentials);
+
+// =========================================================================
+// 🌟 HEAVY EQUIPMENT & MACHINERY MAINTENANCE
+// =========================================================================
+const equipmentController = require('../controllers/equipmentController');
+router.post('/equipment/operations', authenticateToken, equipmentController.logOperation);
+router.post('/equipment/maintenance', authenticateToken, equipmentController.scheduleMaintenance);
+router.post('/equipment/maintenance/:id/complete', authenticateToken, equipmentController.completeMaintenance);
 
 module.exports = router;

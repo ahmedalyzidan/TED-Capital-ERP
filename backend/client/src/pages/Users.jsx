@@ -362,7 +362,9 @@ export default function Users() {
       projects: [],
       modules: ['Finance', 'Inventory', 'Projects', 'HCM', 'CRM', 'Settings'],
       tables: {}
-    }
+    },
+    language: 'en',
+    theme_mode: 'light'
   });
 
   useEffect(() => {
@@ -375,8 +377,24 @@ export default function Users() {
       const staffRes = await api.get('/dynamic/table/staff?limit=1000');
       setEmployees(staffRes.data.data || []);
       if (activeTab === 'users') {
-        const uRes = await api.get('/table/users');
-        setUsers(uRes.data.data || []);
+        const [uRes, prefsRes] = await Promise.all([
+          api.get('/table/users'),
+          api.get('/user/preferences/all').catch(() => ({ data: [] }))
+        ]);
+        const uData = uRes.data.data || [];
+        const prefs = prefsRes.data || [];
+        
+        // Map user preferences to users
+        const usersWithPrefs = uData.map(user => {
+          const userPref = prefs.find(p => p.user_id === user.id);
+          return {
+            ...user,
+            language: userPref?.language || 'en',
+            theme_mode: userPref?.theme_mode || 'light'
+          };
+        });
+        
+        setUsers(usersWithPrefs);
         const rRes = await api.get('/iam/roles');
         setRoles(rRes.data || []);
         const ddRes = await api.get('/dropdowns?bypassScope=true');
@@ -415,6 +433,8 @@ export default function Users() {
     const parsedPerms = typeof u.permissions === 'string' ? JSON.parse(u.permissions || '{}') : (u.permissions || {});
     setSelectedUser({
       ...u,
+      language: u.language || 'en',
+      theme_mode: u.theme_mode || 'light',
       permissions: {
         companies: Array.isArray(parsedPerms.companies) ? parsedPerms.companies : (u.linked_company ? [u.linked_company] : []),
         projects: Array.isArray(parsedPerms.projects) ? parsedPerms.projects : (u.linked_project ? [u.linked_project] : []),
@@ -429,7 +449,18 @@ export default function Users() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/iam/users', newUser);
+      const res = await api.post('/iam/users', newUser);
+      const newUserId = res.data.userId;
+      if (newUserId) {
+        // Save the preferences for the new user
+        await api.put(`/user/preferences/${newUserId}`, {
+          language: newUser.language || 'en',
+          theme_mode: newUser.theme_mode || 'light',
+          date_format: 'DD/MM/YYYY',
+          sidebar_collapsed: false,
+          dashboard_layout: '{}'
+        });
+      }
       alert(cur.alerts.createSuccess);
       setIsUserModalOpen(false);
       setNewUser({ 
@@ -441,7 +472,9 @@ export default function Users() {
           projects: [],
           modules: ['Finance', 'Inventory', 'Projects', 'HCM', 'CRM', 'Settings'],
           tables: {}
-        }
+        },
+        language: 'en',
+        theme_mode: 'light'
       });
       fetchData();
     } catch (err) { alert(err.response?.data?.error || "Error"); }
@@ -451,6 +484,14 @@ export default function Users() {
     e.preventDefault();
     try {
       await api.put(`/iam/users/${selectedUser.id}`, selectedUser);
+      // Save/Update the preferences for this user
+      await api.put(`/user/preferences/${selectedUser.id}`, {
+        language: selectedUser.language || 'en',
+        theme_mode: selectedUser.theme_mode || 'light',
+        date_format: 'DD/MM/YYYY',
+        sidebar_collapsed: false,
+        dashboard_layout: '{}'
+      });
       alert(cur.alerts.updateSuccess);
       setIsEditModalOpen(false);
       fetchData();
@@ -1013,6 +1054,35 @@ export default function Users() {
                         <select value={isEditModalOpen ? selectedUser?.department : newUser.department} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, department: e.target.value}) : setNewUser({...newUser, department: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
                           <option value="">{cur.modal.deptPlaceholder}</option>
                           {cur.departments.map(d => <option key={d.id} value={d.id}>{d.icon} {d.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                          {language === 'ar' ? 'اللغة الافتراضية للمستخدم' : 'Default User Language'}
+                        </label>
+                        <select 
+                          value={isEditModalOpen ? (selectedUser?.language || 'en') : (newUser.language || 'en')} 
+                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, language: e.target.value}) : setNewUser({...newUser, language: e.target.value})} 
+                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                        >
+                          <option value="en">🇺🇸 English (EN)</option>
+                          <option value="ar">🇸🇦 Arabic (AR)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                          {language === 'ar' ? 'مظهر واجهة المستخدم (المود)' : 'User Theme Mode'}
+                        </label>
+                        <select 
+                          value={isEditModalOpen ? (selectedUser?.theme_mode || 'light') : (newUser.theme_mode || 'light')} 
+                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, theme_mode: e.target.value}) : setNewUser({...newUser, theme_mode: e.target.value})} 
+                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                        >
+                          <option value="light">☀️ Light Mode</option>
+                          <option value="dark">🌙 Dark Mode</option>
                         </select>
                       </div>
                     </div>

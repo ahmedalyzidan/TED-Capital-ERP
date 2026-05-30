@@ -1044,6 +1044,28 @@ export default function Inventory() {
     } catch (error) { alert(error.response?.data?.error || t.common.error); } finally { setIsSubmitting(false); }
   };
 
+  const getDepositLimitExceeded = () => {
+    const mpo = supplierDepositForm.master_po_no;
+    if (!mpo) return false;
+    const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
+    const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
+    const mpoTxns = (supplierDeposits || []).filter(d => 
+      ((d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
+      d.id !== editingDepositId
+    );
+    let paid = 0;
+    mpoTxns.forEach(d => {
+      const parts = (d.description || '').split('|');
+      if (parts.length >= 2) {
+        const amtPart = parts[1].trim().split(' ')[0];
+        let fcy = parseFloat(amtPart);
+        if (isNaN(fcy)) { fcy = parseFloat(d.debit || 0); }
+        if (!isNaN(fcy)) paid += fcy;
+      }
+    });
+    return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
+  };
+
   const submitSupplierDeposit = async (e) => {
     e.preventDefault(); setIsSubmitting(true);
     try {
@@ -1067,6 +1089,8 @@ export default function Inventory() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
   const handleConfigSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -3723,51 +3747,12 @@ export default function Inventory() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || (() => {
-                    const mpo = supplierDepositForm.master_po_no;
-                    if (!mpo) return false;
-                    const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
-                    const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
-                    const mpoTxns = (supplierDeposits || []).filter(d => 
-                      ((d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
-                      d.id !== editingDepositId
-                    );
-                    let paid = 0;
-                    mpoTxns.forEach(d => {
-                      const parts = (d.description || '').split('|');
-                      if (parts.length >= 2) {
-                        const amtPart = parts[1].trim().split(' ')[0];
-                        let fcy = parseFloat(amtPart);
-                        if (isNaN(fcy)) { fcy = parseFloat(d.debit || 0); }
-                        if (!isNaN(fcy)) paid += fcy;
-                      }
-                    });
-                    return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
-                  })()}
-                  className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-2xl transition-all flex items-center justify-center gap-4 transform active:scale-95 ${isSubmitting || (() => {
-                    const mpo = supplierDepositForm.master_po_no;
-                    if (!mpo) return false;
-                    const mpoItems = purchaseOrders.filter(p => p.master_po_no === mpo);
-                    const total = mpoItems.reduce((acc, p) => acc + (Number(p.qty) * Number(p.estimated_cost)), 0);
-                    const mpoTxns = (supplierDeposits || []).filter(d => 
-                      ((d.description?.includes(`| MPO: ${mpo}`)) || (mpo && d.description?.includes(`| Ref: ${mpo}`))) &&
-                      d.id !== editingDepositId
-                    );
-                    let paid = 0;
-                    mpoTxns.forEach(d => {
-                      const parts = (d.description || '').split('|');
-                      if (parts.length >= 2) {
-                        const amtPart = parts[1].trim().split(' ')[0];
-                        let fcy = parseFloat(amtPart);
-                        if (isNaN(fcy)) { fcy = parseFloat(d.debit || 0); }
-                        if (!isNaN(fcy)) paid += fcy;
-                      }
-                    });
-                    return (paid + parseFloat(supplierDepositForm.amount || 0)) > (total + 0.01);
-                  })()
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/30'
-                    }`}
+                  disabled={isSubmitting || getDepositLimitExceeded()}
+                  className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-2xl transition-all flex items-center justify-center gap-4 transform active:scale-95 ${
+                    isSubmitting || getDepositLimitExceeded()
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/30'
+                  }`}
                 >
                   {isSubmitting ? (
                     <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>

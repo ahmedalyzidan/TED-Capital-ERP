@@ -39,7 +39,7 @@ export default function CashBalances() {
          <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl max-w-sm">
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-2">إجمالي السيولة النقدية</p>
             <p className="text-3xl font-black font-mono">
-               {accounts.reduce((sum, a) => sum + parseFloat(a.balance), 0).toLocaleString()} 
+               {accounts.reduce((sum, a) => sum + parseFloat(a.balance), 0).toLocaleString()}
                <span className="text-sm font-sans text-slate-500 mr-2">ج.م</span>
             </p>
          </div>
@@ -72,7 +72,7 @@ export default function CashBalances() {
                               </td>
                               <td className="px-8 py-6 text-left">
                                  <span className="text-xl font-black text-emerald-600 font-mono">
-                                    {Number(a.balance).toLocaleString()} 
+                                    {Number(a.balance).toLocaleString()}
                                     <span className="text-[10px] font-sans text-slate-300 mr-1">ج.م</span>
                                  </span>
                               </td>

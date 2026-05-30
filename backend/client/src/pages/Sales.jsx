@@ -1123,6 +1123,36 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
   const [search, setSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [submittingEInvoice, setSubmittingEInvoice] = useState(false);
+
+  const handleEInvoiceSubmit = async (invoiceId) => {
+    setSubmittingEInvoice(true);
+    try {
+      const res = await api.post(`/e-invoice/submit/${invoiceId}`);
+      alert(language === 'ar' ? `تم ترحيل الفاتورة الضريبية بنجاح! الحالة: ${res.data.status}` : `Invoice submitted successfully! Status: ${res.data.status}`);
+      setViewingInvoice(prev => prev ? { ...prev, einvoice_status: res.data.status, einvoice_uuid: res.data.uuid } : null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    } finally {
+      setSubmittingEInvoice(false);
+    }
+  };
+
+  const handleEInvoiceCheckStatus = async (invoiceId) => {
+    setSubmittingEInvoice(true);
+    try {
+      const res = await api.get(`/e-invoice/status/${invoiceId}`);
+      alert(language === 'ar' ? `تحديث حالة الربط الضريبي: ${res.data.status}` : `E-Invoice status updated: ${res.data.status}`);
+      setViewingInvoice(prev => prev ? { ...prev, einvoice_status: res.data.status, einvoice_uuid: res.data.uuid } : null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    } finally {
+      setSubmittingEInvoice(false);
+    }
+  };
+
   const [attachModal, setAttachModal] = useState({ isOpen: false, invoice: null, attachments: [], uploading: false });
 
   const handleAttachClick = (inv, e) => {
@@ -1298,7 +1328,7 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
         <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>{[ar ? 'رقم' : '#', ar ? 'العميل' : 'Client', ar ? 'المبلغ' : 'Amount', ar ? 'المسدد' : 'Paid', ar ? 'المتبقي' : 'Remaining', ar ? 'طريقة الدفع' : 'Payment', ar ? 'الحالة' : 'Status', ar ? 'المرفقات' : 'Attachments'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
+              <tr>{[ar ? 'رقم' : '#', ar ? 'العميل' : 'Client', ar ? 'المبلغ' : 'Amount', ar ? 'المسدد' : 'Paid', ar ? 'المتبقي' : 'Remaining', ar ? 'طريقة الدفع' : 'Payment', ar ? 'الحالة' : 'Status', ar ? 'الربط الضريبي' : 'E-Invoice', ar ? 'المرفقات' : 'Attachments'].map(h => <th key={h} className="px-4 py-3 text-xs font-black text-slate-500 text-right">{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtered.map(item => {
@@ -1313,6 +1343,16 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
                     <td className="px-4 py-3 text-rose-700 font-bold">{fmt(remainingVal)}</td>
                     <td className="px-4 py-3 text-slate-600 text-xs">{item.payment_method || (ar ? 'نقدي' : 'Cash')}</td>
                     <td className="px-4 py-3"><Badge color={statusColor(item.status)}>{item.status}</Badge></td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                        item.einvoice_status === 'Valid' ? 'bg-emerald-100 text-emerald-700' :
+                        item.einvoice_status === 'Submitted' ? 'bg-blue-100 text-blue-700' :
+                        item.einvoice_status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                        'bg-slate-100 text-slate-500'
+                      }`}>
+                        {item.einvoice_status || 'Not_Submitted'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <button 
                         onClick={(e) => handleAttachClick(item, e)}
@@ -1591,9 +1631,45 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
+              {/* E-Invoicing Portal Integration Widget */}
+              <div className={`p-4 my-4 rounded-xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
+                darkMode ? 'bg-[#272a33] border-[#3e4452]' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🌐</span>
+                  <div className="text-right sm:text-left">
+                    <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">{ar ? 'حالة الربط الضريبي (الفاتورة الإلكترونية)' : 'E-Invoice Portal Status'}</p>
+                    <p className="text-[10px] font-mono text-slate-400 mt-1">
+                      UUID: {viewingInvoice.einvoice_uuid || '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                    viewingInvoice.einvoice_status === 'Valid' ? 'bg-emerald-100 text-emerald-700' :
+                    viewingInvoice.einvoice_status === 'Submitted' ? 'bg-blue-100 text-blue-700' :
+                    viewingInvoice.einvoice_status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                    'bg-slate-100 text-slate-500'
+                  }`}>
+                    {viewingInvoice.einvoice_status || 'Not_Submitted'}
+                  </span>
+                  
+                  {(!viewingInvoice.einvoice_status || viewingInvoice.einvoice_status === 'Not_Submitted' || viewingInvoice.einvoice_status === 'Rejected' || viewingInvoice.einvoice_status === 'Failed') && (
+                    <Btn size="xs" variant="success" onClick={() => handleEInvoiceSubmit(viewingInvoice.id)} disabled={submittingEInvoice}>
+                      ⚡ {ar ? 'ترحيل للضرائب' : 'Submit to Tax Portal'}
+                    </Btn>
+                  )}
+                  
+                  {viewingInvoice.einvoice_status === 'Submitted' && (
+                    <Btn size="xs" variant="primary" onClick={() => handleEInvoiceCheckStatus(viewingInvoice.id)} disabled={submittingEInvoice}>
+                      🔄 {ar ? 'فحص الحالة' : 'Check Status'}
+                    </Btn>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
             <div className="flex justify-end gap-2 pt-2">
               <Btn variant="outline" onClick={() => exportInvoiceCSV(viewingInvoice)}>
                 📊 {ar ? 'تصدير إلى Excel' : 'Export to CSV'}
@@ -1614,7 +1690,8 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
               <Btn variant="ghost" onClick={() => setViewingInvoice(null)}>{ar ? 'إغلاق' : 'Close'}</Btn>
             </div>
           </div>
-        </Modal>
+        </div>
+      </Modal>
       )}
 
       {/* --- ATTACHMENTS MODAL --- */}

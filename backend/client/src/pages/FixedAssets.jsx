@@ -4,18 +4,24 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export default function FixedAssets() {
   const { language } = useLanguage();
-  const [activeTab, setActiveTab] = useState('registry'); // registry, categories, logs
+  const [activeTab, setActiveTab] = useState('registry'); // registry, categories, logs, operations, maintenance
   const [loading, setLoading] = useState(true);
   const [assets, setAssets] = useState([]);
   const [categories, setCategories] = useState([]);
   const [projects, setProjects] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [maintenance, setMaintenance] = useState([]);
   const [summary, setSummary] = useState({ totalCost: 0, totalBookValue: 0 });
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isDepModalOpen, setIsDepModalOpen] = useState(false);
+  const [isOpsModalOpen, setIsOpsModalOpen] = useState(false);
+  const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
+  const [isCompleteMaintModalOpen, setIsCompleteMaintModalOpen] = useState(false);
+  const [selectedMaintId, setSelectedMaintId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, asset: null });
 
@@ -23,6 +29,21 @@ export default function FixedAssets() {
   const [assetForm, setAssetForm] = useState({
     name: '', category_id: '', purchase_date: new Date().toISOString().split('T')[0],
     purchase_cost: '', scrap_value: 0, location_id: '', asset_code: '', project_id: ''
+  });
+  
+  const [opsForm, setOpsForm] = useState({
+    asset_id: '', date: new Date().toISOString().split('T')[0],
+    hourmeter_reading: '', odometer_reading: '', fuel_liters: '', fuel_cost: '',
+    operator_name: '', project_name: '', notes: ''
+  });
+
+  const [maintForm, setMaintForm] = useState({
+    asset_id: '', service_date: new Date().toISOString().split('T')[0],
+    service_type: 'Preventive', description: '', service_cost: '', parts_used: ''
+  });
+
+  const [completeMaintForm, setCompleteMaintForm] = useState({
+    completed_date: new Date().toISOString().split('T')[0], actual_cost: '', payment_method: 'Cash'
   });
 
   const [depPeriod, setDepPeriod] = useState(new Date().toISOString().slice(5, 7) + '-' + new Date().getFullYear());
@@ -34,7 +55,9 @@ export default function FixedAssets() {
       tabs: {
         registry: "سجل الأصول",
         categories: "تصنيفات الأصول",
-        logs: "سجل الإهلاك"
+        logs: "سجل الإهلاك",
+        operations: "تشغيل المعدات",
+        maintenance: "صيانة المعدات"
       },
       stats: {
         totalCost: "إجمالي قيمة الأصول",
@@ -91,7 +114,9 @@ export default function FixedAssets() {
       tabs: {
         registry: "Asset Registry",
         categories: "Categories",
-        logs: "Depreciation Logs"
+        logs: "Depreciation Logs",
+        operations: "Equipment Ops",
+        maintenance: "Equipment Maintenance"
       },
       stats: {
         totalCost: "Total Asset Cost",
@@ -154,16 +179,24 @@ export default function FixedAssets() {
     try {
       const catRes = await api.get('/table/asset_categories?limit=100');
       setCategories(catRes.data.data || []);
+      
+      const assetsRes = await api.get('/table/fixed_assets?limit=500');
+      const assetsData = assetsRes.data.data || [];
+      setAssets(assetsData);
+
       if (activeTab === 'registry') {
-        const res = await api.get('/table/fixed_assets?limit=500');
-        const data = res.data.data || [];
-        setAssets(data);
-        const totalCost = data.reduce((sum, a) => sum + Number(a.purchase_cost), 0);
-        const totalBookValue = data.reduce((sum, a) => sum + Number(a.current_book_value), 0);
+        const totalCost = assetsData.reduce((sum, a) => sum + Number(a.purchase_cost), 0);
+        const totalBookValue = assetsData.reduce((sum, a) => sum + Number(a.current_book_value), 0);
         setSummary({ totalCost, totalBookValue });
       } else if (activeTab === 'logs') {
         const res = await api.get('/table/asset_depreciation_logs?limit=500');
         setLogs(res.data.data || []);
+      } else if (activeTab === 'operations') {
+        const res = await api.get('/table/equipment_operations?limit=500');
+        setOperations(res.data.data || []);
+      } else if (activeTab === 'maintenance') {
+        const res = await api.get('/table/equipment_maintenance?limit=500');
+        setMaintenance(res.data.data || []);
       }
       const projRes = await api.get('/table/projects?limit=100');
       setProjects(projRes.data.data || []);
@@ -180,6 +213,42 @@ export default function FixedAssets() {
       setIsAssetModalOpen(false);
       fetchData();
     } catch (error) { alert(error.response?.data?.error || "Error"); } 
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleLogOperation = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post('/equipment/operations', opsForm);
+      alert(language === 'ar' ? "تم تسجيل تشغيل المعدة بنجاح!" : "Operation logged successfully!");
+      setIsOpsModalOpen(false);
+      fetchData();
+    } catch (error) { alert(error.response?.data?.error || "Error"); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleScheduleMaintenance = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post('/equipment/maintenance', maintForm);
+      alert(language === 'ar' ? "تم جدولة الصيانة بنجاح!" : "Maintenance scheduled successfully!");
+      setIsMaintModalOpen(false);
+      fetchData();
+    } catch (error) { alert(error.response?.data?.error || "Error"); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleCompleteMaintenance = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post(`/equipment/maintenance/${selectedMaintId}/complete`, completeMaintForm);
+      alert(language === 'ar' ? "تم إكمال الصيانة وتسجيل القيود بنجاح!" : "Maintenance completed successfully!");
+      setIsCompleteMaintModalOpen(false);
+      fetchData();
+    } catch (error) { alert(error.response?.data?.error || "Error"); }
     finally { setIsSubmitting(false); }
   };
 
@@ -318,7 +387,7 @@ export default function FixedAssets() {
                   : 'text-slate-500 hover:bg-white hover:text-slate-900'
                 }`}
               >
-                <span>{tab === 'registry' ? '📋' : tab === 'categories' ? '📁' : '⚖️'}</span> {cur.tabs[tab]}
+                <span>{tab === 'registry' ? '📋' : tab === 'categories' ? '📁' : tab === 'operations' ? '⚙️' : tab === 'maintenance' ? '🔧' : '⚖️'}</span> {cur.tabs[tab]}
               </button>
             ))}
           </div>
@@ -347,12 +416,24 @@ export default function FixedAssets() {
           </div>
           
           <div className="flex gap-4 w-full sm:w-auto">
-            <button onClick={() => setIsDepModalOpen(true)} className="flex-1 sm:flex-none px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-3 active:scale-95">
-              <span>🔄</span> {cur.actions.depWizard}
-            </button>
-            <button onClick={() => setIsAssetModalOpen(true)} className="flex-1 sm:flex-none px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95">
-              <span className="text-lg leading-none">+</span> {cur.actions.addAsset}
-            </button>
+            {activeTab === 'operations' ? (
+              <button onClick={() => setIsOpsModalOpen(true)} className="flex-1 sm:flex-none px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95">
+                <span className="text-lg leading-none">+</span> {language === 'ar' ? 'تسجيل تشغيل معدة' : 'Log Equipment Ops'}
+              </button>
+            ) : activeTab === 'maintenance' ? (
+              <button onClick={() => setIsMaintModalOpen(true)} className="flex-1 sm:flex-none px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95">
+                <span className="text-lg leading-none">+</span> {language === 'ar' ? 'جدولة صيانة معدة' : 'Schedule Maintenance'}
+              </button>
+            ) : (
+              <>
+                <button onClick={() => setIsDepModalOpen(true)} className="flex-1 sm:flex-none px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-3 active:scale-95">
+                  <span>🔄</span> {cur.actions.depWizard}
+                </button>
+                <button onClick={() => setIsAssetModalOpen(true)} className="flex-1 sm:flex-none px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95">
+                  <span className="text-lg leading-none">+</span> {cur.actions.addAsset}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -460,6 +541,103 @@ export default function FixedAssets() {
               </table>
             </div>
           )}
+
+          {activeTab === 'operations' && (
+            <div className="overflow-x-auto custom-scrollbar animate-fade-in">
+              <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} whitespace-nowrap`}>
+                <thead className="bg-slate-50/50 border-b border-slate-100">
+                  <tr className="text-slate-400 text-[10px] uppercase tracking-widest">
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'المعدة' : 'Equipment'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'التاريخ' : 'Date'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'قراءة العداد (ساعة)' : 'Hourmeter (hrs)'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'عداد المسافة (كم)' : 'Odometer (km)'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'الوقود (لتر)' : 'Fuel (Ltrs)'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'تكلفة الوقود' : 'Fuel Cost'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'المشغل' : 'Operator'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'الموقع/المشروع' : 'Location/Project'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {operations.length === 0 ? (
+                    <tr><td colSpan="8" className="p-20 text-center text-slate-400 font-bold">{cur.empty}</td></tr>
+                  ) : operations.map(op => (
+                    <tr key={op.id} className="hover:bg-slate-50/50 transition-all text-xs font-bold text-slate-700">
+                      <td className="px-8 py-6 text-slate-900 font-black">{assets.find(a => a.id === op.asset_id)?.name || `Asset #${op.asset_id}`}</td>
+                      <td className="px-8 py-6">{new Date(op.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</td>
+                      <td className="px-8 py-6 font-mono">{Number(op.hourmeter_reading || 0).toLocaleString()} hrs</td>
+                      <td className="px-8 py-6 font-mono">{Number(op.odometer_reading || 0).toLocaleString()} km</td>
+                      <td className="px-8 py-6 font-mono">{Number(op.fuel_liters || 0).toLocaleString()} L</td>
+                      <td className="px-8 py-6 font-mono text-emerald-600">{Number(op.fuel_cost || 0).toLocaleString()} LCY</td>
+                      <td className="px-8 py-6">{op.operator_name || '-'}</td>
+                      <td className="px-8 py-6">{op.project_name || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'maintenance' && (
+            <div className="overflow-x-auto custom-scrollbar animate-fade-in">
+              <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} whitespace-nowrap`}>
+                <thead className="bg-slate-50/50 border-b border-slate-100">
+                  <tr className="text-slate-400 text-[10px] uppercase tracking-widest">
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'المعدة' : 'Equipment'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'تاريخ الخدمة' : 'Service Date'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'نوع الصيانة' : 'Type'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'الوصف' : 'Description'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'التكلفة المقدرة/الفعيلة' : 'Cost'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'القطع المستخدمة' : 'Parts Used'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                    <th className="px-8 py-5 font-black">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {maintenance.length === 0 ? (
+                    <tr><td colSpan="8" className="p-20 text-center text-slate-400 font-bold">{cur.empty}</td></tr>
+                  ) : maintenance.map(maint => (
+                    <tr key={maint.id} className="hover:bg-slate-50/50 transition-all text-xs font-bold text-slate-700">
+                      <td className="px-8 py-6 text-slate-900 font-black">{assets.find(a => a.id === maint.asset_id)?.name || `Asset #${maint.asset_id}`}</td>
+                      <td className="px-8 py-6">{new Date(maint.service_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</td>
+                      <td className="px-8 py-6">
+                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
+                          maint.service_type === 'Preventive' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                          maint.service_type === 'Breakdown' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                          'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>{maint.service_type}</span>
+                      </td>
+                      <td className="px-8 py-6 max-w-xs truncate" title={maint.description}>{maint.description || '-'}</td>
+                      <td className="px-8 py-6 font-mono text-emerald-600">{Number(maint.service_cost || 0).toLocaleString()} LCY</td>
+                      <td className="px-8 py-6 max-w-xs truncate">{maint.parts_used || '-'}</td>
+                      <td className="px-8 py-6">
+                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                          maint.status === 'Completed' ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10' : 'bg-slate-100 text-slate-500'
+                        }`}>{maint.status}</span>
+                      </td>
+                      <td className="px-8 py-6">
+                        {maint.status !== 'Completed' && (
+                          <button
+                            onClick={() => {
+                              setSelectedMaintId(maint.id);
+                              setCompleteMaintForm({
+                                completed_date: new Date().toISOString().split('T')[0],
+                                actual_cost: maint.service_cost || '',
+                                payment_method: 'Cash'
+                              });
+                              setIsCompleteMaintModalOpen(true);
+                            }}
+                            className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 transition-all active:scale-95"
+                          >
+                            {language === 'ar' ? 'إكمال وتأكيد' : 'Complete'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>
@@ -527,10 +705,162 @@ export default function FixedAssets() {
                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{cur.modalDep.period}</label>
                  <input type="text" value={depPeriod} onChange={e => setDepPeriod(e.target.value)} className="w-full bg-slate-50 border-none rounded-[2rem] py-6 text-center text-4xl font-black text-slate-900 outline-none focus:bg-white focus:ring-8 focus:ring-slate-900/5 transition-all shadow-inner" />
               </div>
-              <div className="flex gap-4">
-                 <button onClick={() => setIsDepModalOpen(false)} className="flex-1 py-5 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-xs hover:bg-slate-50 hover:text-slate-900 transition-all uppercase tracking-widest">{cur.modalDep.cancel}</button>
-                 <button onClick={handleRunDepreciation} disabled={isSubmitting} className="flex-[2] py-5 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 uppercase tracking-widest">{cur.modalDep.run}</button>
+            </div>
+         </div>
+      )}
+
+      {/* --- EQUIPMENT OPERATIONS LOG MODAL --- */}
+      {isOpsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">⚙️</div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                      {language === 'ar' ? 'تسجيل تشغيل معدة' : 'Log Equipment Operation'}
+                    </h3>
+                 </div>
+                 <button onClick={() => setIsOpsModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm">✕</button>
               </div>
+              <form onSubmit={handleLogOperation} className="p-10 space-y-8">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'اختر المعدة / الأصل' : 'Select Equipment / Asset'}</label>
+                       <select value={opsForm.asset_id} onChange={e => setOpsForm({...opsForm, asset_id: e.target.value})} required className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all">
+                          <option value="">-- {language === 'ar' ? 'اختر المعدة' : 'Select Equipment'} --</option>
+                          {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.asset_code})</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'التاريخ' : 'Date'}</label>
+                       <input type="date" value={opsForm.date} onChange={e => setOpsForm({...opsForm, date: e.target.value})} required className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'عداد الساعات' : 'Hourmeter (hrs)'}</label>
+                       <input type="number" step="0.01" value={opsForm.hourmeter_reading} onChange={e => setOpsForm({...opsForm, hourmeter_reading: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'عداد المسافة (كم)' : 'Odometer (km)'}</label>
+                       <input type="number" step="0.01" value={opsForm.odometer_reading} onChange={e => setOpsForm({...opsForm, odometer_reading: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'الوقود (لتر)' : 'Fuel Liters'}</label>
+                       <input type="number" step="0.01" value={opsForm.fuel_liters} onChange={e => setOpsForm({...opsForm, fuel_liters: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'تكلفة الوقود (LCY)' : 'Fuel Cost (LCY)'}</label>
+                       <input type="number" step="0.01" value={opsForm.fuel_cost} onChange={e => setOpsForm({...opsForm, fuel_cost: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'اسم المشغل' : 'Operator Name'}</label>
+                       <input type="text" value={opsForm.operator_name} onChange={e => setOpsForm({...opsForm, operator_name: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'اسم المشروع/الموقع' : 'Project/Location'}</label>
+                       <input type="text" value={opsForm.project_name} onChange={e => setOpsForm({...opsForm, project_name: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'ملاحظات' : 'Notes'}</label>
+                       <textarea value={opsForm.notes} onChange={e => setOpsForm({...opsForm, notes: e.target.value})} rows="2" className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white resize-none" />
+                    </div>
+                 </div>
+                 <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-3">
+                    {isSubmitting ? <div className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : (language === 'ar' ? 'حفظ سجل التشغيل' : 'Save Operation Log')}
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* --- SCHEDULE MAINTENANCE MODAL --- */}
+      {isMaintModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">🔧</div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                      {language === 'ar' ? 'جدولة صيانة معدة' : 'Schedule Equipment Maintenance'}
+                    </h3>
+                 </div>
+                 <button onClick={() => setIsMaintModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm">✕</button>
+              </div>
+              <form onSubmit={handleScheduleMaintenance} className="p-10 space-y-8">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'اختر المعدة / الأصل' : 'Select Equipment / Asset'}</label>
+                       <select value={maintForm.asset_id} onChange={e => setMaintForm({...maintForm, asset_id: e.target.value})} required className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white">
+                          <option value="">-- {language === 'ar' ? 'اختر المعدة' : 'Select Equipment'} --</option>
+                          {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.asset_code})</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'تاريخ الصيانة' : 'Service Date'}</label>
+                       <input type="date" value={maintForm.service_date} onChange={e => setMaintForm({...maintForm, service_date: e.target.value})} required className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'نوع الخدمة' : 'Service Type'}</label>
+                       <select value={maintForm.service_type} onChange={e => setMaintForm({...maintForm, service_type: e.target.value})} required className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white">
+                          <option value="Preventive">{language === 'ar' ? 'وقائية' : 'Preventive'}</option>
+                          <option value="Breakdown">{language === 'ar' ? 'إصلاح أعطال' : 'Breakdown'}</option>
+                          <option value="Inspection">{language === 'ar' ? 'فحص دوري' : 'Inspection'}</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'التكلفة المقدرة (LCY)' : 'Estimated Cost (LCY)'}</label>
+                       <input type="number" value={maintForm.service_cost} onChange={e => setMaintForm({...maintForm, service_cost: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'وصف العمل المطلوبة' : 'Description of Maintenance'}</label>
+                       <textarea value={maintForm.description} onChange={e => setMaintForm({...maintForm, description: e.target.value})} rows="2" className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white resize-none" />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'قطع الغيار المستخدمة / المطلوبة' : 'Parts Used / Needed'}</label>
+                       <input type="text" value={maintForm.parts_used} onChange={e => setMaintForm({...maintForm, parts_used: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none focus:bg-white" />
+                    </div>
+                 </div>
+                 <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-3">
+                    {isSubmitting ? <div className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : (language === 'ar' ? 'جدولة الصيانة' : 'Schedule Maintenance')}
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* --- COMPLETE MAINTENANCE MODAL --- */}
+      {isCompleteMaintModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+           <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-12 text-center border border-slate-200 animate-scale-in">
+              <div className="w-20 h-20 bg-emerald-500 text-white rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-8 shadow-xl shadow-emerald-500/20 transform rotate-12">✓</div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">
+                {language === 'ar' ? 'تأكيد وإكمال الصيانة' : 'Complete Maintenance'}
+              </h3>
+              <p className="text-slate-400 font-bold text-xs mb-8">
+                {language === 'ar' ? 'يرجى إدخال التكلفة الفعلية وتاريخ الانتهاء لتوليد القيود المحاسبية للمصروف.' : 'Provide the actual completion date and final cost to post to accounting.'}
+              </p>
+              <form onSubmit={handleCompleteMaintenance} className="space-y-6 text-left">
+                 <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'تاريخ الانتهاء الفعلي' : 'Completed Date'}</label>
+                    <input type="date" value={completeMaintForm.completed_date} onChange={e => setCompleteMaintForm({...completeMaintForm, completed_date: e.target.value})} required className="w-full px-5 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none" />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'التكلفة الفعلية (LCY)' : 'Actual Cost (LCY)'}</label>
+                    <input type="number" value={completeMaintForm.actual_cost} onChange={e => setCompleteMaintForm({...completeMaintForm, actual_cost: e.target.value})} required className="w-full px-5 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none text-lg text-center font-mono" />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</label>
+                    <select value={completeMaintForm.payment_method} onChange={e => setCompleteMaintForm({...completeMaintForm, payment_method: e.target.value})} className="w-full px-5 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-900 outline-none">
+                       <option value="Cash">{language === 'ar' ? 'نقداً (الصندوق)' : 'Cash'}</option>
+                       <option value="Bank">{language === 'ar' ? 'تحويل بنكي' : 'Bank Transfer'}</option>
+                    </select>
+                 </div>
+                 <div className="flex gap-4 pt-4">
+                    <button type="button" onClick={() => setIsCompleteMaintModalOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-400 rounded-xl font-black text-xs hover:text-slate-900 transition-all uppercase tracking-widest">{language === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+                    <button type="submit" disabled={isSubmitting} className="flex-[2] py-4 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-slate-800 transition-all shadow-lg uppercase tracking-widest">
+                       {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : (language === 'ar' ? 'ترحيل وإغلاق' : 'Post & Close')}
+                    </button>
+                 </div>
+              </form>
            </div>
         </div>
       )}

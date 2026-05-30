@@ -88,6 +88,7 @@ const TABS = [
   { id: 'memberships',  ar: 'الاشتراكات',    en: 'Memberships',     icon: '🎫' },
   { id: 'points',       ar: 'النقاط والأرصدة', en: 'Points & Credits', icon: '⭐' },
   { id: 'attendance',   ar: 'حضور العملاء',   en: 'Client Attendance', icon: '✅' },
+  { id: 'leads',        ar: 'العملاء العقاريين والصفقات', en: 'Real Estate Leads & Funnel', icon: '🎯' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -563,6 +564,500 @@ function AttendanceTab({ clients, language }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// REAL ESTATE LEADS & SALES FUNNEL TAB
+// ═══════════════════════════════════════════════════════════════════════════════
+function LeadsTab({ language }) {
+  const ar = language === 'ar';
+  const [items, setItems] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [leadModal, setLeadModal] = useState(false);
+  const [interactionModal, setInteractionModal] = useState(false);
+  const [aiModal, setAiModal] = useState(false);
+  const [bookingModal, setBookingModal] = useState(false);
+  
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [interactions, setInteractions] = useState([]);
+  const [interactionNote, setInteractionNote] = useState('');
+  const [interactionType, setInteractionType] = useState('Call');
+  const [aiSuggestion, setAiSuggestion] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
+  
+  // Simulated booking fields
+  const [downPayment, setDownPayment] = useState(50000);
+  const [years, setYears] = useState(3);
+  const [frequency, setFrequency] = useState('Monthly');
+  
+  // Form states
+  const [form, setForm] = useState({
+    company_name: '', contact_person: '', email: '', phone: '', source: 'Web',
+    status: 'New', assigned_to: '', preferred_project_id: '', preferred_unit_id: '', budget: 0, hold_hours: 0
+  });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [leadsRes, projRes, unitsRes] = await Promise.all([
+        api.get('/crm/leads'),
+        api.get('/table/real_estate_projects?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/table/real_estate_units?limit=2000').catch(() => ({ data: { data: [] } }))
+      ]);
+      setItems(leadsRes.data.data || []);
+      setProjects(projRes.data.data || []);
+      setUnits(unitsRes.data.data || []);
+    } catch { } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const saveLead = async () => {
+    try {
+      if (form.id) {
+        await api.put(`/crm/leads/${form.id}`, form);
+      } else {
+        await api.post('/crm/leads', form);
+      }
+      setLeadModal(false);
+      load();
+    } catch (e) { alert(e?.response?.data?.error || 'Error'); }
+  };
+
+  const deleteLead = async (id) => {
+    if (!window.confirm(ar ? 'هل أنت متأكد من حذف هذا العميل المحتمل؟' : 'Are you sure you want to delete this lead?')) return;
+    try {
+      await api.delete(`/crm/leads/${id}`);
+      load();
+    } catch (e) { alert(e?.response?.data?.error || 'Error'); }
+  };
+
+  const openInteractions = async (lead) => {
+    setSelectedLead(lead);
+    setInteractionModal(true);
+    setInteractionNote('');
+    try {
+      const res = await api.get(`/crm/leads/${lead.id}/interactions`);
+      setInteractions(res.data.data || []);
+    } catch { setInteractions([]); }
+  };
+
+  const addInteraction = async () => {
+    if (!interactionNote.trim()) return;
+    try {
+      await api.post(`/crm/leads/${selectedLead.id}/interactions`, { type: interactionType, notes: interactionNote });
+      setInteractionNote('');
+      // Reload
+      const res = await api.get(`/crm/leads/${selectedLead.id}/interactions`);
+      setInteractions(res.data.data || []);
+    } catch { }
+  };
+
+  const getAISuggestion = async (lead) => {
+    setSelectedLead(lead);
+    setAiModal(true);
+    setAiSuggestion('');
+    setLoadingAI(true);
+    try {
+      const res = await api.post(`/crm/leads/${lead.id}/ai-suggest`);
+      setAiSuggestion(res.data.suggestion || '');
+    } catch {
+      setAiSuggestion('Failed to contact AI Copilot.');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const openBooking = (lead) => {
+    if (!lead.preferred_unit_id) {
+      alert(ar ? 'يرجى تحديد وحدة مفضلة أولاً للعميل لإتمام الحجز!' : 'Please assign a preferred unit first before booking!');
+      return;
+    }
+    setSelectedLead(lead);
+    setDownPayment(Math.round(parseFloat(lead.preferred_unit_price || 0) * 0.1)); // 10% default down payment
+    setBookingModal(true);
+  };
+
+  const confirmBooking = async () => {
+    try {
+      const res = await api.post(`/crm/leads/${selectedLead.id}/book-unit`, {
+        down_payment: downPayment,
+        installment_years: years,
+        frequency,
+        contract_date: new Date().toISOString().slice(0, 10)
+      });
+      alert(res.data.message || 'Success');
+      setBookingModal(false);
+      load();
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Error during booking');
+    }
+  };
+
+  const getScoreBadgeColor = (score) => {
+    if (score >= 80) return 'green';
+    if (score >= 40) return 'amber';
+    return 'rose';
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= 80) return ar ? 'اهتمام ساخن 🔥' : 'Hot Lead 🔥';
+    if (score >= 40) return ar ? 'اهتمام دافئ ☀️' : 'Warm Lead ☀️';
+    return ar ? 'بارد ❄️' : 'Cold ❄️';
+  };
+
+  // ROI Calculator Calculations
+  const unitPrice = parseFloat(selectedLead?.preferred_unit_price || 0);
+  const remainingValue = Math.max(0, unitPrice - downPayment);
+  const totalInstallmentMonths = years * 12;
+  const paymentFrequencyMonths = frequency === 'Quarterly' ? 3 : (frequency === 'Semi-Annual' ? 6 : (frequency === 'Annual' ? 12 : 1));
+  const numberOfPayments = Math.floor(totalInstallmentMonths / paymentFrequencyMonths);
+  const amountPerInstallment = numberOfPayments > 0 ? (remainingValue / numberOfPayments).toFixed(2) : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-slate-800">{ar ? 'متابعة العملاء المحتملين والفرص البيعية العقارية' : 'Property Leads & Opportunities Pipeline'}</h2>
+          <p className="text-xs text-slate-500 mt-1">{ar ? 'تتبع الصفقات، قم بجدولة الوحدات، وتحكم بالعمولات والدفعات آلياً' : 'Track deals, allocate unit holds, and convert leads into signed contracts'}</p>
+        </div>
+        <Btn onClick={() => {
+          setForm({ company_name: '', contact_person: '', email: '', phone: '', source: 'Web', status: 'New', assigned_to: '', preferred_project_id: '', preferred_unit_id: '', budget: 0, hold_hours: 0 });
+          setLeadModal(true);
+        }}>
+          + {ar ? 'إضافة عميل محتمل' : 'Add Property Lead'}
+        </Btn>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><div className="w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" /></div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {['New', 'Contacted', 'Qualified', 'Won', 'Lost'].map(stage => {
+            const stageLeads = items.filter(lead => lead.status === stage);
+            return (
+              <div key={stage} className="bg-slate-100/50 p-4 rounded-2xl border border-slate-200/50 min-h-[500px]">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+                  <span className="font-bold text-xs text-slate-700">
+                    {stage === 'New' && (ar ? 'جديد 🆕' : 'New')}
+                    {stage === 'Contacted' && (ar ? 'تم الاتصال 📞' : 'Contacted')}
+                    {stage === 'Qualified' && (ar ? 'مؤهل للشراء 🌟' : 'Qualified')}
+                    {stage === 'Won' && (ar ? 'مكتمل/مباع 🎉' : 'Won')}
+                    {stage === 'Lost' && (ar ? 'صفقة ضائعة ❌' : 'Lost')}
+                  </span>
+                  <Badge color="slate">{stageLeads.length}</Badge>
+                </div>
+
+                <div className="space-y-3">
+                  {stageLeads.map(lead => (
+                    <div key={lead.id} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm space-y-3 relative group">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm leading-tight">{lead.contact_person}</h4>
+                          <span className="text-[10px] text-slate-400 font-medium block mt-0.5">{lead.company_name || (ar ? 'فرد' : 'Individual')}</span>
+                        </div>
+                        <Badge color={getScoreBadgeColor(lead.lead_score)}>
+                          {getScoreLabel(lead.lead_score)}
+                        </Badge>
+                      </div>
+
+                      {lead.phone && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <span>📞</span>
+                          <span className="font-mono">{lead.phone}</span>
+                          <a href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-emerald-500 font-bold hover:underline text-[10px] ml-1">WhatsApp 💬</a>
+                        </div>
+                      )}
+
+                      {lead.budget > 0 && (
+                        <div className="text-xs text-slate-500">
+                          💵 {ar ? 'الميزانية:' : 'Budget:'} <span className="font-bold text-slate-700">{fmt(lead.budget)} EGP</span>
+                        </div>
+                      )}
+
+                      {lead.preferred_project_name && (
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-[11px] text-slate-600 space-y-1">
+                          <div>🏢 {lead.preferred_project_name}</div>
+                          {lead.preferred_unit_number && (
+                            <div className="flex items-center justify-between font-bold">
+                              <span>🔑 {ar ? 'وحدة' : 'Unit'} {lead.preferred_unit_number}</span>
+                              <Badge color={lead.preferred_unit_status === 'Available' ? 'green' : (lead.preferred_unit_status === 'Reserved' ? 'amber' : 'rose')}>
+                                {lead.preferred_unit_status}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {lead.assigned_to && (
+                        <div className="text-[10px] text-slate-400">
+                          👤 {ar ? 'المسؤول:' : 'Agent:'} <span className="font-semibold">{lead.assigned_to}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5 justify-end">
+                        <button onClick={() => openInteractions(lead)} className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded-md font-bold transition-all">📝 {ar ? 'متابعة' : 'Log'}</button>
+                        <button onClick={() => getAISuggestion(lead)} className="text-[10px] bg-violet-50 hover:bg-violet-100 text-violet-600 px-2 py-1 rounded-md font-bold transition-all">🤖 {ar ? 'مساعد الذكاء' : 'AI Msg'}</button>
+                        {lead.status !== 'Won' && lead.preferred_unit_id && lead.preferred_unit_status !== 'Sold' && (
+                          <button onClick={() => openBooking(lead)} className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded-md font-bold transition-all">💰 {ar ? 'حجز وبيع' : 'Book Unit'}</button>
+                        )}
+                        <button onClick={() => {
+                          setForm({ ...lead, preferred_project_id: lead.preferred_project_id || '', preferred_unit_id: lead.preferred_unit_id || '' });
+                          setLeadModal(true);
+                        }} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-md font-bold hover:bg-blue-100 transition-all">✏️</button>
+                        <button onClick={() => deleteLead(lead.id)} className="text-[10px] text-rose-500 hover:bg-rose-50 px-2 py-1 rounded-md transition-all">🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                  {stageLeads.length === 0 && (
+                    <div className="text-center py-8 text-[11px] text-slate-400 italic">{ar ? 'لا يوجد عملاء' : 'Empty'}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add / Edit Lead Modal */}
+      <Modal open={leadModal} onClose={() => setLeadModal(false)} title={form.id ? (ar ? 'تعديل بيانات العميل المحتمل' : 'Edit Property Lead') : (ar ? 'عميل محتمل جديد' : 'New Property Lead')}>
+        <div className="space-y-3">
+          <Input label={ar ? 'اسم العميل الرئيسي' : 'Lead Contact Name'} value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={ar ? 'الهاتف' : 'Phone'} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            <Input label={ar ? 'البريد الإلكتروني' : 'Email'} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={ar ? 'الشركة (اختياري)' : 'Company Name'} value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
+            <Input label={ar ? 'الميزانية المتوقعة (EGP)' : 'Expected Budget'} type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: +e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Select label={ar ? 'مصدر العميل' : 'Source'} value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}>
+              {['Web', 'Referral', 'LinkedIn', 'Cold Call', 'Facebook Ads'].map(s => <option key={s} value={s}>{s}</option>)}
+            </Select>
+            <Select label={ar ? 'الحالة' : 'Status'} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              {['New', 'Contacted', 'Qualified', 'Won', 'Lost'].map(s => <option key={s} value={s}>{s}</option>)}
+            </Select>
+            <Input label={ar ? 'تقييم الاهتمام (1-100)' : 'Lead Score (1-100)'} type="number" value={form.lead_score || 50} onChange={e => setForm(f => ({ ...f, lead_score: +e.target.value }))} />
+          </div>
+
+          <div className="border-t border-slate-100 pt-3 space-y-3">
+            <h4 className="text-xs font-bold text-slate-800">🏢 {ar ? 'اهتمام بالوحدات العقارية والمشاريع' : 'Real Estate Unit Booking Option'}</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <Select label={ar ? 'المشروع العقاري المفضل' : 'Preferred Project'} value={form.preferred_project_id} onChange={e => setForm(f => ({ ...f, preferred_project_id: e.target.value, preferred_unit_id: '' }))}>
+                <option value="">-- {ar ? 'اختر المشروع' : 'Select Project'} --</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </Select>
+              
+              <Select label={ar ? 'الوحدة المفضلة' : 'Preferred Unit'} value={form.preferred_unit_id} onChange={e => setForm(f => ({ ...f, preferred_unit_id: e.target.value }))} disabled={!form.preferred_project_id}>
+                <option value="">-- {ar ? 'اختر الوحدة' : 'Select Unit'} --</option>
+                {units.filter(u => Number(u.project_id) === Number(form.preferred_project_id)).map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.unit_number} — {fmt(u.price)} EGP ({u.status})
+                  </option>
+                ))}
+              </Select>
+            </div>
+            
+            {/* Visual Selector Preview helper */}
+            {form.preferred_project_id && (
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">🗺️ {ar ? 'مخطط الوحدات البصري السريع للمشروع' : 'Visual Unit Selector Grid'}</p>
+                <div className="grid grid-cols-6 gap-1.5 max-h-32 overflow-y-auto p-1 bg-white border border-slate-100 rounded-lg">
+                  {units.filter(u => Number(u.project_id) === Number(form.preferred_project_id)).map(u => {
+                    const isSelected = Number(form.preferred_unit_id) === Number(u.id);
+                    const colorMap = {
+                      'Available': isSelected ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100',
+                      'Reserved': isSelected ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100',
+                      'Sold': 'bg-rose-50 border-rose-200 text-rose-400 cursor-not-allowed opacity-60'
+                    };
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        disabled={u.status === 'Sold'}
+                        onClick={() => setForm(f => ({ ...f, preferred_unit_id: String(u.id) }))}
+                        className={`border rounded px-1.5 py-1 text-[10px] font-bold transition-all text-center ${colorMap[u.status] || 'bg-slate-100 text-slate-500'}`}
+                      >
+                        {u.unit_number}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {!form.id && form.preferred_unit_id && (
+              <Input label={ar ? 'مدة الحجز الحصري المؤقت (ساعات) - اختيارى' : 'Exclusive Unit Hold Period (Hours) - Optional'} type="number" value={form.hold_hours} onChange={e => setForm(f => ({ ...f, hold_hours: +e.target.value }))} />
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Btn variant="ghost" onClick={() => setLeadModal(false)}>{ar ? 'إلغاء' : 'Cancel'}</Btn>
+            <Btn variant="success" onClick={saveLead}>{ar ? 'حفظ' : 'Save'}</Btn>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Interactions Timeline Modal */}
+      <Modal open={interactionModal} onClose={() => setInteractionModal(false)} title={ar ? 'سجل متابعات وتفاعلات العميل' : 'Customer Interactions Timeline'}>
+        <div className="space-y-4">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-150 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              {['Call', 'Email', 'Meeting', 'Note'].map(t => (
+                <button key={t} onClick={() => setInteractionType(t)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${interactionType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <Textarea label={ar ? 'تفاصيل المتابعة أو المكالمة' : 'Interaction Notes'} value={interactionNote} onChange={e => setInteractionNote(e.target.value)} placeholder={ar ? 'اكتب ملخص المكالمة أو الاتفاق...' : 'Write notes about the meeting/call...'} />
+            <div className="flex justify-end">
+              <Btn size="sm" onClick={addInteraction}>{ar ? 'إضافة للسجل' : 'Add Note'}</Btn>
+            </div>
+          </div>
+
+          <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
+            {interactions.map(item => (
+              <div key={item.id} className="p-3 bg-white border border-slate-200 rounded-xl text-xs space-y-1 relative shadow-sm">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                  <span>📅 {new Date(item.interaction_date).toLocaleString('ar-EG')}</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">{item.type}</span>
+                </div>
+                <p className="text-slate-700 font-medium whitespace-pre-wrap">{item.notes}</p>
+                <div className="text-[9px] text-slate-400 text-left">✍️ {item.created_by}</div>
+              </div>
+            ))}
+            {interactions.length === 0 && (
+              <p className="text-center py-6 text-xs text-slate-400">{ar ? 'لا توجد ملاحظات أو اتصالات مسجلة بعد' : 'No logged interactions yet.'}</p>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* AI Sales Co-Pilot Modal */}
+      <Modal open={aiModal} onClose={() => setAiModal(false)} title={ar ? 'مساعد المبيعات الذكي 🤖' : 'AI Sales Co-Pilot'}>
+        <div className="space-y-4">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-250 min-h-[120px] flex flex-col justify-between">
+            {loadingAI ? (
+              <div className="flex flex-col items-center justify-center py-10 space-y-3">
+                <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs font-bold text-violet-600 animate-pulse">{ar ? 'جاري صياغة رسالة المتابعة مع الذكاء الاصطناعي...' : 'AI is drafting your follow-up script...'}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">🤖 {ar ? 'الرسالة المقترحة للمتابعة والتفاوض:' : 'Suggested Negotiation / Follow-up message:'}</p>
+                <p className="text-slate-800 text-sm font-medium whitespace-pre-wrap leading-relaxed">{aiSuggestion}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setAiModal(false)}>{ar ? 'إغلاق' : 'Close'}</Btn>
+            <Btn variant="primary" disabled={loadingAI || !aiSuggestion} onClick={() => {
+              navigator.clipboard.writeText(aiSuggestion);
+              alert(ar ? 'تم نسخ النص إلى الحافظة!' : 'Message copied to clipboard!');
+            }}>
+              📋 {ar ? 'نسخ النص' : 'Copy Text'}
+            </Btn>
+            {selectedLead?.phone && (
+              <a
+                href={`https://wa.me/${selectedLead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(aiSuggestion)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm font-bold rounded-xl px-4 py-2 text-sm flex items-center gap-1.5 transition-all"
+              >
+                💬 {ar ? 'إرسال عبر WhatsApp' : 'Send via WhatsApp'}
+              </a>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ROI Installment Simulator & Booking Modal */}
+      <Modal open={bookingModal} onClose={() => setBookingModal(false)} title={ar ? 'محاكي الأقساط وحجز الوحدة العقارية' : 'Installment Simulator & Property Booking'}>
+        <div className="space-y-4">
+          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-xs space-y-1">
+            <div className="flex justify-between">
+              <span className="font-bold text-indigo-900">{ar ? 'سعر الوحدة الإجمالي:' : 'Total Unit Price:'}</span>
+              <span className="font-black text-indigo-700">{fmt(unitPrice)} EGP</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">{ar ? 'رقم الوحدة:' : 'Unit ID:'}</span>
+              <span className="font-bold">{selectedLead?.preferred_unit_number}</span>
+            </div>
+          </div>
+
+          {/* ROI Simulator Slider Controls */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>💰 {ar ? 'الدفعة المقدمة:' : 'Down Payment:'}</span>
+                <span className="font-mono text-emerald-600">{fmt(downPayment)} EGP</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={unitPrice}
+                step="5000"
+                value={downPayment}
+                onChange={e => setDownPayment(+e.target.value)}
+                className="w-full accent-indigo-600"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">📅 {ar ? 'سنين التقسيط:' : 'Installment Years:'}</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={years}
+                  onChange={e => setYears(Math.max(1, +e.target.value))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-900"
+                />
+              </div>
+              <Select label={ar ? 'دورية الأقساط' : 'Frequency'} value={frequency} onChange={e => setFrequency(e.target.value)}>
+                <option value="Monthly">{ar ? 'شهري' : 'Monthly'}</option>
+                <option value="Quarterly">{ar ? 'ربع سنوي' : 'Quarterly'}</option>
+                <option value="Semi-Annual">{ar ? 'نصف سنوي' : 'Semi-Annual'}</option>
+                <option value="Annual">{ar ? 'سنوي' : 'Annual'}</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* SIM Result Display */}
+          <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 space-y-3 font-mono">
+            <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">📊 {ar ? 'خطة الأقساط المحسوبة:' : 'Simulated Installment Plan:'}</h4>
+            <div className="flex justify-between text-sm">
+              <span>{ar ? 'القيمة المتبقية للتقسيط:' : 'Remaining Balance:'}</span>
+              <span className="font-bold text-amber-400">{fmt(remainingValue)} EGP</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>{ar ? 'عدد الأقساط الإجمالية:' : 'Total Installments:'}</span>
+              <span className="font-bold text-emerald-400">{numberOfPayments} {ar ? 'قسط' : 'payments'}</span>
+            </div>
+            <div className="flex justify-between text-base border-t border-slate-800 pt-3 font-black">
+              <span>{ar ? 'قيمة القسط الواحد:' : 'Installment Amount:'}</span>
+              <span className="text-xl text-yellow-400">{fmt(amountPerInstallment)} EGP</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="ghost" onClick={() => setBookingModal(false)}>{ar ? 'إلغاء' : 'Cancel'}</Btn>
+            <Btn variant="success" onClick={confirmBooking}>
+              🎉 {ar ? 'تأكيد الحجز وتصدير العقد والقيود' : 'Fulfill Booking & Sign Contract'}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN CRM PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function CRM() {
@@ -615,6 +1110,7 @@ export default function CRM() {
         {activeTab === 'memberships'  && <MembershipsTab  clients={clients} language={language} />}
         {activeTab === 'points'       && <PointsTab       clients={clients} language={language} />}
         {activeTab === 'attendance'   && <AttendanceTab   clients={clients} language={language} />}
+        {activeTab === 'leads'        && <LeadsTab        language={language} />}
       </div>
     </div>
   );

@@ -283,4 +283,267 @@ router.post('/memberships/:id/create-invoice', async (req, res) => {
   } finally { client.release(); }
 });
 
+// ─── CRM LEADS CRUD ──────────────────────────────────────────────────────────
+router.get('/leads', async (req, res) => {
+  try {
+    const cf = companyWhere(req, 'l');
+    const { rows } = await pool.query(`
+      SELECT l.*, 
+             p.name AS preferred_project_name, 
+             u.unit_number AS preferred_unit_number, 
+             u.price AS preferred_unit_price,
+             u.status AS preferred_unit_status
+      FROM crm_leads l
+      LEFT JOIN real_estate_projects p ON p.id = l.preferred_project_id
+      LEFT JOIN real_estate_units u ON u.id = l.preferred_unit_id
+      WHERE 1=1 ${cf}
+      ORDER BY l.id DESC
+    `);
+    res.json({ success: true, data: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/leads', async (req, res) => {
+  try {
+    const { company_name, contact_person, email, phone, source, status, assigned_to, preferred_project_id, preferred_unit_id, budget, hold_hours } = req.body;
+    const company = req.selectedCompany || req.headers['x-selected-company'] || '';
+    
+    let hold_expires_at = null;
+    if (preferred_unit_id && hold_hours) {
+      hold_expires_at = new Date();
+      hold_expires_at.setHours(hold_expires_at.getHours() + parseInt(hold_hours));
+      
+      // Reserve the unit temporarily
+      await pool.query("UPDATE real_estate_units SET status = 'Reserved' WHERE id = $1 AND status = 'Available'", [preferred_unit_id]);
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO crm_leads (company_name, contact_person, email, phone, source, status, assigned_to, preferred_project_id, preferred_unit_id, budget, hold_expires_at, company)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [company_name, contact_person, email, phone, source || 'Web', status || 'New', assigned_to, preferred_project_id || null, preferred_unit_id || null, budget || 0, hold_expires_at, company]
+    );
+    res.json({ success: true, data: rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/leads/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company_name, contact_person, email, phone, source, status, assigned_to, preferred_project_id, preferred_unit_id, budget, lead_score } = req.body;
+    
+    const { rows } = await pool.query(
+      `UPDATE crm_leads 
+       SET company_name=$1, contact_person=$2, email=$3, phone=$4, source=$5, status=$6, assigned_to=$7, preferred_project_id=$8, preferred_unit_id=$9, budget=$10, lead_score=$11
+       WHERE id=$12 RETURNING *`,
+      [company_name, contact_person, email, phone, source, status, assigned_to, preferred_project_id || null, preferred_unit_id || null, budget, lead_score || 50, id]
+    );
+    res.json({ success: true, data: rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/leads/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Release unit hold if exists
+    const leadRes = await pool.query("SELECT preferred_unit_id FROM crm_leads WHERE id = $1", [id]);
+    if (leadRes.rows.length > 0 && leadRes.rows[0].preferred_unit_id) {
+      await pool.query("UPDATE real_estate_units SET status = 'Available' WHERE id = $1 AND status = 'Reserved'", [leadRes.rows[0].preferred_unit_id]);
+    }
+    await pool.query("DELETE FROM crm_leads WHERE id = $1", [id]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── LEAD INTERACTIONS ───────────────────────────────────────────────────────
+router.get('/leads/:id/interactions', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM crm_interactions WHERE lead_id = $1 ORDER BY interaction_date DESC`,
+      [req.params.id]
+    );
+    res.json({ success: true, data: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/leads/:id/interactions', async (req, res) => {
+  try {
+    const { type, notes } = req.body;
+    const { rows } = await pool.query(
+      `INSERT INTO crm_interactions (lead_id, type, notes, created_by)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.params.id, type || 'Note', notes, req.user?.username || 'System']
+    );
+    res.json({ success: true, data: rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── AI FOLLOW-UP CO-PILOT ───────────────────────────────────────────────────
+router.post('/leads/:id/ai-suggest', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const leadRes = await pool.query(`
+      SELECT l.*, p.name AS project_name, u.unit_number, u.price
+      FROM crm_leads l
+      LEFT JOIN real_estate_projects p ON p.id = l.preferred_project_id
+      LEFT JOIN real_estate_units u ON u.id = l.preferred_unit_id
+      WHERE l.id = $1
+    `, [id]);
+
+    if (leadRes.rows.length === 0) return res.status(404).json({ error: 'العميل المحتمل غير موجود' });
+    const lead = leadRes.rows[0];
+
+    const prompt = `You are an expert Real Estate Sales Consultant. Write a polite, engaging, and professional follow-up message to a client who is a lead for a property.
+Lead details:
+- Name: ${lead.contact_person}
+- Company: ${lead.company_name || 'Individual'}
+- Preferred Project: ${lead.project_name || 'N/A'}
+- Preferred Unit: ${lead.unit_number || 'N/A'}
+- Unit Price: ${lead.price || 'N/A'} EGP
+- Current Status: ${lead.status}
+- Interaction Notes: (Needs prompt follow up regarding property purchase).
+
+Write a short, professional response in both Arabic and English that can be sent over WhatsApp. Keep it concise.`;
+
+    const axios = require('axios');
+    let aiResponse = "";
+    try {
+      const response = await axios.post('http://127.0.0.1:4040/v1/chat/completions', {
+        model: 'qwen2.5-coder:32b',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7
+      }, { timeout: 3000 });
+      aiResponse = response.data?.choices?.[0]?.message?.content || "";
+    } catch (aiErr) {
+      console.warn("AI Proxy offline, falling back to static templates.");
+      aiResponse = `مرحباً ${lead.contact_person}، نود متابعة اهتمامكم بالوحدة ${lead.unit_number || ''} بمشروع ${lead.project_name || ''}. هل يناسبكم موعد غداً لمناقشة التفاصيل؟\n\nHello ${lead.contact_person}, we are following up on your interest in unit ${lead.unit_number || ''} at ${lead.project_name || ''}. Would you be free for a call tomorrow?`;
+    }
+
+    res.json({ success: true, suggestion: aiResponse });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── CRM CONVERT LEAD TO REAL ESTATE CONTRACT ────────────────────────────────
+router.post('/leads/:id/book-unit', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const { down_payment, installment_years, contract_date, frequency } = req.body;
+    const username = req.user?.username || 'System';
+
+    // 1. Get lead details
+    const leadRes = await client.query(`SELECT * FROM crm_leads WHERE id = $1 FOR UPDATE`, [id]);
+    if (leadRes.rows.length === 0) throw new Error('العميل المحتمل غير موجود');
+    const lead = leadRes.rows[0];
+
+    if (!lead.preferred_unit_id) throw new Error('يرجى تحديد وحدة مفضلة أولاً لحجزها');
+
+    // 2. Resolve/Create Customer in central table
+    let customerId = null;
+    const custCheck = await client.query("SELECT id FROM customers WHERE LOWER(phone) = LOWER($1) OR name ILIKE $2", [lead.phone?.trim(), `%${lead.contact_person?.trim()}%`]);
+    
+    if (custCheck.rows.length > 0) {
+      customerId = custCheck.rows[0].id;
+    } else {
+      const activeComp = lead.company || '';
+      let resolvedCompanyId = 1;
+      let resolvedCompanyName = 'TED CAPITAL';
+      if (activeComp.toLowerCase().includes('design')) { resolvedCompanyId = 2; resolvedCompanyName = 'Design Concept'; }
+      else if (activeComp.toLowerCase().includes('master')) { resolvedCompanyId = 3; resolvedCompanyName = 'Master Builder'; }
+      
+      const insertCust = await client.query(
+        `INSERT INTO customers (name, phone, email, company, company_id, customer_type)
+         VALUES ($1, $2, $3, $4, $5, 'Real Estate') RETURNING id`,
+        [lead.contact_person, lead.phone, lead.email, resolvedCompanyName, resolvedCompanyId]
+      );
+      customerId = insertCust.rows[0].id;
+    }
+
+    // 3. Get Unit Details
+    const unitRes = await client.query(`
+      SELECT u.*, p.name as project_name 
+      FROM real_estate_units u 
+      JOIN real_estate_projects p ON u.project_id = p.id 
+      WHERE u.id = $1 FOR UPDATE`, [lead.preferred_unit_id]);
+    if (unitRes.rows.length === 0) throw new Error("الوحدة غير موجودة");
+    const unit = unitRes.rows[0];
+    if (unit.status !== 'Available' && unit.status !== 'Reserved') throw new Error("الوحدة غير متاحة للبيع");
+
+    // 4. Update Unit & Lead status
+    await client.query("UPDATE real_estate_units SET status = 'Sold' WHERE id = $1", [lead.preferred_unit_id]);
+    await client.query("UPDATE crm_leads SET status = 'Qualified', lead_score = 100 WHERE id = $1", [id]);
+
+    // 5. Create Contract
+    const totalPrice = parseFloat(unit.price || 0);
+    const contractRes = await client.query(
+        `INSERT INTO real_estate_contracts (unit_id, customer_id, customer_name, total_price, down_payment, installment_years, contract_date, project_name, created_by) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [lead.preferred_unit_id, customerId, lead.contact_person, totalPrice, down_payment || 0, installment_years || 1, contract_date || new Date().toISOString(), unit.project_name, username]
+    );
+    const contractId = contractRes.rows[0].id;
+
+    // 6. Generate Installments
+    let monthStep = frequency === 'Quarterly' ? 3 : (frequency === 'Semi-Annual' ? 6 : (frequency === 'Annual' ? 12 : 1));
+    let numPayments = Math.floor(((installment_years || 1) * 12) / monthStep);
+    const remainingValue = totalPrice - parseFloat(down_payment || 0);
+    const amountPer = (remainingValue / numPayments).toFixed(2);
+    let currDate = new Date(contract_date || new Date());
+
+    for (let i = 1; i <= numPayments; i++) {
+        await client.query(
+            "INSERT INTO real_estate_installments (contract_id, installment_no, due_date, amount, status) VALUES ($1, $2, $3, $4, 'Pending')",
+            [contractId, i.toString(), currDate.toISOString(), amountPer]
+        );
+        currDate.setMonth(currDate.getMonth() + monthStep);
+    }
+
+    // 7. Commissions Recording
+    if (lead.assigned_to) {
+      const staffRes = await client.query("SELECT id FROM staff WHERE name ILIKE $1 LIMIT 1", [`%${lead.assigned_to}%`]);
+      if (staffRes.rows.length > 0) {
+        const commAmt = (totalPrice * 0.015).toFixed(2); // Auto 1.5% commission
+        await client.query(
+          `INSERT INTO sales_commissions (staff_id, source_type, source_id, amount, status) 
+           VALUES ($1, 'RealEstate', $2, $3, 'Pending')`,
+          [staffRes.rows[0].id, contractId, commAmt]
+        );
+      }
+    }
+
+    // 8. Accounting Postings
+    const AccountingService = require('../services/accountingService');
+    const revenueDesc = `مبيعات عقارية تحويل من CRM - عقد #${contractId} - وحدة ${unit.unit_number} - عميل: ${lead.contact_person}`;
+    
+    await AccountingService.recordDoubleEntry(client, {
+        debitAccount: 'عملاء (حسابات مدينة - AR)',
+        creditAccount: 'إيرادات مبيعات عقارية',
+        amount: totalPrice,
+        costCenter: unit.project_name,
+        description: revenueDesc,
+        username: username
+    });
+
+    if (parseFloat(down_payment || 0) > 0) {
+        const dpDesc = `مقدم حجز تحويل من CRM - عقد #${contractId} - وحدة ${unit.unit_number} - عميل: ${lead.contact_person}`;
+        await AccountingService.recordDoubleEntry(client, {
+            debitAccount: 'صندوق نقدية - تيد كابيتال',
+            creditAccount: 'عملاء (حسابات مدينة - AR)',
+            amount: parseFloat(down_payment),
+            costCenter: unit.project_name,
+            description: dpDesc,
+            username: username
+        });
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, contractId, message: "تم تحويل العميل المحتمل لعقد بيع بنجاح وتوليد الأقساط والقيود المالية!" });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
 module.exports = router;
+
