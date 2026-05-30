@@ -377,5 +377,77 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+// ============================================================
+// 🏢 COMPANIES REGISTRY (Public + Admin CRUD)
+// ============================================================
 
-module.exports = router;
+// GET /api/public/companies — No auth required, used by Login page
+router.get('/public/companies', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name, display_name, logo_url FROM companies WHERE is_active = TRUE ORDER BY name`
+        );
+        res.json({ companies: result.rows });
+    } catch (e) {
+        // Fallback to hardcoded list if DB not ready yet
+        res.json({ companies: [
+            { id: 1, name: 'TED Capital',     display_name: 'تيد كابيتال للمقاولات' },
+            { id: 2, name: 'Design Concept',  display_name: 'ديزاين كونسبت' },
+            { id: 3, name: 'PRIMEMED PHARMA', display_name: 'برايم ميد فارما' },
+            { id: 4, name: 'Master Builder',  display_name: 'ماستر بيلدر' },
+        ]});
+    }
+});
+
+// GET /api/companies — Admin: list all companies including inactive
+router.get('/companies', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`SELECT * FROM companies ORDER BY name`);
+        res.json({ companies: result.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/companies — Admin: add new company
+router.post('/companies', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { name, db_name, display_name, logo_url } = req.body;
+        if (!name || !db_name) return res.status(400).json({ error: 'name and db_name are required' });
+        const result = await pool.query(
+            `INSERT INTO companies (name, db_name, display_name, logo_url, is_active)
+             VALUES ($1, $2, $3, $4, TRUE)
+             ON CONFLICT (name) DO UPDATE SET db_name=$2, display_name=$3, logo_url=$4, is_active=TRUE
+             RETURNING *`,
+            [name.trim(), db_name.trim(), display_name || name, logo_url || null]
+        );
+        // Invalidate cache
+        const { refreshCompanyCache } = require('../config/db');
+        await refreshCompanyCache();
+        res.json({ success: true, company: result.rows[0] });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/companies/:id — Admin: update company
+router.put('/companies/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { name, db_name, display_name, logo_url, is_active } = req.body;
+        await pool.query(
+            `UPDATE companies SET name=$1, db_name=$2, display_name=$3, logo_url=$4, is_active=$5 WHERE id=$6`,
+            [name, db_name, display_name, logo_url, is_active !== false, req.params.id]
+        );
+        const { refreshCompanyCache } = require('../config/db');
+        await refreshCompanyCache();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/companies/:id — Admin: deactivate (soft delete)
+router.delete('/companies/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        await pool.query(`UPDATE companies SET is_active = FALSE WHERE id = $1`, [req.params.id]);
+        const { refreshCompanyCache } = require('../config/db');
+        await refreshCompanyCache();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+module.exports = router;

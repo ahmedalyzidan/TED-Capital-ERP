@@ -28,7 +28,7 @@ const getDbUrl = () => {
     const pass = encodeURIComponent(process.env.DB_PASS || '1985');
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || 5432;
-    const db = process.env.DB_DATABASE || 'erp_db';
+    const db = process.env.DB_DATABASE || 'erp_ted_capital';
     return `postgresql://${user}:${pass}@${host}:${port}/${db}`;
 };
 
@@ -361,7 +361,10 @@ const buildCompanyFilter = async (type, scope, prefix = "") => {
     }
 
     const escapedProjNames = projectNames.map(p => p.replace(/'/g, "''"));
-    const projNamesSqlList = escapedProjNames.length > 0 ? `(${escapedProjNames.map(p => `'${p}'`).join(', ')})` : `('')`;
+    // If no project names found in central DB (tenant has its own DB), skip project-based filters
+    // to avoid blocking all results with project_name IN ('') — tenant DB isolation handles security
+    const hasCentralProjects = escapedProjNames.length > 0;
+    const projNamesSqlList = hasCentralProjects ? `(${escapedProjNames.map(p => `'${p}'`).join(', ')})` : `('')`;
     const projIdsSqlList = projectIds.length > 0 ? `(${projectIds.join(', ')})` : `(0)`;
     const projIdsStrSqlList = projectIds.length > 0 ? `(${projectIds.map(id => `'${id}'`).join(', ')})` : `('')`;
 
@@ -378,12 +381,16 @@ const buildCompanyFilter = async (type, scope, prefix = "") => {
         return `(${prefix}project_id IN ${projIdsSqlList})`;
     }
     if (type === 'material_usage' || type === 'inventory_bookings') {
+        if (!hasCentralProjects) return `(inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
         return `(project_name IN ${projNamesSqlList} OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'boq') {
+        // If no central projects found, tenant DB isolation is sufficient — don't block results
+        if (!hasCentralProjects) return null;
         return `project_name IN ${projNamesSqlList}`;
     }
     if (type === 'subcontractor_items') {
+        if (!hasCentralProjects) return null;
         return `boq_id IN (SELECT id FROM boq WHERE project_name IN ${projNamesSqlList})`;
     }
     if (type === 'ledger' || type === 'general_ledger') {

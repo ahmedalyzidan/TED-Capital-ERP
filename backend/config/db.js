@@ -25,7 +25,7 @@ const baseConfig = {
 };
 
 // 2. Central/Default Connection Pool
-const centralDatabaseName = process.env.DB_DATABASE || process.env.DB_NAME || 'erp_db';
+const centralDatabaseName = process.env.DB_DATABASE || process.env.DB_NAME || 'erp_ted_capital';
 const centralPool = new Pool({ ...baseConfig, database: centralDatabaseName });
 
 centralPool.on('error', (err) => {
@@ -36,28 +36,63 @@ centralPool.on('error', (err) => {
 const tenantPools = {};
 const tenantStorage = new AsyncLocalStorage();
 
+// In-memory cache: company name (lowercase) → db_name
+const companyDbCache = new Map();
+let cacheLoadedAt = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function refreshCompanyCache() {
+    try {
+        const res = await centralPool.query('SELECT name, db_name FROM companies WHERE is_active = TRUE');
+        companyDbCache.clear();
+        for (const row of res.rows) {
+            companyDbCache.set(row.name.trim().toLowerCase(), row.db_name);
+        }
+        cacheLoadedAt = Date.now();
+    } catch (err) {
+        // DB may not have the table yet on first boot — use hardcoded fallback silently
+    }
+}
+
+// Hardcoded fallback in case DB lookup fails
+const HARDCODED_MAP = {
+    'ted capital': 'erp_ted_capital',
+    'تيد كابيتال': 'erp_ted_capital',
+    'design concept': 'erp_design_concept',
+    'ديزاين كونسبت': 'erp_design_concept',
+    'ديزاين كونسيبت': 'erp_design_concept',
+    'primemed pharma': 'erp_primemed_pharma',
+    'برايم ميد': 'erp_primemed_pharma',
+    'برايمميد': 'erp_primemed_pharma',
+    'master builder': 'erp_master_builder',
+    'ماستر بيلدر': 'erp_master_builder',
+};
+
 // Normalize company names to safe database names
 function normalizeCompanyName(name) {
     if (!name) return centralDatabaseName;
-    
-    // Check common company translations/names
-    const lowerName = name.trim().toLowerCase();
-    if (lowerName.includes('ted capital') || lowerName.includes('تيد كابيتال')) {
-        return 'erp_ted_capital';
-    }
-    if (lowerName.includes('design concept') || lowerName.includes('ديزاين كونسبت') || lowerName.includes('ديزاين كونسيبت')) {
-        return 'erp_design_concept';
-    }
-    if (lowerName.includes('primemed pharma') || lowerName.includes('برايم ميد') || lowerName.includes('برايمميد')) {
-        return 'erp_primemed_pharma';
-    }
-    if (lowerName.includes('master builder') || lowerName.includes('ماستر بيلدر')) {
-        return 'erp_master_builder';
+    const key = name.trim().toLowerCase();
+
+    // 1. Check live cache
+    if (companyDbCache.size > 0 && companyDbCache.has(key)) {
+        return companyDbCache.get(key);
     }
 
-    // Fallback: convert non-standard names to database-friendly names
-    return 'erp_' + lowerName.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+    // 2. Check hardcoded fallback
+    if (HARDCODED_MAP[key]) return HARDCODED_MAP[key];
+
+    // 3. Refresh cache asynchronously (non-blocking) if stale
+    if (Date.now() - cacheLoadedAt > CACHE_TTL_MS) {
+        refreshCompanyCache().catch(() => {});
+    }
+
+    // 4. Generic fallback: erp_<sanitized_name>
+    return 'erp_' + key.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
 }
+
+// Pre-warm cache on startup
+setTimeout(() => refreshCompanyCache(), 2000);
+
 
 // Helper to get or create connection pool for a company
 function getOrCreatePool(companyName) {
@@ -89,7 +124,9 @@ function getOrCreatePool(companyName) {
 const targetProps = {
     tenantStorage,
     getOrCreatePool,
-    centralPool
+    centralPool,
+    refreshCompanyCache,
+    normalizeCompanyName
 };
 
 const poolProxy = new Proxy(targetProps, {

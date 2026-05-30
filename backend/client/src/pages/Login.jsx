@@ -96,22 +96,37 @@ export default function Login() {
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [publicCompanies, setPublicCompanies] = useState(['كل الشركات', 'TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA']);
+  const FALLBACK_COMPANIES = [
+    { name: 'كل الشركات',    display_name: 'كل الشركات' },
+    { name: 'TED Capital',    display_name: 'تيد كابيتال للمقاولات' },
+    { name: 'Design Concept', display_name: 'ديزاين كونسبت' },
+    { name: 'Master Builder', display_name: 'ماستر بيلدر' },
+    { name: 'PRIMEMED PHARMA',display_name: 'برايم ميد فارما' },
+  ];
+  const [publicCompanies, setPublicCompanies] = useState(FALLBACK_COMPANIES);
   const [allowedCompanies, setAllowedCompanies] = useState(['كل الشركات']);
 
   useEffect(() => {
     const fetchComps = async () => {
       try {
         const res = await api.get('/public/companies');
-        if (res.data?.companies) {
-          setPublicCompanies(['كل الشركات', ...res.data.companies]);
+        if (res.data?.companies?.length > 0) {
+          const list = [
+            { name: 'كل الشركات', display_name: 'كل الشركات' },
+            ...res.data.companies.map(c => ({
+              name: c.name,
+              display_name: c.display_name || c.name
+            }))
+          ];
+          setPublicCompanies(list);
         }
       } catch (err) {
-        console.error("Failed to load public companies", err);
+        console.error("Failed to load public companies — using fallback", err);
       }
     };
     fetchComps();
   }, []);
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -146,7 +161,8 @@ export default function Login() {
         setTempRefresh(refreshObj);
 
         // 🌟 تحديد الشركات المسموحة للمستخدم بناءً على مصفوفة الصلاحيات
-        let allowed = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
+        const allCompanyNames = publicCompanies.map(c => c.name).filter(n => n !== 'كل الشركات' && n !== 'ALL');
+        let allowed = allCompanyNames;
         const perms = typeof userObj?.permissions === 'string' ? JSON.parse(userObj.permissions || '{}') : (userObj?.permissions || {});
 
         const userRole = (userObj?.role || '').toLowerCase().trim();
@@ -157,17 +173,17 @@ export default function Login() {
         } else if (userName === 'msobhi') {
           allowed = ['Design Concept'];
         } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin' || userName === 'abzidan') {
-          allowed = publicCompanies.filter(c => c !== 'ALL');
+          allowed = allCompanyNames;
         } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
-            allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
+            allowed = allCompanyNames;
           } else {
             allowed = perms.companies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           }
         } else if (userObj?.linked_company) {
           allowed = [userObj.linked_company].filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else {
-          allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
+          allowed = allCompanyNames;
         }
 
         if (allowed.length === 0) {
@@ -212,7 +228,8 @@ export default function Login() {
         setTempRefresh(refreshObj);
 
         // 🌟 تحديد الشركات المسموحة للمستخدم
-        let allowed = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
+        const allCompanyNames2 = publicCompanies.map(c => c.name).filter(n => n !== 'كل الشركات' && n !== 'ALL');
+        let allowed = allCompanyNames2;
         const perms = typeof userObj?.permissions === 'string' ? JSON.parse(userObj.permissions || '{}') : (userObj?.permissions || {});
 
         const userRole = (userObj?.role || '').toLowerCase().trim();
@@ -223,17 +240,17 @@ export default function Login() {
         } else if (userName === 'msobhi') {
           allowed = ['Design Concept'];
         } else if (userRole === 'admin' || userRole === 'super admin' || userName === 'admin' || userName === 'abzidan') {
-          allowed = publicCompanies.filter(c => c !== 'ALL');
+          allowed = allCompanyNames2;
         } else if (perms?.companies && perms.companies.length > 0) {
           if (perms.companies.includes('ALL')) {
-            allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
+            allowed = allCompanyNames2;
           } else {
             allowed = perms.companies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
           }
         } else if (userObj?.linked_company) {
           allowed = [userObj.linked_company].filter(c => c !== 'كل الشركات' && c !== 'ALL');
         } else {
-          allowed = publicCompanies.filter(c => c !== 'كل الشركات' && c !== 'ALL');
+          allowed = allCompanyNames2;
         }
 
         if (allowed.length === 0) {
@@ -543,28 +560,37 @@ export default function Login() {
           {step === 3 && (
             <form onSubmit={handleCompanySubmit} className="flex flex-col gap-6 animate-fade-in">
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {allowedCompanies.map((comp) => (
-                  <div
-                    key={comp}
-                    onClick={() => setFormData(prev => ({ ...prev, company: comp }))}
-                    className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${formData.company === comp
-                        ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/5 scale-[1.02]'
-                        : theme === 'dark'
-                          ? 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                {allowedCompanies.map((comp) => {
+                  const compObj = publicCompanies.find(c => c.name === comp);
+                  return (
+                    <div
+                      key={comp}
+                      onClick={() => setFormData(prev => ({ ...prev, company: comp }))}
+                      className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
+                        formData.company === comp
+                          ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/5 scale-[1.02]'
+                          : theme === 'dark'
+                            ? 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
                       }`}
-                  >
-                    <span className="font-black text-xs uppercase tracking-tight">{comp}</span>
-                    <input
-                      type="radio"
-                      name="company"
-                      value={comp}
-                      checked={formData.company === comp}
-                      onChange={() => { }}
-                      className="w-5 h-5 accent-blue-600 cursor-pointer"
-                    />
-                  </div>
-                ))}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-black text-xs uppercase tracking-tight">{comp}</span>
+                        {compObj?.display_name && compObj.display_name !== comp && (
+                          <span className="text-[10px] text-slate-400 font-bold mt-0.5">{compObj.display_name}</span>
+                        )}
+                      </div>
+                      <input
+                        type="radio"
+                        name="company"
+                        value={comp}
+                        checked={formData.company === comp}
+                        onChange={() => { }}
+                        className="w-5 h-5 accent-blue-600 cursor-pointer"
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               <button

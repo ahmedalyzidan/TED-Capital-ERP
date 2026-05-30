@@ -20,6 +20,32 @@ const applySchemaFixes = async () => {
         }
     };
 
+    // --- 00. Companies Registry (Tenant DB Mapping) ---
+    await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        db_name VARCHAR(100) UNIQUE NOT NULL,
+        display_name VARCHAR(255),
+        logo_url TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Seed default companies
+    const defaultCompanies = [
+        { name: 'TED Capital',      db_name: 'erp_ted_capital',      display: 'تيد كابيتال للمقاولات' },
+        { name: 'Design Concept',   db_name: 'erp_design_concept',   display: 'ديزاين كونسبت' },
+        { name: 'PRIMEMED PHARMA',  db_name: 'erp_primemed_pharma',  display: 'برايم ميد فارما' },
+        { name: 'Master Builder',   db_name: 'erp_master_builder',   display: 'ماستر بيلدر' },
+    ];
+    for (const co of defaultCompanies) {
+        await runQuery(`Seed company: ${co.name}`, `
+            INSERT INTO companies (name, db_name, display_name, is_active)
+            VALUES ($1, $2, $3, TRUE)
+            ON CONFLICT (name) DO UPDATE SET db_name = EXCLUDED.db_name, display_name = EXCLUDED.display_name
+        `, [co.name, co.db_name, co.display]);
+    }
+
     // --- 0. Core Identity & Logs ---
     await runQuery("Users Table", `CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
