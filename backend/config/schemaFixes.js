@@ -24,12 +24,13 @@ const applySchemaFixes = async () => {
     await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
-        db_name VARCHAR(100) UNIQUE NOT NULL,
-        display_name VARCHAR(255),
-        logo_url TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+    // Add columns that may be missing (handles pre-existing table with different schema)
+    await runQuery("companies.db_name column",    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS db_name VARCHAR(100)`);
+    await runQuery("companies.display_name column",`ALTER TABLE companies ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)`);
+    await runQuery("companies.logo_url column",    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+    await runQuery("companies.is_active column",   `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
 
     // Seed default companies
     const defaultCompanies = [
@@ -42,7 +43,7 @@ const applySchemaFixes = async () => {
         await runQuery(`Seed company: ${co.name}`, `
             INSERT INTO companies (name, db_name, display_name, is_active)
             VALUES ($1, $2, $3, TRUE)
-            ON CONFLICT (name) DO UPDATE SET db_name = EXCLUDED.db_name, display_name = EXCLUDED.display_name
+            ON CONFLICT (name) DO UPDATE SET db_name = EXCLUDED.db_name, display_name = EXCLUDED.display_name, is_active = TRUE
         `, [co.name, co.db_name, co.display]);
     }
 
