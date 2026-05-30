@@ -30,7 +30,7 @@ export const SecurityProvider = ({ children }) => {
         }
     }, []);
 
-    const hasPermission = (code) => isSuperAdmin || permissions.includes(code);
+    const hasPermission = (code) => isSuperAdmin || (permissions && Array.isArray(permissions) && permissions.includes(code));
 
     return (
         <SecurityContext.Provider value={{ permissions, orgUnits, isSuperAdmin, hasPermission, loading }}>

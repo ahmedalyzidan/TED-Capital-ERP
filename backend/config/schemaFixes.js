@@ -33,13 +33,13 @@ const applySchemaFixes = async () => {
     await runQuery("companies.is_active column",   `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
 
     // Seed default companies
-    const defaultCompanies = [
+    const TENANT_COMPANIES_SEED = [
         { name: 'TED Capital',      db_name: 'erp_ted_capital',      display: 'تيد كابيتال للمقاولات' },
         { name: 'Design Concept',   db_name: 'erp_design_concept',   display: 'ديزاين كونسبت' },
         { name: 'PRIMEMED PHARMA',  db_name: 'erp_primemed_pharma',  display: 'برايم ميد فارما' },
         { name: 'Master Builder',   db_name: 'erp_master_builder',   display: 'ماستر بيلدر' },
     ];
-    for (const co of defaultCompanies) {
+    for (const co of TENANT_COMPANIES_SEED) {
         await runQuery(`Seed company: ${co.name}`, `
             INSERT INTO companies (name, db_name, display_name, is_active)
             VALUES ($1, $2, $3, TRUE)
@@ -1158,14 +1158,14 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    const defaultCompanies = [
+    const companySeeds = [
         [1, 'TED Capital', 'EGP'],
         [2, 'Design Concept', 'EGP'],
         [3, 'Master Builder', 'EGP'],
         [4, 'PRIMEMED PHARMA', 'ILS']
     ];
 
-    for (const comp of defaultCompanies) {
+    for (const comp of companySeeds) {
         await runQuery(`Seed Company ${comp[1]}`, `
             INSERT INTO companies (id, name, base_currency) 
             VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_currency = EXCLUDED.base_currency
