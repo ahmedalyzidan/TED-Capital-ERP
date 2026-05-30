@@ -593,10 +593,7 @@ export default function ContractorSuite() {
         };
       });
 
-      setBoqItems(prev => {
-        const localFiltered = prev.filter(item => isNaN(Number(item.projectId)));
-        return [...localFiltered, ...mappedDbBoq];
-      });
+      setBoqItems(mappedDbBoq);
 
       // Map DB client payments to installments state
       const dbClientPayments = clientPaymentHistoryRes.data?.data || [];
