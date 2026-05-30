@@ -796,11 +796,11 @@ export default function Layout() {
           <div className={`p-5 rounded-[1.5rem] border backdrop-blur-md space-y-5 ${isSidebarCollapsed ? 'p-2' : ''} ${theme !== 'dark' ? 'bg-white border-slate-200 shadow-sm' : ''}`}
             style={theme === 'dark' ? { backgroundColor: '#272a33', border: '1px solid #3e4452' } : {}}>
             {!isSidebarCollapsed && (
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl overflow-hidden`}
+              <div className="flex flex-col items-center text-center space-y-3 pb-1">
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center font-extrabold text-xl shadow-xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105"
                   style={theme === 'dark'
-                    ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', color: '#d9a770', border: '1.5px solid rgba(217,167,112,0.5)' }
-                    : { backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>
+                    ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', borderColor: 'rgba(217,167,112,0.5)' }
+                    : { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' }}>
                   {user?.photo || user?.avatar_url ? (
                     <img 
                       src={(user.photo || user.avatar_url).startsWith('/') && !(user.photo || user.avatar_url).startsWith('//') 
@@ -819,9 +819,9 @@ export default function Layout() {
                   )}
                 </div>
                 <div className="overflow-hidden">
-                  <p className={`text-[15px] font-bold truncate`}
+                  <p className="text-[16px] font-black uppercase tracking-wide truncate"
                     style={theme === 'dark' ? { color: '#f1f5f9' } : { color: '#0f172a' }}>{user?.username || 'User'}</p>
-                  <p className={`text-[11px] font-bold uppercase tracking-widest mt-1`}
+                  <p className="text-[11px] font-bold uppercase tracking-widest mt-1"
                     style={theme === 'dark' ? { color: '#d9a770', opacity: 0.8 } : { color: '#94a3b8', opacity: 0.7 }}>{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super admin') ? t.admin : t.user}</p>
                 </div>
               </div>
