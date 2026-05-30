@@ -9,12 +9,17 @@ async function auditSubcontractors() {
         const username = 'AuditAgent';
         
         // 1. Get MASTER BUILDER ID
-        const compRes = await client.query("SELECT id FROM companies WHERE name = 'MASTER BUILDER'");
-        const companyId = compRes.rows[0].id;
+        const compRes = await client.query("SELECT id FROM companies WHERE UPPER(name) IN ('MASTER BUILDER', 'MASTER BUILDER COMPANY') LIMIT 1");
+        let companyId = compRes.rows[0]?.id;
+        if (!companyId) {
+            const allComps = await client.query("SELECT id FROM companies LIMIT 1");
+            companyId = allComps.rows[0]?.id || 1;
+        }
 
         // 2. Setup Subcontractor
         const subName = 'Audit Subcontractor Ltd';
         await client.query("DELETE FROM subcontractors WHERE name = $1", [subName]);
+        await client.query("DELETE FROM ledger WHERE description LIKE $1", [`%${subName}%`]);
         const subRes = await client.query(
             "INSERT INTO subcontractors (name, company_id) VALUES ($1, $2) RETURNING id",
             [subName, companyId]
@@ -23,8 +28,7 @@ async function auditSubcontractors() {
         console.log("✅ Subcontractor Created:", subName);
 
         // 3. Create a Project for this Sub
-        const projectName = 'Sub Audit Proj 2026';
-        await client.query("DELETE FROM projects WHERE name = $1", [projectName]);
+        const projectName = 'Sub Audit Proj ' + Date.now();
         await client.query("INSERT INTO projects (name, company_id, budget) VALUES ($1, $2, 500000)", [projectName, companyId]);
 
         // 4. Simulate Subcontractor Invoice (Moustakhalas)

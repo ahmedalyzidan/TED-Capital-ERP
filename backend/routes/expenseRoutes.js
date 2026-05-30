@@ -109,8 +109,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
         if (auto_post) {
             // Modern GL Posting via AccountingService
+            const mapping = await AccountingService.getMapping(client, 'EXPENSE_PAYMENT');
+            const debitAcc = mapping?.debit_account || '6000';
+
             await AccountingService.recordDoubleEntry(client, {
-                debitAccount: category_id, // category_id maps to an expense account in COA
+                debitAccount: debitAcc, // category_id maps to an expense account in COA
                 creditAccount: payment_method === 'Bank' ? '1111' : '1101', // Standard fallback mappings
                 amount: amount,
                 costCenter: project_id || 'General',

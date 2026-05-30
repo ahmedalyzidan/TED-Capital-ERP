@@ -22,6 +22,12 @@ test.describe('Expenses Module Integrity', () => {
     // Select the category
     await page.selectOption('select[name="category"]', { index: 1 });
     
+    // Setup dialog handler to log errors if submission fails
+    page.on('dialog', async dialog => {
+        console.log(`🔔 Dialog Alert: ${dialog.message()}`);
+        await dialog.accept();
+    });
+
     // Submit the form
     await page.click('button[type="submit"]');
     

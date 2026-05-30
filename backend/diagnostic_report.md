@@ -1,6 +1,6 @@
 # 🛡️ TED ERP System Integrity & Health Report
 
-**Audit Timestamp:** 5/30/2026, 5:43:03 PM
+**Audit Timestamp:** 5/31/2026, 12:27:18 AM
 **Total Issues/Warnings Found:** 0
 
 > [!NOTE]
@@ -10,11 +10,11 @@
 
 | Company / Tenant | Database Name | Status | Latency | Table Count | Issues |
 |---|---|---|---|---|---|
-| **Central / Default** | `erp_db` | 🟢 ONLINE | 27ms | 240 | ✅ Healthy |
-| **TED Capital** | `erp_ted_capital` | 🟢 ONLINE | 18ms | 236 | ✅ Healthy |
-| **Design Concept** | `erp_design_concept` | 🟢 ONLINE | 16ms | 236 | ✅ Healthy |
-| **PRIMEMED PHARMA** | `erp_primemed_pharma` | 🟢 ONLINE | 17ms | 236 | ✅ Healthy |
-| **Master Builder** | `erp_master_builder` | 🟢 ONLINE | 19ms | 236 | ✅ Healthy |
+| **Central / Default** | `erp_db` | 🟢 ONLINE | 45ms | 240 | ✅ Healthy |
+| **TED Capital** | `erp_ted_capital` | 🟢 ONLINE | 71ms | 236 | ✅ Healthy |
+| **Design Concept** | `erp_design_concept` | 🟢 ONLINE | 67ms | 236 | ✅ Healthy |
+| **PRIMEMED PHARMA** | `erp_primemed_pharma` | 🟢 ONLINE | 70ms | 236 | ✅ Healthy |
+| **Master Builder** | `erp_master_builder` | 🟢 ONLINE | 65ms | 236 | ✅ Healthy |
 
 ### Detailed Schema Warnings per Tenant
 

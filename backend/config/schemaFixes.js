@@ -1110,7 +1110,7 @@ const applySchemaFixes = async () => {
     for (const m of defaultMappings) {
         await runQuery(`Seed GL Mapping ${m[0]}`, `
             INSERT INTO gl_mappings (transaction_type, debit_account, credit_account, cost_center_required) 
-            VALUES ($1, $2, $3, $4) ON CONFLICT (transaction_type) DO NOTHING
+            VALUES ($1, $2, $3, $4) ON CONFLICT (transaction_type) DO UPDATE SET debit_account = EXCLUDED.debit_account, credit_account = EXCLUDED.credit_account
         `, m);
     }
 

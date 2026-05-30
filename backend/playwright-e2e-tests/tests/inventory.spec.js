@@ -34,7 +34,7 @@ test.describe('Inventory Module Integrity', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Switch to Stock Tab
-    await page.locator('button').filter({ hasText: /مخزون المستودعات|Inventory Stock/ }).click();
+    await page.locator('button').filter({ hasText: /مخزون المستودعات|Inventory Stock|Warehouse Stock/ }).click();
 
     // Find any stock item row and open its radial hub
     const row = page.locator('tr').nth(1); // Select the first data row

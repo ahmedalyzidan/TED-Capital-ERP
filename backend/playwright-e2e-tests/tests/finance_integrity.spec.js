@@ -4,6 +4,29 @@ const pool = require('../../config/db');
 test.describe('Finance Integrity & Cross-Module Sync', () => {
   test.use({ storageState: 'playwright/.auth/user.json' });
 
+  test.beforeAll(async () => {
+    // Ensure item 'FRFR' exists in the database with a valid project for both central and tenant databases
+    const pools = [pool.centralPool || pool, pool.getOrCreatePool ? pool.getOrCreatePool('TED Capital') : pool];
+    for (const p of pools) {
+      try {
+        const check = await p.query("SELECT id FROM inventory_items WHERE item_name = 'FRFR'");
+        if (check.rows.length === 0) {
+          await p.query(`
+            INSERT INTO inventory_items (
+              item_name, quantity, remaining_qty, buy_price, avg_cost, project_name, warehouse, company_id
+            ) VALUES (
+              'FRFR', 100, 100, 1000, 1000, 'Capital Tower Audit', 'المخزن الرئيسي', 1
+            )
+          `);
+        } else {
+          await p.query("UPDATE inventory_items SET project_name = 'Capital Tower Audit', company_id = 1 WHERE item_name = 'FRFR'");
+        }
+      } catch (err) {
+        console.error("Failed to seed FRFR in pool:", err.message);
+      }
+    }
+  });
+
   test('Complex Sale Flow: Inventory -> Ledger -> Financial Statements', async ({ page }) => {
     test.setTimeout(120000);
     
@@ -21,7 +44,7 @@ test.describe('Finance Integrity & Cross-Module Sync', () => {
     
     // 2. Switch to Stock Tab
     console.log('🔄 Switching to Stock Tab...');
-    await page.locator('button').filter({ hasText: /مخزون المستودعات|Inventory Stock/ }).click();
+    await page.locator('button').filter({ hasText: /مخزون المستودعات|Inventory Stock|Warehouse Stock/ }).click();
     
     // 3. Find item 'FRFR'
     console.log('🔎 Finding item FRFR...');
