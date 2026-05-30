@@ -501,6 +501,62 @@ export default function Layout() {
           <div className="py-8 space-y-12">
             {activeMenuGroups
               .map(group => {
+                const pathTableMap = {
+                  '/reports': 'ledger',
+                  '/projects': 'projects',
+                  '/sales': 'inventory_sales',
+                  '/inventory/master-stock': 'inventory',
+                  '/inventory/pharma': 'inventory',
+                  '/fixed-assets': 'fixed_assets',
+                  '/subcontractors': 'subcontractors',
+                  '/real-estate': 'real_estate_projects',
+                  '/partners': 'partners',
+                  '/clients': 'customers',
+                  '/crm': 'customers',
+                  '/finance/360': 'ledger',
+                  '/finance/custody': 'custody',
+                  '/finance/ar-due': 'ar_invoices',
+                  '/finance/ap-due': 'ledger',
+                  '/finance/inventory-valuation': 'inventory',
+                  '/finance/cash-balances': 'ledger',
+                  '/inter-company': 'intercompany_transactions',
+                  '/expenses': 'expenses',
+                  '/invoices': 'subcontractor_invoices',
+                  '/finance/transactions': 'ledger',
+                  '/attendance': 'attendance',
+                  '/corporate': 'staff',
+                  '/users': 'users',
+                  '/settings': 'system_parameters'
+                };
+
+                const pathModuleMap = {
+                  '/reports': 'Finance',
+                  '/projects': 'Projects',
+                  '/sales': 'Inventory',
+                  '/inventory/master-stock': 'Inventory',
+                  '/inventory/pharma': 'Inventory',
+                  '/fixed-assets': 'Finance',
+                  '/subcontractors': 'Projects',
+                  '/real-estate': 'CRM',
+                  '/partners': 'Finance',
+                  '/clients': 'CRM',
+                  '/crm': 'CRM',
+                  '/finance/360': 'Finance',
+                  '/finance/custody': 'Finance',
+                  '/finance/ar-due': 'Finance',
+                  '/finance/ap-due': 'Finance',
+                  '/finance/inventory-valuation': 'Finance',
+                  '/finance/cash-balances': 'Finance',
+                  '/inter-company': 'Finance',
+                  '/expenses': 'Finance',
+                  '/invoices': 'Finance',
+                  '/finance/transactions': 'Finance',
+                  '/attendance': 'HCM',
+                  '/corporate': 'HCM',
+                  '/users': 'Settings',
+                  '/settings': 'Settings'
+                };
+
                 const visibleItems = group.items
                   .filter(item => {
                     const itemBasePath = item.path ? item.path.split('?')[0] : '';
@@ -525,7 +581,26 @@ export default function Layout() {
                         return allowedMtayemPaths.includes(childBasePath);
                       }));
                     }
-                    return isAdminOrAbzidan || !item.perm || hasPermission(item.perm);
+                    const hasRbac = isAdminOrAbzidan || !item.perm || hasPermission(item.perm);
+                    if (!hasRbac) return false;
+
+                    // Check custom user matrix permissions
+                    if (user && user.permissions && !isAdminOrAbzidan) {
+                      const userPerms = user.permissions;
+                      if (userPerms.tables && Object.keys(userPerms.tables).length > 0) {
+                        const table = pathTableMap[itemBasePath];
+                        if (table) {
+                          const tableActions = userPerms.tables[table] || [];
+                          const hasTableRead = userPerms.tables['ALL'] || tableActions.includes('read');
+                          if (!hasTableRead) return false;
+                        }
+                      }
+                      if (userPerms.modules && userPerms.modules.length > 0) {
+                        const module = pathModuleMap[itemBasePath];
+                        if (module && !userPerms.modules.includes(module)) return false;
+                      }
+                    }
+                    return true;
                   })
                   .map(item => {
                     if (item.children) {
@@ -540,7 +615,27 @@ export default function Layout() {
                           const childBasePath = child.path ? child.path.split('?')[0] : '';
                           return allowedMtayemPaths.includes(childBasePath);
                         }
-                        return isAdminOrAbzidan || !child.perm || hasPermission(child.perm);
+                        const hasRbac = isAdminOrAbzidan || !child.perm || hasPermission(child.perm);
+                        if (!hasRbac) return false;
+
+                        // Check custom user matrix permissions for children
+                        if (user && user.permissions && !isAdminOrAbzidan) {
+                          const userPerms = user.permissions;
+                          const childBasePath = child.path ? child.path.split('?')[0] : '';
+                          if (userPerms.tables && Object.keys(userPerms.tables).length > 0) {
+                            const table = pathTableMap[childBasePath];
+                            if (table) {
+                              const tableActions = userPerms.tables[table] || [];
+                              const hasTableRead = userPerms.tables['ALL'] || tableActions.includes('read');
+                              if (!hasTableRead) return false;
+                            }
+                          }
+                          if (userPerms.modules && userPerms.modules.length > 0) {
+                            const module = pathModuleMap[childBasePath];
+                            if (module && !userPerms.modules.includes(module)) return false;
+                          }
+                        }
+                        return true;
                       });
                       return { ...item, children: visibleChildren };
                     }
