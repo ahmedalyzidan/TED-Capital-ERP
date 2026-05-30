@@ -27,20 +27,42 @@ router.get('/public/companies', async (req, res) => {
     try {
         const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
         const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != '' AND is_deleted = false");
-        const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
+        const legalComps = await pool.query("SELECT name, display_name FROM companies WHERE is_active = TRUE ORDER BY id ASC");
 
-        let baseCompanies = legalComps.rows.map(r => r.name);
+        const fallbacks = [
+            { name: 'TED Capital',     display_name: 'تيد كابيتال للمقاولات' },
+            { name: 'Design Concept',  display_name: 'ديزاين كونسبت' },
+            { name: 'Master Builder',  display_name: 'ماستر بيلدر' },
+            { name: 'PRIMEMED PHARMA', display_name: 'برايم ميد فارما' }
+        ];
+
+        let baseCompanies = legalComps.rows.map(r => ({ name: r.name, display_name: r.display_name || r.name }));
         if (baseCompanies.length === 0) {
-            baseCompanies = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
+            baseCompanies = fallbacks;
         }
-        const govCompanies = orgUnits.rows.filter(u => u.type === 'Company' || u.type === 'Holding').map(u => u.name);
-        const projCompanies = projectComps.rows.map(r => r.company);
+        
+        const govCompanies = orgUnits.rows
+            .filter(u => u.type === 'Company' || u.type === 'Holding')
+            .map(u => ({ name: u.name, display_name: u.name }));
+            
+        const projCompanies = projectComps.rows.map(r => ({ name: r.company, display_name: r.company }));
 
-        const allCompanies = [...new Set([...baseCompanies, ...govCompanies, ...projCompanies])];
-        res.json({ success: true, companies: allCompanies });
+        const mergedMap = new Map();
+        [...baseCompanies, ...govCompanies, ...projCompanies].forEach(c => {
+            if (c.name && !mergedMap.has(c.name)) {
+                mergedMap.set(c.name, c);
+            }
+        });
+        
+        res.json({ success: true, companies: Array.from(mergedMap.values()) });
     } catch (err) {
         console.error("🔥 [PUBLIC COMPANIES ERROR]:", err);
-        res.json({ success: true, companies: ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'] });
+        res.json({ success: true, companies: [
+            { name: 'TED Capital',     display_name: 'تيد كابيتال للمقاولات' },
+            { name: 'Design Concept',  display_name: 'ديزاين كونسبت' },
+            { name: 'Master Builder',  display_name: 'ماستر بيلدر' },
+            { name: 'PRIMEMED PHARMA', display_name: 'برايم ميد فارما' }
+        ]});
     }
 });
 
@@ -381,23 +403,7 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
 // 🏢 COMPANIES REGISTRY (Public + Admin CRUD)
 // ============================================================
 
-// GET /api/public/companies — No auth required, used by Login page
-router.get('/public/companies', async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT id, name, display_name, logo_url FROM companies WHERE is_active = TRUE ORDER BY name`
-        );
-        res.json({ companies: result.rows });
-    } catch (e) {
-        // Fallback to hardcoded list if DB not ready yet
-        res.json({ companies: [
-            { id: 1, name: 'TED Capital',     display_name: 'تيد كابيتال للمقاولات' },
-            { id: 2, name: 'Design Concept',  display_name: 'ديزاين كونسبت' },
-            { id: 3, name: 'PRIMEMED PHARMA', display_name: 'برايم ميد فارما' },
-            { id: 4, name: 'Master Builder',  display_name: 'ماستر بيلدر' },
-        ]});
-    }
-});
+
 
 // GET /api/companies — Admin: list all companies including inactive
 router.get('/companies', authenticateToken, requireAdmin, async (req, res) => {

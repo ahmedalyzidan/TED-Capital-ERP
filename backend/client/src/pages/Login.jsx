@@ -401,7 +401,7 @@ export default function Login() {
                 </h2>
                 <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic animate-fade-in ${theme === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}>
-                  {formData.company === 'كل الشركات' ? 'ERP' : `${formData.company === 'كل الشركات' ? t.allCompanies : formData.company} ERP`}
+                  {formData?.company === 'كل الشركات' || !formData?.company ? 'ERP' : `${formData.company} ERP`}
                 </h1>
               </>
             ) : step === 'forgot_password' ? (
@@ -560,14 +560,14 @@ export default function Login() {
           {step === 3 && (
             <form onSubmit={handleCompanySubmit} className="flex flex-col gap-6 animate-fade-in">
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {allowedCompanies.map((comp) => {
+                {(allowedCompanies || []).filter(Boolean).map((comp, idx) => {
                   const compObj = publicCompanies.find(c => c.name === comp);
                   return (
                     <div
-                      key={comp}
+                      key={comp || idx}
                       onClick={() => setFormData(prev => ({ ...prev, company: comp }))}
                       className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                        formData.company === comp
+                        formData?.company === comp
                           ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/5 scale-[1.02]'
                           : theme === 'dark'
                             ? 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'
@@ -575,7 +575,7 @@ export default function Login() {
                       }`}
                     >
                       <div className="flex flex-col">
-                        <span className="font-black text-xs uppercase tracking-tight">{comp}</span>
+                        <span className="font-black text-xs uppercase tracking-tight">{comp || 'Company'}</span>
                         {compObj?.display_name && compObj.display_name !== comp && (
                           <span className="text-[10px] text-slate-400 font-bold mt-0.5">{compObj.display_name}</span>
                         )}
@@ -583,8 +583,8 @@ export default function Login() {
                       <input
                         type="radio"
                         name="company"
-                        value={comp}
-                        checked={formData.company === comp}
+                        value={comp || ''}
+                        checked={formData?.company === comp}
                         onChange={() => { }}
                         className="w-5 h-5 accent-blue-600 cursor-pointer"
                       />
@@ -727,13 +727,13 @@ export default function Login() {
                 {formData.company !== 'كل الشركات' ? formData.company : 'TED Capital Group'}
               </h3>
               <p className="text-sm text-slate-350 leading-relaxed font-bold">
-                {formData.company.includes('TED') || formData.company === 'كل الشركات'
+                {(formData?.company || '').includes('TED') || formData?.company === 'كل الشركات' || !formData?.company
                   ? 'TED Capital: Leading Large-Scale infrastructure, digital construction, and premium corporate control protocols.'
-                  : formData.company.toLowerCase().includes('builder')
+                  : (formData?.company || '').toLowerCase().includes('builder')
                   ? 'Master Builder: Pioneering construction contracting, structural engineering, and heavy mechanical execution.'
-                  : formData.company.toLowerCase().includes('prime') || formData.company.toLowerCase().includes('pharma')
+                  : (formData?.company || '').toLowerCase().includes('prime') || (formData?.company || '').toLowerCase().includes('pharma')
                   ? 'PrimeMed Pharma: Quality medical distribution, pharmaceutical supply chain, and global biotech partnerships.'
-                  : formData.company.toLowerCase().includes('design')
+                  : (formData?.company || '').toLowerCase().includes('design')
                   ? 'Design Concept: Modern office furnishing, state-of-the-art building materials, and interior spatial design.'
                   : 'TED Capital Group Ecosystem.'}
               </p>
