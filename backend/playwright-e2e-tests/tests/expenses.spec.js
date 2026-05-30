@@ -13,8 +13,11 @@ test.describe('Expenses Module Integrity', () => {
     await page.fill('input[name="description"]', 'Test Automated Expense ' + Date.now());
     await page.fill('input[name="amount"]', '250');
     
-    // Select the company entity
-    await page.selectOption('select[name="company_entity"]', { index: 1 });
+    // Select the company entity if enabled
+    const companySelect = page.locator('select[name="company_entity"]');
+    if (await companySelect.isEnabled()) {
+        await companySelect.selectOption({ index: 1 });
+    }
     
     // Select the category
     await page.selectOption('select[name="category"]', { index: 1 });

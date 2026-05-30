@@ -9,12 +9,15 @@ async function runAudit() {
         const username = 'AuditAgent';
 
         // 1. Get Master Builder Company ID
-        const compRes = await client.query("SELECT id FROM companies WHERE name = 'MASTER BUILDER'");
-        const companyId = compRes.rows[0].id;
+        const compRes = await client.query("SELECT id FROM companies WHERE UPPER(name) IN ('MASTER BUILDER', 'MASTER BUILDER COMPANY') LIMIT 1");
+        let companyId = compRes.rows[0]?.id;
+        if (!companyId) {
+            const allComps = await client.query("SELECT id FROM companies LIMIT 1");
+            companyId = allComps.rows[0]?.id || 1;
+        }
 
         // 2. Setup Project
-        const projectName = 'Audit Test Project 2026';
-        await client.query("DELETE FROM projects WHERE name = $1", [projectName]);
+        const projectName = 'Audit Project ' + Date.now();
         const projRes = await client.query(
             "INSERT INTO projects (name, company_id, budget, status) VALUES ($1, $2, 1000000, 'Active') RETURNING id",
             [projectName, companyId]

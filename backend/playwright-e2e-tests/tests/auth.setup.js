@@ -11,8 +11,18 @@ setup('authenticate', async ({ page }) => {
   await page.fill('input[name="password"]', 'admin123');
   await page.click('button[type="submit"]');
 
-  console.log('⏳ Waiting 10 seconds for redirection...');
-  await page.waitForTimeout(10000);
+  console.log('⏳ Waiting for company scope step...');
+  await page.waitForTimeout(2000);
+
+  // Click submit again to confirm company scope and complete login
+  const enterBtn = page.locator('button[type="submit"]');
+  if (await enterBtn.count() > 0) {
+      console.log('🏢 Confirming company scope...');
+      await enterBtn.click();
+  }
+
+  console.log('⏳ Waiting for final page redirection...');
+  await page.waitForTimeout(5000);
   
   const currentUrl = page.url();
   console.log(`📍 Current URL: ${currentUrl}`);

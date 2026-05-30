@@ -17,7 +17,7 @@ test.describe('Finance Integrity & Cross-Module Sync', () => {
     
     // 1. Navigate to Inventory
     await page.goto('/inventory');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // 2. Switch to Stock Tab
     console.log('🔄 Switching to Stock Tab...');
