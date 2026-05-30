@@ -111,12 +111,13 @@ const Projects = () => {
   };
 
   const openCreateModal = () => {
+    const activeCompany = localStorage.getItem('active_company') || '';
     setFormData({
       id: null,
       name: '',
       code: '',
       project_serial: '',
-      company: '',
+      company: activeCompany,
       project_manager: '',
       fcy_budget: '',
       fx_rate: 1,
@@ -570,13 +571,11 @@ const Projects = () => {
                     name="company"
                     value={formData.company}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none pointer-events-none opacity-80"
                     required
+                    disabled
                   >
-                    <option value="">{language === 'ar' ? 'اختر الجهة...' : 'Select Entity...'}</option>
-                    {orgUnits.map(unit => (
-                      <option key={unit.id} value={unit.name}>{unit.name}</option>
-                    ))}
+                    <option value={formData.company}>{formData.company || localStorage.getItem('active_company') || ''}</option>
                   </select>
                 </div>
                 <div className="space-y-2">

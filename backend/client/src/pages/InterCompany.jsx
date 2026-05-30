@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export default function InterCompany() {
    const { language } = useLanguage();
+   const activeCompany = localStorage.getItem('active_company') || '';
    const [loading, setLoading] = useState(true);
    const [transactions, setTransactions] = useState([]);
    const [companies, setCompanies] = useState([]);
@@ -64,7 +65,20 @@ export default function InterCompany() {
                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mt-1">Multi-Entity Ledger Synchronization • Audit-Ready Protocol</p>
             </div>
             <button 
-               onClick={() => setIsModalOpen(true)}
+               onClick={() => {
+                  const matching = activeCompany ? companies.find(c => 
+                     c.name.toLowerCase().includes(activeCompany.toLowerCase()) || 
+                     activeCompany.toLowerCase().includes(c.name.toLowerCase())
+                  ) : null;
+                  setFormData({
+                     source_company_id: matching ? String(matching.id) : '',
+                     target_company_id: '',
+                     amount: '',
+                     description: '',
+                     project_id: ''
+                  });
+                  setIsModalOpen(true);
+               }}
                className="bg-white text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-xl relative z-10"
             >
                + New IC Transaction
@@ -137,9 +151,12 @@ export default function InterCompany() {
                      <div>
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payer Entity (Company A)</label>
                         <select 
-                           className="w-full p-4 rounded-2xl bg-slate-50 border-none font-bold text-slate-900"
+                           className={`w-full p-4 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 ${
+                              activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                           }`}
                            value={formData.source_company_id}
                            onChange={e => setFormData({...formData, source_company_id: e.target.value})}
+                           disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
                            required
                         >
                            <option value="">Select Entity</option>
@@ -156,7 +173,9 @@ export default function InterCompany() {
                            required
                         >
                            <option value="">Select Entity</option>
-                           {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                           {companies.filter(c => !activeCompany || !(c.name.toLowerCase().includes(activeCompany.toLowerCase()) || activeCompany.toLowerCase().includes(c.name.toLowerCase()))).map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                           ))}
                         </select>
                      </div>
 

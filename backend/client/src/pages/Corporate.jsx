@@ -127,10 +127,14 @@ export default function Corporate() {
         api.get('/table/companies'),
         api.get('/dropdowns')
       ]);
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filteredOrg = (orgRes?.data?.data || []).filter(u => !u.company || u.company.toLowerCase() === activeComp.toLowerCase());
+      const filteredCom = (comRes?.data?.data || []).filter(c => !c.company || c.company.toLowerCase() === activeComp.toLowerCase());
+      const filteredTasks = (taskRes?.data?.data || []).filter(t => !t.company || t.company.toLowerCase() === activeComp.toLowerCase());
       setData({
-        orgUnits: orgRes?.data?.data || [],
-        committees: comRes?.data?.data || [],
-        tasks: taskRes?.data?.data || [],
+        orgUnits: filteredOrg,
+        committees: filteredCom,
+        tasks: filteredTasks,
         companies: compRes?.data?.data || [],
         staff: staffRes?.data?.staff_dd || []
       });
@@ -144,9 +148,14 @@ export default function Corporate() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const endpoint = showModal.includes('edit') ? `/dynamic/update/${showModal.split('-')[1]}/${formData.id}` : `/dynamic/add/${showModal.split('-')[1]}`;
+      const type = showModal.split('-')[1];
+      const endpoint = showModal.includes('edit') ? `/dynamic/update/${type}/${formData.id}` : `/dynamic/add/${type}`;
       const method = showModal.includes('edit') ? 'put' : 'post';
-      await api[method](endpoint, formData);
+      const payload = { ...formData };
+      if (type !== 'companies') {
+        payload.company = localStorage.getItem('active_company') || '';
+      }
+      await api[method](endpoint, payload);
       setShowModal(null);
       setFormData({});
       fetchData();

@@ -661,7 +661,12 @@ const boqCategories = [
                     <span>💸</span> {t.staffTable.addAdvance}
                   </button>
                   <button 
-                    onClick={() => setIsStaffModalOpen(true)}
+                    onClick={() => {
+                      const initialCompany = (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') ? activeCompany : '';
+                      setStaffForm({ name: '', salary: '', company: initialCompany, job_title: '', department: '', id_number: '', joining_date: new Date().toISOString().split('T')[0] });
+                      setEditingStaffId(null);
+                      setIsStaffModalOpen(true);
+                    }}
                     className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-slate-900/20 flex items-center gap-2"
                   >
                     <span>+</span> {t.staffTable.addStaff}
@@ -1090,7 +1095,16 @@ const boqCategories = [
                 </div>
                 <div className="col-span-full space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.modals.staff.company}</label>
-                  <select name="company" value={staffForm.company} onChange={handleStaffChange} required className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none">
+                  <select 
+                    name="company" 
+                    value={staffForm.company} 
+                    onChange={handleStaffChange} 
+                    required 
+                    disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                    className={`w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none ${
+                      activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                    }`}
+                  >
                     <option value="">{t.modals.staff.selectCompany}</option>
                     {projectCompaniesList.map(comp => (
                       <option key={comp} value={comp}>{comp}</option>

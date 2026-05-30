@@ -310,14 +310,10 @@ export default function ContractorSuite() {
         setProjectFiles(migratedFiles);
       }
 
-      const allCombinedProjects = [...localProjects];
-      mappedProjects.forEach(mp => {
-        if (!allCombinedProjects.some(p => String(p.id) === String(mp.id))) {
-          allCombinedProjects.push(mp);
-        }
-      });
-
+      const mockProjects = localProjects.filter(p => isNaN(Number(p.id)));
+      const allCombinedProjects = [...mockProjects, ...mappedProjects];
       setProjects(allCombinedProjects);
+      localStorage.setItem('contractor_projects', JSON.stringify(allCombinedProjects));
 
       // 3. Set DB inventory sales as expenses
       const sales = salesRes.data?.data || [];
@@ -1188,7 +1184,7 @@ export default function ContractorSuite() {
     const isDbProject = !isNaN(Number(projId));
     if (isDbProject) {
       try {
-        await api.put(`/dynamic/update/projects/${projId}`, { is_deleted: true });
+        await api.delete(`/dynamic/delete/projects/${projId}`);
         triggerNotification('💥 تم حذف المشروع من قاعدة البيانات وعكس جميع تأثيراته المالية والقيود المحاسبية بنجاح!', 'warning');
         await fetchAllData();
       } catch (err) {
@@ -2946,9 +2942,9 @@ export default function ContractorSuite() {
             </div>
 
             <p className="text-slate-400 font-bold text-xs mt-1.5 leading-relaxed">
-              {language === 'ar' ? 'العميل الحالي للمشروع:' : 'Current Project Client:'} <span className="text-white font-black">{activeProject.clientName}</span> | {language === 'ar' ? 'الشركة:' : 'Company:'} <span className="text-cyan-400 font-black">{activeProject.company || 'TED CAPITAL'}</span>
-              {activeProject.projectManager && <> | {language === 'ar' ? 'مدير المشروع:' : 'Project Manager:'} <span className="text-emerald-450 font-black">{activeProject.projectManager}</span></>}
-              {activeProject.startDate && <> | {language === 'ar' ? 'تاريخ البدء:' : 'Start Date:'} <span className="text-amber-450 font-black">{activeProject.startDate}</span></>}
+              {language === 'ar' ? 'العميل الحالي للمشروع:' : 'Current Project Client:'} <span className="text-white font-black">{activeProject?.clientName || 'عميل عام'}</span> | {language === 'ar' ? 'الشركة:' : 'Company:'} <span className="text-cyan-400 font-black">{activeProject?.company || 'TED CAPITAL'}</span>
+              {activeProject?.projectManager && <> | {language === 'ar' ? 'مدير المشروع:' : 'Project Manager:'} <span className="text-emerald-450 font-black">{activeProject?.projectManager}</span></>}
+              {activeProject?.startDate && <> | {language === 'ar' ? 'تاريخ البدء:' : 'Start Date:'} <span className="text-amber-450 font-black">{activeProject?.startDate}</span></>}
             </p>
 
             {/* Segmented Cost Center Toggle */}
@@ -2970,7 +2966,7 @@ export default function ContractorSuite() {
                 type="button"
                 onClick={() => {
                   setCostCenterMode('company');
-                  triggerNotification(language === 'ar' ? `🏢 تم تفعيل مركز تكلفة الشركة: ${activeProject.company || 'TED CAPITAL'}` : `🏢 Company Cost Center Activated: ${activeProject.company || 'TED CAPITAL'}`);
+                  triggerNotification(language === 'ar' ? `🏢 تم تفعيل مركز تكلفة الشركة: ${activeProject?.company || 'TED CAPITAL'}` : `🏢 Company Cost Center Activated: ${activeProject?.company || 'TED CAPITAL'}`);
                 }}
                 className={`px-3.5 py-2 rounded-lg text-[10px] font-black transition-all border ${costCenterMode === 'company'
                   ? 'bg-[#1e293b] border-indigo-500/30 text-indigo-400 shadow-md'
@@ -3167,20 +3163,12 @@ export default function ContractorSuite() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] text-slate-400 font-bold">الشركة المالكة / مركز التكلفة</label>
                 <select
-                  value={newProjectForm.company}
+                  value={newProjectForm.company || localStorage.getItem('active_company') || ''}
                   onChange={e => setNewProjectForm({ ...newProjectForm, company: e.target.value })}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 pointer-events-none opacity-80"
+                  disabled
                 >
-                  <option value="">-- اختر الشركة من الحوكمة --</option>
-                  {orgUnits.map(unit => (
-                    <option key={unit.id} value={unit.name}>{unit.name}</option>
-                  ))}
-                  {orgUnits.length === 0 && (
-                    <>
-                      <option value="TED CAPITAL">TED CAPITAL</option>
-                      <option value="PRIMEMED PHARMA">PRIMEMED PHARMA</option>
-                    </>
-                  )}
+                  <option value={localStorage.getItem('active_company') || ''}>{localStorage.getItem('active_company') || ''}</option>
                 </select>
               </div>
 
@@ -3259,20 +3247,12 @@ export default function ContractorSuite() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] text-slate-400 font-bold">الشركة المالكة / مركز التكلفة</label>
                 <select
-                  value={editProjectForm.company}
+                  value={editProjectForm.company || localStorage.getItem('active_company') || ''}
                   onChange={e => setEditProjectForm({ ...editProjectForm, company: e.target.value })}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 pointer-events-none opacity-80"
+                  disabled
                 >
-                  <option value="">-- اختر الشركة من الحوكمة --</option>
-                  {orgUnits.map(unit => (
-                    <option key={unit.id} value={unit.name}>{unit.name}</option>
-                  ))}
-                  {orgUnits.length === 0 && (
-                    <>
-                      <option value="TED CAPITAL">TED CAPITAL</option>
-                      <option value="PRIMEMED PHARMA">PRIMEMED PHARMA</option>
-                    </>
-                  )}
+                  <option value={editProjectForm.company || localStorage.getItem('active_company') || ''}>{editProjectForm.company || localStorage.getItem('active_company') || ''}</option>
                 </select>
               </div>
 
@@ -3306,13 +3286,13 @@ export default function ContractorSuite() {
 
         {/* --- PRINT HEADER (VISIBLE ONLY IN PRINTING) --- */}
         <div className="hidden print:block space-y-3 pb-6 mb-6 border-b-2 border-black">
-          <div className="text-xs font-black text-slate-500 print:text-black mb-1">{activeProject.company || localStorage.getItem('active_company') || 'TED CAPITAL'}</div>
+          <div className="text-xs font-black text-slate-500 print:text-black mb-1">{activeProject?.company || localStorage.getItem('active_company') || 'TED CAPITAL'}</div>
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold print:text-black">{activeProject.name}</h1>
+            <h1 className="text-2xl font-bold print:text-black">{activeProject?.name || ''}</h1>
             <span className="text-xs font-bold print:text-black">تاريخ التقرير: {new Date().toLocaleDateString('ar-EG')}</span>
           </div>
           <div className="flex justify-between items-center text-xs print:text-black font-bold">
-            <span>اسم العميل: {activeProject.clientName}</span>
+            <span>اسم العميل: {activeProject?.clientName || 'عميل عام'}</span>
             <span>تقرير الموقف التنفيذي والمالي للمشروع</span>
           </div>
         </div>
@@ -3326,7 +3306,7 @@ export default function ContractorSuite() {
               <div className="space-y-1">
                 <h4 className="text-sm font-black text-indigo-400">تجميع مركز التكلفة على مستوى الشركة نشط</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  أنت تعرض حالياً البيانات المالية المجمعة لكافة مشاريع شركة <span className="text-white font-black">{activeProject.company || 'TED CAPITAL'}</span>. تشمل الموازنة، المصاريف الفعلية، الإيرادات المجمعة، والمصاريف الإدارية والعمومية غير الموزعة.
+                  أنت تعرض حالياً البيانات المالية المجمعة لكافة مشاريع شركة <span className="text-white font-black">{activeProject?.company || 'TED CAPITAL'}</span>. تشمل الموازنة، المصاريف الفعلية، الإيرادات المجمعة، والمصاريف الإدارية والعمومية غير الموزعة.
                 </p>
               </div>
             </div>
@@ -5617,7 +5597,7 @@ export default function ContractorSuite() {
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     >
                       <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
-                      {companies.map(c => (
+                      {companies.filter(c => c.name?.toLowerCase() === (localStorage.getItem('active_company') || '').toLowerCase()).map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
@@ -5716,7 +5696,7 @@ export default function ContractorSuite() {
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner"
                     >
                       <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
-                      {companies.map(c => (
+                      {companies.filter(c => c.name?.toLowerCase() === (localStorage.getItem('active_company') || '').toLowerCase()).map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>

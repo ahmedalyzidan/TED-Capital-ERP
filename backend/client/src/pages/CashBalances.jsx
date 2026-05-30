@@ -15,7 +15,9 @@ export default function CashBalances() {
       setLoading(true);
       try {
          const response = await api.get('/finance/cash-balances');
-         setAccounts(response.data.data || []);
+         const activeComp = localStorage.getItem('active_company') || '';
+         const filtered = (response.data.data || []).filter(a => !a.company_entity || a.company_entity.toLowerCase() === activeComp.toLowerCase());
+         setAccounts(filtered);
       } catch (error) {
          console.error("خطأ في جلب أرصدة النقدية", error);
       } finally {

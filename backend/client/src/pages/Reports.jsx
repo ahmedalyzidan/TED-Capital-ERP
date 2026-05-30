@@ -17,10 +17,7 @@ export default function Reports() {
    const [absorptionData, setAbsorptionData] = useState([]);
    const [payrollData, setPayrollData] = useState([]);
    const [activeProjects, setActiveProjects] = useState([]);
-   const [selectedCompany, setSelectedCompany] = useState('all');
-   const [reStats, setReStats] = useState({ totalSales: 0, collected: 0, pending: 0 });
-   const [liquidityGapMonths, setLiquidityGapMonths] = useState([]);
-
+   const activeCompany = localStorage.getItem('active_company') || '';
    const companyOptions = [
       { id: 'all', nameAr: 'كل الشركات', nameEn: 'All Companies', idVal: 'all', nameVal: 'all' },
       { id: '1', nameAr: 'تيد كابيتال للتطوير العقاري', nameEn: 'TED Capital', idVal: '1', nameVal: 'TED Capital' },
@@ -28,6 +25,15 @@ export default function Reports() {
       { id: '3', nameAr: 'ماستر بيلدر للمقاولات', nameEn: 'Master Builder', idVal: '3', nameVal: 'Master Builder' },
       { id: '4', nameAr: 'برايم ميد فارما للأدوية', nameEn: 'PRIMEMED PHARMA', idVal: '4', nameVal: 'PRIMEMED PHARMA' },
    ];
+   const matchingOption = activeCompany ? companyOptions.find(o => 
+      o.nameVal.toLowerCase() === activeCompany.toLowerCase() || 
+      o.nameEn.toLowerCase() === activeCompany.toLowerCase() || 
+      o.nameAr === activeCompany
+   ) : null;
+   const initialCompany = matchingOption ? matchingOption.id : 'all';
+   const [selectedCompany, setSelectedCompany] = useState(initialCompany);
+   const [reStats, setReStats] = useState({ totalSales: 0, collected: 0, pending: 0 });
+   const [liquidityGapMonths, setLiquidityGapMonths] = useState([]);
 
    const filterByCompany = (item) => {
       if (selectedCompany === 'all') return true;
@@ -383,7 +389,10 @@ export default function Reports() {
                      <select
                         value={selectedCompany}
                         onChange={(e) => setSelectedCompany(e.target.value)}
-                        className="bg-slate-900 border border-white/15 text-white text-xs font-bold rounded-xl p-2.5 px-4 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer w-full"
+                        disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                        className={`bg-slate-900 border border-white/15 text-white text-xs font-bold rounded-xl p-2.5 px-4 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer w-full ${
+                          activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-85' : ''
+                        }`}
                      >
                         {companyOptions.map(opt => (
                            <option key={opt.id} value={opt.id} className="bg-slate-950">

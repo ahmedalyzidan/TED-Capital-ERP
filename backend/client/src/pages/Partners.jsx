@@ -44,7 +44,34 @@ export default function Partners() {
     payment_method: 'Cash',
     reference_no: ''
   });
+  const activeCompany = localStorage.getItem('active_company') || '';
 
+  const filteredProjects = projects.filter(p => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const pComp = (p.company || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      return pComp.includes(activeComp) || activeComp.includes(pComp);
+    }
+    return true;
+  });
+
+  const filteredPartners = partners.filter(p => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const pComp = (p.company || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      return pComp.includes(activeComp) || activeComp.includes(pComp);
+    }
+    return true;
+  });
+
+  const filteredTransactions = transactions.filter(t => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const tComp = (t.company || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      return tComp.includes(activeComp) || activeComp.includes(tComp);
+    }
+    return true;
+  });
   useEffect(() => {
     fetchData();
     fetchProjects();
@@ -251,7 +278,7 @@ export default function Partners() {
                 }}
               >
                 <option value="">{language === 'ar' ? '-- كل المشاريع --' : '-- All Projects --'}</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {filteredProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               
               <div className="flex p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -345,7 +372,7 @@ export default function Partners() {
                   <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest mb-1">{language === 'ar' ? 'الربح القابل للتوزيع' : 'Distributable Profit'}</p>
                   <h4 className="text-4xl font-bold text-white font-mono tracking-tighter">{Number(distributableProfit).toLocaleString()}</h4>
                   <p className="text-[10px] font-bold text-slate-400 mt-2">
-                    {language === 'ar' ? `سيتم توزيعه على ${partners.length} شركاء` : `Distributed across ${partners.length} partners`}
+                    {language === 'ar' ? `سيتم توزيعه على ${filteredPartners.length} شركاء` : `Distributed across ${filteredPartners.length} partners`}
                   </p>
 
                   <div className="mt-8">
@@ -405,10 +432,10 @@ export default function Partners() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr><td colSpan="9" className="p-20 text-center animate-pulse font-bold text-slate-400">{language === 'ar' ? 'جاري تحميل البيانات...' : 'Loading data...'}</td></tr>
-                  ) : partners.length === 0 ? (
+                  ) : filteredPartners.length === 0 ? (
                     <tr><td colSpan="9" className="p-20 text-center text-slate-400 font-bold italic">{language === 'ar' ? 'لا يوجد شركاء مرتبطين.' : 'No partners found.'}</td></tr>
                   ) : (
-                    partners.map(p => {
+                    filteredPartners.map(p => {
                       const estimatedShare = (distributableProfit * (parseFloat(p.investment_percentage) || 0) / 100).toFixed(2);
                       const ptrDeposits = transactions.filter(t => t.partner_id === p.id && t.type === 'Capital Injection').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
                       const ptrWithdrawals = transactions.filter(t => t.partner_id === p.id && t.type === 'Withdrawal').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
@@ -492,10 +519,10 @@ export default function Partners() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr><td colSpan="7" className="p-20 text-center animate-pulse font-bold text-slate-400">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</td></tr>
-                  ) : transactions.length === 0 ? (
+                  ) : filteredTransactions.length === 0 ? (
                     <tr><td colSpan="7" className="p-20 text-center text-slate-400 font-bold italic">{language === 'ar' ? 'لا توجد حركات مالية.' : 'No transactions found.'}</td></tr>
                   ) : (
-                    transactions.map(t => {
+                    filteredTransactions.map(t => {
                       const partner = partners.find(p => p.id === t.partner_id);
                       const isPositive = t.type === 'Capital Injection' || t.type === 'Profit Distribution';
                       return (
@@ -576,7 +603,7 @@ export default function Partners() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none"
                 >
                   <option value="">{language === 'ar' ? '-- اختر المشروع --' : '-- Select Project --'}</option>
-                  {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  {filteredProjects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </select>
               </div>
 
@@ -652,14 +679,14 @@ export default function Partners() {
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-600 outline-none transition-all appearance-none"
                   >
                     <option value="">{language === 'ar' ? '-- اختر المشروع --' : '-- Select Project --'}</option>
-                    {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {filteredProjects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الشريك المستهدف *' : 'Target Partner *'}</label>
                   <select value={trxForm.partner_id} onChange={(e) => setTrxForm({...trxForm, partner_id: e.target.value})} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-600 outline-none transition-all appearance-none">
                     <option value="">{language === 'ar' ? '-- اختر الشريك --' : '-- Select Partner --'}</option>
-                    {partners.map(p => <option key={p.id} value={p.id}>{p.name} ({p.partner_type})</option>)}
+                    {filteredPartners.map(p => <option key={p.id} value={p.id}>{p.name} ({p.partner_type})</option>)}
                   </select>
                 </div>
               </div>

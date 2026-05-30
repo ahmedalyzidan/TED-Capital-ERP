@@ -600,14 +600,45 @@ function LeadsTab({ language }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const activeComp = localStorage.getItem('active_company') || '';
+      const activeLower = activeComp.toLowerCase().trim();
+
       const [leadsRes, projRes, unitsRes] = await Promise.all([
         api.get('/crm/leads'),
         api.get('/table/real_estate_projects?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/table/real_estate_units?limit=2000').catch(() => ({ data: { data: [] } }))
       ]);
-      setItems(leadsRes.data.data || []);
-      setProjects(projRes.data.data || []);
-      setUnits(unitsRes.data.data || []);
+
+      let rawLeads = leadsRes.data.data || [];
+      let rawProjects = projRes.data.data || [];
+      let rawUnits = unitsRes.data.data || [];
+
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        rawProjects = rawProjects.filter(p => {
+          const projCompLower = (p.company || '').toLowerCase().trim();
+          if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+          if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+          if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+          if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+          return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+        });
+
+        const projectIds = new Set(rawProjects.map(p => Number(p.id)));
+        rawUnits = rawUnits.filter(u => projectIds.has(Number(u.project_id)));
+
+        rawLeads = rawLeads.filter(l => {
+          const leadCompLower = (l.company_name || l.company || '').toLowerCase().trim();
+          if (activeLower.includes('ted') && leadCompLower.includes('ted')) return true;
+          if (activeLower.includes('design') && leadCompLower.includes('design')) return true;
+          if (activeLower.includes('master') && leadCompLower.includes('master')) return true;
+          if (activeLower.includes('prime') && (leadCompLower.includes('prime') || leadCompLower.includes('pharma'))) return true;
+          return leadCompLower.includes(activeLower) || activeLower.includes(leadCompLower) || !leadCompLower;
+        });
+      }
+
+      setItems(rawLeads);
+      setProjects(rawProjects);
+      setUnits(rawUnits);
     } catch { } finally { setLoading(false); }
   }, []);
 
@@ -1069,7 +1100,24 @@ export default function CRM() {
   const [clients, setClients]     = useState([]);
 
   useEffect(() => {
-    api.get('/table/customers?limit=200').then(r => setClients(r.data.data || [])).catch(() => {});
+    api.get('/table/customers?limit=200').then(r => {
+      const rawClients = r.data.data || [];
+      const activeComp = localStorage.getItem('active_company') || '';
+      if (activeComp) {
+        const activeLower = activeComp.toLowerCase().trim();
+        const filtered = rawClients.filter(c => {
+          const cComp = (c.company_name || c.company || '').toLowerCase().trim();
+          if (activeLower.includes('ted') && cComp.includes('ted')) return true;
+          if (activeLower.includes('design') && cComp.includes('design')) return true;
+          if (activeLower.includes('master') && cComp.includes('master')) return true;
+          if (activeLower.includes('prime') && (cComp.includes('prime') || cComp.includes('pharma'))) return true;
+          return cComp.includes(activeLower) || activeLower.includes(cComp) || !cComp;
+        });
+        setClients(filtered);
+      } else {
+        setClients(rawClients);
+      }
+    }).catch(() => {});
   }, []);
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || '';

@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Clients() {
   const { language } = useLanguage();
+  const activeCompany = localStorage.getItem('active_company') || '';
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -750,7 +751,10 @@ export default function Clients() {
                   <select
                     value={companyId}
                     onChange={(e) => setCompanyId(e.target.value)}
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm"
+                    disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                    className={`w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-violet-600 transition-all outline-none shadow-sm ${
+                      activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                    }`}
                   >
                     <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
                     {companies.map((c) => (

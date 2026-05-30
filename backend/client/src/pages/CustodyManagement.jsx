@@ -279,7 +279,9 @@ export default function CustodyManagement() {
     try {
       const res = await api.get('/custodies');
       if (res.data.success) {
-        setCustodies(res.data.custodies);
+        const activeComp = localStorage.getItem('active_company') || '';
+        const filtered = (res.data.custodies || []).filter(c => !c.company || c.company.toLowerCase() === activeComp.toLowerCase());
+        setCustodies(filtered);
       }
     } catch (error) {
       console.error(error);
@@ -295,7 +297,9 @@ export default function CustodyManagement() {
         setAccounts(res.data.accounts_dd);
       }
       if (res.data.projects_dd) {
-        setProjects(res.data.projects_dd);
+        const activeComp = localStorage.getItem('active_company') || '';
+        const filteredProj = (res.data.projects_dd || []).filter(p => !p.company || p.company.toLowerCase() === activeComp.toLowerCase());
+        setProjects(filteredProj);
       }
     } catch (error) {
       console.error("Error fetching accounts:", error);
@@ -915,14 +919,12 @@ export default function CustodyManagement() {
                 </label>
                 <select
                   required
-                  value={custodyForm.company}
+                  disabled
+                  value={custodyForm.company || localStorage.getItem('active_company') || ''}
                   onChange={e => setCustodyForm({ ...custodyForm, company: e.target.value })}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all opacity-70"
                 >
-                  <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
-                  {companies.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
+                  <option value={localStorage.getItem('active_company') || ''}>{localStorage.getItem('active_company') || ''}</option>
                 </select>
               </div>
 

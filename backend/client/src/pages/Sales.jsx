@@ -1795,8 +1795,9 @@ function CustomerLedgerTab({ clients, language, defaultCurrency }) {
           api.get('/table/customers?limit=500'),
           api.get('/sales/invoices')
         ]);
-        const customers = customersRes.data.data || [];
-        const invoices = invoicesRes.data.data || [];
+        const activeComp = localStorage.getItem('active_company') || '';
+        const customers = (customersRes.data.data || []).filter(c => !c.company || c.company.toLowerCase() === activeComp.toLowerCase());
+        const invoices = (invoicesRes.data.data || []).filter(i => !i.company || i.company.toLowerCase() === activeComp.toLowerCase());
 
         const data = customers.map(cust => {
           const custInvoices = invoices.filter(inv => inv.customer_id === cust.id);
@@ -1923,8 +1924,17 @@ function OffersTab({ language }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name: '', discount_type: 'نسبة', discount_value: 0, min_purchase: 0, start_date: '', end_date: '', status: 'نشط', description: '' });
-  const load = useCallback(async () => { setLoading(true); try { const { data } = await api.get('/sales/offers'); setItems(data.data || []); } catch { } finally { setLoading(false); } }, []);
+  const [form, setForm] = useState({ name: '', discount_type: 'نسبة', discount_value: 0, min_purchase: 0, start_date: '', end_date: '', status: 'نشط', description: '', company: localStorage.getItem('active_company') || '' });
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/sales/offers');
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filtered = (data.data || []).filter(item => !item.company || item.company.toLowerCase() === activeComp.toLowerCase());
+      setItems(filtered);
+    } catch { }
+    finally { setLoading(false); }
+  }, []);
   useEffect(() => { load(); }, [load]);
   const save = async () => { try { await api.post('/sales/offers', form); setModal(false); load(); } catch (e) { alert(e?.response?.data?.error || 'خطأ'); } };
   return (
@@ -1984,8 +1994,17 @@ function PriceListsTab({ language }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name: '', product_name: '', base_price: 0, selling_price: 0, category: '', effective_date: '', notes: '' });
-  const load = useCallback(async () => { setLoading(true); try { const { data } = await api.get('/sales/price-lists'); setItems(data.data || []); } catch { } finally { setLoading(false); } }, []);
+  const [form, setForm] = useState({ name: '', product_name: '', base_price: 0, selling_price: 0, category: '', effective_date: '', notes: '', company: localStorage.getItem('active_company') || '' });
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/sales/price-lists');
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filtered = (data.data || []).filter(item => !item.company || item.company.toLowerCase() === activeComp.toLowerCase());
+      setItems(filtered);
+    } catch { }
+    finally { setLoading(false); }
+  }, []);
   useEffect(() => { load(); }, [load]);
   const save = async () => { try { await api.post('/sales/price-lists', form); setModal(false); load(); } catch (e) { alert(e?.response?.data?.error || 'خطأ'); } };
   return (
@@ -2046,7 +2065,7 @@ function CommissionsTab({ staff = [], language }) {
   const [commissions, setCommissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ agent_name: '', target_amount: 0, achieved_amount: 0, commission_rate: 0, period: '' });
+  const [form, setForm] = useState({ agent_name: '', target_amount: 0, achieved_amount: 0, commission_rate: 0, period: '', company: localStorage.getItem('active_company') || '' });
   const [payingId, setPayingId] = useState(null);
 
   const load = useCallback(async () => {
@@ -2056,8 +2075,11 @@ function CommissionsTab({ staff = [], language }) {
         api.get('/sales/targets'),
         api.get('/sales/commissions')
       ]);
-      setTargets(tRes.data.data || []);
-      setCommissions(cRes.data.data || []);
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filteredTargets = (tRes.data.data || []).filter(t => !t.company || t.company.toLowerCase() === activeComp.toLowerCase());
+      const filteredCommissions = (cRes.data.data || []).filter(c => !c.company || c.company.toLowerCase() === activeComp.toLowerCase());
+      setTargets(filteredTargets);
+      setCommissions(filteredCommissions);
     } catch { } finally { setLoading(false); }
   }, []);
 
@@ -2232,10 +2254,19 @@ function InstallmentsTab({ clients, language, defaultCurrency, onNewClientClick,
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ customer_id: '', total_amount: 0, installment_count: 12, monthly_amount: 0, start_date: '', status: 'نشط', notes: '' });
+  const [form, setForm] = useState({ customer_id: '', total_amount: 0, installment_count: 12, monthly_amount: 0, start_date: '', status: 'نشط', notes: '', company: localStorage.getItem('active_company') || '' });
   const [clientSearch, setClientSearch] = useState('');
 
-  const load = useCallback(async () => { setLoading(true); try { const { data } = await api.get('/sales/installments'); setItems(data.data || []); } catch { } finally { setLoading(false); } }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/sales/installments');
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filtered = (data.data || []).filter(item => !item.company || item.company.toLowerCase() === activeComp.toLowerCase());
+      setItems(filtered);
+    } catch { }
+    finally { setLoading(false); }
+  }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (form.total_amount > 0 && form.installment_count > 0) setForm(f => ({ ...f, monthly_amount: Math.ceil(f.total_amount / f.installment_count) })); }, [form.total_amount, form.installment_count]);
   const save = async () => { try { await api.post('/sales/installments', form); setModal(false); load(); } catch (e) { alert(e?.response?.data?.error || 'خطأ'); } };

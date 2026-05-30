@@ -285,6 +285,58 @@ class DynamicController {
 
             if (!hasAccess(req.user, type, 'create')) throw new Error("Access Denied.");
 
+            // Resolve company details (company name and company_id) using req.user.selectedCompany or req.headers['x-selected-company']
+            const selectedCompanyStr = req.user?.selectedCompany || req.headers['x-selected-company'] || '';
+            let activeCompanyId = null;
+            let activeCompanyName = null;
+
+            if (selectedCompanyStr && !['all', 'كل الشركات', 'all companies'].includes(selectedCompanyStr.toLowerCase())) {
+                const nameLower = selectedCompanyStr.toLowerCase();
+                if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
+                    activeCompanyId = 2; activeCompanyName = 'Design Concept';
+                } else if (nameLower.includes('master') || nameLower.includes('ماستر')) {
+                    activeCompanyId = 3; activeCompanyName = 'Master Builder';
+                } else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
+                    activeCompanyId = 4; activeCompanyName = 'PRIMEMED PHARMA';
+                } else if (nameLower.includes('ted') || nameLower.includes('تيد')) {
+                    activeCompanyId = 1; activeCompanyName = 'TED Capital';
+                }
+            }
+
+            if (!activeCompanyName && req.user?.linkedCompany) {
+                const nameLower = req.user.linkedCompany.toLowerCase();
+                if (nameLower.includes('design') || nameLower.includes('ديزاين')) { activeCompanyId = 2; activeCompanyName = 'Design Concept'; }
+                else if (nameLower.includes('master') || nameLower.includes('ماستر')) { activeCompanyId = 3; activeCompanyName = 'Master Builder'; }
+                else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { activeCompanyId = 4; activeCompanyName = 'PRIMEMED PHARMA'; }
+                else if (nameLower.includes('ted') || nameLower.includes('تيد')) { activeCompanyId = 1; activeCompanyName = 'TED Capital'; }
+            }
+
+            // Default fallback if still unresolved
+            if (!activeCompanyName) {
+                activeCompanyId = 1;
+                activeCompanyName = 'TED Capital';
+            }
+
+            // Fetch table columns to check if company fields exist and force isolation
+            const columnsRes = await client.query(
+                `SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+                [type]
+            );
+            const columns = columnsRes.rows.map(r => r.column_name);
+
+            if (columns.includes('company_id')) {
+                data.company_id = activeCompanyId;
+            }
+            if (columns.includes('company')) {
+                data.company = activeCompanyName;
+            }
+            if (columns.includes('company_name')) {
+                data.company_name = activeCompanyName;
+            }
+            if (columns.includes('company_entity')) {
+                data.company_entity = activeCompanyName;
+            }
+
             // 1. Specific Pre-Processing Logic
             if (type === 'projects') {
                 // توليد الرقم المسلسل آلياً إذا لم يتم توفيره
@@ -323,6 +375,21 @@ class DynamicController {
             if (type === 'projects' || type === 'customers') {
                 if (!data.org_unit_id && req.user.primaryOrgUnitId) {
                     data.org_unit_id = req.user.primaryOrgUnitId;
+                }
+            }
+
+            if (type === 'subcontractors' && data.company) {
+                const projCheck = await client.query("SELECT id FROM projects WHERE name = $1 LIMIT 1", [data.company]);
+                if (projCheck.rows.length === 0) {
+                    const newProjSerial = await projectController.generateProjectSerial();
+                    const newProjRes = await client.query(
+                        `INSERT INTO projects (name, company, company_id, budget, start_date, status, project_serial)
+                         VALUES ($1, $2, $3, 0, CURRENT_DATE, 'Active', $4) RETURNING id`,
+                        [data.company, activeCompanyName, activeCompanyId, newProjSerial]
+                    );
+                    data.project_id = newProjRes.rows[0].id;
+                } else {
+                    data.project_id = projCheck.rows[0].id;
                 }
             }
 
@@ -713,6 +780,23 @@ class DynamicController {
                 }
             }
 
+            if (type === 'projects' && data.is_deleted === true) {
+                const pName = oldData.name;
+                await client.query("UPDATE ledger SET is_deleted = TRUE, description = description || ' (Project Deleted)' WHERE cost_center = $1 OR cost_center = $2", [pName, String(id)]);
+                await client.query("UPDATE subcontractor_invoices SET is_deleted = TRUE, status = 'Deleted' WHERE project_id = $1 OR project_name = $2", [id, pName]);
+                await client.query("UPDATE subcontractor_statements SET is_deleted = TRUE WHERE metadata->>'project_name' = $1 OR metadata->>'project_id' = $2 OR sub_name IN (SELECT name FROM subcontractors WHERE project_id = $3)", [pName, String(id), id]);
+                await client.query("UPDATE subcontractor_items SET is_deleted = TRUE WHERE boq_id IN (SELECT id FROM boq WHERE project_name = $1)", [pName]);
+                await client.query("UPDATE boq SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE purchase_orders SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE inventory_items SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE material_usage SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE tasks SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE partners SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE partner_transactions SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE ar_invoices SET is_deleted = TRUE, status = 'Deleted' WHERE project_id = $1", [id]);
+                await client.query("UPDATE client_payment_history SET is_deleted = TRUE WHERE project_id = $1", [id]);
+            }
+
             await logAdvancedAudit(client, req.user.username, type, id, 'UPDATE', `Updated record in ${type}${adjustReasonStr}`, oldData, data);
             await client.query('COMMIT');
             res.json({ success: true });
@@ -738,6 +822,23 @@ class DynamicController {
             // Soft Deletion instead of Hard Deletion
             await client.query(`UPDATE ${type} SET is_deleted = TRUE, deleted_by = $1, deleted_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user.username, id]);
             await logAdvancedAudit(client, req.user.username, type, id, 'SOFT_DELETE', 'Record marked as deleted', oldData, null);
+
+            if (type === 'projects') {
+                const pName = oldData.name;
+                await client.query("UPDATE ledger SET is_deleted = TRUE, description = description || ' (Project Deleted)' WHERE cost_center = $1 OR cost_center = $2", [pName, String(id)]);
+                await client.query("UPDATE subcontractor_invoices SET is_deleted = TRUE, status = 'Deleted' WHERE project_id = $1 OR project_name = $2", [id, pName]);
+                await client.query("UPDATE subcontractor_statements SET is_deleted = TRUE WHERE metadata->>'project_name' = $1 OR metadata->>'project_id' = $2 OR sub_name IN (SELECT name FROM subcontractors WHERE project_id = $3)", [pName, String(id), id]);
+                await client.query("UPDATE subcontractor_items SET is_deleted = TRUE WHERE boq_id IN (SELECT id FROM boq WHERE project_name = $1)", [pName]);
+                await client.query("UPDATE boq SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE purchase_orders SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE inventory_items SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE material_usage SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE tasks SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE partners SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE partner_transactions SET is_deleted = TRUE WHERE project_name = $1", [pName]);
+                await client.query("UPDATE ar_invoices SET is_deleted = TRUE, status = 'Deleted' WHERE project_id = $1", [id]);
+                await client.query("UPDATE client_payment_history SET is_deleted = TRUE WHERE project_id = $1", [id]);
+            }
 
             // Reversal of Accounting ledger entries
             if (type === 'client_payment_history') {

@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }) => {
                 role: metadata.roles?.[0] || prev?.role,
                 permissions: metadata.flattenedPermissions || [],
                 isSuperAdmin: metadata.isSuperAdmin || false,
+                photo: metadata.photo || prev?.photo,
                 selectedCompany: storedCompany || prev?.selectedCompany || 'كل الشركات'
               };
               localStorage.setItem('user', JSON.stringify(updated));
@@ -106,7 +107,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

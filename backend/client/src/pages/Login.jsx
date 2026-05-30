@@ -78,16 +78,16 @@ export default function Login() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ username: '', password: '', otp: '', company: 'كل الشركات' });
   const [forgotData, setForgotData] = useState({ username: '', recoveryType: 'email', email: '', phone: '' });
-  
+
   const [authenticatedUser, setAuthenticatedUser] = useState(null);
   const [tempToken, setTempToken] = useState(null);
   const [tempRefresh, setTempRefresh] = useState(null);
   const [partialToken, setPartialToken] = useState(null);
-  
+
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const [publicCompanies, setPublicCompanies] = useState(['كل الشركات', 'TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA']);
   const [allowedCompanies, setAllowedCompanies] = useState(['كل الشركات']);
 
@@ -140,7 +140,7 @@ export default function Login() {
         // 🌟 تحديد الشركات المسموحة للمستخدم بناءً على مصفوفة الصلاحيات
         let allowed = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
         const perms = typeof userObj?.permissions === 'string' ? JSON.parse(userObj.permissions || '{}') : (userObj?.permissions || {});
-        
+
         const userRole = (userObj?.role || '').toLowerCase().trim();
         const userName = (userObj?.username || '').toLowerCase().trim();
 
@@ -206,7 +206,7 @@ export default function Login() {
         // 🌟 تحديد الشركات المسموحة للمستخدم
         let allowed = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
         const perms = typeof userObj?.permissions === 'string' ? JSON.parse(userObj.permissions || '{}') : (userObj?.permissions || {});
-        
+
         const userRole = (userObj?.role || '').toLowerCase().trim();
         const userName = (userObj?.username || '').toLowerCase().trim();
 
@@ -252,15 +252,15 @@ export default function Login() {
     try {
       localStorage.setItem('token', tempToken);
       if (tempRefresh) localStorage.setItem('refresh_token', tempRefresh);
-      
-      const enrichedUser = { 
-        ...authenticatedUser, 
-        selectedCompany: formData.company 
+
+      const enrichedUser = {
+        ...authenticatedUser,
+        selectedCompany: formData.company
       };
-      
+
       localStorage.setItem('user', JSON.stringify(enrichedUser));
       login(enrichedUser, tempToken, tempRefresh, formData.company);
-      
+
       // التوجيه للصفحة الرئيسية
       window.location.href = '/';
     } catch (err) {
@@ -295,30 +295,27 @@ export default function Login() {
   };
 
   return (
-    <div className={`min-h-screen flex justify-center items-center p-4 relative overflow-hidden transition-colors duration-300 ${
-      theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
-    }`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      
+    <div className={`min-h-screen flex justify-center items-center p-4 relative overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
+      }`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+
       {/* Floating Language & Theme Toggles */}
       <div className="absolute top-6 right-6 flex items-center gap-3 z-30 animate-fade-in">
         <button
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-          className={`px-4 py-2 rounded-2xl border text-xs font-black transition-all shadow-lg active:scale-95 flex items-center gap-2 ${
-            theme === 'dark'
+          className={`px-4 py-2 rounded-2xl border text-xs font-black transition-all shadow-lg active:scale-95 flex items-center gap-2 ${theme === 'dark'
               ? 'bg-slate-900/80 border-white/10 text-white hover:bg-slate-800'
               : 'bg-white/90 border-slate-200 text-slate-850 hover:bg-slate-100 shadow-slate-200/50'
-          }`}
+            }`}
         >
           <span>{language === 'ar' ? '🇬🇧' : '🇸🇦'}</span>
           <span>{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className={`p-2.5 rounded-2xl border transition-all shadow-lg active:scale-95 flex items-center justify-center ${
-            theme === 'dark'
+          className={`p-2.5 rounded-2xl border transition-all shadow-lg active:scale-95 flex items-center justify-center ${theme === 'dark'
               ? 'bg-slate-900/80 border-white/10 text-amber-400 hover:bg-slate-800'
               : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-100 shadow-slate-200/50'
-          }`}
+            }`}
           title={language === 'ar' ? 'تغيير الوضع' : 'Change Mode'}
         >
           {theme === 'dark' ? '☀️' : '🌙'}
@@ -326,27 +323,35 @@ export default function Login() {
       </div>
 
       {/* Animated Background Elements */}
-      <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] animate-pulse transition-colors duration-500 ${
-        theme === 'dark' ? 'bg-blue-600/10' : 'bg-blue-600/5'
-      }`}></div>
-      <div className={`absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[100px] animate-pulse delay-1000 transition-colors duration-500 ${
-        theme === 'dark' ? 'bg-emerald-600/10' : 'bg-emerald-600/5'
-      }`}></div>
-      
-      <div className={`backdrop-blur-3xl p-10 rounded-[2.5rem] w-full max-w-md relative z-10 animate-fade-in border transition-all duration-300 ${
-        theme === 'dark'
+      <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] animate-pulse transition-colors duration-500 ${theme === 'dark' ? 'bg-blue-600/10' : 'bg-blue-600/5'
+        }`}></div>
+      <div className={`absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[100px] animate-pulse delay-1000 transition-colors duration-500 ${theme === 'dark' ? 'bg-emerald-600/10' : 'bg-emerald-600/5'
+        }`}></div>
+
+      <div className={`backdrop-blur-3xl p-10 rounded-[2.5rem] w-full max-w-md relative z-10 animate-fade-in border transition-all duration-300 ${theme === 'dark'
           ? 'bg-white/5 border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)]'
           : 'bg-white/80 border-slate-200/80 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.08)]'
-      }`}>
-        
+        }`}>
+
         {/* --- HEADER DYNAMIC BRANDING --- */}
-        <div className="text-center mb-10">
-          <div className={`inline-block p-4 rounded-2xl border shadow-inner transition-colors duration-300 ${
-            theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
-          }`}>
-            <span className="text-4xl">
-              {step === 1 ? '🛡️' : step === 2 ? '🔐' : step === 3 ? '🏢' : '🔑'}
-            </span>
+        <div className="text-center mb-10 flex flex-col items-center">
+          <div className={`inline-block rounded-2xl border shadow-inner transition-all duration-300 overflow-hidden ${
+            authenticatedUser?.photo ? 'p-0 w-20 h-20 mb-3' : 'p-4'
+          } ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+            {authenticatedUser?.photo ? (
+              <img 
+                src={authenticatedUser.photo.startsWith('/') && !authenticatedUser.photo.startsWith('//')
+                  ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${authenticatedUser.photo}`
+                  : authenticatedUser.photo
+                } 
+                alt={authenticatedUser?.username} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <span className="text-4xl">
+                {step === 1 ? '🛡️' : step === 2 ? '🔐' : step === 3 ? '🏢' : '🔑'}
+              </span>
+            )}
           </div>
 
           {/* 🌟 1. في شاشة الدخول الأولى يكون اسم البرنامج ERP ONLY. وبعد اختيار الشركة يكتب اسم المستخدم فوق اسم الشركة + ERP 🌟 */}
@@ -355,31 +360,27 @@ export default function Login() {
               <h2 className="text-xl font-bold text-emerald-400 mb-1 tracking-wider animate-fade-in">
                 {authenticatedUser?.full_name || authenticatedUser?.username}
               </h2>
-              <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic animate-fade-in ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              }`}>
+              <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic animate-fade-in ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
                 {formData.company === 'كل الشركات' ? 'ERP' : `${formData.company === 'كل الشركات' ? t.allCompanies : formData.company} ERP`}
               </h1>
             </>
           ) : step === 'forgot_password' ? (
-            <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>
+            <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
               {t.forgotPassTitle}
             </h1>
           ) : (
-            <h1 className={`text-4xl font-black tracking-tighter mb-2 uppercase italic ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>
+            <h1 className={`text-4xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
               ERP
             </h1>
           )}
 
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
-            <p className={`font-bold text-[10px] uppercase tracking-[0.3em] ${
-              theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-            }`}>
+            <p className={`font-bold text-[10px] uppercase tracking-[0.3em] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+              }`}>
               {step === 1 ? t.integratedSystem : step === 2 ? t.twoFactor : step === 3 ? t.confirmCompany : t.recoveryPortal}
             </p>
             <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
@@ -402,9 +403,8 @@ export default function Login() {
         {step === 1 && (
           <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-6 animate-fade-in">
             <div className="space-y-2">
-              <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
                 {t.username}
               </label>
               <input
@@ -413,20 +413,18 @@ export default function Login() {
                 value={formData.username}
                 onChange={handleChange}
                 required
-                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${
-                  theme === 'dark'
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 dir="ltr"
                 placeholder={language === 'ar' ? 'اسم المستخدم' : 'Username'}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
                 {t.password}
               </label>
               <input
@@ -435,11 +433,10 @@ export default function Login() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${
-                  theme === 'dark'
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 dir="ltr"
                 placeholder="••••••••"
               />
@@ -468,9 +465,8 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => { setError(''); setSuccessMsg(''); setStep('forgot_password'); }}
-                className={`text-xs font-bold transition-colors underline underline-offset-4 ${
-                  theme === 'dark' ? 'text-slate-400 hover:text-blue-400' : 'text-slate-500 hover:text-blue-600'
-                }`}
+                className={`text-xs font-bold transition-colors underline underline-offset-4 ${theme === 'dark' ? 'text-slate-400 hover:text-blue-400' : 'text-slate-500 hover:text-blue-600'
+                  }`}
               >
                 {t.forgotPassLink}
               </button>
@@ -482,9 +478,8 @@ export default function Login() {
         {step === 2 && (
           <form onSubmit={handleOTPSubmit} className="flex flex-col gap-6 animate-fade-in">
             <div className="text-center space-y-4">
-              <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              }`}>{t.otpLabel}</label>
+              <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>{t.otpLabel}</label>
               <input
                 type="text"
                 name="otp"
@@ -493,11 +488,10 @@ export default function Login() {
                 required
                 maxLength="6"
                 placeholder="000000"
-                className={`w-full p-5 rounded-2xl border outline-none text-center text-3xl font-black font-mono tracking-[0.5em] transition-all ${
-                  theme === 'dark'
+                className={`w-full p-5 rounded-2xl border outline-none text-center text-3xl font-black font-mono tracking-[0.5em] transition-all ${theme === 'dark'
                     ? 'bg-white/5 border-white/20 text-emerald-450 focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10'
                     : 'bg-slate-50 border-slate-200 text-emerald-600 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10'
-                }`}
+                  }`}
                 dir="ltr"
               />
               <p className={`text-[9px] font-bold uppercase ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>{t.otpHelp}</p>
@@ -526,9 +520,8 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => { setError(''); setStep(1); }}
-                className={`text-xs font-bold transition-colors ${
-                  theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'
-                }`}
+                className={`text-xs font-bold transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'
+                  }`}
               >
                 {t.backToLogin}
               </button>
@@ -540,22 +533,20 @@ export default function Login() {
         {step === 3 && (
           <form onSubmit={handleCompanySubmit} className="flex flex-col gap-6 animate-fade-in">
             <div className="space-y-3">
-              <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-              } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
                 {t.allowedCompanies}
               </label>
               <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
                 {allowedCompanies.map((comp, idx) => (
                   <label
                     key={idx}
-                    className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                      formData.company === comp
+                    className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${formData.company === comp
                         ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-blue-500 text-blue-400 font-bold shadow-lg'
                         : theme === 'dark'
                           ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{comp === 'كل الشركات' ? '🌐' : '🏢'}</span>
@@ -615,47 +606,42 @@ export default function Login() {
         {step === 'forgot_password' && (
           <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
             <div className="space-y-2">
-              <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.username}</label>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.username}</label>
               <input
                 type="text"
                 name="username"
                 value={forgotData.username}
                 onChange={handleForgotChange}
                 required
-                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${
-                  theme === 'dark'
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 dir="ltr"
                 placeholder={language === 'ar' ? 'اسم المستخدم' : 'Username'}
               />
             </div>
 
             <div className="space-y-2">
-              <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.recoveryType}</label>
+              <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.recoveryType}</label>
               <div className="grid grid-cols-2 gap-3">
-                <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
-                  forgotData.recoveryType === 'email'
+                <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${forgotData.recoveryType === 'email'
                     ? 'bg-blue-600/20 border-blue-500 text-blue-400'
                     : theme === 'dark'
                       ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}>
+                  }`}>
                   <span>📧</span> {t.email}
                   <input type="radio" name="recoveryType" value="email" checked={forgotData.recoveryType === 'email'} onChange={handleForgotChange} className="sr-only" />
                 </label>
-                <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
-                  forgotData.recoveryType === 'whatsapp'
+                <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${forgotData.recoveryType === 'whatsapp'
                     ? 'bg-emerald-600/20 border-emerald-500 text-emerald-450'
                     : theme === 'dark'
                       ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}>
+                  }`}>
                   <span>💬</span> {t.whatsapp}
                   <input type="radio" name="recoveryType" value="whatsapp" checked={forgotData.recoveryType === 'whatsapp'} onChange={handleForgotChange} className="sr-only" />
                 </label>
@@ -664,40 +650,36 @@ export default function Login() {
 
             {forgotData.recoveryType === 'email' ? (
               <div className="space-y-2 animate-fade-in">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.registeredEmail}</label>
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                  } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.registeredEmail}</label>
                 <input
                   type="email"
                   name="email"
                   value={forgotData.email}
                   onChange={handleForgotChange}
                   required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${
-                    theme === 'dark'
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${theme === 'dark'
                       ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    } ${language === 'ar' ? 'text-right' : 'text-left'}`}
                   dir="ltr"
                   placeholder="user@example.com"
                 />
               </div>
             ) : (
               <div className="space-y-2 animate-fade-in">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.registeredPhone}</label>
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                  } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>{t.registeredPhone}</label>
                 <input
                   type="tel"
                   name="phone"
                   value={forgotData.phone}
                   onChange={handleForgotChange}
                   required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${
-                    theme === 'dark'
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-mono ${theme === 'dark'
                       ? 'bg-white/5 border-white/10 text-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10'
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10'
-                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    } ${language === 'ar' ? 'text-right' : 'text-left'}`}
                   dir="ltr"
                   placeholder="+970590000000"
                 />
@@ -727,9 +709,8 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => { setError(''); setSuccessMsg(''); setStep(1); }}
-                className={`text-xs font-bold transition-colors ${
-                  theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'
-                }`}
+                className={`text-xs font-bold transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'
+                  }`}
               >
                 {t.backToLogin}
               </button>
@@ -738,9 +719,8 @@ export default function Login() {
         )}
 
         <div className="mt-10 text-center">
-          <p className={`text-[8px] font-black uppercase tracking-[0.4em] ${
-            theme === 'dark' ? 'text-slate-650' : 'text-slate-400'
-          }`}>TED Capital • Infrastructure Protocol v4.0</p>
+          <p className={`text-[8px] font-black uppercase tracking-[0.4em] ${theme === 'dark' ? 'text-slate-650' : 'text-slate-400'
+            }`}>TED Capital • Infrastructure Protocol v4.0</p>
         </div>
       </div>
     </div>

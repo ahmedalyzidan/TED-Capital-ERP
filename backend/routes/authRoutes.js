@@ -13,7 +13,7 @@ let speakeasy, qrcode;
 try {
     speakeasy = require('speakeasy');
     qrcode = require('qrcode');
-} catch(e) {
+} catch (e) {
     console.warn("⚠️ Warning: speakeasy or qrcode is not installed. 2FA features will fail.");
 }
 
@@ -28,7 +28,7 @@ router.get('/public/companies', async (req, res) => {
         const orgUnits = await pool.query("SELECT id, name, type FROM org_units");
         const projectComps = await pool.query("SELECT DISTINCT company FROM projects WHERE company IS NOT NULL AND company != '' AND is_deleted = false");
         const legalComps = await pool.query("SELECT name FROM companies WHERE is_deleted = false ORDER BY id ASC");
-        
+
         let baseCompanies = legalComps.rows.map(r => r.name);
         if (baseCompanies.length === 0) {
             baseCompanies = ['TED Capital', 'Design Concept', 'Master Builder', 'PRIMEMED PHARMA'];
@@ -85,24 +85,24 @@ router.get('/iam/audit-trail', authGuard, requireAdmin, iamController.getSecurit
     try {
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_secret VARCHAR(255)");
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN DEFAULT FALSE");
-    } catch(e) { console.error("2FA DDL Schema Error:", e.message); }
+    } catch (e) { console.error("2FA DDL Schema Error:", e.message); }
 })();
 
 // دالة توليد التوكن (تدعم نوعين: توكن جزئي للـ 2FA، وتوكن كامل)
 const generateAccessToken = (user, isPartial = false) => {
     return jwt.sign(
-        { 
-            id: user.id, 
-            username: user.username, 
-            role: user.role, 
+        {
+            id: user.id,
+            username: user.username,
+            role: user.role,
             permissions: user.permissions || {},
             linkedCompany: user.linked_company || '',
             linkedProject: user.linked_project || '',
             is2FAEnabled: user.is_2fa_enabled,
             isPartial2FA: isPartial // 🌟 علامة توضح أن المستخدم تجاوز الباسوورد وينتظر كود الهاتف
-        }, 
-        JWT_SECRET, 
-        { expiresIn: isPartial ? '5m' : '12h' } 
+        },
+        JWT_SECRET,
+        { expiresIn: isPartial ? '5m' : '12h' }
     );
 };
 
@@ -118,16 +118,16 @@ router.post('/login', async (req, res) => {
             console.warn(`❌ [LOGIN FAIL] User not found or inactive: ${username}`);
             return res.status(401).json({ success: false, error: "Invalid credentials or inactive account." });
         }
-        
+
         const user = userRes.rows[0];
         const isMatch = await bcrypt.compare(password, user.password_hash);
         console.log(`🔑 [AUTH DEBUG] User: ${username}, Match: ${isMatch}, 2FA: ${user.is_2fa_enabled}`);
-        
+
         if (!isMatch) {
             console.warn(`❌ [LOGIN FAIL] Password mismatch for: ${username}`);
             return res.status(401).json({ success: false, error: "Invalid credentials." });
         }
-        
+
         // إذا كان المستخدم مفعل الـ 2FA، نعطيه توكن مؤقت ونطلب منه الـ OTP
         if (user.is_2fa_enabled) {
             console.log(`📱 [AUTH 2FA] User ${username} requires OTP.`);
@@ -139,7 +139,7 @@ router.post('/login', async (req, res) => {
                 message: "الرجاء إدخال كود المصادقة الثنائية (OTP) المولد بهاتفك."
             });
         }
-        
+
         const accessToken = generateAccessToken(user);
         const refreshToken = crypto.randomBytes(40).toString('hex');
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 أيام
@@ -147,13 +147,13 @@ router.post('/login', async (req, res) => {
         await pool.query("INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)", [user.id, refreshToken, expiresAt]);
         await logAudit(user.username, 'LOGIN', 'users', user.id, 'User logged into the system.');
         await logSecurityEvent(user.username, 'LOGIN_SUCCESS', 'AuthSystem', 'LOW', 'Successful login established.');
-        
-        const responseBody = { 
-            success: true, 
-            token: accessToken, 
+
+        const responseBody = {
+            success: true,
+            token: accessToken,
             refreshToken: refreshToken,
             mustChangePassword: user.must_change_password,
-            user: { id: user.id, username: user.username, email: user.email, role: user.role, permissions: user.permissions || {} } 
+            user: { id: user.id, username: user.username, email: user.email, role: user.role, photo: user.photo, permissions: user.permissions || {} }
         };
         console.log(`📤 [LOGIN SUCCESS] User: ${username}, Sending token...`);
         res.json(responseBody);
@@ -168,14 +168,14 @@ router.post('/login', async (req, res) => {
 router.post('/2fa/validate', async (req, res) => {
     const { token, otp } = req.body;
     if (!token || !otp) return res.status(400).json({ error: "Token and OTP required." });
-    
+
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (!decoded.isPartial2FA) return res.status(400).json({ error: "Invalid token type." });
-        
+
         const userRes = await pool.query("SELECT * FROM users WHERE id = $1", [decoded.id]);
         const user = userRes.rows[0];
-        
+
         // فحص الـ OTP عبر مكتبة Speakeasy
         const verified = speakeasy.totp.verify({
             secret: user.two_factor_secret,
@@ -183,21 +183,21 @@ router.post('/2fa/validate', async (req, res) => {
             token: otp,
             window: 1 // سماحية 30 ثانية لتأخر الوقت
         });
-        
+
         if (!verified) return res.status(401).json({ error: "الكود غير صحيح أو منتهي الصلاحية." });
-        
+
         const accessToken = generateAccessToken(user);
         const refreshToken = crypto.randomBytes(40).toString('hex');
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
         await pool.query("INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)", [user.id, refreshToken, expiresAt]);
         await logAudit(user.username, 'LOGIN_2FA', 'users', user.id, 'User logged in via 2FA Code.');
-        
-        res.json({ 
-            success: true, 
-            token: accessToken, 
+
+        res.json({
+            success: true,
+            token: accessToken,
             refreshToken: refreshToken,
-            user: { id: user.id, username: user.username, role: user.role, permissions: user.permissions || {} } 
+            user: { id: user.id, username: user.username, role: user.role, photo: user.photo, permissions: user.permissions || {} }
         });
     } catch (err) {
         res.status(401).json({ error: "Partial Token expired or invalid." });
@@ -207,13 +207,13 @@ router.post('/2fa/validate', async (req, res) => {
 // 🌟 3. مسار إعداد الـ 2FA للمستخدم لأول مرة (يولد QR Code)
 router.post('/2fa/setup', authenticateToken, async (req, res) => {
     if (!speakeasy || !qrcode) return res.status(500).json({ error: "2FA libraries not installed on server." });
-    
+
     // توليد مفتاح سري
     const secret = speakeasy.generateSecret({ name: `TED ERP (${req.user.username})` });
-    
+
     // حفظ الـ secret في قاعدة البيانات (لكن التفعيل يظل False حتى يؤكد الكود الأول)
     await pool.query("UPDATE users SET two_factor_secret = $1 WHERE id = $2", [secret.base32, req.user.id]);
-    
+
     // توليد صورة الـ QR لبرنامج Google Authenticator
     qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
         if (err) return res.status(500).json({ error: "QR Code generation failed." });
@@ -226,14 +226,14 @@ router.post('/2fa/enable', authenticateToken, async (req, res) => {
     const { otp } = req.body;
     const userRes = await pool.query("SELECT two_factor_secret FROM users WHERE id = $1", [req.user.id]);
     const secret = userRes.rows[0].two_factor_secret;
-    
+
     const verified = speakeasy.totp.verify({
         secret: secret,
         encoding: 'base32',
         token: otp,
         window: 1
     });
-    
+
     if (verified) {
         await pool.query("UPDATE users SET is_2fa_enabled = TRUE WHERE id = $1", [req.user.id]);
         await logAudit(req.user.username, 'ENABLE_2FA', 'users', req.user.id, '2FA Enabled successfully.');
@@ -250,15 +250,15 @@ router.post('/refresh', async (req, res) => {
     try {
         const rtRes = await pool.query("SELECT * FROM refresh_tokens WHERE token = $1 AND expires_at > NOW()", [token]);
         if (rtRes.rows.length === 0) return res.status(403).json({ error: "Invalid or expired session" });
-        
+
         const userId = rtRes.rows[0].user_id;
         const userRes = await pool.query("SELECT * FROM users WHERE id = $1 AND status = 'Active'", [userId]);
         if (userRes.rows.length === 0) return res.status(403).json({ error: "User inactive or blocked" });
-        
+
         const user = userRes.rows[0];
         const newAccessToken = generateAccessToken(user);
-        
-        res.json({ success: true, token: newAccessToken, user: { id: user.id, username: user.username, email: user.email, role: user.role, permissions: user.permissions || {} } });
+
+        res.json({ success: true, token: newAccessToken, user: { id: user.id, username: user.username, email: user.email, role: user.role, photo: user.photo, permissions: user.permissions || {} } });
     } catch (e) { res.status(500).json({ error: "Server error during refresh" }); }
 });
 
@@ -278,7 +278,7 @@ router.post('/users/:id/revoke', authenticateToken, requireAdmin, async (req, re
         await logAudit(req.user.username, 'REVOKE_SESSION', 'users', req.params.id, `Revoked all active sessions for User ID ${req.params.id}`);
         await logSecurityEvent(req.user.username, 'SESSION_REVOKED', `User:${req.params.id}`, 'HIGH', `Admin revoked all sessions for User ID ${req.params.id}`);
         res.json({ success: true, message: "User sessions revoked instantly." });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
@@ -286,20 +286,20 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
         const result = await pool.query(`
             SELECT id, username, email, role, status, is_2fa_enabled,
             COALESCE(permissions, '{}'::jsonb) as permissions, 
-            linked_company, linked_project,
+            linked_company, linked_project, photo,
             created_at 
             FROM users 
             ORDER BY id DESC
         `);
         res.json({ data: result.rows });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
     const { username, email, password, role, status, permissions } = req.body;
     const userRole = req.user.role ? req.user.role.toLowerCase() : '';
     const targetRole = role ? role.toLowerCase() : '';
-    
+
     if (userRole !== 'admin' && targetRole === 'admin') {
         return res.status(403).json({ error: "Privilege Escalation Blocked: Only Admin can create Admin." });
     }
@@ -312,7 +312,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
         await pool.query("INSERT INTO users (username, email, password_hash, role, status, permissions, must_change_password) VALUES ($1, $2, $3, $4, $5, $6, TRUE)", [username, email, hash, role, status, JSON.stringify(permissions || {})]);
         await logAudit(req.user.username, 'CREATE_USER', 'users', null, `Created user ${username}`);
         res.json({ success: true });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 🌟 مسار تغيير كلمة المرور الإجباري أو الاختياري
@@ -330,7 +330,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 
         const hash = await bcrypt.hash(newPassword, 10);
         await pool.query("UPDATE users SET password_hash = $1, must_change_password = FALSE, last_password_change = CURRENT_TIMESTAMP WHERE id = $2", [hash, req.user.id]);
-        
+
         await logAudit(user.username, 'CHANGE_PASSWORD', 'users', user.id, 'User changed their password.');
         res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح." });
     } catch (err) {
@@ -342,7 +342,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { username, email, password, role, status, permissions } = req.body;
     const userRole = req.user.role ? req.user.role.toLowerCase() : '';
     const targetRole = role ? role.toLowerCase() : '';
-    
+
     if (userRole !== 'admin' && targetRole === 'admin') {
         return res.status(403).json({ error: "Privilege Escalation Blocked: Only Admin can grant Admin role." });
     }
@@ -356,13 +356,13 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
         } else {
             await pool.query("UPDATE users SET username=$1, email=$2, role=$3, status=$4, permissions=$5 WHERE id=$6", [username, email, role, status, JSON.stringify(permissions || {}), req.params.id]);
         }
-        
+
         // مسح جلسات المستخدم ليقوم المتصفح بطلب توكن جديد بالصلاحيات المحدثة
         await pool.query("DELETE FROM refresh_tokens WHERE user_id = $1", [req.params.id]);
-        
+
         await logAudit(req.user.username, 'UPDATE_USER', 'users', req.params.id, `Updated user ${username}`);
         res.json({ success: true });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
@@ -375,7 +375,7 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
         await pool.query("DELETE FROM users WHERE id=$1", [req.params.id]);
         await logAudit(req.user.username, 'DELETE_USER', 'users', req.params.id, `Deleted user ID ${req.params.id}`);
         res.json({ success: true });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;

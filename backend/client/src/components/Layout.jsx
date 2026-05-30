@@ -797,11 +797,26 @@ export default function Layout() {
             style={theme === 'dark' ? { backgroundColor: '#272a33', border: '1px solid #3e4452' } : {}}>
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl`}
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-lg shadow-xl overflow-hidden`}
                   style={theme === 'dark'
                     ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', color: '#d9a770', border: '1.5px solid rgba(217,167,112,0.5)' }
                     : { backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>
-                  {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                  {user?.photo || user?.avatar_url ? (
+                    <img 
+                      src={(user.photo || user.avatar_url).startsWith('/') && !(user.photo || user.avatar_url).startsWith('//') 
+                        ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${user.photo || user.avatar_url}` 
+                        : (user.photo || user.avatar_url)
+                      } 
+                      alt={user?.username} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <img 
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'User'}&backgroundColor=171920`} 
+                      alt={user?.username} 
+                      className="w-full h-full object-cover" 
+                    />
+                  )}
                 </div>
                 <div className="overflow-hidden">
                   <p className={`text-[15px] font-bold truncate`}

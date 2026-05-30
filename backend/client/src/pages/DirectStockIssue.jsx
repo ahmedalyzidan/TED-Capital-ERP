@@ -426,6 +426,16 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       const isPharma = activeComp.toLowerCase().includes('prime') || activeComp.toLowerCase().includes('pharma') || activeComp.toLowerCase().includes('بريم') || activeComp.toLowerCase().includes('فارما');
       
       let filteredItems = rawItems;
+      if (activeComp) {
+        const matchedCompany = compRes.data?.data?.find(c => 
+          c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+          activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+          c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+        );
+        if (matchedCompany) {
+          filteredItems = filteredItems.filter(i => !i.company_id || Number(i.company_id) === Number(matchedCompany.id));
+        }
+      }
       if (isPharma) {
         filteredItems = rawItems.filter(i => 
           i.category === 'PHARMA' || 
@@ -647,8 +657,19 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         const dbProjects = res.data?.data || [];
         const activeProjects = dbProjects.filter(p => !p.is_deleted && p.status !== 'Inactive');
         
-        if (activeProjects.length > 0) {
-          setContractorProjects(activeProjects);
+        const companyProjects = activeProjects.filter(p => {
+          if (!activeComp) return true;
+          const projCompLower = (p.company || '').toLowerCase();
+          const activeLower = activeComp.toLowerCase();
+          if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+          if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+          if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+          if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+          return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+        });
+
+        if (companyProjects.length > 0) {
+          setContractorProjects(companyProjects);
         } else {
           setContractorProjects([
             { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
@@ -659,7 +680,18 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
         console.error("Error fetching projects from DB:", err);
         const saved = localStorage.getItem('contractor_projects');
         if (saved) {
-          setContractorProjects(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          const companyProjects = parsed.filter(p => {
+            if (!activeComp) return true;
+            const projCompLower = (p.company || '').toLowerCase();
+            const activeLower = activeComp.toLowerCase();
+            if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+            if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+            if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+            if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+            return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+          });
+          setContractorProjects(companyProjects);
         } else {
           setContractorProjects([
             { id: 'villa-e109', name: 'فيلا E109 - التجمع الخامس', clientName: 'الأستاذ محمد', company: 'TED CAPITAL' },
@@ -3736,7 +3768,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-inner" 
                     >
                       <option value="">{language === 'ar' ? '-- اختر الشركة --' : '-- Select Company --'}</option>
-                      {companies.map(c => (
+                      {companies.filter(c => c.name?.toLowerCase() === (localStorage.getItem('active_company') || '').toLowerCase()).map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>

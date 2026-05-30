@@ -605,13 +605,40 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
   };
 
   // Dynamic dropdown filters
+  const activeCompany = localStorage.getItem('active_company') || '';
   const selectedClientObj = clients.find(c => String(c.id) === String(colForm.client_id));
-  const filteredProjects = colForm.client_id
-    ? projects.filter(p => {
-        const pClientName = (p.clientName || p.client_name || p.client || 'عميل عام').toLowerCase().trim();
-        return selectedClientObj && pClientName === selectedClientObj.name.toLowerCase().trim();
-      })
-    : projects;
+  const filteredProjects = projects.filter(p => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const pComp = (p.company || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      if (!pComp.includes(activeComp) && !activeComp.includes(pComp)) {
+        return false;
+      }
+    }
+    if (colForm.client_id) {
+      const pClientName = (p.clientName || p.client_name || p.client || 'عميل عام').toLowerCase().trim();
+      return selectedClientObj && pClientName === selectedClientObj.name.toLowerCase().trim();
+    }
+    return true;
+  });
+
+  const filteredSubcontractors = subcontractors.filter(s => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const sComp = (s.company || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      return sComp.includes(activeComp) || activeComp.includes(sComp);
+    }
+    return true;
+  });
+
+  const filteredClients = clients.filter(c => {
+    if (activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies') {
+      const cComp = (c.company || c.company_name || '').toLowerCase().trim();
+      const activeComp = activeCompany.toLowerCase().trim();
+      return cComp.includes(activeComp) || activeComp.includes(cComp);
+    }
+    return true;
+  });
 
   const getInvoiceRemainingAmount = (inv) => {
     const paymentsForVal = collectionsLog.filter(c => {
@@ -842,7 +869,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-emerald-600 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- اختر العميل --' : '-- Select Client --'}</option>
-                  {clients.map(c => (
+                  {filteredClients.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -1117,7 +1144,7 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
                   className={getThemeClass("w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:border-cyan-650 bg-gray-50/50 text-gray-800", "w-full text-xs p-2.5 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 bg-[#090d16] text-slate-200")}
                 >
                   <option value="">{ar ? '-- اختر المقاول --' : '-- Select Subcontractor --'}</option>
-                  {subcontractors.map(s => (
+                  {filteredSubcontractors.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>

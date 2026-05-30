@@ -188,7 +188,7 @@ export default function Expenses() {
       description: '', amount: '', category_id: '', project_id: '', 
       expense_date: new Date().toISOString().split('T')[0], 
       payment_method: 'Cash', supplier_name: '', is_billable: false, 
-      tax_amount: 0, company_entity: '',
+      tax_amount: 0, company_entity: localStorage.getItem('active_company') || '',
       currency: 'EGP',
       exchange_rate: 1,
       metadata: {
@@ -551,12 +551,12 @@ export default function Expenses() {
                        <select 
                           required 
                           name="company_entity"
-                          value={form.company_entity} 
+                          value={form.company_entity || localStorage.getItem('active_company') || ''} 
                           onChange={e => setForm({...form, company_entity: e.target.value})} 
-                          className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all appearance-none cursor-pointer"
+                          className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all appearance-none cursor-pointer pointer-events-none opacity-80"
+                          disabled
                        >
-                          <option value="">-- Select Company --</option>
-                          {companies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                          <option value={form.company_entity || localStorage.getItem('active_company') || ''}>{form.company_entity || localStorage.getItem('active_company') || ''}</option>
                        </select>
                     </div>
 

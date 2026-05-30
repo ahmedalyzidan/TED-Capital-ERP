@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Users() {
   const { language } = useLanguage();
+  const auth = useAuth();
   const [activeTab, setActiveTab] = useState('users'); // users, roles, audit
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
-  const [employees, setEmployees] = useState([]); 
+  const [employees, setEmployees] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [projectsList, setProjectsList] = useState([]);
@@ -259,13 +261,13 @@ export default function Users() {
     const setUser = isEditModalOpen ? setSelectedUser : setNewUser;
     const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
     let curr = Array.isArray(perms.companies) ? perms.companies : (user.linked_company ? [user.linked_company] : []);
-    
+
     if (comp === 'ALL') curr = curr.includes('ALL') ? [] : ['ALL'];
     else {
       curr = curr.filter(c => c !== 'ALL');
       curr = curr.includes(comp) ? curr.filter(c => c !== comp) : [...curr, comp];
     }
-    
+
     setUser({
       ...user,
       permissions: { ...perms, companies: curr },
@@ -278,13 +280,13 @@ export default function Users() {
     const setUser = isEditModalOpen ? setSelectedUser : setNewUser;
     const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
     let curr = Array.isArray(perms.projects) ? perms.projects : (user.linked_project ? [user.linked_project] : []);
-    
+
     if (proj === 'ALL') curr = curr.includes('ALL') ? [] : ['ALL'];
     else {
       curr = curr.filter(p => p !== 'ALL');
       curr = curr.includes(proj) ? curr.filter(p => p !== proj) : [...curr, proj];
     }
-    
+
     setUser({
       ...user,
       permissions: { ...perms, projects: curr },
@@ -297,7 +299,7 @@ export default function Users() {
     const setUser = isEditModalOpen ? setSelectedUser : setNewUser;
     const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
     let curr = Array.isArray(perms.modules) ? perms.modules : ['Finance', 'Inventory', 'Projects', 'HCM', 'CRM', 'Settings'];
-    
+
     curr = curr.includes(mod) ? curr.filter(m => m !== mod) : [...curr, mod];
     setUser({
       ...user,
@@ -310,11 +312,11 @@ export default function Users() {
     const setUser = isEditModalOpen ? setSelectedUser : setNewUser;
     const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
     const currTables = typeof perms.tables === 'object' && perms.tables !== null ? { ...perms.tables } : {};
-    
+
     const currActions = currTables[table] || [];
     const newActions = currActions.includes(action) ? currActions.filter(a => a !== action) : [...currActions, action];
     currTables[table] = newActions;
-    
+
     setUser({
       ...user,
       permissions: { ...perms, tables: currTables }
@@ -326,7 +328,7 @@ export default function Users() {
     const setUser = isEditModalOpen ? setSelectedUser : setNewUser;
     const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions || '{}') : (user.permissions || {});
     const currTables = typeof perms.tables === 'object' && perms.tables !== null ? { ...perms.tables } : {};
-    
+
     currTables[table] = allSelected ? [] : ['read', 'create', 'update', 'delete', 'print', 'export'];
     setUser({
       ...user,
@@ -353,9 +355,9 @@ export default function Users() {
     { id: 'Settings', name: language === 'ar' ? 'إعدادات النظام' : 'System Settings', icon: '⚙️', tables: ['system_parameters', 'audit_logs', 'roles', 'users'] }
   ];
 
-  const [newUser, setNewUser] = useState({ 
-    username: '', full_name: '', email: '', password: '', role: 'Custom', 
-    status: 'Active', phone: '', department: '', employee_id: '', 
+  const [newUser, setNewUser] = useState({
+    username: '', full_name: '', email: '', password: '', role: 'Custom',
+    status: 'Active', phone: '', department: '', employee_id: '',
     linked_employee_id: '', linked_company: '', linked_project: '', two_factor: false,
     permissions: {
       companies: [],
@@ -383,7 +385,7 @@ export default function Users() {
         ]);
         const uData = uRes.data.data || [];
         const prefs = prefsRes.data || [];
-        
+
         // Map user preferences to users
         const usersWithPrefs = uData.map(user => {
           const userPref = prefs.find(p => p.user_id === user.id);
@@ -393,7 +395,7 @@ export default function Users() {
             theme_mode: userPref?.theme_mode || 'light'
           };
         });
-        
+
         setUsers(usersWithPrefs);
         const rRes = await api.get('/iam/roles');
         setRoles(rRes.data || []);
@@ -409,19 +411,43 @@ export default function Users() {
         const res = await api.get('/table/security_audit_trail?limit=50');
         setAuditLogs(res.data.data || []);
       }
-    } catch (err) { console.error(err); } 
+    } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  };
+
+  const handlePhotoUpload = async (e, type = 'new') => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const recordId = type === 'edit' ? selectedUser?.id : 0;
+    try {
+      const uploadRes = await api.post(`/files/upload/users/${recordId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (uploadRes.data?.url) {
+        if (type === 'edit') {
+          setSelectedUser(prev => ({ ...prev, photo: uploadRes.data.url }));
+        } else {
+          setNewUser(prev => ({ ...prev, photo: uploadRes.data.url }));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert(language === 'ar' ? 'فشل رفع الصورة.' : 'Failed to upload photo.');
+    }
   };
 
   const handleEmployeeSelection = (empId, type = 'new') => {
     const emp = employees.find(e => Number(e.id) === Number(empId));
     if (emp) {
       const data = {
-        linked_employee_id: emp.emp_id || emp.id,
+        linked_employee_id: emp.id,
         full_name: emp.name,
-        email: emp.email || '', 
+        email: emp.email || '',
         phone: emp.phone || '',
-        department: emp.position || emp.department || '', 
+        department: emp.position || emp.department || '',
         employee_id: (emp.emp_id || emp.id).toString()
       };
       if (type === 'new') setNewUser({ ...newUser, ...data });
@@ -463,9 +489,9 @@ export default function Users() {
       }
       alert(cur.alerts.createSuccess);
       setIsUserModalOpen(false);
-      setNewUser({ 
-        username: '', full_name: '', email: '', password: '', role: 'Custom', 
-        status: 'Active', phone: '', department: '', employee_id: '', 
+      setNewUser({
+        username: '', full_name: '', email: '', password: '', role: 'Custom',
+        status: 'Active', phone: '', department: '', employee_id: '',
         linked_employee_id: '', linked_company: '', linked_project: '', two_factor: false,
         permissions: {
           companies: [],
@@ -492,6 +518,14 @@ export default function Users() {
         sidebar_collapsed: false,
         dashboard_layout: '{}'
       });
+      if (auth.user && selectedUser.id === auth.user.id) {
+        const enrichedUser = {
+          ...auth.user,
+          ...selectedUser
+        };
+        auth.setUser(enrichedUser);
+        localStorage.setItem('user', JSON.stringify(enrichedUser));
+      }
       alert(cur.alerts.updateSuccess);
       setIsEditModalOpen(false);
       fetchData();
@@ -509,8 +543,8 @@ export default function Users() {
   const handleRolePermUpdate = async () => {
     if (!selectedRole) return;
     try {
-      await api.post('/iam/roles/permissions', { 
-        roleId: selectedRole.id, 
+      await api.post('/iam/roles/permissions', {
+        roleId: selectedRole.id,
         permissionIds: selectedRole.permissionIds || []
       });
       alert(cur.alerts.permSuccess);
@@ -532,8 +566,8 @@ export default function Users() {
     setSelectedRole({ ...selectedRole, permissionIds: newIds });
   };
 
-  const filteredUsers = users.filter(u => 
-    u.username?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -546,11 +580,11 @@ export default function Users() {
   return (
     <div className="bg-[#f8fafc]/50 min-h-screen p-4 sm:p-10 space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-[1600px] mx-auto space-y-10">
-        
+
         {/* --- HEADER --- */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50/30 rounded-full -translate-y-32 translate-x-32 blur-3xl opacity-50"></div>
-          
+
           <div className="flex items-center gap-6 relative z-10">
             <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-3xl shadow-xl shadow-slate-900/20 transform rotate-3">🔐</div>
             <div>
@@ -564,14 +598,13 @@ export default function Users() {
 
           <div className="bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200 flex gap-1 relative z-10 overflow-x-auto scrollbar-none">
             {Object.keys(cur.tabs).map(tab => (
-              <button 
+              <button
                 key={tab}
-                onClick={() => setActiveTab(tab)} 
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs transition-all duration-200 whitespace-nowrap ${
-                  activeTab === tab 
-                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10' 
-                  : 'text-slate-500 hover:bg-white hover:text-slate-900'
-                }`}
+                onClick={() => setActiveTab(tab)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs transition-all duration-200 whitespace-nowrap ${activeTab === tab
+                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                    : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                  }`}
               >
                 <span>{tab === 'users' ? '👤' : tab === 'roles' ? '🎭' : '🛡️'}</span> {cur.tabs[tab]}
               </button>
@@ -581,17 +614,17 @@ export default function Users() {
 
         {/* --- MAIN CONTENT AREA --- */}
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[600px]">
-          
+
           {activeTab === 'users' && (
             <div className="animate-fade-in">
               <div className="p-8 border-b border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="relative w-full sm:w-[400px]">
-                  <input 
-                    type="text" 
-                    placeholder={cur.usersTab.search} 
+                  <input
+                    type="text"
+                    placeholder={cur.usersTab.search}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pr-12 pl-4 py-4 bg-white border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-slate-900/5 transition-all shadow-sm" 
+                    className="w-full pr-12 pl-4 py-4 bg-white border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-slate-900/5 transition-all shadow-sm"
                   />
                   <span className={`absolute ${language === 'ar' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-slate-400 text-lg`}>🔍</span>
                 </div>
@@ -628,7 +661,7 @@ export default function Users() {
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                           <span className="text-xs font-bold text-slate-500 font-mono">{u.email}</span>
+                          <span className="text-xs font-bold text-slate-500 font-mono">{u.email}</span>
                         </td>
                         <td className="px-8 py-6">
                           <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black border border-slate-200 uppercase tracking-widest">{u.role}</span>
@@ -661,7 +694,7 @@ export default function Users() {
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{cur.rolesTab.rolesTitle}</h3>
                 <div className="space-y-3">
                   {roles.map(role => (
-                    <button 
+                    <button
                       key={role.id}
                       onClick={async () => {
                         const res = await api.get(`/iam/roles/${role.id}/permissions`);
@@ -731,7 +764,7 @@ export default function Users() {
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{language === 'ar' ? 'المستخدمين (تخصيص الوصول)' : 'Users (Access Matrix)'}</h3>
                 <div className="space-y-3">
                   {users.map(u => (
-                    <button 
+                    <button
                       key={u.id}
                       onClick={() => handleSelectUserForMatrix(u)}
                       className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} p-5 rounded-[2rem] border transition-all group ${selectedUserMatrix?.id === u.id ? 'bg-slate-900 text-white border-slate-900 shadow-xl' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
@@ -769,14 +802,14 @@ export default function Users() {
                         <span className="text-xl">🏢</span> {language === 'ar' ? 'الشركات المسموح التعامل عليها' : 'Allowed Companies'}
                       </h4>
                       <div className="flex flex-wrap gap-3">
-                        <button 
+                        <button
                           onClick={() => toggleUserMatrixCompany('ALL')}
                           className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.companies.includes('ALL') ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
                         >
                           {userMatrixState.companies.includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كافة الشركات (وصول شامل)' : 'All Companies (Global Access)'}
                         </button>
                         {projectCompaniesList.map(comp => (
-                          <button 
+                          <button
                             key={comp}
                             disabled={userMatrixState.companies.includes('ALL')}
                             onClick={() => toggleUserMatrixCompany(comp)}
@@ -794,14 +827,14 @@ export default function Users() {
                         <span className="text-xl">🏗️</span> {language === 'ar' ? 'المشاريع المسموح التعامل عليها' : 'Allowed Projects'}
                       </h4>
                       <div className="flex flex-wrap gap-3">
-                        <button 
+                        <button
                           onClick={() => toggleUserMatrixProject('ALL')}
                           className={`px-6 py-3 rounded-2xl font-black text-xs border transition-all flex items-center gap-2 ${userMatrixState.projects.includes('ALL') ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
                         >
                           {userMatrixState.projects.includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كافة المشاريع (وصول شامل)' : 'All Projects (Global Access)'}
                         </button>
                         {projectsList.map(proj => (
-                          <button 
+                          <button
                             key={proj}
                             disabled={userMatrixState.projects.includes('ALL')}
                             onClick={() => toggleUserMatrixProject(proj)}
@@ -820,7 +853,7 @@ export default function Users() {
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {matrixModules.map(mod => (
-                          <button 
+                          <button
                             key={mod.id}
                             onClick={() => toggleUserMatrixModule(mod.id)}
                             className={`p-6 rounded-[2rem] border transition-all flex flex-col items-start gap-3 text-left ${userMatrixState.modules.includes(mod.id) ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
@@ -840,14 +873,14 @@ export default function Users() {
                       <h4 className="font-black text-slate-900 text-lg flex items-center gap-3 px-2">
                         <span className="text-2xl">🖥️</span> {language === 'ar' ? 'صلاحيات الشاشات والجداول الفرعية' : 'Screens & Sub-tables Permissions'}
                       </h4>
-                      
+
                       <div className="grid grid-cols-1 gap-8">
                         {matrixModules.filter(m => userMatrixState.modules.includes(m.id)).map(mod => (
                           <div key={mod.id} className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
                             <h5 className="font-black text-slate-900 text-sm flex items-center gap-3 border-b border-slate-200/60 pb-4">
                               <span className="text-xl">{mod.icon}</span> {mod.name}
                             </h5>
-                            
+
                             <div className="space-y-4">
                               {mod.tables.map(table => {
                                 const currActions = userMatrixState.tables[table] || [];
@@ -883,7 +916,7 @@ export default function Users() {
                                         );
                                       })}
 
-                                      <button 
+                                      <button
                                         onClick={() => toggleAllTableActions(table, allActionsSelected)}
                                         className="px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest ml-2 hover:bg-slate-800 transition-all shadow-sm"
                                       >
@@ -934,13 +967,13 @@ export default function Users() {
                         <td className="px-8 py-6 font-mono text-[11px] text-slate-400">{new Date(log.created_at || log.timestamp).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}</td>
                         <td className="px-8 py-6 font-black text-slate-900 text-sm">@{log.username}</td>
                         <td className="px-8 py-6">
-                           <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${log.action === 'ACCESS_DENIED' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
-                             {log.action}
-                           </span>
+                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${log.action === 'ACCESS_DENIED' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
+                            {log.action}
+                          </span>
                         </td>
                         <td className="px-8 py-6 text-[11px] font-bold text-slate-500 font-mono">{log.resource}</td>
                         <td className="px-8 py-6 text-center">
-                           <div className={`w-3 h-3 rounded-full mx-auto ${log.impact_level === 'High' ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full mx-auto ${log.impact_level === 'High' ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></div>
                         </td>
                       </tr>
                     ))}
@@ -955,296 +988,324 @@ export default function Users() {
       {/* --- MODAL: CREATE/EDIT USER --- */}
       {(isUserModalOpen || isEditModalOpen) && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-           <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">👤</div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">{isEditModalOpen ? cur.modal.editTitle : cur.modal.createTitle}</h3>
-                 </div>
-                 <button onClick={() => { setIsUserModalOpen(false); setIsEditModalOpen(false); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-rose-500 transition-all shadow-sm">✕</button>
+          <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">👤</div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">{isEditModalOpen ? cur.modal.editTitle : cur.modal.createTitle}</h3>
               </div>
+              <button onClick={() => { setIsUserModalOpen(false); setIsEditModalOpen(false); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-rose-500 transition-all shadow-sm">✕</button>
+            </div>
 
-              {/* --- TAB SELECTOR INSIDE MODAL --- */}
-              <div className="flex border-b border-slate-100 px-8 py-2 bg-slate-50/20 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setModalTab('profile')}
-                  className={`pb-3 pt-2 px-4 text-xs font-black border-b-2 transition-all ${modalTab === 'profile' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
-                >
-                  {language === 'ar' ? 'الملف الشخصي' : 'User Profile'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalTab('permissions')}
-                  className={`pb-3 pt-2 px-4 text-xs font-black border-b-2 transition-all ${modalTab === 'permissions' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
-                >
-                  {language === 'ar' ? 'الصلاحيات والوصول' : 'Permissions & Access'}
-                </button>
-              </div>
+            {/* --- TAB SELECTOR INSIDE MODAL --- */}
+            <div className="flex border-b border-slate-100 px-8 py-2 bg-slate-50/20 gap-4">
+              <button
+                type="button"
+                onClick={() => setModalTab('profile')}
+                className={`pb-3 pt-2 px-4 text-xs font-black border-b-2 transition-all ${modalTab === 'profile' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
+              >
+                {language === 'ar' ? 'الملف الشخصي' : 'User Profile'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('permissions')}
+                className={`pb-3 pt-2 px-4 text-xs font-black border-b-2 transition-all ${modalTab === 'permissions' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
+              >
+                {language === 'ar' ? 'الصلاحيات والوصول' : 'Permissions & Access'}
+              </button>
+            </div>
 
-              <form onSubmit={isEditModalOpen ? handleUpdateUser : handleCreateUser} className={`p-10 space-y-8 overflow-y-auto custom-scrollbar ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                {modalTab === 'profile' ? (
-                  <>
-                    <div className="bg-indigo-50/50 p-6 rounded-[2.5rem] border border-indigo-100/50 space-y-4">
-                      <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest ml-1">{cur.modal.linkEmployee}</label>
-                      <select 
-                        value={isEditModalOpen ? (selectedUser?.linked_employee_id || '') : (newUser.linked_employee_id)} 
-                        onChange={(e) => handleEmployeeSelection(e.target.value, isEditModalOpen ? 'edit' : 'new')} 
-                        className="w-full p-4 bg-white border border-indigo-100 rounded-2xl font-black text-slate-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="">{cur.modal.linkPlaceholder}</option>
-                        {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.username}</label>
-                        <input type="text" value={isEditModalOpen ? selectedUser?.username : newUser.username} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, username: e.target.value}) : setNewUser({...newUser, username: e.target.value})} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                          {isEditModalOpen 
-                            ? (language === 'ar' ? 'كلمة مرور جديدة (اختياري)' : 'New Password (Optional)')
-                            : cur.modal.password
+            <form onSubmit={isEditModalOpen ? handleUpdateUser : handleCreateUser} className={`p-10 space-y-8 overflow-y-auto custom-scrollbar ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              {modalTab === 'profile' ? (
+                <>
+                  {/* --- PHOTO UPLOAD --- */}
+                  <div className="flex flex-col items-center gap-4 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-200/60 w-full mb-6">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'صورة المستخدم' : 'User Photo'}</label>
+                    <div className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-slate-900/10 hover:border-slate-900 transition-all flex items-center justify-center bg-white shadow-md">
+                      {(isEditModalOpen ? selectedUser?.photo : newUser?.photo) ? (
+                        <img 
+                          src={(isEditModalOpen ? selectedUser?.photo : newUser?.photo).startsWith('/') && !(isEditModalOpen ? selectedUser?.photo : newUser?.photo).startsWith('//')
+                            ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${isEditModalOpen ? selectedUser?.photo : newUser?.photo}`
+                            : (isEditModalOpen ? selectedUser?.photo : newUser?.photo)
                           }
-                        </label>
-                        <input 
-                          type="password" 
-                          value={isEditModalOpen ? (selectedUser?.password || '') : newUser.password} 
-                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, password: e.target.value}) : setNewUser({...newUser, password: e.target.value})} 
-                          required={!isEditModalOpen} 
-                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" 
+                          alt="Avatar Preview" 
+                          className="w-full h-full object-cover" 
                         />
+                      ) : (
+                        <span className="text-3xl">👤</span>
+                      )}
+                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer">
+                        <span className="text-white text-xs font-bold">{language === 'ar' ? 'رفع 📤' : 'Upload 📤'}</span>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.fullName}</label>
-                        <input type="text" value={isEditModalOpen ? selectedUser?.full_name : newUser.full_name} className="w-full p-4 bg-slate-100 border-none rounded-2xl font-black text-slate-500 outline-none" readOnly />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.email}</label>
-                        <input type="email" value={isEditModalOpen ? selectedUser?.email : newUser.email} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, email: e.target.value}) : setNewUser({...newUser, email: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'رقم الهاتف / الجوال' : 'Phone Number'}</label>
-                        <input type="text" value={isEditModalOpen ? (selectedUser?.phone || '') : (newUser.phone || '')} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, phone: e.target.value}) : setNewUser({...newUser, phone: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.status}</label>
-                        <select value={isEditModalOpen ? selectedUser?.status : newUser.status} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, status: e.target.value}) : setNewUser({...newUser, status: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                          <option value="Suspended">Suspended</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.role}</label>
-                        <select value={isEditModalOpen ? selectedUser?.role : newUser.role} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, role: e.target.value}) : setNewUser({...newUser, role: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
-                          <option value="Custom">Custom</option>
-                          {roles.map(role => <option key={role.id} value={role.name}>{role.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.dept}</label>
-                        <select value={isEditModalOpen ? selectedUser?.department : newUser.department} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, department: e.target.value}) : setNewUser({...newUser, department: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
-                          <option value="">{cur.modal.deptPlaceholder}</option>
-                          {cur.departments.map(d => <option key={d.id} value={d.id}>{d.icon} {d.name}</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                          {language === 'ar' ? 'اللغة الافتراضية للمستخدم' : 'Default User Language'}
-                        </label>
-                        <select 
-                          value={isEditModalOpen ? (selectedUser?.language || 'en') : (newUser.language || 'en')} 
-                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, language: e.target.value}) : setNewUser({...newUser, language: e.target.value})} 
-                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                          <option value="en">🇺🇸 English (EN)</option>
-                          <option value="ar">🇸🇦 Arabic (AR)</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                          {language === 'ar' ? 'مظهر واجهة المستخدم (المود)' : 'User Theme Mode'}
-                        </label>
-                        <select 
-                          value={isEditModalOpen ? (selectedUser?.theme_mode || 'light') : (newUser.theme_mode || 'light')} 
-                          onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, theme_mode: e.target.value}) : setNewUser({...newUser, theme_mode: e.target.value})} 
-                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                          <option value="light">☀️ Light Mode</option>
-                          <option value="dark">🌙 Dark Mode</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-950 p-8 rounded-[2.5rem] text-white flex items-center justify-between shadow-xl">
-                      <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                        <p className="font-black text-sm">{cur.modal.twoFactor}</p>
-                        <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-tight">{cur.modal.twoFactorDesc}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={isEditModalOpen ? (selectedUser?.two_factor || false) : newUser.two_factor} onChange={(e) => isEditModalOpen ? setSelectedUser({...selectedUser, two_factor: e.target.checked}) : setNewUser({...newUser, two_factor: e.target.checked})} className="sr-only peer" />
-                        <div className="w-14 h-7 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 shadow-inner"></div>
-                      </label>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-6">
-                    {/* --- COMPANIES SELECTION --- */}
-                    <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
-                      <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
-                        <span className="text-lg">🏢</span> {language === 'ar' ? 'الشركات المسموح دخولها' : 'Allowed Companies'}
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        <button 
-                          type="button"
-                          onClick={() => toggleFormUserCompany('ALL')}
-                          className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
-                        >
-                          {((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كل الشركات' : 'All Companies'}
-                        </button>
-                        {projectCompaniesList.map(comp => {
-                          const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes(comp);
-                          return (
-                            <button 
-                              type="button"
-                              key={comp}
-                              disabled={((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL')}
-                              onClick={() => toggleFormUserCompany(comp)}
-                              className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}
-                            >
-                              {isSelected ? '✓' : '+'} {comp}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* --- PROJECTS SELECTION --- */}
-                    <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
-                      <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
-                        <span className="text-lg">🏗️</span> {language === 'ar' ? 'المشاريع المسموح رؤيتها' : 'Allowed Projects'}
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        <button 
-                          type="button"
-                          onClick={() => toggleFormUserProject('ALL')}
-                          className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
-                        >
-                          {((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كل المشاريع' : 'All Projects'}
-                        </button>
-                        {projectsList.map(proj => {
-                          const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes(proj);
-                          return (
-                            <button 
-                              type="button"
-                              key={proj}
-                              disabled={((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL')}
-                              onClick={() => toggleFormUserProject(proj)}
-                              className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}`}
-                            >
-                              {isSelected ? '✓' : '+'} {proj}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* --- MODULES SELECTION --- */}
-                    <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
-                      <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
-                        <span className="text-lg">📦</span> {language === 'ar' ? 'الأنظمة الفرعية المسموحة' : 'Allowed Modules'}
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {matrixModules.map(mod => {
-                          const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.modules || []).includes(mod.id);
-                          return (
-                            <button 
-                              type="button"
-                              key={mod.id}
-                              onClick={() => toggleFormUserModule(mod.id)}
-                              className={`p-4 rounded-2xl border transition-all flex flex-col items-start gap-2 text-left ${isSelected ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
-                            >
-                              <span className="text-2xl">{mod.icon}</span>
-                              <span className="font-black text-[10px] leading-tight">{mod.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* --- GRANULAR ACTIONS MATRIX --- */}
-                    <div className="space-y-4">
-                      <h4 className="font-black text-slate-900 text-xs flex items-center gap-3 px-2">
-                        <span className="text-lg">🖥️</span> {language === 'ar' ? 'صلاحيات الشاشات والجداول الفرعية' : 'Screens & Tables Permissions'}
-                      </h4>
-                      <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        {matrixModules.filter(m => ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.modules || []).includes(m.id)).map(mod => (
-                          <div key={mod.id} className="bg-slate-50/30 p-4 rounded-3xl border border-slate-100 space-y-3">
-                            <h5 className="font-black text-slate-900 text-xs flex items-center gap-2 border-b border-slate-200/50 pb-2">
-                              <span className="text-sm">{mod.icon}</span> {mod.name}
-                            </h5>
-                            <div className="space-y-2">
-                              {mod.tables.map(table => {
-                                const currActions = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.tables || {})[table] || [];
-                                const allActionsSelected = ['read', 'create', 'update', 'delete', 'print', 'export'].every(a => currActions.includes(a));
-                                return (
-                                  <div key={table} className="bg-white p-4 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-slate-300 transition-all">
-                                    <span className="font-black text-slate-900 text-[11px] font-mono">{table}</span>
-                                    <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
-                                      {[
-                                        { id: 'read', label: '👁️', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', title: language === 'ar' ? 'رؤية' : 'View' },
-                                        { id: 'create', label: '➕', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', title: language === 'ar' ? 'اضافة' : 'Add' },
-                                        { id: 'update', label: '✏️', color: 'text-amber-600 bg-amber-50 border-amber-200', title: language === 'ar' ? 'تعديل' : 'Edit' },
-                                        { id: 'delete', label: '🗑️', color: 'text-rose-600 bg-rose-50 border-rose-200', title: language === 'ar' ? 'حذف' : 'Delete' },
-                                        { id: 'print', label: '🖨️', color: 'text-slate-600 bg-slate-50 border-slate-200', title: language === 'ar' ? 'طباعة' : 'Print' },
-                                        { id: 'export', label: '📤', color: 'text-blue-600 bg-blue-50 border-blue-200', title: language === 'ar' ? 'استخراج' : 'Export' }
-                                      ].map(act => {
-                                        const isChecked = currActions.includes(act.id);
-                                        return (
-                                          <button
-                                            type="button"
-                                            key={act.id}
-                                            onClick={() => toggleFormUserTableAction(table, act.id)}
-                                            title={act.title}
-                                            className={`w-8 h-8 rounded-lg font-black text-xs border transition-all flex items-center justify-center ${isChecked ? `${act.color} shadow-sm` : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-white'}`}
-                                          >
-                                            {act.label}
-                                          </button>
-                                        );
-                                      })}
-                                      <button 
-                                        type="button"
-                                        onClick={() => toggleFormUserAllTableActions(table, allActionsSelected)}
-                                        className="px-2 py-1 bg-slate-900 text-white rounded-lg font-black text-[8px] uppercase tracking-widest ml-1 hover:bg-slate-800 transition-all"
-                                      >
-                                        {allActionsSelected ? '✕' : '✓'}
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handlePhotoUpload(e, isEditModalOpen ? 'edit' : 'new')}
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                      />
                     </div>
                   </div>
-                )}
-                <button type="submit" className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xl hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">{cur.modal.save}</button>
-              </form>
-            </div>
-         </div>
+
+                  <div className="bg-indigo-50/50 p-6 rounded-[2.5rem] border border-indigo-100/50 space-y-4">
+                    <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest ml-1">{cur.modal.linkEmployee}</label>
+                    <select
+                      value={isEditModalOpen ? (selectedUser?.linked_employee_id || '') : (newUser.linked_employee_id)}
+                      onChange={(e) => handleEmployeeSelection(e.target.value, isEditModalOpen ? 'edit' : 'new')}
+                      className="w-full p-4 bg-white border border-indigo-100 rounded-2xl font-black text-slate-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">{cur.modal.linkPlaceholder}</option>
+                      {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.username}</label>
+                      <input type="text" value={isEditModalOpen ? selectedUser?.username : newUser.username} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, username: e.target.value }) : setNewUser({ ...newUser, username: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        {isEditModalOpen
+                          ? (language === 'ar' ? 'كلمة مرور جديدة (اختياري)' : 'New Password (Optional)')
+                          : cur.modal.password
+                        }
+                      </label>
+                      <input
+                        type="password"
+                        value={isEditModalOpen ? (selectedUser?.password || '') : newUser.password}
+                        onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, password: e.target.value }) : setNewUser({ ...newUser, password: e.target.value })}
+                        required={!isEditModalOpen}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.fullName}</label>
+                      <input type="text" value={isEditModalOpen ? selectedUser?.full_name : newUser.full_name} className="w-full p-4 bg-slate-100 border-none rounded-2xl font-black text-slate-500 outline-none" readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.email}</label>
+                      <input type="email" value={isEditModalOpen ? selectedUser?.email : newUser.email} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, email: e.target.value }) : setNewUser({ ...newUser, email: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'رقم الهاتف / الجوال' : 'Phone Number'}</label>
+                      <input type="text" value={isEditModalOpen ? (selectedUser?.phone || '') : (newUser.phone || '')} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, phone: e.target.value }) : setNewUser({ ...newUser, phone: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.status}</label>
+                      <select value={isEditModalOpen ? selectedUser?.status : newUser.status} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, status: e.target.value }) : setNewUser({ ...newUser, status: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Suspended">Suspended</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.role}</label>
+                      <select value={isEditModalOpen ? selectedUser?.role : newUser.role} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, role: e.target.value }) : setNewUser({ ...newUser, role: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
+                        <option value="Custom">Custom</option>
+                        {roles.map(role => <option key={role.id} value={role.name}>{role.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modal.dept}</label>
+                      <select value={isEditModalOpen ? selectedUser?.department : newUser.department} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, department: e.target.value }) : setNewUser({ ...newUser, department: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer">
+                        <option value="">{cur.modal.deptPlaceholder}</option>
+                        {cur.departments.map(d => <option key={d.id} value={d.id}>{d.icon} {d.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        {language === 'ar' ? 'اللغة الافتراضية للمستخدم' : 'Default User Language'}
+                      </label>
+                      <select
+                        value={isEditModalOpen ? (selectedUser?.language || 'en') : (newUser.language || 'en')}
+                        onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, language: e.target.value }) : setNewUser({ ...newUser, language: e.target.value })}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                      >
+                        <option value="en">🇺🇸 English (EN)</option>
+                        <option value="ar">🇸🇦 Arabic (AR)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        {language === 'ar' ? 'مظهر واجهة المستخدم (المود)' : 'User Theme Mode'}
+                      </label>
+                      <select
+                        value={isEditModalOpen ? (selectedUser?.theme_mode || 'light') : (newUser.theme_mode || 'light')}
+                        onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, theme_mode: e.target.value }) : setNewUser({ ...newUser, theme_mode: e.target.value })}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none cursor-pointer"
+                      >
+                        <option value="light">☀️ Light Mode</option>
+                        <option value="dark">🌙 Dark Mode</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950 p-8 rounded-[2.5rem] text-white flex items-center justify-between shadow-xl">
+                    <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                      <p className="font-black text-sm">{cur.modal.twoFactor}</p>
+                      <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-tight">{cur.modal.twoFactorDesc}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={isEditModalOpen ? (selectedUser?.two_factor || false) : newUser.two_factor} onChange={(e) => isEditModalOpen ? setSelectedUser({ ...selectedUser, two_factor: e.target.checked }) : setNewUser({ ...newUser, two_factor: e.target.checked })} className="sr-only peer" />
+                      <div className="w-14 h-7 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 shadow-inner"></div>
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-6">
+                  {/* --- COMPANIES SELECTION --- */}
+                  <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
+                    <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
+                      <span className="text-lg">🏢</span> {language === 'ar' ? 'الشركات المسموح دخولها' : 'Allowed Companies'}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleFormUserCompany('ALL')}
+                        className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
+                      >
+                        {((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كل الشركات' : 'All Companies'}
+                      </button>
+                      {projectCompaniesList.map(comp => {
+                        const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes(comp);
+                        return (
+                          <button
+                            type="button"
+                            key={comp}
+                            disabled={((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL')}
+                            onClick={() => toggleFormUserCompany(comp)}
+                            className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.companies || []).includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                          >
+                            {isSelected ? '✓' : '+'} {comp}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* --- PROJECTS SELECTION --- */}
+                  <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
+                    <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
+                      <span className="text-lg">🏗️</span> {language === 'ar' ? 'المشاريع المسموح رؤيتها' : 'Allowed Projects'}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleFormUserProject('ALL')}
+                        className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
+                      >
+                        {((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? '✓' : '+'} {language === 'ar' ? 'كل المشاريع' : 'All Projects'}
+                      </button>
+                      {projectsList.map(proj => {
+                        const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes(proj);
+                        return (
+                          <button
+                            type="button"
+                            key={proj}
+                            disabled={((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL')}
+                            onClick={() => toggleFormUserProject(proj)}
+                            className={`px-4 py-2 rounded-xl font-black text-xs border transition-all flex items-center gap-1.5 ${((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.projects || []).includes('ALL') ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                          >
+                            {isSelected ? '✓' : '+'} {proj}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* --- MODULES SELECTION --- */}
+                  <div className="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4">
+                    <h4 className="font-black text-slate-900 text-xs flex items-center gap-3">
+                      <span className="text-lg">📦</span> {language === 'ar' ? 'الأنظمة الفرعية المسموحة' : 'Allowed Modules'}
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {matrixModules.map(mod => {
+                        const isSelected = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.modules || []).includes(mod.id);
+                        return (
+                          <button
+                            type="button"
+                            key={mod.id}
+                            onClick={() => toggleFormUserModule(mod.id)}
+                            className={`p-4 rounded-2xl border transition-all flex flex-col items-start gap-2 text-left ${isSelected ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}
+                          >
+                            <span className="text-2xl">{mod.icon}</span>
+                            <span className="font-black text-[10px] leading-tight">{mod.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* --- GRANULAR ACTIONS MATRIX --- */}
+                  <div className="space-y-4">
+                    <h4 className="font-black text-slate-900 text-xs flex items-center gap-3 px-2">
+                      <span className="text-lg">🖥️</span> {language === 'ar' ? 'صلاحيات الشاشات والجداول الفرعية' : 'Screens & Tables Permissions'}
+                    </h4>
+                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      {matrixModules.filter(m => ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.modules || []).includes(m.id)).map(mod => (
+                        <div key={mod.id} className="bg-slate-50/30 p-4 rounded-3xl border border-slate-100 space-y-3">
+                          <h5 className="font-black text-slate-900 text-xs flex items-center gap-2 border-b border-slate-200/50 pb-2">
+                            <span className="text-sm">{mod.icon}</span> {mod.name}
+                          </h5>
+                          <div className="space-y-2">
+                            {mod.tables.map(table => {
+                              const currActions = ((isEditModalOpen ? selectedUser?.permissions : newUser.permissions)?.tables || {})[table] || [];
+                              const allActionsSelected = ['read', 'create', 'update', 'delete', 'print', 'export'].every(a => currActions.includes(a));
+                              return (
+                                <div key={table} className="bg-white p-4 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-slate-300 transition-all">
+                                  <span className="font-black text-slate-900 text-[11px] font-mono">{table}</span>
+                                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
+                                    {[
+                                      { id: 'read', label: '👁️', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', title: language === 'ar' ? 'رؤية' : 'View' },
+                                      { id: 'create', label: '➕', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', title: language === 'ar' ? 'اضافة' : 'Add' },
+                                      { id: 'update', label: '✏️', color: 'text-amber-600 bg-amber-50 border-amber-200', title: language === 'ar' ? 'تعديل' : 'Edit' },
+                                      { id: 'delete', label: '🗑️', color: 'text-rose-600 bg-rose-50 border-rose-200', title: language === 'ar' ? 'حذف' : 'Delete' },
+                                      { id: 'print', label: '🖨️', color: 'text-slate-600 bg-slate-50 border-slate-200', title: language === 'ar' ? 'طباعة' : 'Print' },
+                                      { id: 'export', label: '📤', color: 'text-blue-600 bg-blue-50 border-blue-200', title: language === 'ar' ? 'استخراج' : 'Export' }
+                                    ].map(act => {
+                                      const isChecked = currActions.includes(act.id);
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={act.id}
+                                          onClick={() => toggleFormUserTableAction(table, act.id)}
+                                          title={act.title}
+                                          className={`w-8 h-8 rounded-lg font-black text-xs border transition-all flex items-center justify-center ${isChecked ? `${act.color} shadow-sm` : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-white'}`}
+                                        >
+                                          {act.label}
+                                        </button>
+                                      );
+                                    })}
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleFormUserAllTableActions(table, allActionsSelected)}
+                                      className="px-2 py-1 bg-slate-900 text-white rounded-lg font-black text-[8px] uppercase tracking-widest ml-1 hover:bg-slate-800 transition-all"
+                                    >
+                                      {allActionsSelected ? '✕' : '✓'}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <button type="submit" className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xl hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">{cur.modal.save}</button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

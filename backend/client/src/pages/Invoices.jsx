@@ -17,7 +17,8 @@ export default function Invoices() {
     invoice_no: '', client_id: '', project_id: '',
     issue_date: new Date().toISOString().split('T')[0],
     due_date: '', tax_amount: 0, notes: '', source_module: 'General',
-    items: [{ description: '', quantity: 1, unit_price: 0 }]
+    items: [{ description: '', quantity: 1, unit_price: 0 }],
+    company: localStorage.getItem('active_company') || ''
   });
 
   const t = {
@@ -142,9 +143,13 @@ export default function Invoices() {
         api.get('/table/clients?limit=100'),
         api.get('/table/projects?limit=100')
       ]);
-      setInvoices(invRes.data.data || []);
-      setClients(cliRes.data.data || []);
-      setProjects(projRes.data.data || []);
+      const activeComp = localStorage.getItem('active_company') || '';
+      const filteredInvoices = (invRes.data.data || []).filter(i => !i.company || i.company.toLowerCase() === activeComp.toLowerCase());
+      const filteredClients = (cliRes.data.data || []).filter(c => !c.company || c.company.toLowerCase() === activeComp.toLowerCase());
+      const filteredProjects = (projRes.data.data || []).filter(p => !p.company || p.company.toLowerCase() === activeComp.toLowerCase());
+      setInvoices(filteredInvoices);
+      setClients(filteredClients);
+      setProjects(filteredProjects);
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
   };

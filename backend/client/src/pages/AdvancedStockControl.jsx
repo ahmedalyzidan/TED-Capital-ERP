@@ -554,7 +554,20 @@ function AdvancedStockControl({ isSubcomponent }) {
     setUom(item.uom || item.unit || (isPharma ? 'علبة' : 'قطعة'));
     setMinLevel(item.min_stock_level || '10');
     setVelocity(item.velocity_flag || 'FAST');
-    setCompanyId(item.company_id || '');
+    
+    // Auto-select company on edit if activeComp exists
+    const activeCompVal = localStorage.getItem('active_company') || '';
+    if (activeCompVal) {
+      const matchedCompany = companies.find(c => 
+        c.name.toLowerCase().trim() === activeCompVal.toLowerCase().trim() ||
+        activeCompVal.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+        c.name.toLowerCase().trim().includes(activeCompVal.toLowerCase().trim())
+      );
+      setCompanyId(matchedCompany ? matchedCompany.id : (item.company_id || ''));
+    } else {
+      setCompanyId(item.company_id || '');
+    }
+    
     setActiveSubstance(item.active_substance || '');
     setDosageForm(item.dosage_form || 'أقراص (Tablets)');
     setStorageTemp(item.storage_temp || '20-25°C (غرفة)');
@@ -678,6 +691,17 @@ function AdvancedStockControl({ isSubcomponent }) {
 
   // Filtered items
   const filteredItems = items.filter(item => {
+    if (activeComp) {
+      const matchedCompany = companies.find(c => 
+        c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+        activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+        c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+      );
+      if (matchedCompany && item.company_id && Number(item.company_id) !== Number(matchedCompany.id)) {
+        return false;
+      }
+    }
+
     const matchWh = selectedWarehouse === 'ALL' || 
       (isPharma ? (
         (selectedWarehouse === 'MAIN' && item.warehouse_display === 'مستودع الأدوية الرئيسي') ||
@@ -699,11 +723,35 @@ function AdvancedStockControl({ isSubcomponent }) {
     return matchWh && matchVel && matchQuery;
   });
 
+  // Filtered Sales History for current company
+  const filteredSalesHistory = salesHistory.filter(item => {
+    if (activeComp) {
+      const matchedCompany = companies.find(c => 
+        c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+        activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+        c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+      );
+      if (matchedCompany && item.company_id && Number(item.company_id) !== Number(matchedCompany.id)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   // Stats
-  const totalValuation = items.reduce((sum, i) => sum + i.total_value, 0);
-  const fastMovingCount = items.filter(i => i.velocity_flag === 'FAST').length;
-  const slowMovingCount = items.filter(i => i.velocity_flag === 'SLOW').length;
-  const obsoleteCount = items.filter(i => i.velocity_flag === 'OBSOLETE').length;
+  const itemsForStats = activeComp ? items.filter(item => {
+    const matchedCompany = companies.find(c => 
+      c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+      activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+      c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+    );
+    return !matchedCompany || !item.company_id || Number(item.company_id) === Number(matchedCompany.id);
+  }) : items;
+
+  const totalValuation = itemsForStats.reduce((sum, i) => sum + i.total_value, 0);
+  const fastMovingCount = itemsForStats.filter(i => i.velocity_flag === 'FAST').length;
+  const slowMovingCount = itemsForStats.filter(i => i.velocity_flag === 'SLOW').length;
+  const obsoleteCount = itemsForStats.filter(i => i.velocity_flag === 'OBSOLETE').length;
 
   return (
     <div className={isSubcomponent ? "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white py-4" : "font-sans text-slate-900 selection:bg-indigo-500 selection:text-white p-8 lg:p-12 max-w-[1600px] mx-auto"} dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -1245,7 +1293,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 <div>
                   <p className="text-xs font-black text-indigo-300 mb-2 uppercase tracking-widest">{language === 'ar' ? 'إجمالي قيمة المبيعات والصرف' : 'Total Dispensed/Sales Value'}</p>
                   <h3 className="text-4xl lg:text-5xl font-black font-mono text-white">
-                    {salesHistory.reduce((sum, s) => sum + (Number(s.net_amount) || Number(s.qty) * Number(s.sell_price)), 0).toLocaleString()} 
+                    {filteredSalesHistory.reduce((sum, s) => sum + (Number(s.net_amount) || Number(s.qty) * Number(s.sell_price)), 0).toLocaleString()} 
                     <span className="text-lg font-bold text-slate-400"> {language === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </h3>
                 </div>
@@ -1261,7 +1309,7 @@ function AdvancedStockControl({ isSubcomponent }) {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-xs font-black text-emerald-600 mb-1">{language === 'ar' ? 'إجمالي الحركات المحققة' : 'Total Transactions'}</p>
-                  <h3 className="text-4xl font-black text-slate-900 font-mono">{salesHistory.length}</h3>
+                  <h3 className="text-4xl font-black text-slate-900 font-mono">{filteredSalesHistory.length}</h3>
                 </div>
                 <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
                   📈
@@ -1276,7 +1324,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                 <div>
                   <p className="text-xs font-black text-indigo-600 mb-1">{language === 'ar' ? 'صافي الأرباح المخزنية' : 'Net Integrated Margins'}</p>
                   <h3 className="text-4xl font-black text-slate-900 font-mono">
-                    {salesHistory.reduce((sum, s) => sum + (Number(s.qty) * (Number(s.sell_price) - Number(s.buy_price || 0))), 0).toLocaleString()}
+                    {filteredSalesHistory.reduce((sum, s) => sum + (Number(s.qty) * (Number(s.sell_price) - Number(s.buy_price || 0))), 0).toLocaleString()}
                     <span className="text-xs text-slate-400"> EGP</span>
                   </h3>
                 </div>
@@ -1316,7 +1364,7 @@ function AdvancedStockControl({ isSubcomponent }) {
               </h3>
               <span className="text-xs font-bold text-slate-500">
                 {language === 'ar' ? 'العدد:' : 'Count:'} {
-                  salesHistory.filter(item =>
+                  filteredSalesHistory.filter(item =>
                     !salesSearch ||
                     item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
                     item.customer_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
@@ -1353,7 +1401,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                         </td>
                       </tr>
                     ))
-                  ) : salesHistory.filter(item =>
+                  ) : filteredSalesHistory.filter(item =>
                     !salesSearch ||
                     item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
                     item.customer_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
@@ -1366,7 +1414,7 @@ function AdvancedStockControl({ isSubcomponent }) {
                       </td>
                     </tr>
                   ) : (
-                    salesHistory.filter(item =>
+                    filteredSalesHistory.filter(item =>
                       !salesSearch ||
                       item.item_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
                       item.customer_name?.toLowerCase().includes(salesSearch.toLowerCase()) ||
@@ -1466,7 +1514,8 @@ function AdvancedStockControl({ isSubcomponent }) {
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'الشركة المالكة للصنف (Owning Company)' : 'Owning Company'} <span className="text-rose-500">*</span></label>
                   <select 
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    disabled={!!activeComp}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all disabled:opacity-75 disabled:cursor-not-allowed"
                     value={companyId}
                     onChange={(e) => setCompanyId(e.target.value)}
                   >

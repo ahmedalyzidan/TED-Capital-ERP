@@ -260,19 +260,75 @@ export default function RealEstate() {
         api.get('/dropdowns').catch(() => ({ data: { projects_dd: [] } }))
       ]);
 
-      setProjects(projRes.data?.data || projRes.data || []);
+      const activeComp = localStorage.getItem('active_company') || '';
+      const activeLower = activeComp.toLowerCase();
+
+      let dbRealEstateProjects = projRes.data?.data || projRes.data || [];
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        dbRealEstateProjects = dbRealEstateProjects.filter(p => {
+          const projCompLower = (p.company || '').toLowerCase();
+          if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+          if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+          if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+          if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+          return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+        });
+      }
+      setProjects(dbRealEstateProjects);
       
       const mProj = mainProjRes.data?.data || mainProjRes.data || [];
       const ddProj = dropdownsRes.data?.projects_dd || [];
       const combinedProjects = [...mProj, ...ddProj];
       const uniqueProjects = Array.from(new Map(combinedProjects.map(item => [item.name, item])).values());
-      setMainProjects(uniqueProjects);
+      
+      // Filter mainProjects by active company as well
+      const filteredMainProjects = uniqueProjects.filter(p => {
+        if (!activeComp || ['all', 'كل الشركات', 'all companies'].includes(activeLower)) return true;
+        const projCompLower = (p.company || '').toLowerCase();
+        if (activeLower.includes('ted') && projCompLower.includes('ted')) return true;
+        if (activeLower.includes('design') && projCompLower.includes('design')) return true;
+        if (activeLower.includes('master') && projCompLower.includes('master')) return true;
+        if (activeLower.includes('prime') && (projCompLower.includes('prime') || projCompLower.includes('pharma'))) return true;
+        return projCompLower.includes(activeLower) || activeLower.includes(projCompLower);
+      });
+      setMainProjects(filteredMainProjects);
 
-      setUnits(unitRes.data?.data || unitRes.data || []);
-      setContracts(contRes.data?.data || contRes.data || []);
-      setInstallments(instRes.data?.data || instRes.data || []);
+      const resolvedProjectIds = new Set(dbRealEstateProjects.map(p => Number(p.id)));
+
+      let dbUnits = unitRes.data?.data || unitRes.data || [];
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        dbUnits = dbUnits.filter(u => resolvedProjectIds.has(Number(u.project_id)));
+      }
+      setUnits(dbUnits);
+
+      let dbContracts = contRes.data?.data || contRes.data || [];
+      const resolvedUnitIds = new Set(dbUnits.map(u => Number(u.id)));
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        dbContracts = dbContracts.filter(c => resolvedUnitIds.has(Number(c.unit_id)));
+      }
+      setContracts(dbContracts);
+
+      let dbInstallments = instRes.data?.data || instRes.data || [];
+      const resolvedContractIds = new Set(dbContracts.map(c => Number(c.id)));
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        dbInstallments = dbInstallments.filter(i => resolvedContractIds.has(Number(i.contract_id)));
+      }
+      setInstallments(dbInstallments);
+
       setStaffList(staffRes.data?.data || staffRes.data || []);
-      setCustomers(custRes.data?.data || custRes.data || []);
+      
+      let dbCustomers = custRes.data?.data || custRes.data || [];
+      if (activeComp && !['all', 'كل الشركات', 'all companies'].includes(activeLower)) {
+        dbCustomers = dbCustomers.filter(c => {
+          const cCompLower = (c.company_name || c.company || '').toLowerCase();
+          if (activeLower.includes('ted') && cCompLower.includes('ted')) return true;
+          if (activeLower.includes('design') && cCompLower.includes('design')) return true;
+          if (activeLower.includes('master') && cCompLower.includes('master')) return true;
+          if (activeLower.includes('prime') && (cCompLower.includes('prime') || cCompLower.includes('pharma'))) return true;
+          return cCompLower.includes(activeLower) || activeLower.includes(cCompLower) || !cCompLower;
+        });
+      }
+      setCustomers(dbCustomers);
 
       // Fetch rental contracts & invoices
       try {

@@ -454,16 +454,20 @@ export default function PharmaSupplyChain() {
             api.get('/dynamic/table/currency_rates?limit=50')
          ]);
 
-         setShipments(resShip.data?.data || []);
+         const activeComp = localStorage.getItem('active_company') || '';
+         const filteredShipments = (resShip.data?.data || []).filter(s => !s.company || s.company.toLowerCase() === activeComp.toLowerCase());
+         setShipments(filteredShipments);
          setCurrencies(resCurr.data?.data || []);
 
-         let allItems = resItems.data?.data || [];
+         const filteredItems = (resItems.data?.data || []).filter(i => !i.company || i.company.toLowerCase() === activeComp.toLowerCase());
+         let allItems = filteredItems;
          if (selectedShipmentId) {
             allItems = allItems.filter(i => Number(i.shipment_id) === Number(selectedShipmentId));
          }
          setItems(allItems);
 
-         let allExp = resExp.data?.data || [];
+         const filteredExp = (resExp.data?.data || []).filter(e => !e.company || e.company.toLowerCase() === activeComp.toLowerCase());
+         let allExp = filteredExp;
          if (selectedShipmentId) {
             allExp = allExp.filter(e => Number(e.shipment_id) === Number(selectedShipmentId));
          }
@@ -598,18 +602,17 @@ export default function PharmaSupplyChain() {
    const handleCreateShipment = async (e) => {
       e.preventDefault();
       try {
+         const activeComp = localStorage.getItem('active_company') || 'PRIMEMED PHARMA';
          if (editMode && editRecordId) {
             await api.put(`/dynamic/update/pharma_shipments/${editRecordId}`, {
                ...shipmentForm,
-               company: 'PRIMEMED PHARMA',
-               company_id: 4
+               company: activeComp
             });
             alert(t.alerts.shipEditSuccess);
          } else {
             await api.post('/dynamic/add/pharma_shipments', {
                ...shipmentForm,
-               company: 'PRIMEMED PHARMA',
-               company_id: 4
+               company: activeComp
             });
             alert(t.alerts.shipAddSuccess);
          }
@@ -625,11 +628,13 @@ export default function PharmaSupplyChain() {
    const handleCreateItem = async (e) => {
       e.preventDefault();
       try {
+         const activeComp = localStorage.getItem('active_company') || '';
+         const payload = { ...itemForm, company: activeComp };
          if (editMode && editRecordId) {
-            await api.put(`/dynamic/update/shipment_items/${editRecordId}`, itemForm);
+            await api.put(`/dynamic/update/shipment_items/${editRecordId}`, payload);
             alert(t.alerts.itemEditSuccess);
          } else {
-            await api.post('/dynamic/add/shipment_items', itemForm);
+            await api.post('/dynamic/add/shipment_items', payload);
             alert(t.alerts.itemAddSuccess);
          }
          setIsItemModalOpen(false);
@@ -644,11 +649,13 @@ export default function PharmaSupplyChain() {
    const handleCreateExpense = async (e) => {
       e.preventDefault();
       try {
+         const activeComp = localStorage.getItem('active_company') || '';
+         const payload = { ...expenseForm, company: activeComp };
          if (editMode && editRecordId) {
-            await api.put(`/dynamic/update/shipment_expenses/${editRecordId}`, expenseForm);
+            await api.put(`/dynamic/update/shipment_expenses/${editRecordId}`, payload);
             alert(t.alerts.expEditSuccess);
          } else {
-            await api.post('/dynamic/add/shipment_expenses', expenseForm);
+            await api.post('/dynamic/add/shipment_expenses', payload);
             alert(t.alerts.expAddSuccess);
          }
          setIsExpenseModalOpen(false);

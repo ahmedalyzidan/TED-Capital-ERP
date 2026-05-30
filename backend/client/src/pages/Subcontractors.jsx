@@ -7,6 +7,7 @@ import SubcontractorAnalytics from '../components/SubcontractorAnalytics';
 export default function Subcontractors() {
   const { language, theme } = useLanguage();
   const isDark = theme === 'dark';
+  const activeCompany = localStorage.getItem('active_company') || '';
   const [activeTab, setActiveTab] = useState('subs');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -278,6 +279,15 @@ export default function Subcontractors() {
 
   const openSubModal = () => {
     fetchProjects();
+    setSubForm({
+      name: '',
+      phone: '',
+      project_id: '',
+      company: localStorage.getItem('active_company') || '',
+      tax_id: '',
+      license_number: '',
+      insurance_expiry: ''
+    });
     setIsSubModalOpen(true);
   };
 
@@ -1183,7 +1193,16 @@ export default function Subcontractors() {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
-              <input type="text" name="company" value={subForm.company} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+              <input 
+                type="text" 
+                name="company" 
+                value={subForm.company} 
+                onChange={handleSubChange} 
+                disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${
+                  activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                }`}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1244,7 +1263,16 @@ export default function Subcontractors() {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
-              <input type="text" name="company" value={editSubForm.company} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+              <input 
+                type="text" 
+                name="company" 
+                value={editSubForm.company} 
+                onChange={handleEditSubChange} 
+                disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${
+                  activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                }`}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

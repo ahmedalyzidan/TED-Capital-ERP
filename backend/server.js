@@ -99,6 +99,7 @@ const initDB = async () => {
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_company VARCHAR(255)");
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_project VARCHAR(255)");
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS primary_org_unit_id INTEGER");
+        await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS photo VARCHAR(500)");
 
         const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@tedcapital.com';
         const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD || 'admin123';

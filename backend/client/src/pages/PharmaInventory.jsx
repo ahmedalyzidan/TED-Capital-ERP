@@ -255,12 +255,34 @@ function PharmaInventory() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Fetch companies first to ensure accurate company matching
+      let compData = [];
+      try {
+        const compRes = await api.get('/dynamic/table/companies?limit=100');
+        compData = compRes.data?.data || [];
+        setCompanies(compData);
+      } catch (err) {
+        console.error('Error fetching companies in fetchData', err);
+      }
+
       // Fetch inventory items
       const res = await api.get('/dynamic/table/inventory_items?limit=500');
       const rawItems = res.data?.data || [];
 
       // Filter or hydrate Pharma items
       let pharmaItems = rawItems.filter(i => i.category === 'PHARMA' || i.category?.includes('أدوية') || i.category?.includes('مواد عامة') || i.category?.includes('مواد طبية') || i.warehouse?.includes('مخزن الصيدليات') || i.warehouse?.includes('المستودع الرئيسي') || i.warehouse?.includes('المخزن الرئيسي') || i.item_name?.includes('دواء') || i.item_name?.includes('حقن') || i.item_name?.includes('أقراص') || i.item_name?.includes('فيال'));
+
+      const activeComp = localStorage.getItem('active_company') || '';
+      if (activeComp) {
+        const matchedCompany = compData.find(c => 
+          c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+          activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+          c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+        );
+        if (matchedCompany) {
+          pharmaItems = pharmaItems.filter(i => !i.company_id || Number(i.company_id) === Number(matchedCompany.id));
+        }
+      }
 
       // Map database items first and extract metadata attributes
       let mappedPharma = pharmaItems.map(item => {
@@ -381,22 +403,74 @@ function PharmaInventory() {
       // Fetch compliance logs
       try {
         const narcRes = await api.get('/dynamic/table/narcotics_custody_ledger');
-        if (narcRes.data?.data) setNarcoticsLogs(narcRes.data.data);
+        if (narcRes.data?.data) {
+          let logs = narcRes.data.data;
+          if (activeComp) {
+            const matchedCompany = compData.find(c => 
+              c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+              activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+              c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+            );
+            if (matchedCompany) {
+              logs = logs.filter(l => !l.company_id || Number(l.company_id) === Number(matchedCompany.id));
+            }
+          }
+          setNarcoticsLogs(logs);
+        }
       } catch (e) { /* silent fallback */ }
 
       try {
         const coldRes = await api.get('/dynamic/table/cold_chain_logs');
-        if (coldRes.data?.data) setColdChainLogs(coldRes.data.data);
+        if (coldRes.data?.data) {
+          let logs = coldRes.data.data;
+          if (activeComp) {
+            const matchedCompany = compData.find(c => 
+              c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+              activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+              c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+            );
+            if (matchedCompany) {
+              logs = logs.filter(l => !l.company_id || Number(l.company_id) === Number(matchedCompany.id));
+            }
+          }
+          setColdChainLogs(logs);
+        }
       } catch (e) { /* silent fallback */ }
 
       try {
         const dispRes = await api.get('/dynamic/table/stock_disposal_protocols');
-        if (dispRes.data?.data) setDisposalProtocols(dispRes.data.data);
+        if (dispRes.data?.data) {
+          let logs = dispRes.data.data;
+          if (activeComp) {
+            const matchedCompany = compData.find(c => 
+              c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+              activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+              c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+            );
+            if (matchedCompany) {
+              logs = logs.filter(l => !l.company_id || Number(l.company_id) === Number(matchedCompany.id));
+            }
+          }
+          setDisposalProtocols(logs);
+        }
       } catch (e) { /* silent fallback */ }
 
       try {
         const salesRes = await api.get('/dynamic/table/inventory_sales');
-        if (salesRes.data?.data) setSalesLogs(salesRes.data.data);
+        if (salesRes.data?.data) {
+          let logs = salesRes.data.data;
+          if (activeComp) {
+            const matchedCompany = compData.find(c => 
+              c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
+              activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
+              c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
+            );
+            if (matchedCompany) {
+              logs = logs.filter(l => !l.company_id || Number(l.company_id) === Number(matchedCompany.id));
+            }
+          }
+          setSalesLogs(logs);
+        }
       } catch (e) { /* silent fallback */ }
 
       try {

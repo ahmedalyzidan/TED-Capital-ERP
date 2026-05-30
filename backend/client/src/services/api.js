@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://46.224.144.166/api',
+  baseURL: typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'http://localhost:4000/api' : 'http://46.224.144.166/api',
   timeout: 20000,
 });
 

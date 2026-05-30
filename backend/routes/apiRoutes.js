@@ -161,7 +161,7 @@ router.get('/users', async (req, res) => {
 
 router.get('/table/users', async (req, res) => {
     try {
-        const result = await pool.query("SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, created_at FROM users ORDER BY id ASC");
+        const result = await pool.query("SELECT id, username, email, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, photo, created_at FROM users ORDER BY id ASC");
         res.json({ data: result.rows, total: result.rows.length });
     } catch (err) {
         console.error("Users Table Fetch Error:", err);
@@ -170,14 +170,14 @@ router.get('/table/users', async (req, res) => {
 });
 
 router.put('/users/:id', requireAdmin, async (req, res) => {
-    const { username, email, password, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, two_factor } = req.body;
+    const { username, email, password, role, status, permissions, full_name, phone, department, employee_id, linked_employee_id, two_factor, photo } = req.body;
     try {
         const bcrypt = require('bcryptjs');
         if (password) {
             const hash = await bcrypt.hash(password, 10);
-            await pool.query("UPDATE users SET username=$1, email=$2, password_hash=$3, role=$4, status=$5, permissions=$6, full_name=$7, phone=$8, department=$9, employee_id=$10, linked_employee_id=$11, two_factor=$12 WHERE id=$13", [username, email, hash, role, status, JSON.stringify(permissions || {}), full_name, phone, department, employee_id, linked_employee_id, two_factor, req.params.id]);
+            await pool.query("UPDATE users SET username=$1, email=$2, password_hash=$3, role=$4, status=$5, permissions=$6, full_name=$7, phone=$8, department=$9, employee_id=$10, linked_employee_id=$11, two_factor=$12, photo=$13 WHERE id=$14", [username, email, hash, role, status, JSON.stringify(permissions || {}), full_name, phone, department, employee_id, linked_employee_id, two_factor, photo, req.params.id]);
         } else {
-            await pool.query("UPDATE users SET username=$1, email=$2, role=$3, status=$4, permissions=$5, full_name=$6, phone=$7, department=$8, employee_id=$9, linked_employee_id=$10, two_factor=$11 WHERE id=$12", [username, email, role, status, JSON.stringify(permissions || {}), full_name, phone, department, employee_id, linked_employee_id, two_factor, req.params.id]);
+            await pool.query("UPDATE users SET username=$1, email=$2, role=$3, status=$4, permissions=$5, full_name=$6, phone=$7, department=$8, employee_id=$9, linked_employee_id=$10, two_factor=$11, photo=$12 WHERE id=$13", [username, email, role, status, JSON.stringify(permissions || {}), full_name, phone, department, employee_id, linked_employee_id, two_factor, photo, req.params.id]);
         }
         await logAudit(req.user.username, 'UPDATE_USER', 'users', req.params.id, `Updated user ${username}`);
         res.json({ success: true });
@@ -1022,6 +1022,53 @@ router.post('/add/:type', async (req, res) => {
                 }
             } else if (!data.item_desc) {
                 data.item_desc = 'Unspecified Work';
+            }
+        }
+
+        if (type === 'subcontractors' && data.company) {
+            const projCheck = await client.query("SELECT id FROM projects WHERE name = $1 LIMIT 1", [data.company]);
+            if (projCheck.rows.length === 0) {
+                const projectController = require('../controllers/projectController');
+                const newProjSerial = await projectController.generateProjectSerial();
+                
+                const selectedCompanyStr = req.user?.selectedCompany || req.headers['x-selected-company'] || '';
+                let activeCompanyId = null;
+                let activeCompanyName = null;
+
+                if (selectedCompanyStr && !['all', 'كل الشركات', 'all companies'].includes(selectedCompanyStr.toLowerCase())) {
+                    const nameLower = selectedCompanyStr.toLowerCase();
+                    if (nameLower.includes('design') || nameLower.includes('ديزاين')) {
+                        activeCompanyId = 2; activeCompanyName = 'Design Concept';
+                    } else if (nameLower.includes('master') || nameLower.includes('ماستر')) {
+                        activeCompanyId = 3; activeCompanyName = 'Master Builder';
+                    } else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) {
+                        activeCompanyId = 4; activeCompanyName = 'PRIMEMED PHARMA';
+                    } else if (nameLower.includes('ted') || nameLower.includes('تيد')) {
+                        activeCompanyId = 1; activeCompanyName = 'TED Capital';
+                    }
+                }
+
+                if (!activeCompanyName && req.user?.linkedCompany) {
+                    const nameLower = req.user.linkedCompany.toLowerCase();
+                    if (nameLower.includes('design') || nameLower.includes('ديزاين')) { activeCompanyId = 2; activeCompanyName = 'Design Concept'; }
+                    else if (nameLower.includes('master') || nameLower.includes('ماستر')) { activeCompanyId = 3; activeCompanyName = 'Master Builder'; }
+                    else if (nameLower.includes('prime') || nameLower.includes('فارما') || nameLower.includes('بريم')) { activeCompanyId = 4; activeCompanyName = 'PRIMEMED PHARMA'; }
+                    else if (nameLower.includes('ted') || nameLower.includes('تيد')) { activeCompanyId = 1; activeCompanyName = 'TED Capital'; }
+                }
+
+                if (!activeCompanyName) {
+                    activeCompanyId = 1;
+                    activeCompanyName = 'TED Capital';
+                }
+
+                const newProjRes = await client.query(
+                    `INSERT INTO projects (name, company, company_id, budget, start_date, status, project_serial)
+                     VALUES ($1, $2, $3, 0, CURRENT_DATE, 'Active', $4) RETURNING id`,
+                    [data.company, activeCompanyName, activeCompanyId, newProjSerial]
+                );
+                data.project_id = newProjRes.rows[0].id;
+            } else {
+                data.project_id = projCheck.rows[0].id;
             }
         }
 
