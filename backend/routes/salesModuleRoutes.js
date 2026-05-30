@@ -638,6 +638,32 @@ router.post('/orders/:id/invoice', async (req, res) => {
     const so = soRes.rows[0];
     if (so.status === 'Invoiced') throw new Error("تم إصدار فاتورة لأمر البيع هذا بالفعل.");
 
+    const items = typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []);
+    
+    // Check Invoicing Policies
+    for (const item of items) {
+      const itemInfo = await client.query(
+        "SELECT product_type, invoicing_policy FROM inventory_items WHERE item_name ILIKE $1 LIMIT 1",
+        [item.name]
+      );
+      if (itemInfo.rows.length > 0) {
+        const { product_type, invoicing_policy } = itemInfo.rows[0];
+        if (invoicing_policy === 'Delivered' && product_type === 'Storable') {
+          const dnRes = await client.query(
+            `SELECT COALESCE(SUM((elem->>'qty')::numeric), 0) as delivered_qty 
+             FROM sales_delivery_notes dn, jsonb_array_elements(dn.items) elem 
+             WHERE dn.order_id = $1 AND dn.status = 'Delivered' AND elem->>'name' ILIKE $2`,
+            [soId, item.name]
+          );
+          const deliveredQty = parseFloat(dnRes.rows[0]?.delivered_qty || 0);
+          const orderedQty = parseFloat(item.qty || 0);
+          if (deliveredQty < orderedQty) {
+            throw new Error(`لا يمكن الفوترة بناءً على الكميات المستلمة فقط. المنتج "${item.name}" تم تسليم ${deliveredQty} من أصل ${orderedQty}.`);
+          }
+        }
+      }
+    }
+
     // 2. Create Sales Invoice
     const invNum = `INV-${Date.now().toString(36).toUpperCase()}`;
     const commRate = parseFloat(so.commission_rate) || 0;
@@ -658,27 +684,49 @@ router.post('/orders/:id/invoice', async (req, res) => {
     // 3. Deduct Stock Levels & Post COGS (ONLY IF Inventory)
     const AccountingService = require('../services/accountingService');
     if ((so.sales_type || 'Inventory') === 'Inventory') {
-      const items = typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []);
       for (const item of items) {
         const qty = parseFloat(item.qty) || 0;
         if (qty <= 0) continue;
 
         const itemRes = await client.query(
-          `SELECT id, remaining_qty, buy_price, avg_cost, item_name FROM inventory_items 
-           WHERE item_name ILIKE $1 AND remaining_qty >= $2 LIMIT 1`,
-          [item.name, qty]
+          `SELECT id, remaining_qty, buy_price, avg_cost, item_name, product_type, costing_method FROM inventory_items 
+           WHERE item_name ILIKE $1 LIMIT 1`,
+          [item.name]
         );
 
         if (itemRes.rows.length > 0) {
           const invItem = itemRes.rows[0];
-          const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
-          const cogsAmount = qty * buyPrice;
+          const prodType = invItem.product_type || 'Storable';
 
-          // Deduct Stock
-          await client.query(
-            "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
-            [qty, invItem.id]
-          );
+          if (prodType === 'Service') continue;
+
+          if (prodType === 'Storable' && parseFloat(invItem.remaining_qty || 0) < qty) {
+            throw new Error(`الكمية غير كافية بالمخزن للمنتج "${invItem.item_name}". المتاح: ${invItem.remaining_qty}`);
+          }
+
+          let cogsAmount = 0;
+          const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
+
+          if (invItem.costing_method === 'FIFO') {
+            const poRes = await client.query(
+              `SELECT id, qty, estimated_cost as unit_price FROM purchase_orders 
+               WHERE item_description ILIKE $1 AND qty > 0 ORDER BY created_at ASC`,
+              [item.name]
+            );
+            const { calculateFifoCOGS } = require('../utils/helpers');
+            const fifoResult = calculateFifoCOGS(poRes.rows, qty);
+            cogsAmount = fifoResult.totalCogs;
+          } else {
+            cogsAmount = qty * buyPrice;
+          }
+
+          // Deduct Stock only if Storable
+          if (prodType === 'Storable') {
+            await client.query(
+              "UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2",
+              [qty, invItem.id]
+            );
+          }
 
           // Post COGS
           if (cogsAmount > 0) {
@@ -687,7 +735,7 @@ router.post('/orders/:id/invoice', async (req, res) => {
               creditAccount: '1130',
               amount: cogsAmount,
               costCenter: 'General',
-              description: `تكلفة مبيعات أمر بيع - صنف ${invItem.item_name} - فاتورة ${invNum}`,
+              description: `تكلفة مبيعات أمر بيع (${prodType}) - صنف ${invItem.item_name} - فاتورة ${invNum}`,
               username: req.user?.username || 'System',
               referenceNo: invNum,
               company: so.company

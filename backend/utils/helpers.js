@@ -221,6 +221,33 @@ const calculateMovingAverage = (currentQty, currentAvgPrice, newQty, newUnitPric
     return Number(movingAverage.toFixed(2));
 };
 
+// --- INVENTORY VALUATION: FIFO (الوارد أولاً يصرف أولاً) ---
+const calculateFifoCOGS = (batches, issueQty) => {
+    let remainingIssue = cleanNumeric(issueQty);
+    let totalCogs = 0;
+    const updatedBatches = [];
+
+    for (const batch of batches) {
+        const batchQty = cleanNumeric(batch.qty);
+        const batchPrice = cleanNumeric(batch.unit_price);
+
+        if (remainingIssue <= 0) {
+            updatedBatches.push({ ...batch });
+            continue;
+        }
+
+        if (batchQty <= remainingIssue) {
+            totalCogs += batchQty * batchPrice;
+            remainingIssue -= batchQty;
+        } else {
+            totalCogs += remainingIssue * batchPrice;
+            updatedBatches.push({ ...batch, qty: batchQty - remainingIssue });
+            remainingIssue = 0;
+        }
+    }
+    return { totalCogs, updatedBatches, remainingIssue };
+};
+
 // 🌟 دالة التحقق من قوة كلمة المرور (Password Strength Validation)
 const validatePasswordStrength = (password) => {
     if (!password) return null; // Allow empty if not changing
@@ -450,6 +477,7 @@ module.exports = {
     autoLedgerEntry, 
     syncProjectFinancials,
     calculateMovingAverage,
+    calculateFifoCOGS,
     validatePasswordStrength,
     resolveScope,
     buildCompanyFilter

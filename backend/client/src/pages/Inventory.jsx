@@ -530,6 +530,16 @@ export default function Inventory() {
   const [mpoWeightedAvgRate, setMpoWeightedAvgRate] = useState(0);
   const [relevantTxns, setRelevantTxns] = useState([]);
 
+  // Product configurations (Odoo Sales & Inventory controls)
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configForm, setConfigForm] = useState({
+    id: null,
+    product_type: 'Storable',
+    costing_method: 'AVCO',
+    invoicing_policy: 'Ordered'
+  });
+
+
   // Modal States
   const [isPOModalOpen, setIsPOModalOpen] = useState(false);
   const [isDDPModalOpen, setIsDDPModalOpen] = useState(false);
@@ -1057,6 +1067,23 @@ export default function Inventory() {
     } finally {
       setIsSubmitting(false);
     }
+  const handleConfigSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.put(`/dynamic/update/inventory_items/${configForm.id}`, {
+        product_type: configForm.product_type,
+        costing_method: configForm.costing_method,
+        invoicing_policy: configForm.invoicing_policy
+      });
+      alert(language === 'ar' ? 'تم تحديث تهيئة المنتج بنجاح!' : 'Product configuration updated successfully!');
+      setIsConfigModalOpen(false);
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.error || t.common.error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1417,6 +1444,9 @@ export default function Inventory() {
                               <span className="text-[9px] text-slate-400 font-bold tracking-tight font-mono uppercase bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm">PO: #{item.po_id}</span>
                               {item.batch_no && <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Batch: {item.batch_no}</span>}
                               {item.expiry_date && <span className="text-[9px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">Exp: {new Date(item.expiry_date).toLocaleDateString()}</span>}
+                              <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">Type: {item.product_type || 'Storable'}</span>
+                              <span className="text-[9px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">Cost: {item.costing_method || 'AVCO'}</span>
+                              <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">Invoice: {item.invoicing_policy || 'Ordered'}</span>
                             </div>
                           </div>
                         </td>
@@ -1521,9 +1551,18 @@ export default function Inventory() {
                                   }
                                 },
                                 {
-                                  label: language === 'ar' ? 'تعديل الصنف' : 'Edit Item',
-                                  icon: '✍️',
-                                  onClick: () => { setSelectedItem(item); alert('Security Lock'); }
+                                  label: language === 'ar' ? 'تهيئة المنتج' : 'Configure Product',
+                                  icon: '⚙️',
+                                  onClick: () => {
+                                    setSelectedItem(item);
+                                    setConfigForm({
+                                      id: item.id,
+                                      product_type: item.product_type || 'Storable',
+                                      costing_method: item.costing_method || 'AVCO',
+                                      invoicing_policy: item.invoicing_policy || 'Ordered'
+                                    });
+                                    setIsConfigModalOpen(true);
+                                  }
                                 },
                                 {
                                   icon: '🔍',
@@ -3304,6 +3343,80 @@ export default function Inventory() {
                     <span>🖨️</span> {t.modals.transfer.print}
                   </button>
                 </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: PRODUCT CONFIGURATION CONTROLS */}
+        {isConfigModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in">
+            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 shadow-slate-900/20 animate-in zoom-in-95 duration-200">
+              <div className="bg-white p-8 border-b border-slate-100 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-slate-900/20">⚙️</div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                      {language === 'ar' ? 'إعدادات تحكم المنتج' : 'Product Control Settings'}
+                    </h3>
+                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Odoo-Style configurations</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsConfigModalOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-xl transition-all border border-slate-200 active:scale-95">✕</button>
+              </div>
+              <form onSubmit={handleConfigSubmit} className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-[0.2em]">
+                      {language === 'ar' ? 'نوع المنتج' : 'Product Type'}
+                    </label>
+                    <select
+                      value={configForm.product_type}
+                      onChange={e => setConfigForm({ ...configForm, product_type: e.target.value })}
+                      className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-slate-900 transition-all"
+                    >
+                      <option value="Storable">{language === 'ar' ? 'مخزني (Storable)' : 'Storable Product'}</option>
+                      <option value="Consumable">{language === 'ar' ? 'استهلاكي (Consumable)' : 'Consumable'}</option>
+                      <option value="Service">{language === 'ar' ? 'خدمة (Service)' : 'Service'}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-[0.2em]">
+                      {language === 'ar' ? 'طريقة حساب التكلفة' : 'Costing Method'}
+                    </label>
+                    <select
+                      value={configForm.costing_method}
+                      onChange={e => setConfigForm({ ...configForm, costing_method: e.target.value })}
+                      className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-slate-900 transition-all"
+                    >
+                      <option value="AVCO">{language === 'ar' ? 'المتوسط المرجح (AVCO)' : 'Average Cost (AVCO)'}</option>
+                      <option value="FIFO">{language === 'ar' ? 'الوارد أولاً يصرف أولاً (FIFO)' : 'First In First Out (FIFO)'}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-[0.2em]">
+                      {language === 'ar' ? 'سياسة الفوترة' : 'Invoicing Policy'}
+                    </label>
+                    <select
+                      value={configForm.invoicing_policy}
+                      onChange={e => setConfigForm({ ...configForm, invoicing_policy: e.target.value })}
+                      className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-900 text-sm outline-none focus:bg-white focus:border-slate-900 transition-all"
+                    >
+                      <option value="Ordered">{language === 'ar' ? 'الكميات المطلوبة (Ordered Quantities)' : 'Ordered Quantities'}</option>
+                      <option value="Delivered">{language === 'ar' ? 'الكميات المستلمة (Delivered Quantities)' : 'Delivered Quantities'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all flex items-center justify-center gap-4 transform active:scale-95 ${isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'}`}
+                >
+                  {isSubmitting ? '...' : (language === 'ar' ? 'حفظ التغييرات' : 'Save Changes')}
+                </button>
               </form>
             </div>
           </div>
