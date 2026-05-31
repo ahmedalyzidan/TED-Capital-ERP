@@ -35,35 +35,35 @@ const applySchemaFixes = async () => {
             }
         };
 
-    // --- 00. Companies Registry (Tenant DB Mapping) ---
-    await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
+        // --- 00. Companies Registry (Tenant DB Mapping) ---
+        await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    // Add columns that may be missing (handles pre-existing table with different schema)
-    await runQuery("companies.db_name column",    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS db_name VARCHAR(100)`);
-    await runQuery("companies.display_name column",`ALTER TABLE companies ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)`);
-    await runQuery("companies.logo_url column",    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`);
-    await runQuery("companies.is_active column",   `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+        // Add columns that may be missing (handles pre-existing table with different schema)
+        await runQuery("companies.db_name column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS db_name VARCHAR(100)`);
+        await runQuery("companies.display_name column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)`);
+        await runQuery("companies.logo_url column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+        await runQuery("companies.is_active column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
 
-    // Seed default companies
-    const TENANT_COMPANIES_SEED = [
-        { name: 'TED Capital',      db_name: 'erp_ted_capital',      display: 'تيد كابيتال للمقاولات' },
-        { name: 'Design Concept',   db_name: 'erp_design_concept',   display: 'ديزاين كونسبت' },
-        { name: 'PRIMEMED PHARMA',  db_name: 'erp_primemed_pharma',  display: 'برايم ميد فارما' },
-        { name: 'Master Builder',   db_name: 'erp_master_builder',   display: 'ماستر بيلدر' },
-    ];
-    for (const co of TENANT_COMPANIES_SEED) {
-        await runQuery(`Seed company: ${co.name}`, `
+        // Seed default companies
+        const TENANT_COMPANIES_SEED = [
+            { name: 'TED Capital', db_name: 'erp_ted_capital', display: 'تيد كابيتال للمقاولات' },
+            { name: 'Design Concept', db_name: 'erp_design_concept', display: 'ديزاين كونسبت' },
+            { name: 'PRIMEMED PHARMA', db_name: 'erp_primemed_pharma', display: 'برايم ميد فارما' },
+            { name: 'Master Builder', db_name: 'erp_master_builder', display: 'ماستر بيلدر' },
+        ];
+        for (const co of TENANT_COMPANIES_SEED) {
+            await runQuery(`Seed company: ${co.name}`, `
             INSERT INTO companies (name, db_name, display_name, is_active)
             VALUES ($1, $2, $3, TRUE)
             ON CONFLICT (name) DO UPDATE SET db_name = EXCLUDED.db_name, display_name = EXCLUDED.display_name, is_active = TRUE
         `, [co.name, co.db_name, co.display]);
-    }
+        }
 
-    // --- 0. Core Identity & Logs ---
-    await runQuery("Users Table", `CREATE TABLE IF NOT EXISTS users (
+        // --- 0. Core Identity & Logs ---
+        await runQuery("Users Table", `CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(255),
@@ -76,7 +76,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Audit Logs Table", `CREATE TABLE IF NOT EXISTS audit_logs (
+        await runQuery("Audit Logs Table", `CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         username VARCHAR(100),
         action VARCHAR(100),
@@ -86,8 +86,8 @@ const applySchemaFixes = async () => {
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Fix: ensure record_id is TEXT (not INTEGER) to support MPO/string references like 'MPO-421597'
-    await runQuery("Audit Logs record_id to TEXT", `
+        // Fix: ensure record_id is TEXT (not INTEGER) to support MPO/string references like 'MPO-421597'
+        await runQuery("Audit Logs record_id to TEXT", `
         DO $$ 
         BEGIN
             IF EXISTS (
@@ -99,7 +99,7 @@ const applySchemaFixes = async () => {
         END $$
     `);
 
-    await runQuery("Refresh Tokens Table", `CREATE TABLE IF NOT EXISTS refresh_tokens (
+        await runQuery("Refresh Tokens Table", `CREATE TABLE IF NOT EXISTS refresh_tokens (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         token TEXT NOT NULL,
@@ -107,7 +107,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Notifications Table", `CREATE TABLE IF NOT EXISTS notifications (
+        await runQuery("Notifications Table", `CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         title VARCHAR(255),
@@ -119,12 +119,12 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Notifications Severity Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'info'`);
-    await runQuery("Notifications Type Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50)`);
-    await runQuery("Notifications Link Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(255)`);
+        await runQuery("Notifications Severity Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'info'`);
+        await runQuery("Notifications Type Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50)`);
+        await runQuery("Notifications Link Column", `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(255)`);
 
-    // --- IAM Infrastructure ---
-    await runQuery("Permissions Table", `CREATE TABLE IF NOT EXISTS permissions (
+        // --- IAM Infrastructure ---
+        await runQuery("Permissions Table", `CREATE TABLE IF NOT EXISTS permissions (
         id SERIAL PRIMARY KEY,
         resource VARCHAR(100),
         action VARCHAR(100),
@@ -133,10 +133,10 @@ const applySchemaFixes = async () => {
         name VARCHAR(255)
     )`);
 
-    await runQuery("Permissions Resource Column", `ALTER TABLE permissions ADD COLUMN IF NOT EXISTS resource VARCHAR(100)`);
-    await runQuery("Permissions Action Column", `ALTER TABLE permissions ADD COLUMN IF NOT EXISTS action VARCHAR(100)`);
+        await runQuery("Permissions Resource Column", `ALTER TABLE permissions ADD COLUMN IF NOT EXISTS resource VARCHAR(100)`);
+        await runQuery("Permissions Action Column", `ALTER TABLE permissions ADD COLUMN IF NOT EXISTS action VARCHAR(100)`);
 
-    await runQuery("Roles Table", `CREATE TABLE IF NOT EXISTS roles (
+        await runQuery("Roles Table", `CREATE TABLE IF NOT EXISTS roles (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) UNIQUE,
         description TEXT,
@@ -146,19 +146,19 @@ const applySchemaFixes = async () => {
         deleted_at TIMESTAMP
     )`);
 
-    await runQuery("Role Permissions Table", `CREATE TABLE IF NOT EXISTS role_permissions (
+        await runQuery("Role Permissions Table", `CREATE TABLE IF NOT EXISTS role_permissions (
         role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
         permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
         PRIMARY KEY(role_id, permission_id)
     )`);
 
-    await runQuery("User Roles Table", `CREATE TABLE IF NOT EXISTS user_roles (
+        await runQuery("User Roles Table", `CREATE TABLE IF NOT EXISTS user_roles (
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
         PRIMARY KEY(user_id, role_id)
     )`);
 
-    await runQuery("Security Matrix Table", `CREATE TABLE IF NOT EXISTS elite_security_matrix (
+        await runQuery("Security Matrix Table", `CREATE TABLE IF NOT EXISTS elite_security_matrix (
         id SERIAL PRIMARY KEY,
         role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
         module_name VARCHAR(100),
@@ -167,7 +167,7 @@ const applySchemaFixes = async () => {
         UNIQUE(role_id, module_name, action_name)
     )`);
 
-    await runQuery("Security Audit Trail Table", `CREATE TABLE IF NOT EXISTS security_audit_trail (
+        await runQuery("Security Audit Trail Table", `CREATE TABLE IF NOT EXISTS security_audit_trail (
         id SERIAL PRIMARY KEY,
         user_id INTEGER,
         username VARCHAR(100),
@@ -179,11 +179,11 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Security Audit Trail Timestamp Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
-    await runQuery("Security Audit Trail EventType Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS event_type VARCHAR(100)`);
-    await runQuery("Security Audit Trail CreatedAt Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        await runQuery("Security Audit Trail Timestamp Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        await runQuery("Security Audit Trail EventType Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS event_type VARCHAR(100)`);
+        await runQuery("Security Audit Trail CreatedAt Column", `ALTER TABLE security_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
-    await runQuery("Active Sessions Table", `CREATE TABLE IF NOT EXISTS active_sessions (
+        await runQuery("Active Sessions Table", `CREATE TABLE IF NOT EXISTS active_sessions (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         token_hash TEXT,
@@ -192,33 +192,33 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Seeding Basic Permissions ---
-    const basicPerms = [
-        ['FINANCE', 'VIEW', 'FIN_VIEW_LEDGER', 'Finance', 'View Ledger'],
-        ['FINANCE', 'POST', 'FIN_POST_ENTRY', 'Finance', 'Post Entry'],
-        ['INVENTORY', 'MANAGE', 'INV_MANAGE_STOCK', 'Inventory', 'Manage Stock'],
-        ['HR', 'VIEW', 'HR_VIEW_STAFF', 'HR', 'View Staff'],
-        ['IAM', 'MANAGE', 'IAM_MANAGE_ROLES', 'Security', 'Manage Roles'],
-        ['IAM', 'MANAGE', 'IAM_MANAGE_USERS', 'Security', 'Manage Users']
-    ];
+        // --- Seeding Basic Permissions ---
+        const basicPerms = [
+            ['FINANCE', 'VIEW', 'FIN_VIEW_LEDGER', 'Finance', 'View Ledger'],
+            ['FINANCE', 'POST', 'FIN_POST_ENTRY', 'Finance', 'Post Entry'],
+            ['INVENTORY', 'MANAGE', 'INV_MANAGE_STOCK', 'Inventory', 'Manage Stock'],
+            ['HR', 'VIEW', 'HR_VIEW_STAFF', 'HR', 'View Staff'],
+            ['IAM', 'MANAGE', 'IAM_MANAGE_ROLES', 'Security', 'Manage Roles'],
+            ['IAM', 'MANAGE', 'IAM_MANAGE_USERS', 'Security', 'Manage Users']
+        ];
 
-    for (const p of basicPerms) {
-        await runQuery(`Seed Permission ${p[2]}`, `
+        for (const p of basicPerms) {
+            await runQuery(`Seed Permission ${p[2]}`, `
             INSERT INTO permissions (resource, action, code, module, name) 
             VALUES ($1, $2, $3, $4, $5) ON CONFLICT (code) DO NOTHING
         `, p);
-    }
+        }
 
 
-    // --- 1. Workflow & Approvals ---
-    await runQuery("Workflow Definitions", `CREATE TABLE IF NOT EXISTS workflow_definitions (
+        // --- 1. Workflow & Approvals ---
+        await runQuery("Workflow Definitions", `CREATE TABLE IF NOT EXISTS workflow_definitions (
         id SERIAL PRIMARY KEY,
         module_name VARCHAR(100) UNIQUE NOT NULL,
         min_amount NUMERIC(15,2) DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Workflow Instances", `CREATE TABLE IF NOT EXISTS workflow_instances (
+        await runQuery("Workflow Instances", `CREATE TABLE IF NOT EXISTS workflow_instances (
         id SERIAL PRIMARY KEY,
         definition_id INTEGER REFERENCES workflow_definitions(id),
         record_id INTEGER,
@@ -229,8 +229,8 @@ const applySchemaFixes = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- 2. Inventory & Procurement ---
-    await runQuery("Purchase Orders", `CREATE TABLE IF NOT EXISTS purchase_orders (
+        // --- 2. Inventory & Procurement ---
+        await runQuery("Purchase Orders", `CREATE TABLE IF NOT EXISTS purchase_orders (
         id SERIAL PRIMARY KEY,
         item_description TEXT,
         qty NUMERIC(20,6),
@@ -244,16 +244,16 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Purchase Orders Category", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Material'`);
-    await runQuery("Purchase Orders Warehouse", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS warehouse VARCHAR(100)`);
-    await runQuery("Purchase Orders Currency", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP'`);
-    await runQuery("Purchase Orders LCY Total", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS lcy_total NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("Purchase Orders Unit Cost DDP", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS unit_cost_after_ddp NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("Purchase Orders DDP Added", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS ddp_added_amount NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("Purchase Orders DDP LCY Added", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS ddp_lcy_added_amount NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("Purchase Orders FX Rate", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS fx_rate NUMERIC(20,8) DEFAULT 1`);
+        await runQuery("Purchase Orders Category", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Material'`);
+        await runQuery("Purchase Orders Warehouse", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS warehouse VARCHAR(100)`);
+        await runQuery("Purchase Orders Currency", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP'`);
+        await runQuery("Purchase Orders LCY Total", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS lcy_total NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("Purchase Orders Unit Cost DDP", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS unit_cost_after_ddp NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("Purchase Orders DDP Added", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS ddp_added_amount NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("Purchase Orders DDP LCY Added", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS ddp_lcy_added_amount NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("Purchase Orders FX Rate", `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS fx_rate NUMERIC(20,8) DEFAULT 1`);
 
-    await runQuery("Inventory Items", `CREATE TABLE IF NOT EXISTS inventory_items (
+        await runQuery("Inventory Items", `CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
         po_id INTEGER,
         item_name VARCHAR(255),
@@ -268,24 +268,24 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Inventory Items LCY FX Rate", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lcy_fx_rate NUMERIC(15,4) DEFAULT 1`);
-    await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
-    await runQuery("Inventory Items Category", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS category VARCHAR(255)`);
-    await runQuery("Inventory Items UOM", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS uom VARCHAR(50)`);
-    await runQuery("Inventory Items Unit", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit VARCHAR(50)`);
-    await runQuery("Inventory Items Status", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'FAST'`);
-    await runQuery("Inventory Items Serial No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS serial_no VARCHAR(100)`);
-    await runQuery("Inventory Items Batch No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_no VARCHAR(100)`);
-    await runQuery("Inventory Items Expiry Date", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS expiry_date DATE`);
-    await runQuery("Inventory Items Supplier", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS supplier VARCHAR(255)`);
-    await runQuery("Inventory Items Unit Cost", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0`);
-    await runQuery("Inventory Items Batch Number", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100)`);
-    await runQuery("Inventory Items Item Code", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS item_code VARCHAR(100)`);
-    await runQuery("Inventory Items Metadata", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb`);
-    await runQuery("Inventory Items Company ID", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS company_id INTEGER`);
+        await runQuery("Inventory Items LCY FX Rate", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lcy_fx_rate NUMERIC(15,4) DEFAULT 1`);
+        await runQuery("Inventory Items Warehouse", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS warehouse VARCHAR(255) DEFAULT 'المخزن الرئيسي'`);
+        await runQuery("Inventory Items Category", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS category VARCHAR(255)`);
+        await runQuery("Inventory Items UOM", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS uom VARCHAR(50)`);
+        await runQuery("Inventory Items Unit", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit VARCHAR(50)`);
+        await runQuery("Inventory Items Status", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'FAST'`);
+        await runQuery("Inventory Items Serial No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS serial_no VARCHAR(100)`);
+        await runQuery("Inventory Items Batch No", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_no VARCHAR(100)`);
+        await runQuery("Inventory Items Expiry Date", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS expiry_date DATE`);
+        await runQuery("Inventory Items Supplier", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS supplier VARCHAR(255)`);
+        await runQuery("Inventory Items Unit Cost", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0`);
+        await runQuery("Inventory Items Batch Number", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100)`);
+        await runQuery("Inventory Items Item Code", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS item_code VARCHAR(100)`);
+        await runQuery("Inventory Items Metadata", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb`);
+        await runQuery("Inventory Items Company ID", `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS company_id INTEGER`);
 
-    // --- B2B CRM & Communication Tables ---
-    await runQuery("CRM Templates Table", `
+        // --- B2B CRM & Communication Tables ---
+        await runQuery("CRM Templates Table", `
         CREATE TABLE IF NOT EXISTS crm_templates (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
@@ -295,7 +295,7 @@ const applySchemaFixes = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
-    await runQuery("CRM Campaigns Table", `
+        await runQuery("CRM Campaigns Table", `
         CREATE TABLE IF NOT EXISTS crm_campaigns (
             id SERIAL PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -308,7 +308,7 @@ const applySchemaFixes = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
-    await runQuery("Communication Logs Table", `
+        await runQuery("Communication Logs Table", `
         CREATE TABLE IF NOT EXISTS communication_logs (
             id SERIAL PRIMARY KEY,
             campaign_id INTEGER REFERENCES crm_campaigns(id) ON DELETE SET NULL,
@@ -324,8 +324,8 @@ const applySchemaFixes = async () => {
         )
     `);
 
-    // --- Accountant Custodies & Expenses Tables ---
-    await runQuery("Custodies Table", `
+        // --- Accountant Custodies & Expenses Tables ---
+        await runQuery("Custodies Table", `
         CREATE TABLE IF NOT EXISTS custodies (
             id SERIAL PRIMARY KEY,
             custodian_name VARCHAR(255) NOT NULL,
@@ -338,7 +338,7 @@ const applySchemaFixes = async () => {
             company_id INTEGER DEFAULT 1
         )
     `);
-    await runQuery("Custody Expenses Table", `
+        await runQuery("Custody Expenses Table", `
         CREATE TABLE IF NOT EXISTS custody_expenses (
             id SERIAL PRIMARY KEY,
             custody_id INTEGER REFERENCES custodies(id) ON DELETE CASCADE,
@@ -353,17 +353,17 @@ const applySchemaFixes = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
-    await runQuery("Custody Expenses Add project_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL");
-    await runQuery("Custody Expenses Add boq_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE SET NULL");
-    await runQuery("Custody Expenses Add cost_type", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS cost_type VARCHAR(100)");
+        await runQuery("Custody Expenses Add project_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL");
+        await runQuery("Custody Expenses Add boq_id", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE SET NULL");
+        await runQuery("Custody Expenses Add cost_type", "ALTER TABLE custody_expenses ADD COLUMN IF NOT EXISTS cost_type VARCHAR(100)");
 
-    await runQuery("Seed Custody Account", `
+        await runQuery("Seed Custody Account", `
         INSERT INTO chart_of_accounts (account_code, account_name, company_entity, hierarchy_level, parent_account, account_type, currency, manual_entry_allowed, company_id)
         VALUES ('1170', 'عهد الموظفين والعهدة النقدية', 'All', 3, '1100', 'Asset', 'EGP', true, 1)
         ON CONFLICT (account_code, company_id) DO NOTHING
     `);
 
-    await runQuery("Inventory Movements Table", `CREATE TABLE IF NOT EXISTS inventory_movements (
+        await runQuery("Inventory Movements Table", `CREATE TABLE IF NOT EXISTS inventory_movements (
         id SERIAL PRIMARY KEY,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
         movement_type VARCHAR(100),
@@ -375,22 +375,22 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Inventory Audits Table", `CREATE TABLE IF NOT EXISTS inventory_audits (
+        await runQuery("Inventory Audits Table", `CREATE TABLE IF NOT EXISTS inventory_audits (
         id SERIAL PRIMARY KEY,
         audit_no VARCHAR(100),
         warehouse VARCHAR(255), status VARCHAR(50) DEFAULT 'Pending',
         created_by VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Inventory Audit Lines Table", `CREATE TABLE IF NOT EXISTS inventory_audit_lines (
+        await runQuery("Inventory Audit Lines Table", `CREATE TABLE IF NOT EXISTS inventory_audit_lines (
         id SERIAL PRIMARY KEY,
         audit_id INTEGER REFERENCES inventory_audits(id) ON DELETE CASCADE,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
         recorded_qty NUMERIC(20,6), physical_qty NUMERIC(20,6), variance NUMERIC(20,6)
     )`);
 
-    // --- Stock Returns Module ---
-    await runQuery("Inventory Sales Table", `CREATE TABLE IF NOT EXISTS inventory_sales (
+        // --- Stock Returns Module ---
+        await runQuery("Inventory Sales Table", `CREATE TABLE IF NOT EXISTS inventory_sales (
         id SERIAL PRIMARY KEY,
         sale_no VARCHAR(100) UNIQUE,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
@@ -416,10 +416,10 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Inventory Sales project_name column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
-    await runQuery("Inventory Sales project_id column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_id VARCHAR(255)");
+        await runQuery("Inventory Sales project_name column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
+        await runQuery("Inventory Sales project_id column", "ALTER TABLE inventory_sales ADD COLUMN IF NOT EXISTS project_id VARCHAR(255)");
 
-    await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
+        await runQuery("Stock Returns Table", `CREATE TABLE IF NOT EXISTS stock_returns (
         id               SERIAL PRIMARY KEY,
         return_no        VARCHAR(50) UNIQUE,
         return_type      VARCHAR(20) NOT NULL CHECK (return_type IN ('customer', 'supplier')),
@@ -445,32 +445,32 @@ const applySchemaFixes = async () => {
         deleted_at       TIMESTAMP,
         metadata         JSONB DEFAULT '{}'::jsonb
     )`);
-    await runQuery("Stock Returns Index Type", `CREATE INDEX IF NOT EXISTS idx_stock_returns_type    ON stock_returns(return_type)`);
-    await runQuery("Stock Returns Index Status", `CREATE INDEX IF NOT EXISTS idx_stock_returns_status  ON stock_returns(status)`);
-    await runQuery("Stock Returns Index Inv", `CREATE INDEX IF NOT EXISTS idx_stock_returns_inv     ON stock_returns(inventory_id)`);
-    await runQuery("Stock Returns Index Sale", `CREATE INDEX IF NOT EXISTS idx_stock_returns_sale    ON stock_returns(source_sale_id)`);
+        await runQuery("Stock Returns Index Type", `CREATE INDEX IF NOT EXISTS idx_stock_returns_type    ON stock_returns(return_type)`);
+        await runQuery("Stock Returns Index Status", `CREATE INDEX IF NOT EXISTS idx_stock_returns_status  ON stock_returns(status)`);
+        await runQuery("Stock Returns Index Inv", `CREATE INDEX IF NOT EXISTS idx_stock_returns_inv     ON stock_returns(inventory_id)`);
+        await runQuery("Stock Returns Index Sale", `CREATE INDEX IF NOT EXISTS idx_stock_returns_sale    ON stock_returns(source_sale_id)`);
 
 
-    await runQuery("Job Titles Table", `CREATE TABLE IF NOT EXISTS job_titles (
+        await runQuery("Job Titles Table", `CREATE TABLE IF NOT EXISTS job_titles (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) UNIQUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    const defaultJobTitles = [
-        'Project Manager', 'Site Engineer', 'Accountant', 'HR Manager',
-        'Operations Manager', 'Sales Executive', 'Procurement Officer',
-        'Technical Office Engineer', 'General Manager', 'Draftsman',
-        'Storekeeper', 'Safety Officer', 'Quality Control'
-    ];
+        const defaultJobTitles = [
+            'Project Manager', 'Site Engineer', 'Accountant', 'HR Manager',
+            'Operations Manager', 'Sales Executive', 'Procurement Officer',
+            'Technical Office Engineer', 'General Manager', 'Draftsman',
+            'Storekeeper', 'Safety Officer', 'Quality Control'
+        ];
 
-    for (const title of defaultJobTitles) {
-        await runQuery(`Seed Job Title ${title}`, `
+        for (const title of defaultJobTitles) {
+            await runQuery(`Seed Job Title ${title}`, `
             INSERT INTO job_titles (title) VALUES ($1) ON CONFLICT (title) DO NOTHING
         `, [title]);
-    }
+        }
 
-    await runQuery("Staff Table", `CREATE TABLE IF NOT EXISTS staff (
+        await runQuery("Staff Table", `CREATE TABLE IF NOT EXISTS staff (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         job_title VARCHAR(255),
@@ -480,7 +480,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Subcontractors Table", `CREATE TABLE IF NOT EXISTS subcontractors (
+        await runQuery("Subcontractors Table", `CREATE TABLE IF NOT EXISTS subcontractors (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         specialty VARCHAR(255),
@@ -500,20 +500,20 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Ensure all dynamic columns exist for Subcontractors 360 & onboarding form
-    await runQuery("Subcontractors project_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS project_id INTEGER");
-    await runQuery("Subcontractors company", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
-    await runQuery("Subcontractors tax_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS tax_id VARCHAR(100)");
-    await runQuery("Subcontractors license_number", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS license_number VARCHAR(100)");
-    await runQuery("Subcontractors insurance_expiry", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS insurance_expiry DATE");
-    await runQuery("Subcontractors credit_limit", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(15,2) DEFAULT 0");
-    await runQuery("Subcontractors rating", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS rating NUMERIC(3,2) DEFAULT 5.00");
-    await runQuery("Subcontractors username", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS username VARCHAR(150)");
-    await runQuery("Subcontractors password_hash", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
-    await runQuery("Subcontractors portal_access_active", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS portal_access_active BOOLEAN DEFAULT FALSE");
-    await runQuery("Subcontractors metadata", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb");
+        // Ensure all dynamic columns exist for Subcontractors 360 & onboarding form
+        await runQuery("Subcontractors project_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS project_id INTEGER");
+        await runQuery("Subcontractors company", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
+        await runQuery("Subcontractors tax_id", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS tax_id VARCHAR(100)");
+        await runQuery("Subcontractors license_number", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS license_number VARCHAR(100)");
+        await runQuery("Subcontractors insurance_expiry", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS insurance_expiry DATE");
+        await runQuery("Subcontractors credit_limit", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(15,2) DEFAULT 0");
+        await runQuery("Subcontractors rating", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS rating NUMERIC(3,2) DEFAULT 5.00");
+        await runQuery("Subcontractors username", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS username VARCHAR(150)");
+        await runQuery("Subcontractors password_hash", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
+        await runQuery("Subcontractors portal_access_active", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS portal_access_active BOOLEAN DEFAULT FALSE");
+        await runQuery("Subcontractors metadata", "ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb");
 
-    await runQuery("Customers Table", `CREATE TABLE IF NOT EXISTS customers (
+        await runQuery("Customers Table", `CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         company_name VARCHAR(255),
@@ -529,8 +529,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Enterprise Sales Upgrades (Odoo & SAP Workflow) ---
-    await runQuery("Sales Quotations Table", `CREATE TABLE IF NOT EXISTS sales_quotations (
+        // --- Enterprise Sales Upgrades (Odoo & SAP Workflow) ---
+        await runQuery("Sales Quotations Table", `CREATE TABLE IF NOT EXISTS sales_quotations (
         id SERIAL PRIMARY KEY,
         quotation_number VARCHAR(100) UNIQUE NOT NULL,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
@@ -546,7 +546,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Orders Table", `CREATE TABLE IF NOT EXISTS sales_orders (
+        await runQuery("Sales Orders Table", `CREATE TABLE IF NOT EXISTS sales_orders (
         id SERIAL PRIMARY KEY,
         order_number VARCHAR(100) UNIQUE NOT NULL,
         quotation_id INTEGER REFERENCES sales_quotations(id) ON DELETE SET NULL,
@@ -562,8 +562,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Invoices ---
-    await runQuery("Sales Invoices Table", `CREATE TABLE IF NOT EXISTS sales_invoices (
+        // --- Sales Invoices ---
+        await runQuery("Sales Invoices Table", `CREATE TABLE IF NOT EXISTS sales_invoices (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         invoice_number VARCHAR(100) UNIQUE NOT NULL,
@@ -578,8 +578,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- POS Transactions ---
-    await runQuery("Sales POS Transactions Table", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
+        // --- POS Transactions ---
+        await runQuery("Sales POS Transactions Table", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         payment_method VARCHAR(50) DEFAULT 'نقدي',
@@ -591,8 +591,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Offers ---
-    await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
+        // --- Sales Offers ---
+        await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         discount_type VARCHAR(50) DEFAULT 'نسبة',
@@ -606,8 +606,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Price Lists ---
-    await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        // --- Sales Price Lists ---
+        await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         product_name VARCHAR(255),
@@ -620,8 +620,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Insurance ---
-    await runQuery("Sales Insurance Table", `CREATE TABLE IF NOT EXISTS sales_insurance (
+        // --- Sales Insurance ---
+        await runQuery("Sales Insurance Table", `CREATE TABLE IF NOT EXISTS sales_insurance (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         provider VARCHAR(255),
@@ -636,8 +636,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Targets ---
-    await runQuery("Sales Targets Table", `CREATE TABLE IF NOT EXISTS sales_targets (
+        // --- Sales Targets ---
+        await runQuery("Sales Targets Table", `CREATE TABLE IF NOT EXISTS sales_targets (
         id SERIAL PRIMARY KEY,
         agent_name VARCHAR(255),
         target_amount NUMERIC(20,6) DEFAULT 0,
@@ -648,8 +648,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Commissions ---
-    await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
+        // --- Sales Commissions ---
+        await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
         id SERIAL PRIMARY KEY,
         agent_name VARCHAR(255),
         commission_amount NUMERIC(20,6) DEFAULT 0,
@@ -659,8 +659,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Installments ---
-    await runQuery("Sales Installments Table", `CREATE TABLE IF NOT EXISTS sales_installments (
+        // --- Sales Installments ---
+        await runQuery("Sales Installments Table", `CREATE TABLE IF NOT EXISTS sales_installments (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         total_amount NUMERIC(20,6) DEFAULT 0,
@@ -674,51 +674,51 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- Sales Module Upgrades: New Columns on existing tables ---
-    await runQuery("Sales Quotations currency", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP'`);
-    await runQuery("Sales Quotations source_crm_lead_id", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS source_crm_lead_id INTEGER`);
-    await runQuery("Sales Quotations sent_at", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP`);
-    await runQuery("Sales Quotations booking_duration", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS booking_duration INTEGER DEFAULT 0`);
-    await runQuery("Sales Quotations amount_paid", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0`);
-    await runQuery("Sales Quotations is_partial", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS is_partial BOOLEAN DEFAULT FALSE`);
-    await runQuery("Sales Quotations payment_method", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'On Account'`);
-    await runQuery("Sales Quotations project_id", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS project_id VARCHAR(100)`);
-    await runQuery("Sales Orders delivery_status", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(50) DEFAULT 'Not Shipped'`);
-    await runQuery("Sales Orders source_module", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
-    await runQuery("Sales Orders delivery_date", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_date DATE`);
-    await runQuery("Sales Orders booking_duration", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS booking_duration INTEGER DEFAULT 0`);
-    await runQuery("Sales Orders amount_paid", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0`);
-    await runQuery("Sales Orders is_partial", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS is_partial BOOLEAN DEFAULT FALSE`);
-    await runQuery("Sales Orders payment_method", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'On Account'`);
-    await runQuery("Sales Orders project_id", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS project_id VARCHAR(100)`);
-    await runQuery("Sales Invoices items", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb`);
-    await runQuery("Sales Invoices source_order_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
-    await runQuery("Sales Installments source_order_id", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
-    await runQuery("Sales Installments source_module", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
+        // --- Sales Module Upgrades: New Columns on existing tables ---
+        await runQuery("Sales Quotations currency", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP'`);
+        await runQuery("Sales Quotations source_crm_lead_id", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS source_crm_lead_id INTEGER`);
+        await runQuery("Sales Quotations sent_at", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP`);
+        await runQuery("Sales Quotations booking_duration", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS booking_duration INTEGER DEFAULT 0`);
+        await runQuery("Sales Quotations amount_paid", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0`);
+        await runQuery("Sales Quotations is_partial", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS is_partial BOOLEAN DEFAULT FALSE`);
+        await runQuery("Sales Quotations payment_method", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'On Account'`);
+        await runQuery("Sales Quotations project_id", `ALTER TABLE sales_quotations ADD COLUMN IF NOT EXISTS project_id VARCHAR(100)`);
+        await runQuery("Sales Orders delivery_status", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(50) DEFAULT 'Not Shipped'`);
+        await runQuery("Sales Orders source_module", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
+        await runQuery("Sales Orders delivery_date", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS delivery_date DATE`);
+        await runQuery("Sales Orders booking_duration", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS booking_duration INTEGER DEFAULT 0`);
+        await runQuery("Sales Orders amount_paid", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0`);
+        await runQuery("Sales Orders is_partial", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS is_partial BOOLEAN DEFAULT FALSE`);
+        await runQuery("Sales Orders payment_method", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'On Account'`);
+        await runQuery("Sales Orders project_id", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS project_id VARCHAR(100)`);
+        await runQuery("Sales Invoices items", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb`);
+        await runQuery("Sales Invoices source_order_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
+        await runQuery("Sales Installments source_order_id", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL`);
+        await runQuery("Sales Installments source_module", `ALTER TABLE sales_installments ADD COLUMN IF NOT EXISTS source_module VARCHAR(50) DEFAULT 'Sales'`);
 
-    await runQuery("Sales Orders salesperson_id", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
-    await runQuery("Sales Orders sales_type", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
-    await runQuery("Sales Orders commission_rate", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
-    await runQuery("Sales Orders commission_amount", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
+        await runQuery("Sales Orders salesperson_id", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
+        await runQuery("Sales Orders sales_type", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+        await runQuery("Sales Orders commission_rate", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
+        await runQuery("Sales Orders commission_amount", `ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
 
-    await runQuery("Sales Invoices salesperson_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
-    await runQuery("Sales Invoices sales_type", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
-    await runQuery("Sales Invoices commission_rate", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
-    await runQuery("Sales Invoices commission_amount", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
-    await runQuery("Sales Invoices payment_method", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'Cash'`);
-    await runQuery("Sales Invoices amount_paid", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0.00`);
-    await runQuery("Sales Invoices remaining_balance", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS remaining_balance NUMERIC(20,6) DEFAULT 0.00`);
+        await runQuery("Sales Invoices salesperson_id", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE SET NULL`);
+        await runQuery("Sales Invoices sales_type", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+        await runQuery("Sales Invoices commission_rate", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00`);
+        await runQuery("Sales Invoices commission_amount", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2) DEFAULT 0.00`);
+        await runQuery("Sales Invoices payment_method", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'Cash'`);
+        await runQuery("Sales Invoices amount_paid", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(20,6) DEFAULT 0.00`);
+        await runQuery("Sales Invoices remaining_balance", `ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS remaining_balance NUMERIC(20,6) DEFAULT 0.00`);
 
-    await runQuery("Sales Commissions agent_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
-    await runQuery("Sales Commissions salesperson_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
-    await runQuery("Sales Commissions sales_type", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
-    await runQuery("Sales Commissions status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Unpaid'`);
-    await runQuery("Sales Commissions payout_status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS payout_status VARCHAR(50) DEFAULT 'Unpaid'`);
-    await runQuery("Sales Commissions reference_no", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100)`);
-    await runQuery("Sales Commissions company", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("Sales Commissions agent_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
+        await runQuery("Sales Commissions salesperson_id", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS salesperson_id INTEGER REFERENCES staff(id) ON DELETE CASCADE`);
+        await runQuery("Sales Commissions sales_type", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS sales_type VARCHAR(50) DEFAULT 'Inventory'`);
+        await runQuery("Sales Commissions status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Unpaid'`);
+        await runQuery("Sales Commissions payout_status", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS payout_status VARCHAR(50) DEFAULT 'Unpaid'`);
+        await runQuery("Sales Commissions reference_no", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100)`);
+        await runQuery("Sales Commissions company", `ALTER TABLE sales_commissions ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
-    // --- Delivery Notes (مذكرات التسليم) ---
-    await runQuery("Sales Delivery Notes Table", `CREATE TABLE IF NOT EXISTS sales_delivery_notes (
+        // --- Delivery Notes (مذكرات التسليم) ---
+        await runQuery("Sales Delivery Notes Table", `CREATE TABLE IF NOT EXISTS sales_delivery_notes (
         id SERIAL PRIMARY KEY,
         delivery_number VARCHAR(100) UNIQUE NOT NULL,
         order_id INTEGER REFERENCES sales_orders(id) ON DELETE SET NULL,
@@ -733,11 +733,11 @@ const applySchemaFixes = async () => {
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("Sales Delivery Notes idx order", `CREATE INDEX IF NOT EXISTS idx_sdn_order ON sales_delivery_notes(order_id)`);
-    await runQuery("Sales Delivery Notes idx status", `CREATE INDEX IF NOT EXISTS idx_sdn_status ON sales_delivery_notes(status)`);
+        await runQuery("Sales Delivery Notes idx order", `CREATE INDEX IF NOT EXISTS idx_sdn_order ON sales_delivery_notes(order_id)`);
+        await runQuery("Sales Delivery Notes idx status", `CREATE INDEX IF NOT EXISTS idx_sdn_status ON sales_delivery_notes(status)`);
 
-    // --- Sales Return Orders (مردودات المبيعات) ---
-    await runQuery("Sales Return Orders Table", `CREATE TABLE IF NOT EXISTS sales_return_orders (
+        // --- Sales Return Orders (مردودات المبيعات) ---
+        await runQuery("Sales Return Orders Table", `CREATE TABLE IF NOT EXISTS sales_return_orders (
         id SERIAL PRIMARY KEY,
         return_number VARCHAR(100) UNIQUE NOT NULL,
         source_invoice_id INTEGER REFERENCES sales_invoices(id) ON DELETE SET NULL,
@@ -756,15 +756,15 @@ const applySchemaFixes = async () => {
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("Sales Return Orders idx invoice", `CREATE INDEX IF NOT EXISTS idx_sro_invoice ON sales_return_orders(source_invoice_id)`);
-    await runQuery("Sales Return Orders idx status", `CREATE INDEX IF NOT EXISTS idx_sro_status ON sales_return_orders(status)`);
+        await runQuery("Sales Return Orders idx invoice", `CREATE INDEX IF NOT EXISTS idx_sro_invoice ON sales_return_orders(source_invoice_id)`);
+        await runQuery("Sales Return Orders idx status", `CREATE INDEX IF NOT EXISTS idx_sro_status ON sales_return_orders(status)`);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // REAL ESTATE — COST TRACKING + RENTAL MODULE
-    // ═══════════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════════
+        // REAL ESTATE — COST TRACKING + RENTAL MODULE
+        // ═══════════════════════════════════════════════════════════════════════
 
-    // 1. تكاليف المشروع العقاري (Cost Entries per Project)
-    await runQuery("RE Project Costs Table", `CREATE TABLE IF NOT EXISTS re_project_costs (
+        // 1. تكاليف المشروع العقاري (Cost Entries per Project)
+        await runQuery("RE Project Costs Table", `CREATE TABLE IF NOT EXISTS re_project_costs (
         id SERIAL PRIMARY KEY,
         project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE CASCADE,
         cost_category VARCHAR(100) DEFAULT 'بناء',
@@ -777,10 +777,10 @@ const applySchemaFixes = async () => {
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("RE Project Costs idx project", `CREATE INDEX IF NOT EXISTS idx_rpc_project ON re_project_costs(project_id)`);
+        await runQuery("RE Project Costs idx project", `CREATE INDEX IF NOT EXISTS idx_rpc_project ON re_project_costs(project_id)`);
 
-    // 2. تكلفة الوحدات المحسوبة (Allocated Unit Costs)
-    await runQuery("RE Unit Costs Table", `CREATE TABLE IF NOT EXISTS re_unit_costs (
+        // 2. تكلفة الوحدات المحسوبة (Allocated Unit Costs)
+        await runQuery("RE Unit Costs Table", `CREATE TABLE IF NOT EXISTS re_unit_costs (
         id SERIAL PRIMARY KEY,
         unit_id INTEGER REFERENCES real_estate_units(id) ON DELETE CASCADE,
         project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE CASCADE,
@@ -798,11 +798,11 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(unit_id)
     )`);
-    await runQuery("RE Unit Costs idx unit", `CREATE INDEX IF NOT EXISTS idx_ruc_unit ON re_unit_costs(unit_id)`);
-    await runQuery("RE Unit Costs idx project", `CREATE INDEX IF NOT EXISTS idx_ruc_project ON re_unit_costs(project_id)`);
+        await runQuery("RE Unit Costs idx unit", `CREATE INDEX IF NOT EXISTS idx_ruc_unit ON re_unit_costs(unit_id)`);
+        await runQuery("RE Unit Costs idx project", `CREATE INDEX IF NOT EXISTS idx_ruc_project ON re_unit_costs(project_id)`);
 
-    // 3. عقود الإيجار (Rental Contracts)
-    await runQuery("RE Rental Contracts Table", `CREATE TABLE IF NOT EXISTS re_rental_contracts (
+        // 3. عقود الإيجار (Rental Contracts)
+        await runQuery("RE Rental Contracts Table", `CREATE TABLE IF NOT EXISTS re_rental_contracts (
         id SERIAL PRIMARY KEY,
         contract_number VARCHAR(100) UNIQUE NOT NULL,
         project_id INTEGER REFERENCES real_estate_projects(id) ON DELETE SET NULL,
@@ -824,11 +824,11 @@ const applySchemaFixes = async () => {
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("RE Rental Contracts idx unit", `CREATE INDEX IF NOT EXISTS idx_rrc_unit ON re_rental_contracts(unit_id)`);
-    await runQuery("RE Rental Contracts idx status", `CREATE INDEX IF NOT EXISTS idx_rrc_status ON re_rental_contracts(status)`);
+        await runQuery("RE Rental Contracts idx unit", `CREATE INDEX IF NOT EXISTS idx_rrc_unit ON re_rental_contracts(unit_id)`);
+        await runQuery("RE Rental Contracts idx status", `CREATE INDEX IF NOT EXISTS idx_rrc_status ON re_rental_contracts(status)`);
 
-    // 4. فواتير الإيجار (Rental Invoices — Auto-generated monthly)
-    await runQuery("RE Rental Invoices Table", `CREATE TABLE IF NOT EXISTS re_rental_invoices (
+        // 4. فواتير الإيجار (Rental Invoices — Auto-generated monthly)
+        await runQuery("RE Rental Invoices Table", `CREATE TABLE IF NOT EXISTS re_rental_invoices (
         id SERIAL PRIMARY KEY,
         invoice_number VARCHAR(100) UNIQUE NOT NULL,
         contract_id INTEGER REFERENCES re_rental_contracts(id) ON DELETE CASCADE,
@@ -845,12 +845,12 @@ const applySchemaFixes = async () => {
         company VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("RE Rental Invoices idx contract", `CREATE INDEX IF NOT EXISTS idx_rri_contract ON re_rental_invoices(contract_id)`);
-    await runQuery("RE Rental Invoices idx status", `CREATE INDEX IF NOT EXISTS idx_rri_status ON re_rental_invoices(status)`);
-    await runQuery("RE Rental Invoices unique period", `CREATE UNIQUE INDEX IF NOT EXISTS idx_rri_unique_period ON re_rental_invoices(contract_id, period_month, period_year)`);
+        await runQuery("RE Rental Invoices idx contract", `CREATE INDEX IF NOT EXISTS idx_rri_contract ON re_rental_invoices(contract_id)`);
+        await runQuery("RE Rental Invoices idx status", `CREATE INDEX IF NOT EXISTS idx_rri_status ON re_rental_invoices(status)`);
+        await runQuery("RE Rental Invoices unique period", `CREATE UNIQUE INDEX IF NOT EXISTS idx_rri_unique_period ON re_rental_invoices(contract_id, period_month, period_year)`);
 
-    // 5. مدفوعات الإيجار (Rental Payments)
-    await runQuery("RE Rental Payments Table", `CREATE TABLE IF NOT EXISTS re_rental_payments (
+        // 5. مدفوعات الإيجار (Rental Payments)
+        await runQuery("RE Rental Payments Table", `CREATE TABLE IF NOT EXISTS re_rental_payments (
         id SERIAL PRIMARY KEY,
         invoice_id INTEGER REFERENCES re_rental_invoices(id) ON DELETE CASCADE,
         contract_id INTEGER REFERENCES re_rental_contracts(id) ON DELETE CASCADE,
@@ -862,20 +862,20 @@ const applySchemaFixes = async () => {
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("RE Rental Payments idx invoice", `CREATE INDEX IF NOT EXISTS idx_rrp_invoice ON re_rental_payments(invoice_id)`);
+        await runQuery("RE Rental Payments idx invoice", `CREATE INDEX IF NOT EXISTS idx_rrp_invoice ON re_rental_payments(invoice_id)`);
 
-    // Column upgrades on existing RE tables
-    await runQuery("RE Projects linked_project_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS project_type_detail VARCHAR(50) DEFAULT 'Residential'`);
-    await runQuery("RE Projects total_area", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS total_area NUMERIC(10,2) DEFAULT 0`);
-    await runQuery("RE Projects land_cost", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS land_cost NUMERIC(20,2) DEFAULT 0`);
-    await runQuery("RE Projects company", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
-    await runQuery("RE Projects company_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company_id INTEGER`);
-    await runQuery("RE Units area_m2", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS area NUMERIC(10,2)`);
-    await runQuery("RE Units cost_per_meter_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS cost_per_meter NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("RE Units suggested_price_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(20,2) DEFAULT 0`);
-    await runQuery("RE Units rental_status", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS rental_status VARCHAR(50) DEFAULT 'Available'`);
+        // Column upgrades on existing RE tables
+        await runQuery("RE Projects linked_project_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS project_type_detail VARCHAR(50) DEFAULT 'Residential'`);
+        await runQuery("RE Projects total_area", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS total_area NUMERIC(10,2) DEFAULT 0`);
+        await runQuery("RE Projects land_cost", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS land_cost NUMERIC(20,2) DEFAULT 0`);
+        await runQuery("RE Projects company", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("RE Projects company_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS company_id INTEGER`);
+        await runQuery("RE Units area_m2", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS area NUMERIC(10,2)`);
+        await runQuery("RE Units cost_per_meter_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS cost_per_meter NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("RE Units suggested_price_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(20,2) DEFAULT 0`);
+        await runQuery("RE Units rental_status", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS rental_status VARCHAR(50) DEFAULT 'Available'`);
 
-    await runQuery("RFQ Table", `CREATE TABLE IF NOT EXISTS rfq (
+        await runQuery("RFQ Table", `CREATE TABLE IF NOT EXISTS rfq (
         id SERIAL PRIMARY KEY,
         project_name VARCHAR(255),
         item_description TEXT,
@@ -885,14 +885,14 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Warehouses Table", `CREATE TABLE IF NOT EXISTS warehouses (
+        await runQuery("Warehouses Table", `CREATE TABLE IF NOT EXISTS warehouses (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         location VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("BOQ Table", `CREATE TABLE IF NOT EXISTS boq (
+        await runQuery("BOQ Table", `CREATE TABLE IF NOT EXISTS boq (
         id SERIAL PRIMARY KEY,
         project_name VARCHAR(255),
         item_name VARCHAR(255),
@@ -903,35 +903,35 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Ensure all target BOQ columns exist on any pre-existing boq relation (legacy schema compatibility):
-    await runQuery("BOQ Add project_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
-    await runQuery("BOQ Add item_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS item_name VARCHAR(255)");
-    await runQuery("BOQ Add uom", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS uom VARCHAR(50)");
-    await runQuery("BOQ Add est_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_qty NUMERIC(20,6) DEFAULT 0");
-    await runQuery("BOQ Add est_unit_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_unit_price NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ Add est_total_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_total_price NUMERIC(15,2) DEFAULT 0");
+        // Ensure all target BOQ columns exist on any pre-existing boq relation (legacy schema compatibility):
+        await runQuery("BOQ Add project_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS project_name VARCHAR(255)");
+        await runQuery("BOQ Add item_name", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS item_name VARCHAR(255)");
+        await runQuery("BOQ Add uom", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS uom VARCHAR(50)");
+        await runQuery("BOQ Add est_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_qty NUMERIC(20,6) DEFAULT 0");
+        await runQuery("BOQ Add est_unit_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_unit_price NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ Add est_total_price", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_total_price NUMERIC(15,2) DEFAULT 0");
 
-    // Copy old legacy column data if applicable to preserve existing data safely
-    await runQuery("BOQ Migrate item_desc to item_name", "UPDATE boq SET item_name = item_desc WHERE item_name IS NULL AND item_desc IS NOT NULL");
-    await runQuery("BOQ Migrate unit to uom", "UPDATE boq SET uom = unit WHERE uom IS NULL AND unit IS NOT NULL");
-    await runQuery("BOQ Migrate unit_price to est_unit_price", "UPDATE boq SET est_unit_price = unit_price WHERE est_unit_price = 0 AND unit_price IS NOT NULL");
-    await runQuery("BOQ Migrate est_total_price calc", "UPDATE boq SET est_total_price = est_qty * est_unit_price WHERE est_total_price = 0 AND est_qty > 0 AND est_unit_price > 0");
+        // Copy old legacy column data if applicable to preserve existing data safely
+        await runQuery("BOQ Migrate item_desc to item_name", "UPDATE boq SET item_name = item_desc WHERE item_name IS NULL AND item_desc IS NOT NULL");
+        await runQuery("BOQ Migrate unit to uom", "UPDATE boq SET uom = unit WHERE uom IS NULL AND unit IS NOT NULL");
+        await runQuery("BOQ Migrate unit_price to est_unit_price", "UPDATE boq SET est_unit_price = unit_price WHERE est_unit_price = 0 AND unit_price IS NOT NULL");
+        await runQuery("BOQ Migrate est_total_price calc", "UPDATE boq SET est_total_price = est_qty * est_unit_price WHERE est_total_price = 0 AND est_qty > 0 AND est_unit_price > 0");
 
 
-    // --- 🌟 BOQ Contracting Upgrades 🌟 ---
-    await runQuery("BOQ est_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_qty NUMERIC(20,6) DEFAULT 0");
-    await runQuery("BOQ est_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ est_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_labor_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ est_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ actual_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_qty NUMERIC(20,6) DEFAULT 0");
-    await runQuery("BOQ actual_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ actual_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_labor_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ actual_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
-    await runQuery("BOQ status", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Not Started'");
-    await runQuery("BOQ material_category", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS material_category VARCHAR(100)");
-    await runQuery("BOQ company_id", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company_id INTEGER");
-    await runQuery("BOQ company", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
-    await runQuery("BOQ Backfill company details from projects", `
+        // --- 🌟 BOQ Contracting Upgrades 🌟 ---
+        await runQuery("BOQ est_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_qty NUMERIC(20,6) DEFAULT 0");
+        await runQuery("BOQ est_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_material_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ est_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_labor_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ est_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS est_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ actual_material_qty", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_qty NUMERIC(20,6) DEFAULT 0");
+        await runQuery("BOQ actual_material_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_material_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ actual_labor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_labor_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ actual_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
+        await runQuery("BOQ status", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Not Started'");
+        await runQuery("BOQ material_category", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS material_category VARCHAR(100)");
+        await runQuery("BOQ company_id", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company_id INTEGER");
+        await runQuery("BOQ company", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
+        await runQuery("BOQ Backfill company details from projects", `
         UPDATE boq b
         SET company_id = p.company_id,
             company = p.company
@@ -939,7 +939,7 @@ const applySchemaFixes = async () => {
         WHERE b.project_name = p.name AND b.company_id IS NULL
     `);
 
-    await runQuery("Material Usage Table", `CREATE TABLE IF NOT EXISTS material_usage (
+        await runQuery("Material Usage Table", `CREATE TABLE IF NOT EXISTS material_usage (
         id SERIAL PRIMARY KEY,
         project_name VARCHAR(255) NOT NULL,
         boq_id INTEGER REFERENCES boq(id) ON DELETE RESTRICT,
@@ -958,21 +958,21 @@ const applySchemaFixes = async () => {
         deleted_at TIMESTAMP
     )`);
 
-    // Ensure all target material_usage columns exist for legacy database compatibility:
-    await runQuery("Material Usage Add boq_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE RESTRICT");
-    await runQuery("Material Usage Add inventory_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE RESTRICT");
-    await runQuery("Material Usage Add unit_cost", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0");
-    await runQuery("Material Usage Add status", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Approved'");
-    await runQuery("Material Usage Add issued_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS issued_by VARCHAR(100)");
-    await runQuery("Material Usage Add approved_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)");
-    await runQuery("Material Usage Add notes", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS notes TEXT");
+        // Ensure all target material_usage columns exist for legacy database compatibility:
+        await runQuery("Material Usage Add boq_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS boq_id INTEGER REFERENCES boq(id) ON DELETE RESTRICT");
+        await runQuery("Material Usage Add inventory_id", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE RESTRICT");
+        await runQuery("Material Usage Add unit_cost", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(20,6) DEFAULT 0");
+        await runQuery("Material Usage Add status", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Approved'");
+        await runQuery("Material Usage Add issued_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS issued_by VARCHAR(100)");
+        await runQuery("Material Usage Add approved_by", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)");
+        await runQuery("Material Usage Add notes", "ALTER TABLE material_usage ADD COLUMN IF NOT EXISTS notes TEXT");
 
-    await runQuery("Index Material Usage BOQ", "CREATE INDEX IF NOT EXISTS idx_mat_usage_boq ON material_usage(boq_id)");
-    await runQuery("Index Material Usage Project", "CREATE INDEX IF NOT EXISTS idx_mat_usage_project ON material_usage(project_name)");
+        await runQuery("Index Material Usage BOQ", "CREATE INDEX IF NOT EXISTS idx_mat_usage_boq ON material_usage(boq_id)");
+        await runQuery("Index Material Usage Project", "CREATE INDEX IF NOT EXISTS idx_mat_usage_project ON material_usage(project_name)");
 
 
 
-    await runQuery("Subcontractor Items Table", `CREATE TABLE IF NOT EXISTS subcontractor_items (
+        await runQuery("Subcontractor Items Table", `CREATE TABLE IF NOT EXISTS subcontractor_items (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id),
         boq_id INTEGER REFERENCES boq(id),
@@ -982,7 +982,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Subcontractor Invoices Table", `CREATE TABLE IF NOT EXISTS subcontractor_invoices (
+        await runQuery("Subcontractor Invoices Table", `CREATE TABLE IF NOT EXISTS subcontractor_invoices (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id),
         project_name VARCHAR(255),
@@ -993,14 +993,14 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("System Parameters Table", `CREATE TABLE IF NOT EXISTS system_parameters (
+        await runQuery("System Parameters Table", `CREATE TABLE IF NOT EXISTS system_parameters (
         id SERIAL PRIMARY KEY,
         category VARCHAR(100),
         value TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Projects Table", `CREATE TABLE IF NOT EXISTS projects (
+        await runQuery("Projects Table", `CREATE TABLE IF NOT EXISTS projects (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         description TEXT,
@@ -1013,7 +1013,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("PO Expenses Table", `CREATE TABLE IF NOT EXISTS po_expenses (
+        await runQuery("PO Expenses Table", `CREATE TABLE IF NOT EXISTS po_expenses (
         id SERIAL PRIMARY KEY,
         po_id INTEGER REFERENCES purchase_orders(id),
         expense_name VARCHAR(255),
@@ -1024,10 +1024,10 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("PO Expenses Master PO", `ALTER TABLE po_expenses ADD COLUMN IF NOT EXISTS master_po_no VARCHAR(100)`);
+        await runQuery("PO Expenses Master PO", `ALTER TABLE po_expenses ADD COLUMN IF NOT EXISTS master_po_no VARCHAR(100)`);
 
-    // --- 3. Finance & Installments ---
-    await runQuery("Installments (Real Estate)", `CREATE TABLE IF NOT EXISTS installments (
+        // --- 3. Finance & Installments ---
+        await runQuery("Installments (Real Estate)", `CREATE TABLE IF NOT EXISTS installments (
         id SERIAL PRIMARY KEY,
         contract_id INTEGER,
         due_date DATE NOT NULL,
@@ -1036,7 +1036,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sale Installments (Inventory)", `CREATE TABLE IF NOT EXISTS sale_installments (
+        await runQuery("Sale Installments (Inventory)", `CREATE TABLE IF NOT EXISTS sale_installments (
         id SERIAL PRIMARY KEY,
         sale_id INTEGER,
         client_id INTEGER,
@@ -1046,8 +1046,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- 4. Chart of Accounts Support ---
-    await runQuery("COA Table", `CREATE TABLE IF NOT EXISTS chart_of_accounts (
+        // --- 4. Chart of Accounts Support ---
+        await runQuery("COA Table", `CREATE TABLE IF NOT EXISTS chart_of_accounts (
         id SERIAL PRIMARY KEY,
         account_code VARCHAR(50) UNIQUE NOT NULL,
         account_name VARCHAR(255) NOT NULL,
@@ -1059,10 +1059,10 @@ const applySchemaFixes = async () => {
         manual_entry_allowed BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("COA Unique Constraint", `ALTER TABLE chart_of_accounts ADD CONSTRAINT chart_of_accounts_account_code_key UNIQUE (account_code)`);
+        await runQuery("COA Unique Constraint", `ALTER TABLE chart_of_accounts ADD CONSTRAINT chart_of_accounts_account_code_key UNIQUE (account_code)`);
 
-    // --- 4.5 Attachments Table Verification ---
-    await runQuery("Attachments Table", `CREATE TABLE IF NOT EXISTS attachments (
+        // --- 4.5 Attachments Table Verification ---
+        await runQuery("Attachments Table", `CREATE TABLE IF NOT EXISTS attachments (
         id SERIAL PRIMARY KEY,
         table_name VARCHAR(100),
         record_id VARCHAR(100),
@@ -1072,70 +1072,70 @@ const applySchemaFixes = async () => {
         uploaded_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await runQuery("Attachments Original Name Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS original_name VARCHAR(255)`);
-    await runQuery("Attachments Upload Date Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
-    await runQuery("Attachments Created At Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        await runQuery("Attachments Original Name Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS original_name VARCHAR(255)`);
+        await runQuery("Attachments Upload Date Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        await runQuery("Attachments Created At Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
-    // --- 5. Global Columns (Soft-Delete & Metadata) ---
-    const allTablesRes = await targetPool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
-    for (const r of allTablesRes.rows) {
-        const table = r.table_name;
-        await runQuery(`Soft-Delete for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
-        await runQuery(`DeletedBy for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS deleted_by VARCHAR(100)`);
-        await runQuery(`DeletedAt for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
-        await runQuery(`Metadata for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb`);
-    }
+        // --- 5. Global Columns (Soft-Delete & Metadata) ---
+        const allTablesRes = await targetPool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
+        for (const r of allTablesRes.rows) {
+            const table = r.table_name;
+            await runQuery(`Soft-Delete for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
+            await runQuery(`DeletedBy for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS deleted_by VARCHAR(100)`);
+            await runQuery(`DeletedAt for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
+            await runQuery(`Metadata for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb`);
+        }
 
-    // --- 6. Chart of Accounts Seeding (Safe Mode) ---
-    const defaultAccounts = [
-        ['1000', 'الأصول (Assets)', 'All', 1, null, 'Asset', 'EGP', false],
-        ['1100', 'الأصول المتداولة', 'All', 2, '1000', 'Asset', 'EGP', false],
-        ['1101', 'صندوق نقدية - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
-        ['1102', 'صندوق نقدية - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
-        ['1103', 'صندوق نقدية - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
-        ['1104', 'صندوق نقدية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
-        ['1105', 'صندوق المصروفات النثرية', 'All', 3, '1100', 'Asset', 'EGP', true],
-        ['1111', 'بنك CIB - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
-        ['1112', 'بنك الأهلي - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
-        ['1113', 'بنك مصر - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
-        ['1114', 'بنك فلسطين - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
-        ['1120', 'عملاء (حسابات مدينة - AR)', 'All', 3, '1100', 'Asset', 'EGP', false],
-        ['1125', 'تأمين وضمان أعمال طرف الغير', 'All', 3, '1100', 'Asset', 'EGP', true],
-        ['1130', 'مخزون خامات ومواد', 'All', 3, '1100', 'Asset', 'EGP', false],
-        ['1134', 'مخزون الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
-        ['1150', 'ضريبة الخصم من المنبع', 'All', 3, '1100', 'Asset', 'EGP', true],
-        ['1200', 'الأصول الثابتة (Fixed Assets)', 'All', 1, null, 'Asset', 'EGP', false],
-        ['2000', 'الالتزامات (Liabilities)', 'All', 1, null, 'Liability', 'EGP', false],
-        ['2100', 'الالتزامات المتداولة', 'All', 2, '2000', 'Liability', 'EGP', false],
-        ['2110', 'موردين (حسابات دائنة - AP)', 'All', 3, '2100', 'Liability', 'EGP', false],
-        ['2120', 'مقاولي الباطن', 'All', 3, '2100', 'Liability', 'EGP', false],
-        ['2125', 'تأمينات مستقطعة لجهات خارجية', 'All', 3, '2100', 'Liability', 'EGP', true],
-        ['2150', 'ضريبة القيمة المضافة', 'All', 3, '2100', 'Liability', 'EGP', true],
-        ['2160', 'ضرائب الخصم والإضافة (WHT)', 'All', 3, '2100', 'Liability', 'EGP', false],
-        ['2200', 'الضرائب والقيمة المضافة (VAT)', 'All', 2, '2100', 'Liability', 'EGP', false],
-        ['3000', 'حقوق الملكية (Equity)', 'All', 1, null, 'Equity', 'EGP', false],
-        ['4000', 'الإيرادات (Revenues)', 'All', 1, null, 'Revenue', 'EGP', false],
-        ['4100', 'إيرادات مبيعات', 'All', 2, '4000', 'Revenue', 'EGP', true],
-        ['4104', 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '4000', 'Revenue', 'ILS', true],
-        ['5000', 'التكاليف المباشرة (COGS)', 'All', 1, null, 'Expense', 'EGP', false],
-        ['5100', 'تكاليف المشروعات المباشرة', 'All', 1, null, 'Expense', 'EGP', false],
-        ['5104', 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '5000', 'Expense', 'ILS', true],
-        ['5200', 'تسويات جردية (Inventory Adjustments)', 'All', 3, '5000', 'Expense', 'EGP', true],
-        ['6000', 'مصاريف عمومية وإدارية', 'All', 1, null, 'Expense', 'EGP', false],
-        ['6004', 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما', 'PRIMEMED PHARMA', 3, '6000', 'Expense', 'ILS', true],
-        ['3900', 'حساب معلق - تسويات نظام', 'All', 3, '3000', 'Equity', 'EGP', true],
-        ['6900', 'حساب تسويات الكسور', 'All', 3, '6000', 'Expense', 'EGP', true]
-    ];
+        // --- 6. Chart of Accounts Seeding (Safe Mode) ---
+        const defaultAccounts = [
+            ['1000', 'الأصول (Assets)', 'All', 1, null, 'Asset', 'EGP', false],
+            ['1100', 'الأصول المتداولة', 'All', 2, '1000', 'Asset', 'EGP', false],
+            ['1101', 'صندوق نقدية - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
+            ['1102', 'صندوق نقدية - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
+            ['1103', 'صندوق نقدية - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
+            ['1104', 'صندوق نقدية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
+            ['1105', 'صندوق المصروفات النثرية', 'All', 3, '1100', 'Asset', 'EGP', true],
+            ['1111', 'بنك CIB - تيد كابيتال', 'TED Capital', 3, '1100', 'Asset', 'EGP', true],
+            ['1112', 'بنك الأهلي - ديزاين كونسبت', 'Design Concept', 3, '1100', 'Asset', 'EGP', true],
+            ['1113', 'بنك مصر - ماستر بيلدر', 'Master Builder', 3, '1100', 'Asset', 'EGP', true],
+            ['1114', 'بنك فلسطين - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
+            ['1120', 'عملاء (حسابات مدينة - AR)', 'All', 3, '1100', 'Asset', 'EGP', false],
+            ['1125', 'تأمين وضمان أعمال طرف الغير', 'All', 3, '1100', 'Asset', 'EGP', true],
+            ['1130', 'مخزون خامات ومواد', 'All', 3, '1100', 'Asset', 'EGP', false],
+            ['1134', 'مخزون الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '1100', 'Asset', 'ILS', true],
+            ['1150', 'ضريبة الخصم من المنبع', 'All', 3, '1100', 'Asset', 'EGP', true],
+            ['1200', 'الأصول الثابتة (Fixed Assets)', 'All', 1, null, 'Asset', 'EGP', false],
+            ['2000', 'الالتزامات (Liabilities)', 'All', 1, null, 'Liability', 'EGP', false],
+            ['2100', 'الالتزامات المتداولة', 'All', 2, '2000', 'Liability', 'EGP', false],
+            ['2110', 'موردين (حسابات دائنة - AP)', 'All', 3, '2100', 'Liability', 'EGP', false],
+            ['2120', 'مقاولي الباطن', 'All', 3, '2100', 'Liability', 'EGP', false],
+            ['2125', 'تأمينات مستقطعة لجهات خارجية', 'All', 3, '2100', 'Liability', 'EGP', true],
+            ['2150', 'ضريبة القيمة المضافة', 'All', 3, '2100', 'Liability', 'EGP', true],
+            ['2160', 'ضرائب الخصم والإضافة (WHT)', 'All', 3, '2100', 'Liability', 'EGP', false],
+            ['2200', 'الضرائب والقيمة المضافة (VAT)', 'All', 2, '2100', 'Liability', 'EGP', false],
+            ['3000', 'حقوق الملكية (Equity)', 'All', 1, null, 'Equity', 'EGP', false],
+            ['4000', 'الإيرادات (Revenues)', 'All', 1, null, 'Revenue', 'EGP', false],
+            ['4100', 'إيرادات مبيعات', 'All', 2, '4000', 'Revenue', 'EGP', true],
+            ['4104', 'إيرادات مبيعات الصيدلية والأدوية - بريميميد فارما', 'PRIMEMED PHARMA', 3, '4000', 'Revenue', 'ILS', true],
+            ['5000', 'التكاليف المباشرة (COGS)', 'All', 1, null, 'Expense', 'EGP', false],
+            ['5100', 'تكاليف المشروعات المباشرة', 'All', 1, null, 'Expense', 'EGP', false],
+            ['5104', 'تكلفة مبيعات الأدوية والمستلزمات - بريميميد فارما', 'PRIMEMED PHARMA', 3, '5000', 'Expense', 'ILS', true],
+            ['5200', 'تسويات جردية (Inventory Adjustments)', 'All', 3, '5000', 'Expense', 'EGP', true],
+            ['6000', 'مصاريف عمومية وإدارية', 'All', 1, null, 'Expense', 'EGP', false],
+            ['6004', 'مصاريف تشغيل الصيدلية والرواتب - بريميميد فارما', 'PRIMEMED PHARMA', 3, '6000', 'Expense', 'ILS', true],
+            ['3900', 'حساب معلق - تسويات نظام', 'All', 3, '3000', 'Equity', 'EGP', true],
+            ['6900', 'حساب تسويات الكسور', 'All', 3, '6000', 'Expense', 'EGP', true]
+        ];
 
-    for (const acc of defaultAccounts) {
-        await runQuery(`COA Seed ${acc[0]}`, `
+        for (const acc of defaultAccounts) {
+            await runQuery(`COA Seed ${acc[0]}`, `
             INSERT INTO chart_of_accounts (account_code, account_name, company_entity, hierarchy_level, parent_account, account_type, currency, manual_entry_allowed) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (account_code) DO NOTHING
         `, acc);
-    }
+        }
 
-    // --- 6.1 GL Mappings (Rule Engine) ---
-    await runQuery("GL Mappings Table", `CREATE TABLE IF NOT EXISTS gl_mappings (
+        // --- 6.1 GL Mappings (Rule Engine) ---
+        await runQuery("GL Mappings Table", `CREATE TABLE IF NOT EXISTS gl_mappings (
         id SERIAL PRIMARY KEY,
         transaction_type VARCHAR(255) UNIQUE NOT NULL,
         debit_account VARCHAR(255),
@@ -1147,26 +1147,26 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    const defaultMappings = [
-        ['CUSTOMER_INVOICE', '1120', '4000', true], // AR | Revenue
-        ['SUPPLIER_INVOICE', '1130', '2110', true], // Inventory | AP
-        ['EXPENSE_PAYMENT', '6000', '1101', true], // General Expense | Cash
-        ['PAYROLL_POSTING', '6000', '2110', true],  // Payroll Expense | Salaries Payable
-        ['CUSTOMER_PAYMENT', '1101', '1120', false],
-        ['SUPPLIER_PAYMENT', '2110', '1101', false],
-        ['CASH_TRANSFER', '1101', '1111', false],
-        ['INVENTORY_ADJUSTMENT', '5000', '1130', true]
-    ];
+        const defaultMappings = [
+            ['CUSTOMER_INVOICE', '1120', '4000', true], // AR | Revenue
+            ['SUPPLIER_INVOICE', '1130', '2110', true], // Inventory | AP
+            ['EXPENSE_PAYMENT', '6000', '1101', true], // General Expense | Cash
+            ['PAYROLL_POSTING', '6000', '2110', true],  // Payroll Expense | Salaries Payable
+            ['CUSTOMER_PAYMENT', '1101', '1120', false],
+            ['SUPPLIER_PAYMENT', '2110', '1101', false],
+            ['CASH_TRANSFER', '1101', '1111', false],
+            ['INVENTORY_ADJUSTMENT', '5000', '1130', true]
+        ];
 
-    for (const m of defaultMappings) {
-        await runQuery(`Seed GL Mapping ${m[0]}`, `
+        for (const m of defaultMappings) {
+            await runQuery(`Seed GL Mapping ${m[0]}`, `
             INSERT INTO gl_mappings (transaction_type, debit_account, credit_account, cost_center_required) 
             VALUES ($1, $2, $3, $4) ON CONFLICT (transaction_type) DO UPDATE SET debit_account = EXCLUDED.debit_account, credit_account = EXCLUDED.credit_account
         `, m);
-    }
+        }
 
-    // --- 7. Enterprise Structures (Dropdowns Support) ---
-    await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
+        // --- 7. Enterprise Structures (Dropdowns Support) ---
+        await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         base_currency VARCHAR(10) DEFAULT 'EGP',
@@ -1182,35 +1182,35 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    const companySeeds = [
-        [1, 'TED Capital', 'EGP'],
-        [2, 'Design Concept', 'EGP'],
-        [3, 'Master Builder', 'EGP'],
-        [4, 'PRIMEMED PHARMA', 'ILS']
-    ];
+        const companySeeds = [
+            [1, 'TED Capital', 'EGP'],
+            [2, 'Design Concept', 'EGP'],
+            [3, 'Master Builder', 'EGP'],
+            [4, 'PRIMEMED PHARMA', 'ILS']
+        ];
 
-    for (const comp of companySeeds) {
-        await runQuery(`Seed Company ${comp[1]}`, `
+        for (const comp of companySeeds) {
+            await runQuery(`Seed Company ${comp[1]}`, `
             INSERT INTO companies (id, name, base_currency) 
             VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_currency = EXCLUDED.base_currency
         `, comp);
-    }
+        }
 
-    await runQuery("Backfill Projects Company ID", `
+        await runQuery("Backfill Projects Company ID", `
         UPDATE projects p
         SET company_id = c.id
         FROM companies c
         WHERE p.company_id IS NULL AND (UPPER(p.company) = UPPER(c.name) OR p.company ILIKE '%' || c.name || '%')
     `);
 
-    await runQuery("Backfill Ledger Company ID", `
+        await runQuery("Backfill Ledger Company ID", `
         UPDATE ledger l
         SET company_id = c.id, company = c.name
         FROM companies c
         WHERE (l.company_id IS NULL OR l.company IS NULL OR l.company = '') AND (UPPER(l.company) = UPPER(c.name) OR l.cost_center IN (SELECT name FROM projects WHERE company_id = c.id))
     `);
 
-    await runQuery("Backfill Subcontractors Company ID from Project", `
+        await runQuery("Backfill Subcontractors Company ID from Project", `
         UPDATE subcontractors s
         SET company_id = p.company_id, company = p.company
         FROM projects p
@@ -1219,7 +1219,7 @@ const applySchemaFixes = async () => {
           AND p.company_id IS NOT NULL
     `);
 
-    await runQuery("Backfill Subcontractors Company ID from Company Name", `
+        await runQuery("Backfill Subcontractors Company ID from Company Name", `
         UPDATE subcontractors s
         SET company_id = c.id
         FROM companies c
@@ -1229,14 +1229,14 @@ const applySchemaFixes = async () => {
           AND (UPPER(s.company) = UPPER(c.name) OR s.company ILIKE '%' || c.name || '%')
     `);
 
-    await runQuery("Committees Table", `CREATE TABLE IF NOT EXISTS committees (
+        await runQuery("Committees Table", `CREATE TABLE IF NOT EXISTS committees (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         description TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Org Units Table", `CREATE TABLE IF NOT EXISTS org_units (
+        await runQuery("Org Units Table", `CREATE TABLE IF NOT EXISTS org_units (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         type VARCHAR(50),
@@ -1244,33 +1244,33 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("User Org Units Table", `CREATE TABLE IF NOT EXISTS user_org_units (
+        await runQuery("User Org Units Table", `CREATE TABLE IF NOT EXISTS user_org_units (
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         org_unit_id INTEGER REFERENCES org_units(id) ON DELETE CASCADE,
         is_primary BOOLEAN DEFAULT FALSE,
         PRIMARY KEY(user_id, org_unit_id)
     )`);
 
-    // --- 8. Missing Columns for Dropdowns ---
-    await runQuery("Customers Legal ID", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS legal_id VARCHAR(100)`);
-    await runQuery("Customers Type", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type VARCHAR(50) DEFAULT 'Individual'`);
-    await runQuery("Customers Referral", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS referral VARCHAR(255)`);
-    await runQuery("Customers Since", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_since DATE DEFAULT CURRENT_DATE`);
-    await runQuery("Customers Product", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS product VARCHAR(255)`);
-    await runQuery("Customers Company Name", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
-    await runQuery("Customers Company ID", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id INTEGER`);
+        // --- 8. Missing Columns for Dropdowns ---
+        await runQuery("Customers Legal ID", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS legal_id VARCHAR(100)`);
+        await runQuery("Customers Type", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type VARCHAR(50) DEFAULT 'Individual'`);
+        await runQuery("Customers Referral", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS referral VARCHAR(255)`);
+        await runQuery("Customers Since", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_since DATE DEFAULT CURRENT_DATE`);
+        await runQuery("Customers Product", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS product VARCHAR(255)`);
+        await runQuery("Customers Company Name", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("Customers Company ID", `ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id INTEGER`);
 
-    await runQuery("Staff Salary", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS salary DECIMAL(15,2) DEFAULT 0`);
-    await runQuery("Staff Company", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("Staff Salary", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS salary DECIMAL(15,2) DEFAULT 0`);
+        await runQuery("Staff Company", `ALTER TABLE staff ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
-    await runQuery("Projects Company", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
-    await runQuery("Projects Client Name", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_name VARCHAR(255)`);
-    await runQuery("AR Invoices Project ID", `ALTER TABLE ar_invoices ADD COLUMN IF NOT EXISTS project_id INTEGER`);
-    await runQuery("Ledger Company", `ALTER TABLE ledger ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("Projects Company", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("Projects Client Name", `ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_name VARCHAR(255)`);
+        await runQuery("AR Invoices Project ID", `ALTER TABLE ar_invoices ADD COLUMN IF NOT EXISTS project_id INTEGER`);
+        await runQuery("Ledger Company", `ALTER TABLE ledger ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
-    await runQuery("Installments No", `ALTER TABLE installments ADD COLUMN IF NOT EXISTS installment_no VARCHAR(50)`);
+        await runQuery("Installments No", `ALTER TABLE installments ADD COLUMN IF NOT EXISTS installment_no VARCHAR(50)`);
 
-    await runQuery("Payment Receipts Table", `CREATE TABLE IF NOT EXISTS payment_receipts (
+        await runQuery("Payment Receipts Table", `CREATE TABLE IF NOT EXISTS payment_receipts (
         id SERIAL PRIMARY KEY,
         installment_id INTEGER REFERENCES installments(id),
         amount NUMERIC(15,2) DEFAULT 0,
@@ -1279,8 +1279,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- 9. Expense Management System ---
-    await runQuery("Expense Categories Table", `CREATE TABLE IF NOT EXISTS expense_categories (
+        // --- 9. Expense Management System ---
+        await runQuery("Expense Categories Table", `CREATE TABLE IF NOT EXISTS expense_categories (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) UNIQUE NOT NULL,
         description TEXT,
@@ -1288,25 +1288,25 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    const defaultExpenseCats = [
-        ['Operational Expenses', 'Direct costs for daily operations'],
-        ['Administrative Expenses', 'General management and office costs'],
-        ['Project Specific Costs', 'Costs directly attributed to a client project'],
-        ['Marketing & Sales', 'Campaigns, ads, and lead generation'],
-        ['Travel & Transportation', 'Fuel, tickets, and employee logistics'],
-        ['Maintenance & Utilities', 'Electricity, water, and building upkeep'],
-        ['Payroll & Benefits', 'Staff salaries and insurance premiums'],
-        ['Taxes & Legal Fees', 'Government duties and professional fees']
-    ];
+        const defaultExpenseCats = [
+            ['Operational Expenses', 'Direct costs for daily operations'],
+            ['Administrative Expenses', 'General management and office costs'],
+            ['Project Specific Costs', 'Costs directly attributed to a client project'],
+            ['Marketing & Sales', 'Campaigns, ads, and lead generation'],
+            ['Travel & Transportation', 'Fuel, tickets, and employee logistics'],
+            ['Maintenance & Utilities', 'Electricity, water, and building upkeep'],
+            ['Payroll & Benefits', 'Staff salaries and insurance premiums'],
+            ['Taxes & Legal Fees', 'Government duties and professional fees']
+        ];
 
-    for (const cat of defaultExpenseCats) {
-        await runQuery(`Seed Expense Category ${cat[0]}`, `
+        for (const cat of defaultExpenseCats) {
+            await runQuery(`Seed Expense Category ${cat[0]}`, `
             INSERT INTO expense_categories (name, description) 
             VALUES ($1, $2) ON CONFLICT (name) DO NOTHING
         `, cat);
-    }
+        }
 
-    await runQuery("Company Expenses Table", `CREATE TABLE IF NOT EXISTS expenses (
+        await runQuery("Company Expenses Table", `CREATE TABLE IF NOT EXISTS expenses (
         id SERIAL PRIMARY KEY,
         description TEXT NOT NULL,
         amount NUMERIC(15,2) NOT NULL,
@@ -1328,14 +1328,14 @@ const applySchemaFixes = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Expenses Project ID Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
-    await runQuery("Expenses Tax Amount Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(15,2) DEFAULT 0`);
-    await runQuery("Expenses Company Entity Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_entity VARCHAR(255)`);
-    await runQuery("Expenses Company ID Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
-    await runQuery("Payroll Company ID Column", `ALTER TABLE payroll ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
-    await runQuery("Journal Entries Company ID Column", `ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
+        await runQuery("Expenses Project ID Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
+        await runQuery("Expenses Tax Amount Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(15,2) DEFAULT 0`);
+        await runQuery("Expenses Company Entity Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_entity VARCHAR(255)`);
+        await runQuery("Expenses Company ID Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
+        await runQuery("Payroll Company ID Column", `ALTER TABLE payroll ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
+        await runQuery("Journal Entries Company ID Column", `ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id)`);
 
-    await runQuery("Inter-Company Transactions Table", `CREATE TABLE IF NOT EXISTS intercompany_transactions (
+        await runQuery("Inter-Company Transactions Table", `CREATE TABLE IF NOT EXISTS intercompany_transactions (
         id SERIAL PRIMARY KEY,
         source_company_id INTEGER REFERENCES companies(id),
         target_company_id INTEGER REFERENCES companies(id),
@@ -1347,8 +1347,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Global Subcontractor Matrix Expansion
-    await runQuery("Subcontractors Global Expansion", `
+        // Global Subcontractor Matrix Expansion
+        await runQuery("Subcontractors Global Expansion", `
         ALTER TABLE subcontractors 
         ADD COLUMN IF NOT EXISTS email VARCHAR(255),
         ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
@@ -1362,11 +1362,11 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb
     `);
 
-    await runQuery("Subcontractors Unique Name", `
+        await runQuery("Subcontractors Unique Name", `
         ALTER TABLE subcontractors ADD CONSTRAINT subcontractors_name_unique UNIQUE (name)
     `);
 
-    await runQuery("Subcontractor Contracts Table", `CREATE TABLE IF NOT EXISTS subcontractor_contracts (
+        await runQuery("Subcontractor Contracts Table", `CREATE TABLE IF NOT EXISTS subcontractor_contracts (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id) ON DELETE CASCADE,
         project_id INTEGER REFERENCES projects(id),
@@ -1382,7 +1382,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Subcontractor Bonds Table", `CREATE TABLE IF NOT EXISTS subcontractor_bonds (
+        await runQuery("Subcontractor Bonds Table", `CREATE TABLE IF NOT EXISTS subcontractor_bonds (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id) ON DELETE CASCADE,
         contract_id INTEGER REFERENCES subcontractor_contracts(id),
@@ -1395,7 +1395,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Retention Releases Table", `CREATE TABLE IF NOT EXISTS retention_releases (
+        await runQuery("Retention Releases Table", `CREATE TABLE IF NOT EXISTS retention_releases (
         id SERIAL PRIMARY KEY,
         subcontractor_id INTEGER REFERENCES subcontractors(id),
         contract_id INTEGER REFERENCES subcontractor_contracts(id),
@@ -1406,20 +1406,20 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Retention Releases Contract ID", `ALTER TABLE retention_releases ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES subcontractor_contracts(id)`);
+        await runQuery("Retention Releases Contract ID", `ALTER TABLE retention_releases ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES subcontractor_contracts(id)`);
 
-    // --- Performance Optimization & Indexing ---
-    await runQuery("Subcontractor Invoices Contract ID", `ALTER TABLE subcontractor_invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES subcontractor_contracts(id)`);
+        // --- Performance Optimization & Indexing ---
+        await runQuery("Subcontractor Invoices Contract ID", `ALTER TABLE subcontractor_invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES subcontractor_contracts(id)`);
 
-    await runQuery("Index Subcontractor Contracts", `CREATE INDEX IF NOT EXISTS idx_sub_contracts_sub_id ON subcontractor_contracts(subcontractor_id)`);
-    await runQuery("Index Subcontractor Invoices Sub", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_sub_id ON subcontractor_invoices(subcontractor_id)`);
-    await runQuery("Index Subcontractor Invoices Contract", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_contract_id ON subcontractor_invoices(contract_id)`);
-    await runQuery("Index Subcontractor Invoices Status", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_status ON subcontractor_invoices(status)`);
-    await runQuery("Index Subcontractor Bonds", `CREATE INDEX IF NOT EXISTS idx_sub_bonds_sub_id ON subcontractor_bonds(subcontractor_id)`);
-    await runQuery("Index Subcontractor Releases", `CREATE INDEX IF NOT EXISTS idx_sub_releases_sub_id ON retention_releases(subcontractor_id)`);
+        await runQuery("Index Subcontractor Contracts", `CREATE INDEX IF NOT EXISTS idx_sub_contracts_sub_id ON subcontractor_contracts(subcontractor_id)`);
+        await runQuery("Index Subcontractor Invoices Sub", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_sub_id ON subcontractor_invoices(subcontractor_id)`);
+        await runQuery("Index Subcontractor Invoices Contract", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_contract_id ON subcontractor_invoices(contract_id)`);
+        await runQuery("Index Subcontractor Invoices Status", `CREATE INDEX IF NOT EXISTS idx_sub_invoices_status ON subcontractor_invoices(status)`);
+        await runQuery("Index Subcontractor Bonds", `CREATE INDEX IF NOT EXISTS idx_sub_bonds_sub_id ON subcontractor_bonds(subcontractor_id)`);
+        await runQuery("Index Subcontractor Releases", `CREATE INDEX IF NOT EXISTS idx_sub_releases_sub_id ON retention_releases(subcontractor_id)`);
 
-    // --- Subcontractor Portal Auth Fields ---
-    await runQuery("Subcontractors Auth Fields", `
+        // --- Subcontractor Portal Auth Fields ---
+        await runQuery("Subcontractors Auth Fields", `
         ALTER TABLE subcontractors 
         ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE,
         ADD COLUMN IF NOT EXISTS password_hash TEXT,
@@ -1427,28 +1427,28 @@ const applySchemaFixes = async () => {
         ADD COLUMN IF NOT EXISTS portal_access_active BOOLEAN DEFAULT FALSE
     `);
 
-    // --- Seed Default Warehouses ---
-    const defaultWarehouses = [
-        'Main Store',
-        'branch 1',
-        'branch 2',
-        'branch 3',
-        'branch 4',
-        'branch 5',
-        'branch 6',
-        'branch 7',
-        'branch 8'
-    ];
-    for (const w of defaultWarehouses) {
-        await runQuery("Insert Default Warehouse", `
+        // --- Seed Default Warehouses ---
+        const defaultWarehouses = [
+            'Main Store',
+            'branch 1',
+            'branch 2',
+            'branch 3',
+            'branch 4',
+            'branch 5',
+            'branch 6',
+            'branch 7',
+            'branch 8'
+        ];
+        for (const w of defaultWarehouses) {
+            await runQuery("Insert Default Warehouse", `
             INSERT INTO warehouses (name)
             SELECT $1::VARCHAR
             WHERE NOT EXISTS (SELECT 1 FROM warehouses WHERE name = $1)
         `, [w]);
-    }
+        }
 
-    // --- 🌟 Package 2 & Package 4 Schema Expansion (Pharma & Direct Issue) 🌟 ---
-    await runQuery("Narcotics Custody Ledger Table", `CREATE TABLE IF NOT EXISTS narcotics_custody_ledger (
+        // --- 🌟 Package 2 & Package 4 Schema Expansion (Pharma & Direct Issue) 🌟 ---
+        await runQuery("Narcotics Custody Ledger Table", `CREATE TABLE IF NOT EXISTS narcotics_custody_ledger (
         id SERIAL PRIMARY KEY,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
         patient_id VARCHAR(100),
@@ -1467,7 +1467,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Cold Chain Logs Table", `CREATE TABLE IF NOT EXISTS cold_chain_logs (
+        await runQuery("Cold Chain Logs Table", `CREATE TABLE IF NOT EXISTS cold_chain_logs (
         id SERIAL PRIMARY KEY,
         warehouse VARCHAR(255),
         logged_date DATE DEFAULT CURRENT_DATE,
@@ -1484,7 +1484,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Stock Disposal Protocols Table", `CREATE TABLE IF NOT EXISTS stock_disposal_protocols (
+        await runQuery("Stock Disposal Protocols Table", `CREATE TABLE IF NOT EXISTS stock_disposal_protocols (
         id SERIAL PRIMARY KEY,
         protocol_no VARCHAR(100) UNIQUE,
         inventory_id INTEGER REFERENCES inventory_items(id) ON DELETE CASCADE,
@@ -1506,7 +1506,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Insurance Claims Table", `CREATE TABLE IF NOT EXISTS insurance_claims (
+        await runQuery("Insurance Claims Table", `CREATE TABLE IF NOT EXISTS insurance_claims (
         id SERIAL PRIMARY KEY,
         claim_no VARCHAR(100) UNIQUE,
         customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
@@ -1526,8 +1526,8 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    // --- 🌟 Package 5 Schema Expansion (Pharma Supply Chain & Landed Cost Engine) 🌟 ---
-    await runQuery("Pharma Shipments Table", `CREATE TABLE IF NOT EXISTS pharma_shipments (
+        // --- 🌟 Package 5 Schema Expansion (Pharma Supply Chain & Landed Cost Engine) 🌟 ---
+        await runQuery("Pharma Shipments Table", `CREATE TABLE IF NOT EXISTS pharma_shipments (
         id SERIAL PRIMARY KEY,
         shipment_no VARCHAR(50) UNIQUE,
         origin VARCHAR(100),
@@ -1549,7 +1549,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Shipment Expenses Table", `CREATE TABLE IF NOT EXISTS shipment_expenses (
+        await runQuery("Shipment Expenses Table", `CREATE TABLE IF NOT EXISTS shipment_expenses (
         id SERIAL PRIMARY KEY,
         shipment_id INTEGER REFERENCES pharma_shipments(id) ON DELETE CASCADE,
         expense_type VARCHAR(100),
@@ -1567,7 +1567,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Shipment Items Table (CBM Proration)", `CREATE TABLE IF NOT EXISTS shipment_items (
+        await runQuery("Shipment Items Table (CBM Proration)", `CREATE TABLE IF NOT EXISTS shipment_items (
         id SERIAL PRIMARY KEY,
         shipment_id INTEGER REFERENCES pharma_shipments(id) ON DELETE CASCADE,
         item_name VARCHAR(255),
@@ -1587,7 +1587,7 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb
     )`);
 
-    await runQuery("Currency Rates Table", `CREATE TABLE IF NOT EXISTS currency_rates (
+        await runQuery("Currency Rates Table", `CREATE TABLE IF NOT EXISTS currency_rates (
         id SERIAL PRIMARY KEY,
         currency_code VARCHAR(10) UNIQUE,
         currency_name VARCHAR(50),
@@ -1595,48 +1595,48 @@ const applySchemaFixes = async () => {
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Seed default currency rates to ILS
-    const defaultCurrencies = [
-        ['USD', 'US Dollar', 3.7500],
-        ['EGP', 'Egyptian Pound', 0.0750],
-        ['JOD', 'Jordanian Dinar', 5.2800],
-        ['ILS', 'Israeli Shekel', 1.0000]
-    ];
-    for (const curr of defaultCurrencies) {
-        await runQuery("Insert Default Currency Rate", `
+        // Seed default currency rates to ILS
+        const defaultCurrencies = [
+            ['USD', 'US Dollar', 3.7500],
+            ['EGP', 'Egyptian Pound', 0.0750],
+            ['JOD', 'Jordanian Dinar', 5.2800],
+            ['ILS', 'Israeli Shekel', 1.0000]
+        ];
+        for (const curr of defaultCurrencies) {
+            await runQuery("Insert Default Currency Rate", `
             INSERT INTO currency_rates (currency_code, currency_name, rate_to_ils)
             VALUES ($1, $2, $3) ON CONFLICT (currency_code) DO UPDATE SET
                 currency_name = EXCLUDED.currency_name
         `, curr);
-    }
+        }
 
-    // --- Subcontractor & Client Valuation Link ---
-    await runQuery("Subcontractor Invoices Client Valuation Link", `
+        // --- Subcontractor & Client Valuation Link ---
+        await runQuery("Subcontractor Invoices Client Valuation Link", `
         ALTER TABLE subcontractor_invoices 
         ADD COLUMN IF NOT EXISTS client_valuation_id INTEGER
     `);
 
-    // --- Client Payment History Project Link ---
-    await runQuery("Client Payment History Project Link", `
+        // --- Client Payment History Project Link ---
+        await runQuery("Client Payment History Project Link", `
         ALTER TABLE client_payment_history 
         ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
     `);
 
-    // --- AR Invoices Metadata Column ---
-    await runQuery("AR Invoices Metadata JSONB", `
+        // --- AR Invoices Metadata Column ---
+        await runQuery("AR Invoices Metadata JSONB", `
         ALTER TABLE ar_invoices 
         ADD COLUMN IF NOT EXISTS metadata JSONB
     `);
 
-    // --- Backfill Ledger reference_no from description ---
-    await runQuery("Backfill Ledger reference_no from description", `
+        // --- Backfill Ledger reference_no from description ---
+        await runQuery("Backfill Ledger reference_no from description", `
         UPDATE ledger 
         SET reference_no = TRIM(split_part(description, ' | مرجع: ', 2)) 
         WHERE (reference_no IS NULL OR reference_no = '') AND description LIKE '% | مرجع: %'
     `);
 
-    // --- CRM Extensions Tables ---
-    await runQuery("CRM Appointments Table", `CREATE TABLE IF NOT EXISTS crm_appointments (
+        // --- CRM Extensions Tables ---
+        await runQuery("CRM Appointments Table", `CREATE TABLE IF NOT EXISTS crm_appointments (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
         resource_name VARCHAR(255),
@@ -1647,15 +1647,15 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Appointments customer_id Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
-    await runQuery("CRM Appointments title Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS title VARCHAR(255)`);
-    await runQuery("CRM Appointments appointment_date Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS appointment_date TIMESTAMP`);
-    await runQuery("CRM Appointments duration_minutes Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60`);
-    await runQuery("CRM Appointments assigned_to Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(255)`);
-    await runQuery("CRM Appointments company Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
-    await runQuery("CRM Appointments created_by Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
+        await runQuery("CRM Appointments customer_id Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
+        await runQuery("CRM Appointments title Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS title VARCHAR(255)`);
+        await runQuery("CRM Appointments appointment_date Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS appointment_date TIMESTAMP`);
+        await runQuery("CRM Appointments duration_minutes Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60`);
+        await runQuery("CRM Appointments assigned_to Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(255)`);
+        await runQuery("CRM Appointments company Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("CRM Appointments created_by Column", `ALTER TABLE crm_appointments ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
 
-    await runQuery("CRM Memberships Table", `CREATE TABLE IF NOT EXISTS crm_memberships (
+        await runQuery("CRM Memberships Table", `CREATE TABLE IF NOT EXISTS crm_memberships (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
         tier VARCHAR(100) DEFAULT 'Standard',
@@ -1665,14 +1665,14 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Memberships customer_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
-    await runQuery("CRM Memberships plan_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS plan_id INTEGER REFERENCES crm_membership_plans(id) ON DELETE SET NULL`);
-    await runQuery("CRM Memberships sessions_used Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS sessions_used INTEGER DEFAULT 0`);
-    await runQuery("CRM Memberships notes Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS notes TEXT`);
-    await runQuery("CRM Memberships company Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
-    await runQuery("CRM Memberships created_by Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
+        await runQuery("CRM Memberships customer_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`);
+        await runQuery("CRM Memberships plan_id Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS plan_id INTEGER REFERENCES crm_membership_plans(id) ON DELETE SET NULL`);
+        await runQuery("CRM Memberships sessions_used Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS sessions_used INTEGER DEFAULT 0`);
+        await runQuery("CRM Memberships notes Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS notes TEXT`);
+        await runQuery("CRM Memberships company Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+        await runQuery("CRM Memberships created_by Column", `ALTER TABLE crm_memberships ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)`);
 
-    await runQuery("CRM Loyalty Ledger Table", `CREATE TABLE IF NOT EXISTS crm_loyalty_ledger (
+        await runQuery("CRM Loyalty Ledger Table", `CREATE TABLE IF NOT EXISTS crm_loyalty_ledger (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
         points_change INTEGER NOT NULL,
@@ -1680,7 +1680,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Attendance Table", `CREATE TABLE IF NOT EXISTS crm_attendance (
+        await runQuery("CRM Attendance Table", `CREATE TABLE IF NOT EXISTS crm_attendance (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
         check_in_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1688,8 +1688,8 @@ const applySchemaFixes = async () => {
         status VARCHAR(50) DEFAULT 'Present'
     )`);
 
-    // --- Sales Extensions Tables ---
-    await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
+        // --- Sales Extensions Tables ---
+        await runQuery("Sales Offers Table", `CREATE TABLE IF NOT EXISTS sales_offers (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         discount_percent NUMERIC(5,2) NOT NULL,
@@ -1698,7 +1698,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        await runQuery("Sales Price Lists Table", `CREATE TABLE IF NOT EXISTS sales_price_lists (
         id SERIAL PRIMARY KEY,
         item_name VARCHAR(255) NOT NULL,
         price_tier VARCHAR(100) DEFAULT 'Retail',
@@ -1706,7 +1706,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Insurance Claims Table", `CREATE TABLE IF NOT EXISTS sales_insurance_claims (
+        await runQuery("Sales Insurance Claims Table", `CREATE TABLE IF NOT EXISTS sales_insurance_claims (
         id SERIAL PRIMARY KEY,
         client_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
         insurer_name VARCHAR(255) NOT NULL,
@@ -1715,7 +1715,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
+        await runQuery("Sales Commissions Table", `CREATE TABLE IF NOT EXISTS sales_commissions (
         id SERIAL PRIMARY KEY,
         agent_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
         sales_amount NUMERIC(15,2) NOT NULL,
@@ -1724,8 +1724,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // ─── CRM MODULE TABLES ─────────────────────────────────────────────────
-    await runQuery("CRM Appointments", `CREATE TABLE IF NOT EXISTS crm_appointments (
+        // ─── CRM MODULE TABLES ─────────────────────────────────────────────────
+        await runQuery("CRM Appointments", `CREATE TABLE IF NOT EXISTS crm_appointments (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         title VARCHAR(255),
@@ -1739,7 +1739,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Membership Plans", `CREATE TABLE IF NOT EXISTS crm_membership_plans (
+        await runQuery("CRM Membership Plans", `CREATE TABLE IF NOT EXISTS crm_membership_plans (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         duration_days INTEGER DEFAULT 30,
@@ -1750,7 +1750,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Memberships", `CREATE TABLE IF NOT EXISTS crm_memberships (
+        await runQuery("CRM Memberships", `CREATE TABLE IF NOT EXISTS crm_memberships (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         plan_id INTEGER REFERENCES crm_membership_plans(id) ON DELETE SET NULL,
@@ -1762,7 +1762,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Points", `CREATE TABLE IF NOT EXISTS crm_points (
+        await runQuery("CRM Points", `CREATE TABLE IF NOT EXISTS crm_points (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         points NUMERIC(15,2) DEFAULT 0,
@@ -1773,7 +1773,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("CRM Client Attendance", `CREATE TABLE IF NOT EXISTS crm_client_attendance (
+        await runQuery("CRM Client Attendance", `CREATE TABLE IF NOT EXISTS crm_client_attendance (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         check_in TIMESTAMP NOT NULL,
@@ -1785,8 +1785,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // ─── SALES MODULE TABLES ────────────────────────────────────────────────
-    await runQuery("Sales Invoices", `CREATE TABLE IF NOT EXISTS sales_invoices (
+        // ─── SALES MODULE TABLES ────────────────────────────────────────────────
+        await runQuery("Sales Invoices", `CREATE TABLE IF NOT EXISTS sales_invoices (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         invoice_number VARCHAR(100),
@@ -1801,7 +1801,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales POS Transactions", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
+        await runQuery("Sales POS Transactions", `CREATE TABLE IF NOT EXISTS sales_pos_transactions (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         payment_method VARCHAR(50) DEFAULT 'نقدي',
@@ -1813,7 +1813,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Offers", `CREATE TABLE IF NOT EXISTS sales_offers (
+        await runQuery("Sales Offers", `CREATE TABLE IF NOT EXISTS sales_offers (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255),
         discount_type VARCHAR(50) DEFAULT 'نسبة',
@@ -1827,7 +1827,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Price Lists", `CREATE TABLE IF NOT EXISTS sales_price_lists (
+        await runQuery("Sales Price Lists", `CREATE TABLE IF NOT EXISTS sales_price_lists (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255),
         product_name VARCHAR(255),
@@ -1840,7 +1840,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Insurance", `CREATE TABLE IF NOT EXISTS sales_insurance (
+        await runQuery("Sales Insurance", `CREATE TABLE IF NOT EXISTS sales_insurance (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         provider VARCHAR(255),
@@ -1855,7 +1855,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Targets", `CREATE TABLE IF NOT EXISTS sales_targets (
+        await runQuery("Sales Targets", `CREATE TABLE IF NOT EXISTS sales_targets (
         id SERIAL PRIMARY KEY,
         agent_name VARCHAR(255),
         target_amount NUMERIC(15,2) DEFAULT 0,
@@ -1866,7 +1866,7 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await runQuery("Sales Installments", `CREATE TABLE IF NOT EXISTS sales_installments (
+        await runQuery("Sales Installments", `CREATE TABLE IF NOT EXISTS sales_installments (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
         total_amount NUMERIC(15,2) DEFAULT 0,
@@ -1880,8 +1880,8 @@ const applySchemaFixes = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // --- WebSocket notification trigger ---
-    await runQuery("Notify Function", `
+        // --- WebSocket notification trigger ---
+        await runQuery("Notify Function", `
         CREATE OR REPLACE FUNCTION notify_new_notification()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -1891,7 +1891,7 @@ const applySchemaFixes = async () => {
         $$ LANGUAGE plpgsql;
     `);
 
-    await runQuery("Notify Trigger", `
+        await runQuery("Notify Trigger", `
         CREATE OR REPLACE TRIGGER trg_notify_new_notification
         AFTER INSERT ON notifications
         FOR EACH ROW
