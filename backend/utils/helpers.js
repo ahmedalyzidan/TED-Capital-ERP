@@ -385,13 +385,10 @@ const buildCompanyFilter = async (type, scope, prefix = "") => {
         return `(project_name IN ${projNamesSqlList} OR inventory_id IN (SELECT id FROM inventory_items WHERE warehouse IN ${namesSqlList} OR company_id IN ${idsSqlList}))`;
     }
     if (type === 'boq') {
-        // If no central projects found, tenant DB isolation is sufficient — don't block results
-        if (!hasCentralProjects) return null;
-        return `project_name IN ${projNamesSqlList}`;
+        return `(${prefix}company_id IN ${idsSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}project_name IN ${projNamesSqlList})`;
     }
     if (type === 'subcontractor_items') {
-        if (!hasCentralProjects) return null;
-        return `boq_id IN (SELECT id FROM boq WHERE project_name IN ${projNamesSqlList})`;
+        return `boq_id IN (SELECT id FROM boq WHERE company_id IN ${idsSqlList} OR company IN ${namesSqlList} OR project_name IN ${projNamesSqlList})`;
     }
     if (type === 'ledger' || type === 'general_ledger') {
         return `(${prefix}cost_center IN ${projNamesSqlList} OR ${prefix}cost_center IN ${namesSqlList} OR ${prefix}company IN ${namesSqlList} OR ${prefix}company_id IN ${idsSqlList})`;

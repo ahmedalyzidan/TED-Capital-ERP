@@ -579,7 +579,7 @@ export default function ContractorSuite() {
       // Map DB BOQ items to boqItems state
       const dbBoqItems = boqRes.data?.data || [];
       const mappedDbBoq = dbBoqItems.map(item => {
-        const proj = allCombinedProjects.find(p => p.name === item.project_name);
+        const proj = allCombinedProjects.find(p => p.name && item.project_name && p.name.trim().toLowerCase() === item.project_name.trim().toLowerCase());
         return {
           id: item.id,
           projectId: proj ? String(proj.id) : activeProjectId,

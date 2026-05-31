@@ -8,17 +8,32 @@ const pool = require('./db');
 const applySchemaFixes = async () => {
     console.log("🛠️ Starting Granular Schema Synchronization...");
 
-    const runQuery = async (label, sql, params = []) => {
-        try {
-            await pool.query(sql, params);
-        } catch (e) {
-            // Suppress warnings for things that already exist
-            if (e.message.includes("already exists") || e.code === '42P07' || e.code === '42710') {
-                return;
-            }
-            console.warn(`⚠️ Schema Notice [${label}]: ${e.message}`);
+    // Get all active companies from central pool
+    let companies = ['TED Capital', 'Design Concept', 'PRIMEMED PHARMA', 'Master Builder'];
+    try {
+        const res = await pool.centralPool.query("SELECT name FROM companies WHERE is_active = TRUE");
+        if (res.rows.length > 0) {
+            companies = res.rows.map(r => r.name);
         }
-    };
+    } catch (err) {
+        console.warn("Could not query companies registry:", err.message);
+    }
+
+    for (const company of companies) {
+        console.log(`📡 Syncing database schema for company: "${company}"`);
+        const targetPool = pool.getOrCreatePool(company);
+
+        const runQuery = async (label, sql, params = []) => {
+            try {
+                await targetPool.query(sql, params);
+            } catch (e) {
+                // Suppress warnings for things that already exist
+                if (e.message.includes("already exists") || e.code === '42P07' || e.code === '42710') {
+                    return;
+                }
+                console.warn(`⚠️ Schema Notice [${label}] on "${company}": ${e.message}`);
+            }
+        };
 
     // --- 00. Companies Registry (Tenant DB Mapping) ---
     await runQuery("Companies Table", `CREATE TABLE IF NOT EXISTS companies (
@@ -914,6 +929,15 @@ const applySchemaFixes = async () => {
     await runQuery("BOQ actual_subcontractor_cost", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS actual_subcontractor_cost NUMERIC(15,2) DEFAULT 0");
     await runQuery("BOQ status", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Not Started'");
     await runQuery("BOQ material_category", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS material_category VARCHAR(100)");
+    await runQuery("BOQ company_id", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company_id INTEGER");
+    await runQuery("BOQ company", "ALTER TABLE boq ADD COLUMN IF NOT EXISTS company VARCHAR(255)");
+    await runQuery("BOQ Backfill company details from projects", `
+        UPDATE boq b
+        SET company_id = p.company_id,
+            company = p.company
+        FROM projects p
+        WHERE b.project_name = p.name AND b.company_id IS NULL
+    `);
 
     await runQuery("Material Usage Table", `CREATE TABLE IF NOT EXISTS material_usage (
         id SERIAL PRIMARY KEY,
@@ -1053,7 +1077,7 @@ const applySchemaFixes = async () => {
     await runQuery("Attachments Created At Column", `ALTER TABLE attachments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
     // --- 5. Global Columns (Soft-Delete & Metadata) ---
-    const allTablesRes = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
+    const allTablesRes = await targetPool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
     for (const r of allTablesRes.rows) {
         const table = r.table_name;
         await runQuery(`Soft-Delete for ${table}`, `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
@@ -1874,7 +1898,9 @@ const applySchemaFixes = async () => {
         EXECUTE FUNCTION notify_new_notification();
     `);
 
-    console.log("✅ Granular Schema Synchronization & Performance Tuning Completed.");
+    } // Close company loop
+
+    console.log("✅ Granular Schema Synchronization & Performance Tuning Completed on all databases.");
 };
 
 module.exports = { applySchemaFixes };
