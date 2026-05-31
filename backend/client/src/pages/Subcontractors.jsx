@@ -2087,7 +2087,8 @@ export default function Subcontractors() {
                   value={paymentForm.source_account}
                   onChange={(e) => setPaymentForm({ ...paymentForm, source_account: e.target.value })}
                   required
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                  disabled
+                  className="w-full p-4 bg-slate-150 border-none rounded-2xl font-black text-slate-500 text-xs outline-none cursor-not-allowed appearance-none"
                 >
                   <option value="">{language === 'ar' ? '-- اختر حساب الصرف --' : '-- Select Source Account --'}</option>
                   {coaAccounts.map(acc => (

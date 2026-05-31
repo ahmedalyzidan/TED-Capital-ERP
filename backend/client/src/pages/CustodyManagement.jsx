@@ -871,7 +871,7 @@ export default function CustodyManagement() {
 
       {/* --- CUSTODY CREATION MODAL --- */}
       {isCustodyModalOpen && (
-        <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
           <div className="absolute inset-0 cursor-pointer" onClick={() => setIsCustodyModalOpen(false)}></div>
           <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-scale-up border border-white/10 flex flex-col max-h-[90vh]">
             <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -953,7 +953,7 @@ export default function CustodyManagement() {
 
       {/* --- EXPENSE LOGGING MODAL --- */}
       {isExpenseModalOpen && selectedCustody && (
-        <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
           <div className="absolute inset-0 cursor-pointer" onClick={() => setIsExpenseModalOpen(false)}></div>
           <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-scale-up border border-white/10 flex flex-col max-h-[90vh]">
             <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -1111,7 +1111,7 @@ export default function CustodyManagement() {
 
       {/* --- MANAGER APPROVAL DEBIT ACCOUNT SELECTION MODAL --- */}
       {isApproveModalOpen && activeExpenseToApprove && (
-        <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl">
           <div className="absolute inset-0 cursor-pointer" onClick={() => setIsApproveModalOpen(false)}></div>
           <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10 flex flex-col">
             <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -1140,9 +1140,9 @@ export default function CustodyManagement() {
                 <select
                   value={approveForm.debit_account}
                   onChange={e => setApproveForm({ ...approveForm, debit_account: e.target.value })}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all appearance-none cursor-pointer"
+                  disabled={true}
+                  className="w-full px-5 py-3.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none cursor-not-allowed opacity-80"
                 >
-                  <option value="">{cur.approveForm.defaultAccount}</option>
                   {accounts.map((acc, index) => (
                     <option key={index} value={acc}>{acc}</option>
                   ))}

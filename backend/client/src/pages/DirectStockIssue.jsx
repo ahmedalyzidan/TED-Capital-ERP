@@ -202,6 +202,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     ? (language === 'ar' ? 'ش.ج' : 'ILS') 
     : (language === 'ar' ? 'ج.م' : 'EGP');
   const [activeTab, setActiveTab] = useState(defaultTab); // 'issue', 'return', 'invoice_list', 'customer_statement'
+  const [issueType, setIssueType] = useState('invoice'); // 'invoice' for direct stock issue, 'quotation' for quotation draft
 
   useEffect(() => {
     if (defaultTab) {
@@ -918,7 +919,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
     setSuccessMsg('');
 
     try {
-      if (activeTab === 'issue') {
+      if (activeTab === 'issue' && issueType === 'quotation') {
         const cartItems = invoiceLines.map(line => ({
           inventory_id: parseInt(line.inventory_id),
           name: line.item_name,
@@ -1019,6 +1020,39 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       });
 
       await Promise.all(inventoryAndSalesPromises);
+
+      // Save to sales_invoices registry so it appears under 'Invoice Records'
+      try {
+        const invoiceItems = invoiceLines.map(line => ({
+          id: line.inventory_id,
+          name: line.item_name,
+          qty: Number(line.qty),
+          price: parseFloat(line.unit_price) || 0,
+          uom: line.uom || 'وحدة',
+          batch_no: line.batch_no || 'N/A'
+        }));
+
+        await api.post('/sales/invoices', {
+          customer_id: selectedCustomer ? parseInt(selectedCustomer) : null,
+          invoice_number: documentNo,
+          total_amount: parseFloat(totals.grandTotal),
+          tax_amount: parseFloat(totals.taxAmount),
+          discount: parseFloat(discount || 0),
+          due_date: invoiceDate,
+          status: paymentMethod === 'On Account' ? 'غير مدفوعة' : 'مدفوعة',
+          notes: selectedProjectId ? `المشروع: ${selectedProjectId}` : '',
+          sales_type: 'DirectIssue',
+          payment_method: paymentMethod,
+          amount_paid: isPartial ? parseFloat(amountPaid) : (paymentMethod === 'Cash' || paymentMethod === 'Bank' ? parseFloat(totals.grandTotal) : 0),
+          remaining_balance: isPartial 
+            ? (parseFloat(totals.grandTotal) - parseFloat(amountPaid)) 
+            : (paymentMethod === 'On Account' ? parseFloat(totals.grandTotal) : 0),
+          items: invoiceItems,
+          project_id: selectedProjectId || null
+        });
+      } catch (err) {
+        console.warn('Could not post invoice to registry:', err);
+      }
 
       // B. Create balanced General Ledger postings using active company configuration
       const accountMap = {
@@ -1861,7 +1895,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                 <span>👤</span> {activeTab === 'issue' ? (language === 'ar' ? 'بيانات العميل واللوجستيات' : 'Customer & Logistics Details') : (language === 'ar' ? 'بيانات العميل المرجع والمخزن' : 'Return Client & Store Details')}
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className={`grid grid-cols-1 ${activeTab === 'issue' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-6`}>
                 
                 {/* Select Customer + Live Search */}
                 <div className="flex flex-col gap-2">
@@ -1995,6 +2029,23 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                     className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
                   />
                 </div>
+
+                {/* Issue Type Selector (Direct Stock Issue vs Quotation) */}
+                {activeTab === 'issue' && (
+                  <div className="flex flex-col gap-2 justify-end animate-in fade-in duration-200">
+                    <label className="text-xs font-black text-slate-500">
+                      ⚙️ {language === 'ar' ? 'نوع حركة الصرف *' : 'Issue Movement Type *'}
+                    </label>
+                    <select
+                      value={issueType}
+                      onChange={(e) => setIssueType(e.target.value)}
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
+                    >
+                      <option value="invoice">{language === 'ar' ? 'صرف مخزني مباشر وفاتورة' : 'Direct Stock Issue & Invoice'}</option>
+                      <option value="quotation">{language === 'ar' ? 'عرض سعر مسودة (مسوّدة فقط)' : 'Quotation Draft (Draft Only)'}</option>
+                    </select>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -2606,8 +2657,16 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
               className={`w-full text-white py-4.5 rounded-2xl font-black shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 disabled:opacity-50 text-sm cursor-pointer ${btnAccentClass}`}
             >
               {isSubmitting 
-                ? (activeTab === 'issue' ? (language === 'ar' ? 'جاري الصرف والترحيل للميزانية...' : 'Posting Issue Ledger...') : (language === 'ar' ? 'جاري ترحيل المرتجع للمستودع والميزانية...' : 'Posting Return Reversal...')) 
-                : (activeTab === 'issue' ? (language === 'ar' ? '🚚 ترحيل قيد الصرف وفاتورة المبيعات' : '🚚 Post Stock Issue & Invoice') : (language === 'ar' ? '🔄 ترحيل مرتجع الصرف وإصدار قيد التسوية' : '🔄 Post Stock Return & Settlement'))}
+                ? (activeTab === 'issue' 
+                    ? (issueType === 'quotation' 
+                        ? (language === 'ar' ? 'جاري حفظ مسودة عرض السعر...' : 'Saving Quotation Draft...')
+                        : (language === 'ar' ? 'جاري الصرف والترحيل للميزانية...' : 'Posting Issue Ledger...'))
+                    : (language === 'ar' ? 'جاري ترحيل المرتجع للمستودع والميزانية...' : 'Posting Return Reversal...')) 
+                : (activeTab === 'issue' 
+                    ? (issueType === 'quotation'
+                        ? (language === 'ar' ? '💾 حفظ عرض السعر كمسودة' : '💾 Save Quotation Draft')
+                        : (language === 'ar' ? '🚚 ترحيل قيد الصرف وفاتورة المبيعات' : '🚚 Post Stock Issue & Invoice'))
+                    : (language === 'ar' ? '🔄 ترحيل مرتجع الصرف وإصدار قيد التسوية' : '🔄 Post Stock Return & Settlement'))}
             </button>
 
           </div>

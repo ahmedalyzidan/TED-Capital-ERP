@@ -3058,21 +3058,26 @@ export default function ContractorSuite() {
         </div>
 
         {/* --- PREMIUM RESPONSIVE NAVIGATION GRID --- */}
+        {/* --- PREMIUM RESPONSIVE NAVIGATION GRID (UNIFIED 2 ROWS) --- */}
         <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
             {[
               { id: 'dashboard', label: language === 'ar' ? 'لوحة القيادة' : 'Dashboard', icon: '📊' },
-              { id: 'boq', label: language === 'ar' ? 'المقايسة والبنود' : 'BOQ & Items', icon: '📝' },
+              { id: 'boq', label: language === 'ar' ? 'المقايسة والبنود' : 'BOQ & Items', icon: '📋' },
               { id: 'expenses', label: language === 'ar' ? 'المصروفات الفعلية' : 'Actual Expenses', icon: '💸' },
               { id: 'client', label: language === 'ar' ? 'دفعات العميل' : 'Client Payments', icon: '💳' },
+              { id: 'financial_summary', label: language === 'ar' ? 'موقف العميل والمقاول' : 'Financial Summary', icon: '📊' },
               { id: 'warehouses', label: language === 'ar' ? 'المخازن' : 'Warehouses', icon: '📦' },
               { id: 'transactions', label: language === 'ar' ? 'التحصيلات والمدفوعات' : 'Collections & Payments', icon: '💸' },
-              { id: 'files', label: language === 'ar' ? 'ملفات ومستندات' : 'Files & Documents', icon: '📁' }
+              { id: 'custody', label: language === 'ar' ? 'إدارة العهد النقدية' : 'Custody Management', icon: '💼' },
+              { id: 'hr', label: language === 'ar' ? 'الموارد البشرية' : 'HR', icon: '👥' },
+              { id: 'takeoff', label: language === 'ar' ? 'استخراج المقايسات' : 'DXF Takeoff', icon: '📐' },
+              { id: 'files', label: language === 'ar' ? 'ملفات ومستندات' : 'Files & Documents', icon: '📂' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === tab.id
+                className={`flex items-center justify-center gap-1.5 lg:gap-2 px-2 py-3 lg:px-3 lg:py-3.5 rounded-xl font-black text-[10px] lg:text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === tab.id
                   ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
                   : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
                   }`}
@@ -3081,42 +3086,6 @@ export default function ContractorSuite() {
                 <span>{tab.label}</span>
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* --- PREMIUM INLINE TABS ROW (Custody & HR) --- */}
-        <div className="bg-[#090d16] p-2 rounded-2xl border border-slate-800 shadow-2xl no-print mt-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              onClick={() => setActiveTab('custody')}
-              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'custody'
-                ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
-                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
-                }`}
-            >
-              <span className="text-sm">💼</span>
-              <span>{language === 'ar' ? 'إدارة العهد النقدية' : 'Custody Management'}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('hr')}
-              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'hr'
-                ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-[1px]'
-                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
-                }`}
-            >
-              <span className="text-sm">👥</span>
-              <span>{language === 'ar' ? 'الموارد البشرية' : 'HR'}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('takeoff')}
-              className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-black text-xs transition-all duration-300 whitespace-nowrap border ${activeTab === 'takeoff'
-                ? 'bg-[#1e293b] border-indigo-500/30 text-indigo-400 shadow-md transform -translate-y-[1px]'
-                : 'text-slate-450 bg-[#0f172a]/40 border-slate-800 hover:bg-[#131b2e] hover:text-white hover:border-slate-700'
-                }`}
-            >
-              <span className="text-sm">📐</span>
-              <span>{language === 'ar' ? 'استخراج المقايسات' : 'DXF Takeoff'}</span>
-            </button>
           </div>
         </div>
 
@@ -3330,7 +3299,7 @@ export default function ContractorSuite() {
 
         {/* 1. DASHBOARD VIEW */}
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
 
             {/* Category breakdown visual bars */}
             <div className="lg:col-span-2 bg-[#0f172a] border border-slate-800 p-8 rounded-3xl shadow-lg space-y-6">
@@ -3441,7 +3410,7 @@ export default function ContractorSuite() {
 
         {/* 2. BOQ VIEW */}
         {activeTab === 'boq' && (
-          <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+          <div className="space-y-6 animate-in fade-in duration-500">
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl no-print">
               <div>
@@ -3639,7 +3608,7 @@ export default function ContractorSuite() {
 
         {/* 3. EXPENSES VIEW */}
         {activeTab === 'expenses' && (
-          <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+          <div className="space-y-6 animate-in fade-in duration-500">
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl no-print">
               <div>
@@ -3888,7 +3857,7 @@ export default function ContractorSuite() {
 
         {/* 4. CLIENT PAYMENTS & PROGRESS CLAIMS VIEW */}
         {activeTab === 'client' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
+          <div className="space-y-8 animate-in fade-in duration-500">
 
             {/* 4.1 Financial Highlights / Balances */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 no-print">
@@ -4931,6 +4900,106 @@ export default function ContractorSuite() {
                 {/* ════════════════════════════════════════
                     📊 الخلاصة المالية للمقاولين من الباطن
                 ════════════════════════════════════════ */}
+
+                {/* Received Payments History with linked claims */}
+                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-black text-white flex items-center gap-3">
+                        <span className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/25 text-emerald-400">💳</span> سجل دفعات وأقساط العميل المقبوضة
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">تتبع التدفق النقدي الوارد من سداد الدفعات وربطها بالمستخلصات المعتمدة لبيان التسوية</p>
+                    </div>
+                  </div>
+
+                  <div className="relative border-r border-slate-800 pr-6 space-y-6 py-4">
+                    {currentInstallments.map((inst, index) => {
+                      const linkedVal = valuations.find(v => v.id === inst.valuationId);
+                      return (
+                        <div key={inst.id} className="relative group">
+                          <div className="absolute right-0 top-1 w-3 h-3 rounded-full bg-cyan-500 border-2 border-slate-900 translate-x-[24px] group-hover:scale-125 transition-transform z-10"></div>
+
+                          <div className="p-5 bg-[#070a13] border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-600/30 transition-colors">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-cyan-400 font-black">الدفعة رقم #{index + 1}</span>
+                                {linkedVal && (
+                                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-black border border-slate-850">
+                                    تسوية مستخلص: {linkedVal.claimNo}
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="text-sm font-black text-white">{inst.notes || 'تحصيل بدون ملاحظات'}</h4>
+                              <span className="text-[10px] text-slate-500 font-mono block">
+                                {inst.date} | طريقة الدفع: {inst.paymentMethod || 'نقدًا'}
+                                {inst.referenceNo ? ` (الرقم المرجعي: ${inst.referenceNo})` : ''}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-baseline gap-1 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 font-black">
+                                <span className="text-lg font-black font-mono tracking-tighter">+{inst.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span className="text-[10px] font-bold">جنيه</span>
+                              </div>
+                              <div className="flex flex-col gap-1.5 no-print text-left">
+                                <button
+                                  onClick={() => setSelectedPrintInstallment(inst)}
+                                  className="text-[10px] font-black text-cyan-400 hover:text-cyan-300 transition-colors"
+                                >
+                                  طباعة الإيصال 🖨️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteInstallment(inst.id)}
+                                  className="text-[10px] font-bold text-rose-400 hover:text-rose-300 transition-colors"
+                                >
+                                  حذف 🗑️
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {currentInstallments.length === 0 && (
+                      <p className="text-xs text-slate-500 py-8 text-center">لم يتم قيد أي دفعات نقدية مستلمة بعد.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Col: Collection wizard and payment linkage Form */}
+              <div className="space-y-6 no-print">
+
+
+                {/* Progress Summary Gauge */}
+                <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col items-center text-center space-y-4 hover:scale-[1.02] transition-all duration-300">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي نسبة التحصيل من العقد</span>
+
+                  {/* Circular Gauge */}
+                  <div className="relative w-36 h-36 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle cx="72" cy="72" r="60" className="stroke-slate-800" strokeWidth="12" fill="transparent" />
+                      <circle cx="72" cy="72" r="60" className="stroke-cyan-500 transition-all duration-1000" strokeWidth="12" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * totals.progressPercent) / 100} />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-2xl font-black text-white font-mono">{totals.progressPercent.toFixed(0)}%</span>
+                      <span className="text-[8px] font-black text-slate-500 tracking-wider">تحصيل فعلي</span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-300 leading-relaxed font-bold">
+                    محصل <span className="font-mono text-cyan-400 font-black">{totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م من عقد بقيمة <span className="font-mono text-white font-black">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* 11. FINANCIAL SUMMARY (CLIENT & CONTRACTOR POSITION) VIEW */}
+        {activeTab === 'financial_summary' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
                   <div>
                     <h3 className="text-lg font-black text-white flex items-center gap-3">
@@ -5239,106 +5308,11 @@ export default function ContractorSuite() {
                     );
                   })()}
                 </div>
-
-                {/* Received Payments History with linked claims */}
-                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-lg font-black text-white flex items-center gap-3">
-                        <span className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/25 text-emerald-400">💳</span> سجل دفعات وأقساط العميل المقبوضة
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1">تتبع التدفق النقدي الوارد من سداد الدفعات وربطها بالمستخلصات المعتمدة لبيان التسوية</p>
-                    </div>
-                  </div>
-
-                  <div className="relative border-r border-slate-800 pr-6 space-y-6 py-4">
-                    {currentInstallments.map((inst, index) => {
-                      const linkedVal = valuations.find(v => v.id === inst.valuationId);
-                      return (
-                        <div key={inst.id} className="relative group">
-                          <div className="absolute right-0 top-1 w-3 h-3 rounded-full bg-cyan-500 border-2 border-slate-900 translate-x-[24px] group-hover:scale-125 transition-transform z-10"></div>
-
-                          <div className="p-5 bg-[#070a13] border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-600/30 transition-colors">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-cyan-400 font-black">الدفعة رقم #{index + 1}</span>
-                                {linkedVal && (
-                                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-black border border-slate-850">
-                                    تسوية مستخلص: {linkedVal.claimNo}
-                                  </span>
-                                )}
-                              </div>
-                              <h4 className="text-sm font-black text-white">{inst.notes || 'تحصيل بدون ملاحظات'}</h4>
-                              <span className="text-[10px] text-slate-500 font-mono block">
-                                {inst.date} | طريقة الدفع: {inst.paymentMethod || 'نقدًا'}
-                                {inst.referenceNo ? ` (الرقم المرجعي: ${inst.referenceNo})` : ''}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-baseline gap-1 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 font-black">
-                                <span className="text-lg font-black font-mono tracking-tighter">+{inst.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="text-[10px] font-bold">جنيه</span>
-                              </div>
-                              <div className="flex flex-col gap-1.5 no-print text-left">
-                                <button
-                                  onClick={() => setSelectedPrintInstallment(inst)}
-                                  className="text-[10px] font-black text-cyan-400 hover:text-cyan-300 transition-colors"
-                                >
-                                  طباعة الإيصال 🖨️
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteInstallment(inst.id)}
-                                  className="text-[10px] font-bold text-rose-400 hover:text-rose-300 transition-colors"
-                                >
-                                  حذف 🗑️
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {currentInstallments.length === 0 && (
-                      <p className="text-xs text-slate-500 py-8 text-center">لم يتم قيد أي دفعات نقدية مستلمة بعد.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Col: Collection wizard and payment linkage Form */}
-              <div className="space-y-6 no-print">
-
-
-                {/* Progress Summary Gauge */}
-                <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col items-center text-center space-y-4 hover:scale-[1.02] transition-all duration-300">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي نسبة التحصيل من العقد</span>
-
-                  {/* Circular Gauge */}
-                  <div className="relative w-36 h-36 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="72" cy="72" r="60" className="stroke-slate-800" strokeWidth="12" fill="transparent" />
-                      <circle cx="72" cy="72" r="60" className="stroke-cyan-500 transition-all duration-1000" strokeWidth="12" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * totals.progressPercent) / 100} />
-                    </svg>
-                    <div className="absolute flex flex-col items-center">
-                      <span className="text-2xl font-black text-white font-mono">{totals.progressPercent.toFixed(0)}%</span>
-                      <span className="text-[8px] font-black text-slate-500 tracking-wider">تحصيل فعلي</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-slate-300 leading-relaxed font-bold">
-                    محصل <span className="font-mono text-cyan-400 font-black">{totals.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م من عقد بقيمة <span className="font-mono text-white font-black">{totals.totalBOQ.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> ج.م.
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
         )}
-
         {/* 5. FILES MANAGER VIEW (WITH LIVE INLINE EDITING & AUTO-SAVE INDICATORS) */}
         {activeTab === 'files' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom duration-500 no-print">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500 no-print">
 
             {/* Files List Directory */}
             <div className="bg-[#131b2e] border border-slate-800 p-6 rounded-[2rem] shadow-2xl space-y-4">
@@ -5504,35 +5478,35 @@ export default function ContractorSuite() {
 
         {/* 5.1 WAREHOUSES VIEW */}
         {activeTab === 'warehouses' && (
-          <div className="animate-in slide-in-from-bottom duration-500">
+          <div className="animate-in fade-in duration-500">
             <DirectStockIssue defaultTab="issue" embedded={true} projectId={activeProjectId} />
           </div>
         )}
 
         {/* 5.2 FINANCIAL TRANSACTIONS VIEW */}
         {activeTab === 'transactions' && (
-          <div className="animate-in slide-in-from-bottom duration-500">
+          <div className="animate-in fade-in duration-500">
             <FinancialTransactions embedded={true} projectId={activeProjectId} />
           </div>
         )}
 
         {/* 5.3 CUSTODY MANAGEMENT (INLINE TAB) */}
         {activeTab === 'custody' && (
-          <div className="animate-in slide-in-from-bottom duration-500">
+          <div className="animate-in fade-in duration-500">
             <CustodyManagement />
           </div>
         )}
 
         {/* 5.4 HR — HUMAN RESOURCES (INLINE TAB) */}
         {activeTab === 'hr' && (
-          <div className="animate-in slide-in-from-bottom duration-500">
+          <div className="animate-in fade-in duration-500">
             <HR />
           </div>
         )}
 
         {/* 5.5 DXF QUANTITY TAKEOFF ENGINE */}
         {activeTab === 'takeoff' && (
-          <div className="animate-in slide-in-from-bottom duration-500">
+          <div className="animate-in fade-in duration-500">
             <DXFQuantityTakeoff
               projectFiles={projectFiles}
               boqItems={boqItems}
@@ -6543,4 +6517,3 @@ export default function ContractorSuite() {
     </div>
   );
 }
-
