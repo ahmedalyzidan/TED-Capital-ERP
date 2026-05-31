@@ -188,6 +188,7 @@ export default function ContractorSuite() {
 
   // Cost Center Mode State ('project' | 'company')
   const [costCenterMode, setCostCenterMode] = useState('project');
+  const [isSubmittingBoq, setIsSubmittingBoq] = useState(false);
 
   // Save state helpers
   useEffect(() => {
@@ -1206,43 +1207,49 @@ export default function ContractorSuite() {
   const handleAddBoq = async (e) => {
     e.preventDefault();
     if (!newBoq.item_name || newBoq.price <= 0) return;
+    if (isSubmittingBoq) return;
+    setIsSubmittingBoq(true);
     const total = Number(newBoq.quantity) * Number(newBoq.price);
 
-    const isDbProject = !isNaN(Number(activeProjectId));
-    if (isDbProject) {
-      try {
-        const payload = {
-          project_name: activeProject.name,
-          item_name: newBoq.item_name,
-          material_category: newBoq.category,
-          uom: newBoq.unit,
-          est_qty: Number(newBoq.quantity),
-          est_unit_price: Number(newBoq.price),
-          est_total_price: total,
-          item_desc: newBoq.notes || ''
+    try {
+      const isDbProject = !isNaN(Number(activeProjectId));
+      if (isDbProject) {
+        try {
+          const payload = {
+            project_name: activeProject.name,
+            item_name: newBoq.item_name,
+            material_category: newBoq.category,
+            uom: newBoq.unit,
+            est_qty: Number(newBoq.quantity),
+            est_unit_price: Number(newBoq.price),
+            est_total_price: total,
+            item_desc: newBoq.notes || ''
+          };
+          await api.post('/dynamic/add/boq', payload);
+          triggerNotification('📝 تم إضافة بند جديد للمقايسة بنجاح!');
+          await fetchAllData();
+        } catch (err) {
+          console.error("Failed to add BOQ to DB:", err);
+          alert(err.response?.data?.error || 'فشل في إضافة البند في قاعدة البيانات.');
+        }
+      } else {
+        const newItem = {
+          id: Date.now(),
+          projectId: activeProjectId,
+          ...newBoq,
+          quantity: Number(newBoq.quantity),
+          price: Number(newBoq.price),
+          total
         };
-        await api.post('/dynamic/add/boq', payload);
-        triggerNotification('📝 تم إضافة بند جديد للمقايسة بنجاح!');
-        await fetchAllData();
-      } catch (err) {
-        console.error("Failed to add BOQ to DB:", err);
-        alert(err.response?.data?.error || 'فشل في إضافة البند في قاعدة البيانات.');
+        setBoqItems([...boqItems, newItem]);
+        triggerNotification('📝 تم إضافة بند جديد للمقايسة وتحديث الميزانية بنجاح!');
       }
-    } else {
-      const newItem = {
-        id: Date.now(),
-        projectId: activeProjectId,
-        ...newBoq,
-        quantity: Number(newBoq.quantity),
-        price: Number(newBoq.price),
-        total
-      };
-      setBoqItems([...boqItems, newItem]);
-      triggerNotification('📝 تم إضافة بند جديد للمقايسة وتحديث الميزانية بنجاح!');
-    }
 
-    setNewBoq({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
-    setShowAddBoq(false);
+      setNewBoq({ category: 'أعمال صحي', item_name: '', quantity: 1, unit: 'م٢', price: 0, notes: '' });
+      setShowAddBoq(false);
+    } finally {
+      setIsSubmittingBoq(false);
+    }
   };
 
   const handleStartEditBoq = (item) => {
@@ -3553,8 +3560,12 @@ export default function ContractorSuite() {
 
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => { setShowAddBoq(false); setEditingItemId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
-                  <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-xs font-black text-slate-955 transition-all">
-                    {editingItemId ? 'حفظ التعديلات 💾' : 'إضافة البند الآن 🚀'}
+                  <button 
+                    type="submit" 
+                    disabled={isSubmittingBoq}
+                    className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-black text-slate-955 transition-all"
+                  >
+                    {isSubmittingBoq ? 'جاري الإضافة... ⏳' : (editingItemId ? 'حفظ التعديلات 💾' : 'إضافة البند الآن 🚀')}
                   </button>
                 </div>
               </form>
