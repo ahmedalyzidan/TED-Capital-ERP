@@ -1328,6 +1328,9 @@ const applySchemaFixes = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+        await runQuery("Drop expenses created_by foreign key", `ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_created_by_fkey`);
+        await runQuery("Drop expenses approved_by foreign key", `ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_approved_by_fkey`);
+
         await runQuery("Expenses Project ID Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
         await runQuery("Expenses Tax Amount Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(15,2) DEFAULT 0`);
         await runQuery("Expenses Company Entity Column", `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_entity VARCHAR(255)`);
