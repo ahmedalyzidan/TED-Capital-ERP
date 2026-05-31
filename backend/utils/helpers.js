@@ -349,12 +349,11 @@ const buildCompanyFilter = async (type, scope, prefix = "") => {
         return `(${prefix}company_id IN ${idsSqlList} OR ${prefix}company_id IS NULL OR LOWER(${prefix}company_name) IN ${lowerNamesSqlList})`;
     }
 
-    // Query central DB for project names and IDs in scope to avoid empty local projects table filtering
-    const { centralPool } = require('../config/db');
+    // Query active DB for project names and IDs in scope to ensure project IDs match local tenant DB values
     let projectNames = [];
     let projectIds = [];
     try {
-        const projRes = await centralPool.query(`SELECT id, name FROM projects WHERE LOWER(company) IN ${lowerNamesSqlList} OR company_id IN ${idsSqlList}`);
+        const projRes = await pool.query(`SELECT id, name FROM projects WHERE LOWER(company) IN ${lowerNamesSqlList} OR company_id IN ${idsSqlList}`);
         projectNames = projRes.rows.map(r => r.name);
         projectIds = projRes.rows.map(r => r.id);
     } catch (err) {
