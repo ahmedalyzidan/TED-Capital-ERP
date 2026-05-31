@@ -335,7 +335,7 @@ class CustodyController {
                 );
             }
 
-            // تحديث تكلفة المقايسة (BOQ) ومزامنة أرباح المشروع
+            // تحديث تكلفة المقايسة (BOQ) إذا وجدت
             if (expense.boq_id && expense.cost_type) {
                 const amount = parseFloat(expense.amount);
                 let updateCol = null;
@@ -356,12 +356,12 @@ class CustodyController {
                      WHERE id = $2`,
                     [amount, expense.boq_id]
                 );
+            }
 
-                // إعادة احتساب أرباح ومصاريف المشروع وتحديث لوحة تحكم المالية
+            // إعادة احتساب أرباح ومصاريف المشروع وتحديث لوحة تحكم المالية إذا كان مرتبطاً بمشروع
+            if (expense.project_name) {
                 const { syncProjectFinancials } = require('../utils/helpers');
-                if (expense.project_name) {
-                    await syncProjectFinancials(expense.project_name, client);
-                }
+                await syncProjectFinancials(expense.project_name, client);
             }
 
             await logAdvancedAudit(

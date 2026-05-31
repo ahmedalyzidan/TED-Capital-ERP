@@ -5493,7 +5493,7 @@ export default function ContractorSuite() {
         {/* 5.3 CUSTODY MANAGEMENT (INLINE TAB) */}
         {activeTab === 'custody' && (
           <div className="animate-in fade-in duration-500">
-            <CustodyManagement />
+            <CustodyManagement projectId={activeProjectId} />
           </div>
         )}
 

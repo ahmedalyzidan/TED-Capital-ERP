@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export default function CustodyManagement() {
+export default function CustodyManagement({ projectId = '' }) {
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [custodies, setCustodies] = useState([]);
@@ -342,6 +342,42 @@ export default function CustodyManagement() {
       fetchBOQItems(selectedProj.name);
     }
   }, [expenseForm.project_id, projects]);
+
+  // Auto-fill active project when modal is open and projectId prop is passed
+  useEffect(() => {
+    if (isExpenseModalOpen && projectId && projects.length > 0) {
+      let matched = projects.find(p => String(p.id) === String(projectId));
+      if (!matched) {
+        let localProjName = '';
+        const savedLocalProjs = localStorage.getItem('contractor_projects');
+        if (savedLocalProjs) {
+          try {
+            const parsed = JSON.parse(savedLocalProjs);
+            const foundLocal = parsed.find(lp => String(lp.id) === String(projectId));
+            if (foundLocal) {
+              localProjName = foundLocal.name;
+            }
+          } catch (e) {}
+        }
+        if (!localProjName) {
+          if (projectId === 'villa-e109') localProjName = 'فيلا E109';
+          else if (projectId === 'villa-e110') localProjName = 'فيلا E110';
+        }
+        if (localProjName) {
+          matched = projects.find(p => 
+            p.name.toLowerCase().includes(localProjName.toLowerCase()) || 
+            localProjName.toLowerCase().includes(p.name.toLowerCase())
+          );
+        }
+      }
+      if (matched) {
+        setExpenseForm(prev => ({
+          ...prev,
+          project_id: String(matched.id)
+        }));
+      }
+    }
+  }, [isExpenseModalOpen, projectId, projects]);
 
   const handleCustodyClick = async (custody) => {
     setSelectedCustody(custody);
@@ -1034,7 +1070,12 @@ export default function CustodyManagement() {
                 <select
                   value={expenseForm.project_id}
                   onChange={e => setExpenseForm({ ...expenseForm, project_id: e.target.value })}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                  disabled={!!projectId}
+                  className={`w-full px-5 py-3.5 border-none rounded-xl text-xs font-bold outline-none transition-all ${
+                    projectId 
+                      ? 'bg-slate-150 text-slate-500 cursor-not-allowed appearance-none' 
+                      : 'bg-slate-50 border border-slate-200 text-slate-900 cursor-pointer focus:bg-white focus:border-slate-900'
+                  }`}
                 >
                   <option value="">{cur.expenseForm.projectPlaceholder}</option>
                   {projects.map(p => (
