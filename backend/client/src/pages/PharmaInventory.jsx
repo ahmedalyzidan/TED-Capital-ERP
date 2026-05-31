@@ -1244,7 +1244,9 @@ function PharmaInventory() {
             <>
 
               {/* HEADER & COMPLIANCE ACTIONS */}
-              <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white">
+              <div className="relative bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl mb-8 flex flex-col gap-6 text-white overflow-hidden">
+                {/* 🌌 Background Cover Image */}
+                <div className="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none -z-10" style={{ backgroundImage: "url('/primemed_warehouse.jpg')" }}></div>
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
                   <div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-black uppercase tracking-widest mb-3">

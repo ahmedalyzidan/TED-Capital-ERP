@@ -3948,7 +3948,7 @@ export default function ContractorSuite() {
                                   min={prevPercent}
                                   max={100}
                                   step="0.5"
-                                  value={currPercentVal !== undefined && Number(currPercentVal) >= prevPercent ? currPercentVal : prevPercent}
+                                  value={currPercentVal !== undefined ? currPercentVal : prevPercent}
                                   onChange={e => setNewValuationItems({ ...newValuationItems, [item.id]: e.target.value })}
                                   className="bg-[#111827] border border-cyan-600/40 focus:border-cyan-500 rounded-xl p-1.5 text-center text-xs text-white font-mono w-16 focus:outline-none"
                                   required

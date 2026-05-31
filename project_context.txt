@@ -149,4 +149,5 @@
 - Never run INSERT/UPDATE/DROP on live DB — generate migration scripts in /migrations first
 - Financial logic changes require: pytest -m finance confirmation from user
 - No git commands without user request
+- STRICT MANDATE: Do NOT execute ANY terminal/cli commands autonomously. You must output the exact command for the user to run manually.
 ================================================================================
