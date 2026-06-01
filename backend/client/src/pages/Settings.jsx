@@ -3,6 +3,99 @@ import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import ThemeToggle from '../components/ThemeToggle';
 
+const tableLabels = {
+  ar: {
+    inventory_sales: 'سجل المبيعات وصرف المخازن (Sales & Store Issues Log)',
+    inventory_items: 'أصناف المخزون (Inventory Items)',
+    inventory_movements: 'حركات المخزون (Stock Movements)',
+    inventory_transfers: 'تحويلات المخزون (Stock Transfers)',
+    inventory_bookings: 'حجوزات المخزون (Inventory Bookings)',
+    inventory_audits: 'عمليات الجرد (Inventory Audits)',
+    inventory_audit_lines: 'تفاصيل الجرد (Inventory Audit Lines)',
+    material_usage: 'استهلاك المواد (Material Usage)',
+    ledger: 'دفتر الأستاذ العام (General Ledger)',
+    chart_of_accounts: 'شجرة الحسابات (Chart of Accounts)',
+    ar_invoices: 'فواتير العملاء (Customer Invoices)',
+    ar_invoice_items: 'تفاصيل فواتير العملاء (Invoice Items)',
+    fixed_assets: 'الأصول الثابتة (Fixed Assets)',
+    payment_receipts: 'سندات المقبوضات/المدفوعات (Payment Receipts)',
+    installments: 'الأقساط (Installments)',
+    contracts: 'العقود (Contracts)',
+    client_consumptions: 'استهلاكات العملاء (Client Consumptions)',
+    client_refunds: 'مرتجع العملاء (Client Refunds)',
+    client_delayed_payments: 'الدفعات المتأخرة للعملاء (Delayed Payments)',
+    narcotics_custody_ledger: 'سجل عهدة المواد المخدرة (Narcotics Custody)',
+    cold_chain_logs: 'سجل سلسلة التبريد (Cold Chain Logs)',
+    stock_disposal_protocols: 'محاضر إتلاف المخزون (Disposal Protocols)',
+    pharma_shipments: 'شحنات الأدوية (Pharma Shipments)',
+    shipment_items: 'تفاصيل شحنات الأدوية (Shipment Items)',
+    shipment_expenses: 'مصاريف الشحنات (Shipment Expenses)',
+    staff: 'بيانات الموظفين (HR Staff)',
+    payroll: 'مسيرات الرواتب (HR Payroll)',
+    staff_advances: 'سلف الموظفين (Staff Advances)',
+    attendance: 'سجل الحضور والانصراف (Attendance Logs)',
+    projects: 'المشاريع (Projects)',
+    subcontractors: 'مقاولين الباطن (Subcontractors)',
+    subcontractor_invoices: 'مستخلصات مقاولي الباطن (Subcontractor Invoices)',
+    subcontractor_items: 'تفاصيل مستخلصات الباطن (Subcontractor Items)',
+    subcontractor_statements: 'كشوف حساب مقاولي الباطن (Subcontractor Statements)',
+    boq: 'مقايسات الكميات (BOQ)',
+    clients: 'العملاء والجهات (Clients)',
+    customers: 'العملاء (Customers)',
+    partners: 'الشركاء المساهمين (Partners)',
+    partner_deposits: 'إيداعات الشركاء (Partner Deposits)',
+    partner_withdrawals: 'مسحوبات الشركاء (Partner Withdrawals)',
+    tasks: 'المهام والتكاليف (Tasks)',
+    daily_reports: 'التقارير اليومية (Daily Reports)',
+    committees: 'اللجان والقرارات (Committees)'
+  },
+  en: {
+    inventory_sales: 'Sales & Store Issues Log',
+    inventory_items: 'Inventory Items',
+    inventory_movements: 'Stock Movements',
+    inventory_transfers: 'Stock Transfers',
+    inventory_bookings: 'Inventory Bookings',
+    inventory_audits: 'Inventory Audits',
+    inventory_audit_lines: 'Inventory Audit Lines',
+    material_usage: 'Material Usage Logs',
+    ledger: 'General Ledger',
+    chart_of_accounts: 'Chart of Accounts',
+    ar_invoices: 'Customer Invoices',
+    ar_invoice_items: 'Invoice Items',
+    fixed_assets: 'Fixed Assets',
+    payment_receipts: 'Payment & Receipts',
+    installments: 'Installments Ledger',
+    contracts: 'Contracts',
+    client_consumptions: 'Client Consumptions',
+    client_refunds: 'Client Refunds',
+    client_delayed_payments: 'Delayed Payments',
+    narcotics_custody_ledger: 'Narcotics Custody Ledger',
+    cold_chain_logs: 'Cold Chain Logs',
+    stock_disposal_protocols: 'Disposal Protocols',
+    pharma_shipments: 'Pharma Shipments',
+    shipment_items: 'Shipment Items',
+    shipment_expenses: 'Shipment Expenses',
+    staff: 'HR Staff Records',
+    payroll: 'Monthly Payroll Run',
+    staff_advances: 'Staff Advances',
+    attendance: 'Attendance Logs',
+    projects: 'Projects',
+    subcontractors: 'Subcontractors',
+    subcontractor_invoices: 'Subcontractor Invoices',
+    subcontractor_items: 'Subcontractor Items',
+    subcontractor_statements: 'Subcontractor Statements',
+    boq: 'Bill of Quantities (BOQ)',
+    clients: 'Clients',
+    customers: 'Customers',
+    partners: 'Shareholder Partners',
+    partner_deposits: 'Partner Deposits',
+    partner_withdrawals: 'Partner Withdrawals',
+    tasks: 'Tasks & Milestones',
+    daily_reports: 'Daily Site Reports',
+    committees: 'Management Committees'
+  }
+};
+
 export default function Settings() {
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -925,7 +1018,9 @@ className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-60
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {groupTables.map(table => (
                           <label key={table} className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${selectedPurgeTables.includes(table) ? 'border-rose-300 bg-rose-50/50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
-                            <span className="font-bold text-[11px] uppercase tracking-tight text-slate-600 group-hover:text-rose-600 transition-colors">{table.replace(/_/g, ' ')}</span>
+                            <span className="font-bold text-[11px] uppercase tracking-tight text-slate-600 group-hover:text-rose-600 transition-colors">
+                              {tableLabels[language === 'ar' ? 'ar' : 'en'][table.toLowerCase()] || table.replace(/_/g, ' ')}
+                            </span>
                             <input 
                               type="checkbox" 
                               checked={selectedPurgeTables.includes(table)}
@@ -949,7 +1044,9 @@ className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-60
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {purgeableTables.filter(t => !['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'payment_receipts', 'installments', 'contracts', 'client_consumptions', 'client_refunds', 'client_delayed_payments', 'inventory_items', 'inventory_movements', 'inventory_sales', 'inventory_transfers', 'inventory_bookings', 'inventory_audits', 'inventory_audit_lines', 'material_usage', 'narcotics_custody_ledger', 'cold_chain_logs', 'stock_disposal_protocols', 'pharma_shipments', 'shipment_items', 'shipment_expenses', 'staff', 'payroll', 'staff_advances', 'attendance', 'projects', 'subcontractors', 'subcontractor_invoices', 'subcontractor_items', 'subcontractor_statements', 'boq', 'clients', 'customers', 'partners', 'partner_deposits', 'partner_withdrawals', 'tasks', 'daily_reports', 'committees', 'users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events', 'notifications', 'companies', 'settings', 'crm_templates'].includes(t.toLowerCase())).map(table => (
                           <label key={table} className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${selectedPurgeTables.includes(table) ? 'border-rose-300 bg-rose-50/50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
-                            <span className="font-bold text-[11px] uppercase tracking-tight text-slate-600 group-hover:text-rose-600 transition-colors">{table.replace(/_/g, ' ')}</span>
+                            <span className="font-bold text-[11px] uppercase tracking-tight text-slate-600 group-hover:text-rose-600 transition-colors">
+                              {tableLabels[language === 'ar' ? 'ar' : 'en'][table.toLowerCase()] || table.replace(/_/g, ' ')}
+                            </span>
                             <input 
                               type="checkbox" 
                               checked={selectedPurgeTables.includes(table)}
