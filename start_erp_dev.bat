@@ -42,4 +42,9 @@ if %errorlevel% equ 0 (
 
 echo [SUCCESS] Environment startup complete!
 echo [NOTE] Backend auto-restart is active. Run "python orchestrator.py" manually for testing.
+
+:: 7. Launch System in Maximize Desktop App Mode
+echo [INFO] Launching System in Maximized Desktop App Mode...
+start "" msedge --app=http://localhost:5173 --start-maximized
+
 if "%~1" neq "--no-pause" pause

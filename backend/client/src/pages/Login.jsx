@@ -395,479 +395,460 @@ export default function Login() {
   const companyBg = getCompanyBg();
 
   return (
-    <div className={`min-h-screen w-full flex flex-col lg:flex-row transition-all duration-500 ${theme === 'dark' ? 'bg-[#121318]' : 'bg-slate-100'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div 
+      className="min-h-screen w-full flex items-center justify-start p-6 md:pl-16 lg:pl-28 xl:pl-40 relative overflow-hidden transition-all duration-500 bg-[#0d0e12]"
+      style={{
+        backgroundImage: companyBg ? `linear-gradient(to right, rgba(10, 11, 15, 0.95) 0%, rgba(10, 11, 15, 0.65) 40%, rgba(10, 11, 15, 0.2) 75%, rgba(10, 11, 15, 0) 100%), url(${companyBg})` : 'linear-gradient(to bottom, #1e293b, #0f172a)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+      dir="ltr"
+    >
       
-      {/* Side A: Form Area */}
-      <div className={`w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 ${theme === 'dark' ? 'bg-slate-950/40 text-white' : 'bg-slate-50 text-slate-900'}`}>
-        
-        {/* Floating Language & Theme Toggles inside Side A */}
-        <div className={`absolute top-6 ${language === 'ar' ? 'left-6' : 'right-6'} flex items-center gap-3 z-30`}>
-          <button
-            type="button"
-            onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-            className={`px-4 py-2 rounded-2xl border text-xs font-black transition-all shadow-lg active:scale-95 flex items-center gap-2 ${theme === 'dark'
-                ? 'bg-slate-900/80 border-white/10 text-white hover:bg-slate-800'
-                : 'bg-white/90 border-slate-200 text-slate-850 hover:bg-slate-100 shadow-slate-200/50'
-              }`}
-          >
-            <span>{language === 'ar' ? '🇬🇧' : '🇸🇦'}</span>
-            <span>{language === 'ar' ? 'English' : 'العربية'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={`p-2.5 rounded-2xl border transition-all shadow-lg active:scale-95 flex items-center justify-center ${theme === 'dark'
-                ? 'bg-slate-900/80 border-white/10 text-amber-400 hover:bg-slate-800'
-                : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-100 shadow-slate-200/50'
-              }`}
-            title={language === 'ar' ? 'تغيير الوضع' : 'Change Mode'}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-        </div>
-
-        {/* Animated Background Elements inside Side A */}
-        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] animate-pulse transition-colors duration-500 ${theme === 'dark' ? 'bg-blue-600/5' : 'bg-blue-600/5'}`}></div>
-
-        {/* Main Login Card */}
-        <div className={`backdrop-blur-3xl p-8 lg:p-10 rounded-[2.5rem] w-full max-w-md border transition-all duration-300 ${theme === 'dark'
-            ? 'bg-slate-900/80 border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)]'
-            : 'bg-white/90 border-slate-200/80 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.08)]'
-          }`}>
-
-          {/* --- HEADER DYNAMIC BRANDING --- */}
-          <div className="text-center mb-10 flex flex-col items-center">
-            <div className={`inline-block rounded-2xl border shadow-inner transition-all duration-300 overflow-hidden ${
-              authenticatedUser?.photo ? 'p-0 w-20 h-20 mb-3' : 'p-4'
-            } ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-              {authenticatedUser?.photo ? (
-                <img 
-                  src={authenticatedUser.photo.startsWith('/') && !authenticatedUser.photo.startsWith('//')
-                    ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${authenticatedUser.photo}`
-                    : authenticatedUser.photo
-                  } 
-                  alt={authenticatedUser?.username} 
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <span className="text-4xl">
-                  {step === 1 ? '🛡️' : step === 2 ? '🔐' : step === 3 ? '🏢' : '🔑'}
-                </span>
-              )}
-            </div>
-
-            {/* 🌟 1. في شاشة الدخول الأولى يكون اسم البرنامج ERP ONLY. وبعد اختيار الشركة يكتب اسم المستخدم فوق اسم الشركة + ERP 🌟 */}
-            {step === 3 ? (
-              <>
-                <h2 className="text-xl font-bold text-emerald-400 mb-1 tracking-wider animate-fade-in">
-                  {authenticatedUser?.full_name || authenticatedUser?.username}
-                </h2>
-                <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic animate-fade-in ${theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  }`}>
-                  {formData?.company === 'كل الشركات' || !formData?.company ? 'ERP' : `${formData.company} ERP`}
-                </h1>
-              </>
-            ) : step === 'forgot_password' ? (
-              <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>
-                {t.forgotPassTitle}
-              </h1>
-            ) : step === 'change_password' ? (
-              <h1 className={`text-2xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>
-                {t.changePassTitle}
-              </h1>
-            ) : (
-              <h1 className={`text-4xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>
-                ERP
-              </h1>
-            )}
-
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
-              <p className={`font-bold text-[10px] uppercase tracking-[0.3em] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                }`}>
-                {step === 1 ? t.integratedSystem : step === 2 ? t.twoFactor : step === 3 ? t.confirmCompany : t.recoveryPortal}
-              </p>
-              <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-rose-500/10 text-rose-400 p-4 rounded-2xl text-xs font-black mb-8 text-center border border-rose-500/20 backdrop-blur-md animate-bounce">
-              ⚠️ {error}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="bg-emerald-500/10 text-emerald-400 p-4 rounded-2xl text-xs font-black mb-8 text-center border border-emerald-500/20 backdrop-blur-md animate-fade-in">
-              ✅ {successMsg}
-            </div>
-          )}
-
-          {/* --- STEP 1: USERNAME & PASSWORD --- */}
-          {step === 1 && (
-            <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-6 animate-fade-in">
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                  } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
-                  {t.username}
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                    } ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                  dir="ltr"
-                  placeholder="admin"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-1">
-                  <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {t.password}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setStep('forgot_password')}
-                    className={`text-[9px] font-black uppercase tracking-widest transition-colors ${theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-                      }`}
-                  >
-                    {t.forgotPassword}
-                  </button>
-                </div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                    } ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                  dir="ltr"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-4 cursor-pointer"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      {t.login}
-                      <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
-                    </>
-                  )}
-                </span>
-              </button>
-            </form>
-          )}
-
-          {/* --- STEP 2: 2FA OTP VERIFICATION --- */}
-          {step === 2 && (
-            <form onSubmit={handleOTPSubmit} className="flex flex-col gap-6 animate-fade-in">
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                  } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
-                  {t.otpCode}
-                </label>
-                <input
-                  type="text"
-                  name="otp"
-                  value={formData.otp}
-                  onChange={handleChange}
-                  required
-                  maxLength={6}
-                  className={`w-full p-5 rounded-2xl border outline-none transition-all font-mono text-center text-2xl tracking-[0.5em] font-black ${theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
-                    }`}
-                  dir="ltr"
-                  placeholder="000000"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      {t.verify}
-                      <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
-                    </>
-                  )}
-                </span>
-              </button>
-            </form>
-          )}
-
-          {/* --- STEP 3: COMPANY SELECTION --- */}
-          {step === 3 && (
-            <form onSubmit={handleCompanySubmit} className="flex flex-col gap-6 animate-fade-in">
-              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {(allowedCompanies || []).filter(Boolean).map((comp, idx) => {
-                  const compObj = publicCompanies.find(c => c.name === comp);
-                  return (
-                    <div
-                      key={comp || idx}
-                      onClick={() => setFormData(prev => ({ ...prev, company: comp }))}
-                      className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                        formData?.company === comp
-                          ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/5 scale-[1.02]'
-                          : theme === 'dark'
-                            ? 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-black text-xs uppercase tracking-tight">{comp || 'Company'}</span>
-                        {compObj?.display_name && compObj.display_name !== comp && (
-                          <span className="text-[10px] text-slate-400 font-bold mt-0.5">{compObj.display_name}</span>
-                        )}
-                      </div>
-                      <input
-                        type="radio"
-                        name="company"
-                        value={comp || ''}
-                        checked={formData?.company === comp}
-                        onChange={() => { }}
-                        className="w-5 h-5 accent-blue-600 cursor-pointer"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      {t.enterSystem}
-                      <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
-                    </>
-                  )}
-                </span>
-              </button>
-            </form>
-          )}
-
-          {/* --- STEP: CHANGE PASSWORD (FORCE) --- */}
-          {step === 'change_password' && (
-            <form onSubmit={handleForcePasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t.tempPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={changePassData.currentPassword}
-                  onChange={e => setChangePassData({ ...changePassData, currentPassword: e.target.value })}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
-                  placeholder="TEMP-XXXXXX"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t.newPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={changePassData.newPassword}
-                  onChange={e => setChangePassData({ ...changePassData, newPassword: e.target.value })}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t.confirmPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={changePassData.confirmPassword}
-                  onChange={e => setChangePassData({ ...changePassData, confirmPassword: e.target.value })}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                  {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : t.saveAndLogin}
-                </span>
-              </button>
-            </form>
-          )}
-
-          {/* --- FORGOT PASSWORD PANEL --- */}
-          {step === 'forgot_password' && (
-            <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t.username}
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={forgotData.username}
-                  onChange={handleForgotChange}
-                  required
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
-                  placeholder="username"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t.recoveryType}
-                </label>
-                <select
-                  name="recoveryType"
-                  value={forgotData.recoveryType}
-                  onChange={handleForgotChange}
-                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
-                >
-                  <option value="email">{t.email}</option>
-                  <option value="whatsapp">{t.whatsapp}</option>
-                </select>
-              </div>
-
-              {forgotData.recoveryType === 'email' ? (
-                <div className="space-y-2">
-                  <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {t.registeredEmail}
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={forgotData.email}
-                    onChange={handleForgotChange}
-                    required
-                    className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
-                    placeholder="email@example.com"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {t.registeredPhone}
-                  </label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={forgotData.phone}
-                    onChange={handleForgotChange}
-                    required
-                    className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
-                    placeholder="+966..."
-                  />
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                  {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : t.sendRecovery}
-                </span>
-              </button>
-
-              <div className="text-center mt-2">
-                <button
-                  type="button"
-                  onClick={() => { setError(''); setSuccessMsg(''); setStep(1); }}
-                  className={`text-xs font-bold transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {t.backToLogin}
-                </button>
-              </div>
-            </form>
-          )}
-
-        </div> {/* End of Card */}
-
-      </div> {/* End of Side A */}
-
-      {/* Side B: Dynamic Background Artwork */}
-      <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden bg-[#0d0e12]">
-        {companyBg ? (
-          <img
-            src={companyBg}
-            alt="Company Background"
-            className="absolute inset-0 w-full h-full object-cover opacity-80 transition-all duration-700 ease-in-out scale-100"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-[#121318] opacity-90"></div>
-        )}
-
-        <div className="absolute top-1/4 left-1/4 w-[60%] h-[60%] rounded-full bg-blue-500/10 blur-[150px] animate-pulse"></div>
-
-        {step === 3 && (
-          <div className="absolute bottom-16 left-16 right-16 z-20 text-white">
-            <div className="backdrop-blur-md bg-slate-950/40 p-8 rounded-3xl border border-white/10 max-w-lg animate-fade-in">
-              <h3 className="text-3xl font-black mb-3 tracking-wide uppercase italic">
-                {formData.company !== 'كل الشركات' ? formData.company : 'TED Capital Group'}
-              </h3>
-              <p className="text-sm text-slate-350 leading-relaxed font-bold">
-                {(formData?.company || '').includes('TED') || formData?.company === 'كل الشركات' || !formData?.company
-                  ? 'TED Capital: Leading Large-Scale infrastructure, digital construction, and premium corporate control protocols.'
-                  : (formData?.company || '').toLowerCase().includes('builder')
-                  ? 'Master Builder: Pioneering construction contracting, structural engineering, and heavy mechanical execution.'
-                  : (formData?.company || '').toLowerCase().includes('prime') || (formData?.company || '').toLowerCase().includes('pharma')
-                  ? 'PrimeMed Pharma: Quality medical distribution, pharmaceutical supply chain, and global biotech partnerships.'
-                  : (formData?.company || '').toLowerCase().includes('design')
-                  ? 'Design Concept: Modern office furnishing, state-of-the-art building materials, and interior spatial design.'
-                  : 'TED Capital Group Ecosystem.'}
-              </p>
-            </div>
-          </div>
-        )}
+      {/* Floating Language & Theme Toggles */}
+      <div className="absolute top-6 right-6 flex items-center gap-3 z-30">
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+          className={`px-4 py-2 rounded-2xl border text-xs font-black transition-all shadow-lg active:scale-95 flex items-center gap-2 ${theme === 'dark'
+              ? 'bg-slate-900/80 border-white/10 text-white hover:bg-slate-800'
+              : 'bg-white/90 border-slate-200 text-slate-850 hover:bg-slate-100 shadow-slate-200/50'
+            }`}
+        >
+          <span>{language === 'ar' ? '🇬🇧' : '🇸🇦'}</span>
+          <span>{language === 'ar' ? 'English' : 'العربية'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className={`p-2.5 rounded-2xl border transition-all shadow-lg active:scale-95 flex items-center justify-center ${theme === 'dark'
+              ? 'bg-slate-900/80 border-white/10 text-amber-400 hover:bg-slate-800'
+              : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-100 shadow-slate-200/50'
+            }`}
+          title={language === 'ar' ? 'تغيير الوضع' : 'Change Mode'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </div>
 
+      {/* Animated Background Glow */}
+      <div className="absolute top-1/4 left-1/4 w-[60%] h-[60%] rounded-full bg-blue-500/10 blur-[150px] animate-pulse pointer-events-none"></div>
+
+      {/* Main Login Card */}
+      <div 
+        className={`backdrop-blur-2xl p-8 lg:p-10 rounded-[2.5rem] w-full max-w-md border transition-all duration-300 z-10 ${theme === 'dark'
+            ? 'bg-slate-950/75 border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] text-white'
+            : 'bg-white/80 border-slate-200/50 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.15)] text-slate-900'
+          }`}
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
+      >
+
+        {/* --- HEADER DYNAMIC BRANDING --- */}
+        <div className="text-center mb-10 flex flex-col items-center">
+          <div className={`inline-block rounded-2xl border shadow-inner transition-all duration-300 overflow-hidden ${
+            authenticatedUser?.photo ? 'p-0 w-20 h-20 mb-3' : 'p-4'
+          } ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+            {authenticatedUser?.photo ? (
+              <img 
+                src={authenticatedUser.photo.startsWith('/') && !authenticatedUser.photo.startsWith('//')
+                  ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${authenticatedUser.photo}`
+                  : authenticatedUser.photo
+                } 
+                alt={authenticatedUser?.username} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <span className="text-4xl">
+                {step === 1 ? '🛡️' : step === 2 ? '🔐' : step === 3 ? '🏢' : '🔑'}
+              </span>
+            )}
+          </div>
+
+          {step === 3 ? (
+            <>
+              <h2 className="text-xl font-bold text-emerald-400 mb-1 tracking-wider animate-fade-in">
+                {authenticatedUser?.full_name || authenticatedUser?.username}
+              </h2>
+              <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic animate-fade-in ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                {formData?.company === 'كل الشركات' || !formData?.company ? 'ERP' : `${formData.company} ERP`}
+              </h1>
+            </>
+          ) : step === 'forgot_password' ? (
+            <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
+              {t.forgotPassTitle}
+            </h1>
+          ) : step === 'change_password' ? (
+            <h1 className={`text-2xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
+              {t.changePassTitle}
+            </h1>
+          ) : (
+            <h1 className={`text-4xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
+              ERP
+            </h1>
+          )}
+
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
+            <p className={`font-bold text-[10px] uppercase tracking-[0.3em] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+              {step === 1 ? t.integratedSystem : step === 2 ? t.twoFactor : step === 3 ? t.confirmCompany : t.recoveryPortal}
+            </p>
+            <span className={`h-px w-8 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-rose-500/10 text-rose-400 p-4 rounded-2xl text-xs font-black mb-8 text-center border border-rose-500/20 backdrop-blur-md animate-bounce">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="bg-emerald-500/10 text-emerald-400 p-4 rounded-2xl text-xs font-black mb-8 text-center border border-emerald-500/20 backdrop-blur-md animate-fade-in">
+            ✅ {successMsg}
+          </div>
+        )}
+
+        {/* --- STEP 1: USERNAME & PASSWORD --- */}
+        {step === 1 && (
+          <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-6 animate-fade-in">
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                {t.username}
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                dir="ltr"
+                placeholder="admin"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.password}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setStep('forgot_password')}
+                  className={`text-[9px] font-black uppercase tracking-widest transition-colors ${theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                >
+                  {t.forgotPassword}
+                </button>
+              </div>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                dir="ltr"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-4 cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    {t.login}
+                    <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+        )}
+
+        {/* --- STEP 2: 2FA OTP VERIFICATION --- */}
+        {step === 2 && (
+          <form onSubmit={handleOTPSubmit} className="flex flex-col gap-6 animate-fade-in">
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                } ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                {t.otpCode}
+              </label>
+              <input
+                type="text"
+                name="otp"
+                value={formData.otp}
+                onChange={handleChange}
+                required
+                maxLength={6}
+                className={`w-full p-5 rounded-2xl border outline-none transition-all font-mono text-center text-2xl tracking-[0.5em] font-black ${theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10'
+                  }`}
+                dir="ltr"
+                placeholder="000000"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    {t.verify}
+                    <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+        )}
+
+        {/* --- STEP 3: COMPANY SELECTION --- */}
+        {step === 3 && (
+          <form onSubmit={handleCompanySubmit} className="flex flex-col gap-6 animate-fade-in">
+            <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+              {(allowedCompanies || []).filter(Boolean).map((comp, idx) => {
+                const compObj = publicCompanies.find(c => c.name === comp);
+                return (
+                  <div
+                    key={comp || idx}
+                    onClick={() => setFormData(prev => ({ ...prev, company: comp }))}
+                    className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
+                      formData?.company === comp
+                        ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/5 scale-[1.02]'
+                        : theme === 'dark'
+                          ? 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-black text-xs uppercase tracking-tight">{comp || 'Company'}</span>
+                      {compObj?.display_name && compObj.display_name !== comp && (
+                        <span className="text-[10px] text-slate-400 font-bold mt-0.5">{compObj.display_name}</span>
+                      )}
+                    </div>
+                    <input
+                      type="radio"
+                      name="company"
+                      value={comp || ''}
+                      checked={formData?.company === comp}
+                      onChange={() => { }}
+                      className="w-5 h-5 accent-blue-600 cursor-pointer"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className={`p-4 rounded-2xl border text-[11px] font-bold leading-relaxed ${theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-350' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+              {(formData?.company || '').includes('TED') || formData?.company === 'كل الشركات' || !formData?.company
+                ? 'TED Capital: Leading Large-Scale infrastructure, digital construction, and premium corporate control protocols.'
+                : (formData?.company || '').toLowerCase().includes('builder')
+                ? 'Master Builder: Pioneering construction contracting, structural engineering, and heavy mechanical execution.'
+                : (formData?.company || '').toLowerCase().includes('prime') || (formData?.company || '').toLowerCase().includes('pharma')
+                ? 'PrimeMed Pharma: Quality medical distribution, pharmaceutical supply chain, and global biotech partnerships.'
+                : (formData?.company || '').toLowerCase().includes('design')
+                ? 'Design Concept: Modern office furnishing, state-of-the-art building materials, and interior spatial design.'
+                : 'TED Capital Group Ecosystem.'}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    {t.enterSystem}
+                    <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+        )}
+
+        {/* --- STEP: CHANGE PASSWORD (FORCE) --- */}
+        {step === 'change_password' && (
+          <form onSubmit={handleForcePasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t.tempPasswordLabel}
+              </label>
+              <input
+                type="password"
+                value={changePassData.currentPassword}
+                onChange={e => setChangePassData({ ...changePassData, currentPassword: e.target.value })}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                placeholder="TEMP-XXXXXX"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t.newPasswordLabel}
+              </label>
+              <input
+                type="password"
+                value={changePassData.newPassword}
+                onChange={e => setChangePassData({ ...changePassData, newPassword: e.target.value })}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t.confirmPasswordLabel}
+              </label>
+              <input
+                type="password"
+                value={changePassData.confirmPassword}
+                onChange={e => setChangePassData({ ...changePassData, confirmPassword: e.target.value })}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+              <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : t.saveAndLogin}
+              </span>
+            </button>
+          </form>
+        )}
+
+        {/* --- FORGOT PASSWORD PANEL --- */}
+        {step === 'forgot_password' && (
+          <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t.username}
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={forgotData.username}
+                onChange={handleForgotChange}
+                required
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                placeholder="username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t.recoveryType}
+              </label>
+              <select
+                name="recoveryType"
+                value={forgotData.recoveryType}
+                onChange={handleForgotChange}
+                className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+              >
+                <option value="email">{t.email}</option>
+                <option value="whatsapp">{t.whatsapp}</option>
+              </select>
+            </div>
+
+            {forgotData.recoveryType === 'email' ? (
+              <div className="space-y-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.registeredEmail}
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={forgotData.email}
+                  onChange={handleForgotChange}
+                  required
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                  placeholder="email@example.com"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.registeredPhone}
+                </label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={forgotData.phone}
+                  onChange={handleForgotChange}
+                  required
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                  placeholder="+966..."
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+              <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : t.sendRecovery}
+              </span>
+            </button>
+
+            <div className="text-center mt-2">
+              <button
+                type="button"
+                onClick={() => { setError(''); setSuccessMsg(''); setStep(1); }}
+                className={`text-xs font-bold transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t.backToLogin}
+              </button>
+            </div>
+          </form>
+        )}
+
+      </div>
     </div>
   );
 }

@@ -78,7 +78,7 @@ export default function NotificationCenter() {
   return (
     <div className="relative">
       {/* Trigger Button */}
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2.5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:bg-slate-50 transition-all active:scale-95"
       >
@@ -107,8 +107,8 @@ export default function NotificationCenter() {
               </div>
             ) : (
               notifications.map((n) => (
-                <div 
-                  key={n.id} 
+                <div
+                  key={n.id}
                   className={`p-6 transition-all hover:bg-slate-50 cursor-pointer border-l-4 ${getSeverityStyle(n.severity)} ${!n.is_read ? 'opacity-100' : 'opacity-60'}`}
                   onClick={() => markAsRead(n.id)}
                 >
@@ -120,10 +120,10 @@ export default function NotificationCenter() {
                   </div>
                   <h4 className="font-black text-[#0f172a] text-sm mb-1">{n.title}</h4>
                   <p className="text-xs text-slate-500 leading-relaxed font-medium">{n.message}</p>
-                  
+
                   {n.action_link && (
-                    <a 
-                      href={n.action_link} 
+                    <a
+                      href={n.action_link}
                       className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all"
                     >
                       Take Action ↗
@@ -135,14 +135,15 @@ export default function NotificationCenter() {
           </div>
 
           <div className="p-4 bg-slate-50 text-center border-t border-slate-100">
-             <button className="text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-[#0f172a]">
-               Archive & Analytics
-             </button>
+            <button className="text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-[#0f172a]">
+              Archive & Analytics
+            </button>
           </div>
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }

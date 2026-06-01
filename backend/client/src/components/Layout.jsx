@@ -342,7 +342,7 @@ export default function Layout() {
 
   const activeCompany = user?.selectedCompany || localStorage.getItem('active_company') || 'كل الشركات';
   const activeCompLower = activeCompany.toLowerCase();
-  
+
   const isPharma = activeCompLower.includes('prime') || activeCompLower.includes('pharma') || activeCompLower.includes('بريم') || activeCompLower.includes('فارما');
   const isDesign = activeCompLower.includes('design') || activeCompLower.includes('ديزاين');
   const isTed = activeCompLower.includes('ted') || activeCompLower.includes('تيد');
@@ -719,9 +719,8 @@ export default function Layout() {
                                 {item.icon}
                               </span>
                               {!isSidebarCollapsed && (
-                                <span className={`font-bold text-[17px] tracking-normal transition-all duration-300 ${
-                                  isReallyActive && theme !== 'dark' ? 'translate-x-1 text-white drop-shadow-md font-extrabold' : ''
-                                }`}
+                                <span className={`font-bold text-[17px] tracking-normal transition-all duration-300 ${isReallyActive && theme !== 'dark' ? 'translate-x-1 text-white drop-shadow-md font-extrabold' : ''
+                                  }`}
                                   style={theme === 'dark' ? {
                                     color: isReallyActive ? '#d9a770' : '#cbd5e1',
                                     fontWeight: isReallyActive ? 700 : 600,
@@ -731,8 +730,8 @@ export default function Layout() {
                               )}
                               {item.badgeKey && sidebarStats[item.badgeKey] > 0 && (
                                 <div className={`absolute ${isSidebarCollapsed ? 'top-2 right-2' : 'right-4'} min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center text-[11px] font-black animate-pulse border-2 
-                                  ${theme === 'dark' 
-                                    ? 'bg-[#d9a770] text-[#171920] border-[#171920] shadow-[0_0_10px_rgba(217,167,112,0.4)]' 
+                                  ${theme === 'dark'
+                                    ? 'bg-[#d9a770] text-[#171920] border-[#171920] shadow-[0_0_10px_rgba(217,167,112,0.4)]'
                                     : 'bg-rose-500 text-white border-white shadow-lg shadow-rose-500/40'}`}>
                                   {sidebarStats[item.badgeKey]}
                                 </div>
@@ -813,19 +812,19 @@ export default function Layout() {
                     ? { background: 'linear-gradient(135deg, #29384e 0%, #1d2026 100%)', borderColor: 'rgba(217,167,112,0.5)' }
                     : { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' }}>
                   {user?.photo || user?.avatar_url ? (
-                    <img 
-                      src={(user.photo || user.avatar_url).startsWith('/') && !(user.photo || user.avatar_url).startsWith('//') 
-                        ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${user.photo || user.avatar_url}` 
+                    <img
+                      src={(user.photo || user.avatar_url).startsWith('/') && !(user.photo || user.avatar_url).startsWith('//')
+                        ? `${window.location.origin.includes('localhost') ? 'http://localhost:4000' : 'http://46.224.144.166'}${user.photo || user.avatar_url}`
                         : (user.photo || user.avatar_url)
-                      } 
-                      alt={user?.username} 
-                      className="w-full h-full object-cover" 
+                      }
+                      alt={user?.username}
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <img 
-                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'User'}&backgroundColor=171920`} 
-                      alt={user?.username} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'User'}&backgroundColor=171920`}
+                      alt={user?.username}
+                      className="w-full h-full object-cover"
                     />
                   )}
                 </div>
@@ -890,9 +889,9 @@ export default function Layout() {
                 className={`
                     w-full border outline-none transition-all py-2.5 lg:py-3 rounded-xl lg:rounded-2xl text-[12px] lg:text-[13px] font-bold placeholder:text-slate-400 placeholder:font-medium
                     ${language === 'ar' ? 'pr-10 lg:pr-12 pl-4 lg:pl-16' : 'pl-10 lg:pl-12 pr-4 lg:pr-16'} 
-                    ${theme === 'dark' 
-                      ? 'bg-white/5 border-white/10 text-white focus:bg-white/10 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50' 
-                      : 'bg-slate-50 border-slate-100 text-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-300'}
+                    ${theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white focus:bg-white/10 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50'
+                    : 'bg-slate-50 border-slate-100 text-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-300'}
                    `}
               />
               {isSearchOpen && (searchQuery.length >= 2) && (

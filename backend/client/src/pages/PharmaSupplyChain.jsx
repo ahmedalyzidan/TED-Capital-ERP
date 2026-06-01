@@ -713,7 +713,7 @@ export default function PharmaSupplyChain() {
    };
 
     return (
-       <div className={`min-h-screen pb-20 animate-fade-in font-sans ${theme === 'dark' ? 'dark text-slate-100 bg-[#1d2026]' : 'pharma-supply-light text-slate-900 bg-slate-950'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+       <div className={`min-h-screen pb-20 animate-fade-in font-sans ${theme === 'dark' ? 'dark text-slate-100 bg-[#1d2026]' : 'pharma-supply-light text-slate-900 bg-[#f8fafc]'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
           {theme !== 'dark' && <style dangerouslySetInnerHTML={{
              __html: `
              /* ═══════════════════════════════════════════════════════════
@@ -739,10 +739,19 @@ export default function PharmaSupplyChain() {
              .pharma-supply-light .bg-slate-950,
              .pharma-supply-light .bg-slate-900,
              .pharma-supply-light .bg-slate-950\\/50,
-             .pharma-supply-light .bg-\\[\\#272a33\\] {
+             .pharma-supply-light .bg-\\[\\#272a33\\],
+             .pharma-supply-light .bg-slate-900\\/80,
+             .pharma-supply-light .bg-slate-900\\/60,
+             .pharma-supply-light .bg-slate-900\\/30,
+             .pharma-supply-light .bg-slate-900\\/90 {
                 background-color: var(--ph-bg-card) !important;
                 border-color: var(--ph-border) !important;
                 color: var(--ph-text-primary) !important;
+             }
+
+             .pharma-supply-light .bg-\\[\\#171920\\]\\/50 {
+                background-color: var(--ph-bg-alt) !important;
+                border-color: var(--ph-border) !important;
              }
  
              /* Tab Navigation Pill Bar Container */
@@ -770,6 +779,23 @@ export default function PharmaSupplyChain() {
                 color: #06b6d4 !important;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
                 margin: 2px !important;
+             }
+
+             .pharma-supply-light button.bg-\\[\\#29384e\\] {
+                background-color: #ffffff !important;
+                border: 1.8px solid #0f172a !important;
+                color: #06b6d4 !important;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+             }
+
+             .pharma-supply-light button.bg-\\[\\#272a33\\] {
+                background-color: #ffffff !important;
+                border: 1.8px solid #f1f5f9 !important;
+                color: #64748b !important;
+             }
+             .pharma-supply-light button.bg-\\[\\#272a33\\]:hover {
+                background-color: #f8fafc !important;
+                color: #0f172a !important;
              }
  
              /* Text Elements */

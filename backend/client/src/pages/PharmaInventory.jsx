@@ -9,7 +9,7 @@ import BatchExpiryMatrix from './BatchExpiryMatrix';
 import SmartReorder from './SmartReorder';
 
 function PharmaInventory() {
-  const { language } = useLanguage();
+  const { language, theme } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'store'; // default to store
 
@@ -1128,7 +1128,238 @@ function PharmaInventory() {
   const totalInventoryValue = items.reduce((sum, i) => sum + (Number(i.remaining_qty) * Number(i.unit_cost)), 0);
 
   return (
-    <div className="font-sans min-h-screen bg-[#0a0f1d] text-slate-100 selection:bg-teal-500 selection:text-white p-6 lg:p-10 max-w-[1800px] mx-auto relative overflow-hidden transition-all duration-500" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`font-sans min-h-screen selection:bg-teal-500 selection:text-white p-6 lg:p-10 max-w-[1800px] mx-auto relative overflow-hidden transition-all duration-500 ${theme === 'dark' ? 'dark bg-[#0a0f1d] text-slate-100' : 'pharma-inventory-light bg-[#f8fafc] text-slate-800'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {theme !== 'dark' && <style dangerouslySetInnerHTML={{
+        __html: `
+        /* ═══════════════════════════════════════════════════════════
+           PREMIUM WHITE THEME ENGINE — PharmaInventory (HIGH CONTRAST)
+           Scoped under .pharma-inventory-light to avoid side effects
+        ═══════════════════════════════════════════════════════════ */
+
+        /* ── CSS Variables ───────────────────────────────────────── */
+        .pharma-inventory-light {
+          --ph-bg-page: #f8fafc;
+          --ph-bg-card: #ffffff;
+          --ph-bg-alt: #f1f5f9;
+          --ph-bg-input: #ffffff;
+          --ph-border: #cbd5e1;
+          --ph-text-primary: #0f172a;
+          --ph-text-secondary: #334155;
+          --ph-text-muted: #64748b;
+        }
+
+        /* ── Tab Container & Active/Inactive Overrides ───────────── */
+        .pharma-inventory-light .bg-\\[\\#0b0f19\\]\\/90 {
+          background-color: #ffffff !important;
+          border-color: var(--ph-border) !important;
+          box-shadow: 0 10px 30px -10px rgba(0,0,0,0.08) !important;
+        }
+        .pharma-inventory-light button.bg-\\[\\#1e293b\\]\\/80 {
+          background-color: #0f172a !important;
+          border: 1.8px solid #0f172a !important;
+          color: #ffffff !important;
+        }
+        .pharma-inventory-light button.bg-\\[\\#131d31\\]\\/50 {
+          background-color: #f1f5f9 !important;
+          border: 1.8px solid #cbd5e1 !important;
+          color: #334155 !important;
+        }
+        
+        /* Category button Active state override when background is '#0b0f19' */
+        .pharma-inventory-light button.bg-\\[\\#0b0f19\\] {
+          background-color: #0f172a !important;
+          color: #ffffff !important;
+        }
+
+        /* ── Dark Backgrounds → White/Light ──────────────────────── */
+        .pharma-inventory-light .bg-\\[\\#0a0f1d\\],
+        .pharma-inventory-light .bg-\\[\\#0b0f19\\],
+        .pharma-inventory-light .bg-\\[\\#0d1527\\]:not(div),
+        .pharma-inventory-light .bg-\\[\\#131d31\\]\\/50:not(button) {
+          background-color: var(--ph-bg-page) !important;
+        }
+        .pharma-inventory-light .bg-\\[\\#0d1527\\],
+        .pharma-inventory-light .bg-\\[\\#0f172a\\],
+        .pharma-inventory-light .bg-\\[\\#111c35\\],
+        .pharma-inventory-light .bg-\\[\\#121c33\\],
+        .pharma-inventory-light .bg-\\[\\#171920\\],
+        .pharma-inventory-light .bg-\\[\\#070c19\\],
+        .pharma-inventory-light .bg-slate-900,
+        .pharma-inventory-light .bg-slate-950,
+        .pharma-inventory-light .bg-slate-900\\/60 {
+          background-color: var(--ph-bg-card) !important;
+          box-shadow: 0 4px 20px -2px rgba(0,0,0,0.06) !important;
+          border: 1.5px solid var(--ph-border) !important;
+        }
+        
+        /* Metric cards inside banner */
+        .pharma-inventory-light .bg-\\[\\#1e293b\\]\\/60 {
+          background-color: #f1f5f9 !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        .pharma-inventory-light .bg-\\[\\#1e293b\\]\\/60 span {
+          color: #475569 !important;
+          font-weight: 800 !important;
+        }
+        
+        .pharma-inventory-light .bg-slate-900\\/50,
+        .pharma-inventory-light .bg-slate-950\\/50,
+        .pharma-inventory-light .bg-slate-950\\/40,
+        .pharma-inventory-light .bg-slate-950\\/20 {
+          background-color: #f8fafc !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+
+        .pharma-inventory-light .bg-slate-800 {
+          background-color: #cbd5e1 !important;
+        }
+
+        /* ── Borders ─────────────────────────────────────────────── */
+        .pharma-inventory-light .border-slate-800,
+        .pharma-inventory-light .border-slate-700,
+        .pharma-inventory-light .border-slate-850,
+        .pharma-inventory-light .border-white\\/5,
+        .pharma-inventory-light .border-white\\/10 {
+          border-color: var(--ph-border) !important;
+        }
+
+        /* ── Text Colors ─────────────────────────────────────────── */
+        .pharma-inventory-light .text-white { color: var(--ph-text-primary) !important; }
+        .pharma-inventory-light .text-slate-100,
+        .pharma-inventory-light .text-slate-200 { color: #0f172a !important; font-weight: 700 !important; }
+        .pharma-inventory-light .text-slate-300 { color: #334155 !important; font-weight: 700 !important; }
+        .pharma-inventory-light .text-slate-400 { color: #475569 !important; font-weight: 700 !important; }
+        .pharma-inventory-light .text-slate-500 { color: #64748b !important; font-weight: 700 !important; }
+        
+        /* Banner title and description */
+        .pharma-inventory-light h1.text-white, 
+        .pharma-inventory-light h1 {
+          color: #0f172a !important;
+        }
+        .pharma-inventory-light p.text-slate-300,
+        .pharma-inventory-light p {
+          color: #334155 !important;
+        }
+
+        /* ── Input Fields ────────────────────────────────────────── */
+        .pharma-inventory-light input,
+        .pharma-inventory-light select,
+        .pharma-inventory-light textarea {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border: 1.5px solid #94a3b8 !important;
+          font-weight: 700 !important;
+        }
+        .pharma-inventory-light input:focus,
+        .pharma-inventory-light select:focus,
+        .pharma-inventory-light textarea:focus {
+          border-color: #0d9488 !important;
+          box-shadow: 0 0 0 3px rgba(13,148,136,0.15) !important;
+        }
+        .pharma-inventory-light input::placeholder { color: #64748b !important; }
+        .pharma-inventory-light select option { color: #0f172a !important; background: #fff !important; }
+
+        /* ── Table & Interactive Lists ───────────────────────────── */
+        .pharma-inventory-light thead,
+        .pharma-inventory-light thead tr {
+          background-color: #e2e8f0 !important;
+        }
+        .pharma-inventory-light th {
+          color: #0f172a !important;
+          background-color: #e2e8f0 !important;
+          font-weight: 800 !important;
+          border-bottom: 2px solid #cbd5e1 !important;
+        }
+        .pharma-inventory-light td {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+          border-bottom-color: #e2e8f0 !important;
+        }
+        .pharma-inventory-light tbody tr:hover {
+          background-color: #f1f5f9 !important;
+        }
+        
+        /* Action buttons under banner */
+        .pharma-inventory-light .bg-rose-500\\/10 {
+          background-color: #fef2f2 !important;
+          border: 1.5px solid #fca5a5 !important;
+          color: #991b1b !important;
+        }
+        .pharma-inventory-light .bg-cyan-500\\/10 {
+          background-color: #ecfeff !important;
+          border: 1.5px solid #67e8f9 !important;
+          color: #083344 !important;
+        }
+        .pharma-inventory-light .bg-amber-500\\/10 {
+          background-color: #fffbeb !important;
+          border: 1.5px solid #fde68a !important;
+          color: #78350f !important;
+        }
+        
+        /* Modals & Dialog Overlays */
+        .pharma-inventory-light .fixed.inset-0.bg-slate-950\\/80 {
+          background-color: rgba(15, 23, 42, 0.6) !important;
+          backdrop-filter: blur(8px) !important;
+        }
+        
+        .pharma-inventory-light .fixed.inset-0.bg-black\\/80 {
+          background-color: rgba(15, 23, 42, 0.6) !important;
+          backdrop-filter: blur(8px) !important;
+        }
+
+        /* ── Sales & Communications Banner ───────────────────────── */
+        .pharma-inventory-light .from-slate-900 {
+          background-image: none !important;
+          background-color: #ffffff !important;
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 4px 20px -2px rgba(0,0,0,0.06) !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 h2 {
+          color: #0f172a !important;
+        }
+        .pharma-inventory-light .from-slate-900 p {
+          color: #334155 !important;
+        }
+        
+        /* Metric/Summary cards inside sales/communications banner */
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 {
+          background-color: #f1f5f9 !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-slate-300 {
+          color: #475569 !important;
+          font-weight: 800 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-white {
+          color: #0f172a !important;
+        }
+        
+        /* Custom status text colors in light mode */
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-amber-400 {
+          color: #d97706 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-cyan-400 {
+          color: #0891b2 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-teal-400 {
+          color: #0d9488 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-emerald-400 {
+          color: #059669 !important;
+        }
+        
+        .pharma-inventory-light .from-slate-900 .bg-white\\/10 .text-rose-400 {
+          color: #e11d48 !important;
+        }
+        `
+      }} />}
 
       {/* 🌌 Ambient Calm Background Glows */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-teal-500/5 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse"></div>
