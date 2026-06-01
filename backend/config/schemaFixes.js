@@ -46,6 +46,8 @@ const applySchemaFixes = async () => {
         await runQuery("companies.display_name column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)`);
         await runQuery("companies.logo_url column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`);
         await runQuery("companies.is_active column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+        await runQuery("companies.email column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+        await runQuery("companies.phone column", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
 
         // Seed default companies
         const TENANT_COMPANIES_SEED = [
@@ -1181,6 +1183,8 @@ const applySchemaFixes = async () => {
         metadata JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+        await runQuery("companies.email column (tenant)", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+        await runQuery("companies.phone column (tenant)", `ALTER TABLE companies ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
 
         const companySeeds = [
             [1, 'TED Capital', 'EGP'],

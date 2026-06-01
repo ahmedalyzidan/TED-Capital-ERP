@@ -17,6 +17,7 @@ function AdvancedStockControl({ isSubcomponent }) {
   const [storageTemp, setStorageTemp] = useState('20-25°C (غرفة)');
   const [batchNo, setBatchNo] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [ingestionDate, setIngestionDate] = useState(new Date().toISOString().split('T')[0]);
 
   const setActiveTab = (tabValue) => {
     setSearchParams({ tab: tabValue });
@@ -342,6 +343,7 @@ function AdvancedStockControl({ isSubcomponent }) {
     setStorageTemp('20-25°C (غرفة)');
     setBatchNo(`BATCH-2026-${items.length + 101}`);
     setExpiryDate('');
+    setIngestionDate(new Date().toISOString().split('T')[0]);
     
     // Auto-select company
     const activeComp = localStorage.getItem('active_company') || '';
@@ -377,6 +379,7 @@ function AdvancedStockControl({ isSubcomponent }) {
     setStorageTemp(item.storage_temp || '20-25°C (غرفة)');
     setBatchNo(item.batch_no || '');
     setExpiryDate(item.expiry_date || '');
+    setIngestionDate(item.metadata?.ingestion_date || (item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
     setShowModal(true);
   };
 
@@ -391,6 +394,7 @@ function AdvancedStockControl({ isSubcomponent }) {
     setUom(item.uom || item.unit || (isPharma ? 'علبة' : 'قطعة'));
     setMinLevel(item.min_stock_level || '10');
     setVelocity(item.velocity_flag || 'FAST');
+    setIngestionDate(item.metadata?.ingestion_date || (item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
     
     // Auto-select company on edit if activeComp exists
     const activeCompVal = localStorage.getItem('active_company') || '';
@@ -465,7 +469,8 @@ function AdvancedStockControl({ isSubcomponent }) {
           active_substance: activeSubstance,
           dosage_form: dosageForm,
           pharma_category: category,
-          storage_temp: storageTemp
+          storage_temp: storageTemp,
+          ingestion_date: ingestionDate
         }
       };
 
@@ -533,7 +538,19 @@ function AdvancedStockControl({ isSubcomponent }) {
     );
     
     if (itemSales.length === 0) {
-      return 'OBSOLETE';
+      const meta = item.metadata || {};
+      const baseDateStr = meta.ingestion_date || item.created_at || new Date().toISOString();
+      const baseDate = new Date(baseDateStr);
+      const now = new Date();
+      const diffTime = Math.abs(now - baseDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= fastDays) {
+        return 'FAST';
+      } else if (diffDays <= obsoleteDays) {
+        return 'SLOW';
+      } else {
+        return 'OBSOLETE';
+      }
     }
 
     const now = new Date();
@@ -1447,14 +1464,23 @@ function AdvancedStockControl({ isSubcomponent }) {
 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'التصنيف الرئيسي (Category)' : 'Item Group / Classification'} <span className="text-rose-500">*</span></label>
-                  <input 
-                    type="text" 
+                  <select 
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder={language === 'ar' ? "مثال: مواد بناء، تشطيبات، سباكة..." : "e.g. PHARMA, CONSUMABLE, OTC..."}
-                  />
+                  >
+                    <option value="مواد بناء">{language === 'ar' ? 'مواد بناء (Construction Materials)' : 'Construction Materials'}</option>
+                    <option value="حديد تسليح">{language === 'ar' ? 'حديد تسليح (Reinforcement Steel)' : 'Reinforcement Steel'}</option>
+                    <option value="أسمنت">{language === 'ar' ? 'أسمنت (Cement)' : 'Cement'}</option>
+                    <option value="أخشاب">{language === 'ar' ? 'أخشاب (Timber/Wood)' : 'Timber/Wood'}</option>
+                    <option value="أعمال صحي">{language === 'ar' ? 'أعمال صحي (Plumbing/Sanitary)' : 'Plumbing/Sanitary'}</option>
+                    <option value="أعمال كهرباء">{language === 'ar' ? 'أعمال كهرباء (Electrical Works)' : 'Electrical Works'}</option>
+                    <option value="أعمال عزل">{language === 'ar' ? 'أعمال عزل (Insulation Works)' : 'Insulation Works'}</option>
+                    <option value="أعمال دهانات">{language === 'ar' ? 'أعمال دهانات (Paint Works)' : 'Paint Works'}</option>
+                    <option value="تشطيبات">{language === 'ar' ? 'تشطيبات (Finishes)' : 'Finishes'}</option>
+                    <option value="أخرى">{language === 'ar' ? 'أخرى' : 'Other'}</option>
+                  </select>
                 </div>
               </div>
 
@@ -1508,17 +1534,24 @@ function AdvancedStockControl({ isSubcomponent }) {
                 </div>
               </div>
  
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'وحدة القياس (UOM)' : 'UOM (Unit)'}</label>
-                  <input 
-                    type="text" 
+                  <select 
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     value={uom}
                     onChange={(e) => setUom(e.target.value)}
-                    placeholder={language === 'ar' ? "مثال: طن، شيكارة، متر، قطعة..." : "e.g. Box, Vial, Meter, Pack..."}
-                  />
+                  >
+                    <option value="قطعة">{language === 'ar' ? 'قطعة (Piece/PCS)' : 'Piece/PCS'}</option>
+                    <option value="متر">{language === 'ar' ? 'متر (Meter)' : 'Meter'}</option>
+                    <option value="متر مربع">{language === 'ar' ? 'متر مربع (Square Meter)' : 'Square Meter'}</option>
+                    <option value="متر مكعب">{language === 'ar' ? 'متر مكعب (Cubic Meter)' : 'Cubic Meter'}</option>
+                    <option value="طن">{language === 'ar' ? 'طن (Ton)' : 'Ton'}</option>
+                    <option value="شيكارة">{language === 'ar' ? 'شيكارة (Bag/Sack)' : 'Bag/Sack'}</option>
+                    <option value="علبة">{language === 'ar' ? 'علبة (Box)' : 'Box'}</option>
+                    <option value="كيلو جرام">{language === 'ar' ? 'كيلو جرام (Kilogram)' : 'Kilogram'}</option>
+                  </select>
                 </div>
  
                 <div className="space-y-2">
@@ -1530,6 +1563,17 @@ function AdvancedStockControl({ isSubcomponent }) {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all font-mono"
                     value={minLevel}
                     onChange={(e) => setMinLevel(e.target.value)}
+                  />
+                </div>
+ 
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-700">{language === 'ar' ? 'تاريخ ورود الشحنة / الصنف' : 'Receipt / Ingestion Date'} <span className="text-rose-500">*</span></label>
+                  <input 
+                    type="date" 
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all font-mono"
+                    value={ingestionDate}
+                    onChange={(e) => setIngestionDate(e.target.value)}
                   />
                 </div>
  

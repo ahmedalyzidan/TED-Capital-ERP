@@ -6,7 +6,7 @@ import { useSecurity } from '../hooks/useSecurity';
 export default function Corporate() {
   const { language } = useLanguage();
   const { hasPermission } = useSecurity();
-  const [activeTab, setActiveTab] = useState('structure');
+  const [activeTab, setActiveTab] = useState('companies');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({ orgUnits: [], committees: [], tasks: [], companies: [], staff: [] });
   const [showModal, setShowModal] = useState(null);
@@ -17,10 +17,10 @@ export default function Corporate() {
       title: "الحوكمة واللجان والمهام",
       subtitle: "إدارة الهياكل التنظيمية، تشكيل اللجان، ومتابعة التكليفات الإدارية",
       tabs: {
+        companies: "الشركات",
         structure: "الهيكل التنظيمي",
         committees: "اللجان",
-        tasks: "المهام والتكليفات",
-        companies: "الشركات"
+        tasks: "المهام والتكليفات"
       },
       structure: {
         title: "وحدات الهيكل التنظيمي",
@@ -59,6 +59,8 @@ export default function Corporate() {
         authCapital: "رأس المال المرخص",
         issuedCapital: "رأس المال المصدر",
         legalForm: "الشكل القانوني",
+        email: "البريد الإلكتروني للشركة",
+        phone: "رقم التواصل / الهاتف",
         actions: "الإجراءات"
       }
     },
@@ -66,10 +68,10 @@ export default function Corporate() {
       title: "Governance & Tasks",
       subtitle: "Org structures, committee formations, and administrative assignments",
       tabs: {
+        companies: "Companies",
         structure: "Org Structure",
         committees: "Committees",
-        tasks: "Tasks & Assignments",
-        companies: "Companies"
+        tasks: "Tasks & Assignments"
       },
       structure: {
         title: "Organizational Units",
@@ -108,6 +110,8 @@ export default function Corporate() {
         authCapital: "Authorized Capital",
         issuedCapital: "Issued Capital",
         legalForm: "Legal Form",
+        email: "Company Email",
+        phone: "Contact Phone",
         actions: "Actions"
       }
     }
@@ -359,9 +363,11 @@ export default function Corporate() {
                     <tr className="text-slate-400 text-[10px] uppercase tracking-widest font-black">
                       <th className="px-8 py-5">{t.companies?.name}</th>
                       <th className="px-8 py-5">{t.companies?.currency}</th>
-                      <th className="px-8 py-5">{t.companies?.taxNumber}</th>
+                       <th className="px-8 py-5">{t.companies?.taxNumber}</th>
                       <th className="px-8 py-5">{t.companies?.commercialReg}</th>
                       <th className="px-8 py-5">{t.companies?.legalForm}</th>
+                      <th className="px-8 py-5">{t.companies?.email}</th>
+                      <th className="px-8 py-5">{t.companies?.phone}</th>
                       <th className="px-8 py-5 text-center">{t.companies?.actions}</th>
                     </tr>
                   </thead>
@@ -375,6 +381,8 @@ export default function Corporate() {
                         <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.tax_number || '---'}</td>
                         <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.commercial_reg || '---'}</td>
                         <td className="px-8 py-6 font-bold text-slate-500 text-xs">{comp.legal_form || '---'}</td>
+                        <td className="px-8 py-6 font-bold text-slate-550 text-xs">{comp.email || '---'}</td>
+                        <td className="px-8 py-6 font-bold text-slate-550 text-xs">{comp.phone || '---'}</td>
                         <td className="px-8 py-6 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button onClick={() => { setFormData(comp); setShowModal('edit-companies'); }} className="w-8 h-8 flex items-center justify-center bg-white text-slate-400 rounded-lg border border-slate-100 hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="تعديل">✏️</button>
@@ -531,6 +539,16 @@ export default function Corporate() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.issuedCapital}</label>
                       <input type="number" value={formData.issued_capital || 0} onChange={e => setFormData({ ...formData, issued_capital: parseFloat(e.target.value) || 0 })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.email}</label>
+                      <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.companies?.phone}</label>
+                      <input type="text" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" />
                     </div>
                   </div>
                 </>
