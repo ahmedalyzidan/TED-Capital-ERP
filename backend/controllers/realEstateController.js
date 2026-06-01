@@ -56,7 +56,8 @@ const createContract = async (req, res) => {
         const username = req.user ? req.user.username : 'System';
         const { 
             unit_id, customer_id, total_price, 
-            down_payment, installment_years, frequency, contract_date
+            down_payment, installment_years, frequency, contract_date,
+            broker_id, broker_commission_rate
         } = req.body;
 
         // جلب بيانات الوحدة والمشروع المرتبط بها
@@ -76,10 +77,14 @@ const createContract = async (req, res) => {
 
         await client.query("UPDATE real_estate_units SET status = 'Sold' WHERE id = $1", [unit_id]);
 
+        // حساب عمولة الوسيط
+        const rate = parseFloat(broker_commission_rate || 0);
+        const commissionAmount = parseFloat(((parseFloat(total_price) * rate) / 100).toFixed(2));
+
         const contractRes = await client.query(
-            `INSERT INTO real_estate_contracts (unit_id, customer_id, customer_name, total_price, down_payment, installment_years, contract_date, project_name, created_by) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-            [unit_id, customer_id, customerName, total_price, down_payment, installment_years, contract_date || new Date().toISOString(), unit.project_name, username]
+            `INSERT INTO real_estate_contracts (unit_id, customer_id, customer_name, total_price, down_payment, installment_years, contract_date, project_name, created_by, broker_id, broker_commission_rate, broker_commission_amount) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+            [unit_id, customer_id, customerName, total_price, down_payment, installment_years, contract_date || new Date().toISOString(), unit.project_name, username, broker_id || null, rate, commissionAmount]
         );
         const contractId = contractRes.rows[0].id;
 
@@ -120,6 +125,25 @@ const createContract = async (req, res) => {
                 amount: parseFloat(down_payment),
                 costCenter: unit.project_name,
                 description: dpDesc,
+                username: username
+            });
+        }
+
+        // 3. إثبات عمولة الوسيط محاسبياً وفي جدول العمولات
+        if (broker_id && commissionAmount > 0) {
+            await client.query(
+                `INSERT INTO broker_commissions (broker_id, contract_id, commission_amount, paid_amount, status)
+                 VALUES ($1, $2, $3, 0, 'Unpaid')`,
+                [broker_id, contractId, commissionAmount]
+            );
+
+            const commDesc = `إثبات عمولة تسويق مستحقة - عقد #${contractId} - وحدة ${unit.unit_number} - وسيط ID: ${broker_id}`;
+            await AccountingService.recordDoubleEntry(client, {
+                debitAccount: 'مصروفات تسويق وعمولات عقارية',
+                creditAccount: 'عمولات وسطاء مستحقة الدفع',
+                amount: commissionAmount,
+                costCenter: unit.project_name,
+                description: commDesc,
                 username: username
             });
         }
@@ -511,6 +535,80 @@ const updateUnit = async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// ─── إدارة الوسطاء والعمولات ──────────────────────────────────────────────────
+const addBroker = async (req, res) => {
+    const { name, company_name, phone, email, commission_rate } = req.body;
+    try {
+        if (!hasAccess(req.user, 'real_estate', 'create')) throw new Error("Access Denied.");
+        const result = await pool.query(
+            `INSERT INTO real_estate_brokers (name, company_name, phone, email, commission_rate)
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [name, company_name, phone, email, parseFloat(commission_rate || 0)]
+        );
+        res.json({ success: true, id: result.rows[0].id, message: "تم تسجيل الوسيط بنجاح" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+const getBrokers = async (req, res) => {
+    try {
+        const { rows } = await pool.query(`SELECT * FROM real_estate_brokers ORDER BY id DESC`);
+        res.json({ success: true, data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+const payBrokerCommission = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { commission_id, payment_amount, payment_method, reference_no } = req.body;
+        const username = req.user ? req.user.username : 'System';
+
+        const commRes = await client.query(
+            `SELECT c.*, b.name as broker_name, p.name as project_name
+             FROM broker_commissions c
+             JOIN real_estate_brokers b ON c.broker_id = b.id
+             JOIN real_estate_contracts co ON c.contract_id = co.id
+             JOIN real_estate_units u ON co.unit_id = u.id
+             JOIN real_estate_projects p ON u.project_id = p.id
+             WHERE c.id = $1 FOR UPDATE`, [commission_id]
+        );
+        if (commRes.rows.length === 0) throw new Error("العمولة غير موجودة");
+        const comm = commRes.rows[0];
+
+        const remaining = parseFloat(comm.commission_amount) - parseFloat(comm.paid_amount);
+        const payVal = parseFloat(payment_amount || remaining);
+
+        if (payVal > remaining) throw new Error("المبلغ المدفوع أكبر من المتبقي للعمولة");
+
+        await client.query(
+            `UPDATE broker_commissions 
+             SET paid_amount = paid_amount + $1,
+                 status = CASE WHEN paid_amount + $1 >= commission_amount THEN 'Paid' ELSE 'Partially Paid' END
+             WHERE id = $2`, [payVal, commission_id]
+        );
+
+        // 🌟 صرف نقدي للعمولة (القيد المالي)
+        const creditAcc = (payment_method === 'Transfer' || payment_method === 'Bank' || payment_method === 'Cheque')
+            ? 'بنك CIB - تيد كابيتال' : 'صندوق نقدية - تيد كابيتال';
+
+        const desc = `صرف عمولة وسيط عقاري [${payment_method}] - وسيط: ${comm.broker_name} - مرجع: ${reference_no || '---'}`;
+        await AccountingService.recordDoubleEntry(client, {
+            debitAccount: 'عمولات وسطاء مستحقة الدفع',
+            creditAccount: creditAcc,
+            amount: payVal,
+            costCenter: comm.project_name,
+            description: desc,
+            username
+        });
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: "تم سداد العمولة وتوليد القيد المحاسبي بنجاح" });
+    } catch (e) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: e.message });
+    } finally { client.release(); }
+};
+
 module.exports = {
     addProject,
     addUnit,
@@ -528,5 +626,8 @@ module.exports = {
     deleteContract,
     deleteInstallment,
     refundPreOrder,
-    transferPreOrder
+    transferPreOrder,
+    addBroker,
+    getBrokers,
+    payBrokerCommission
 };

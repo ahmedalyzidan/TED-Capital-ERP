@@ -55,6 +55,45 @@ class NotificationService {
         }
     }
 
+    async send(userId, title, message, channel, options = {}) {
+        const severity = options.severity || 'info';
+        const category = options.category || 'general';
+        const actionLink = options.actionLink || null;
+
+        try {
+            let targetUsers = [];
+            if (typeof userId === 'string' && isNaN(userId)) {
+                const usersRes = await pool.query("SELECT id, email, phone FROM users WHERE role ILIKE $1 OR role ILIKE '%Admin%'", [userId]);
+                targetUsers = usersRes.rows;
+            } else {
+                const userRes = await pool.query("SELECT id, email, phone FROM users WHERE id = $1", [userId]);
+                targetUsers = userRes.rows;
+            }
+
+            for (const user of targetUsers) {
+                const channelLower = (channel || '').toLowerCase();
+                if (channelLower === 'in-app' || channelLower === 'system' || channelLower === 'in_app') {
+                    await pool.query(
+                        `INSERT INTO notifications 
+                        (user_id, title, message, metadata, severity, category, action_link, is_read) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)`,
+                        [user.id, title, message, JSON.stringify(options), severity, category, actionLink]
+                    );
+                } else if (channelLower === 'email') {
+                    if (user.email) {
+                        await sendEmailNotification(user.email, title, message, true);
+                    }
+                } else if (channelLower === 'whatsapp') {
+                    if (user.phone) {
+                        await this.sendWhatsApp(user.phone, message);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("🔥 Notification Service send channel error:", err.message);
+        }
+    }
+
     async sendWhatsApp(phone, message) {
         console.log(`📱 [WHATSAPP SIMULATOR] To: ${phone} | Message: ${message}`);
         try {

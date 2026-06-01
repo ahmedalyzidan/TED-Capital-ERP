@@ -6,6 +6,7 @@ const { generateInvoicePDF } = require('../utils/pdfGenerator');
 const AccountingService = require('../services/accountingService');
 const projectController = require('./projectController');
 const { processApprovalWorkflow } = require('../services/workflowEngine');
+const eventService = require('../services/eventService');
 
 async function recalculateCBMProration(client, shipmentId, username = 'System') {
     if (!shipmentId) return;
@@ -457,6 +458,97 @@ class DynamicController {
                 const recordId = result.rows[0].id;
                 newId = recordId;
 
+                // Trigger central event notification alerts
+                try {
+                    if (type === 'subcontractor_invoices') {
+                        let pName = data.project_name || 'مشروع';
+                        if (data.project_id && (!data.project_name || data.project_name === 'مشروع')) {
+                            const pRes = await client.query("SELECT name FROM projects WHERE id = $1", [data.project_id]);
+                            if (pRes.rows.length > 0) pName = pRes.rows[0].name;
+                        }
+                        await eventService.emit('SUB_INVOICE_SUBMITTED', 'Subcontractors', {
+                            subcontractor_name: data.subcontractor_name || 'مقاول',
+                            project_name: pName,
+                            amount: data.amount || data.net_amount || 0,
+                            doc_no: recordId
+                        });
+                    } else if (type === 'purchase_orders') {
+                        await eventService.emit('PO_CREATED', 'Procurement', {
+                            doc_no: data.po_number || recordId,
+                            supplier_name: data.supplier_name || 'مورد',
+                            project_name: data.project_name || 'مشروع',
+                            amount: data.total_amount || 0
+                        });
+                    } else if (type === 'custodies') {
+                        await eventService.emit('CUSTODY_REQUESTED', 'Finance', {
+                            employee_name: data.custodian_name || 'موظف',
+                            amount: data.assigned_amount || 0,
+                            purpose: data.notes || 'عهدة'
+                        });
+                    } else if (type === 'custody_expenses') {
+                        await eventService.emit('CUSTODY_EXPENSE_SUBMITTED', 'Finance', {
+                            employee_name: data.recipient_name || 'موظف',
+                            amount: data.amount || 0
+                        });
+                    } else if (type === 'expenses') {
+                        await eventService.emit('EXPENSE_SUBMITTED', 'Finance', {
+                            category: data.expense_category || 'عام',
+                            amount: data.amount || 0,
+                            username: req.user?.username || 'موظف'
+                        });
+                    } else if (type === 'ledger') {
+                        await eventService.emit('MANUAL_GL_ENTRY_ALERT', 'Finance', {
+                            journal_no: data.voucher_no || recordId,
+                            amount: data.debit || data.credit || 0,
+                            username: req.user?.username || 'مستخدم',
+                            description: data.description || ''
+                        });
+                    } else if (type === 'client_payment_history' || type === 'payment_receipts') {
+                        await eventService.emit('CLIENT_RECEIPT_RECORDED', 'Finance', {
+                            customer_name: data.client_name || 'عميل',
+                            amount: data.amount || 0,
+                            balance: data.current_outstanding || 0
+                        });
+                    } else if (type === 'inventory_movements') {
+                        await eventService.emit('STOCK_TRANSFER', 'Inventory', {
+                            doc_no: recordId,
+                            from_warehouse: data.from_warehouse || 'مخزن أ',
+                            to_warehouse: data.to_warehouse || 'مخزن ب',
+                            items_summary: data.notes || 'تحويل مخزني'
+                        });
+                    } else if (type === 'staff_absent') {
+                        await eventService.emit('STAFF_ABSENT', 'HR', {
+                            employee_name: data.employee_name || 'موظف',
+                            department: data.department || 'عام',
+                            date: data.date || new Date().toLocaleDateString()
+                        });
+                    } else if (type === 'payroll') {
+                        await eventService.emit('PAYROLL_PROCESSED', 'HR', {
+                            month: data.month || 'الشهر الحالي',
+                            year: data.year || 'السنة الحالية',
+                            amount: data.total_amount || 0
+                        });
+                    } else if (type === 'ar_invoices') {
+                        await eventService.emit('CLIENT_INVOICE_ISSUED', 'Real Estate', {
+                            customer_name: data.client_name || 'عميل',
+                            amount: data.amount || data.total_amount || 0,
+                            doc_no: data.invoice_no || recordId,
+                            project_name: data.project_name || 'مشروع',
+                            due_date: data.due_date || ''
+                        });
+                    } else if (type === 'real_estate_contracts') {
+                        await eventService.emit('CLIENT_INVOICE_ISSUED', 'Real Estate', {
+                            customer_name: data.customer_name || 'عميل',
+                            amount: data.total_amount || 0,
+                            doc_no: data.contract_number || recordId,
+                            project_name: data.unit_no || 'وحدة عقارية',
+                            due_date: data.start_date || ''
+                        });
+                    }
+                } catch (evtErr) {
+                    console.error("🔥 Trigger Event Notification Alert Error:", evtErr.message);
+                }
+
                 // 🔗 Link Workflow Instance to Record ID
                 if (workflowResult.instanceId) {
                     await client.query("UPDATE workflow_instances SET record_id = $1 WHERE id = $2", [recordId, workflowResult.instanceId]);
@@ -721,6 +813,68 @@ class DynamicController {
             const query = `UPDATE ${type} SET ${setClause} WHERE id = $${keys.length + 1}`;
             console.log(`📝 [DynamicController] Executing Update: ${query}`, values, id);
             await client.query(query, [...values, id]);
+
+            // Trigger central event updates
+            try {
+                if (type === 'subcontractor_invoices') {
+                    if (data.status && data.status !== oldData.status) {
+                        let pName = data.project_name || oldData.project_name || 'مشروع';
+                        if ((data.project_id || oldData.project_id) && (!pName || pName === 'مشروع')) {
+                            const pRes = await client.query("SELECT name FROM projects WHERE id = $1", [data.project_id || oldData.project_id]);
+                            if (pRes.rows.length > 0) pName = pRes.rows[0].name;
+                        }
+                        if (data.status === 'Tech Approved' || data.status === 'المعتمد الفني') {
+                            await eventService.emit('SUB_INVOICE_TECH_APPROVED', 'Subcontractors', {
+                                subcontractor_name: data.subcontractor_name || oldData.subcontractor_name || 'مقاول',
+                                project_name: pName,
+                                amount: data.amount || oldData.amount || 0,
+                                doc_no: id
+                            });
+                        } else if (data.status === 'Approved' || data.status === 'معتمد') {
+                            await eventService.emit('SUB_INVOICE_FIN_APPROVED', 'Subcontractors', {
+                                subcontractor_name: data.subcontractor_name || oldData.subcontractor_name || 'مقاول',
+                                project_name: pName,
+                                amount: data.amount || oldData.amount || 0,
+                                doc_no: id
+                            });
+                        } else if (data.status === 'Paid' || data.status === 'مدفوع') {
+                            await eventService.emit('SUB_INVOICE_PAID', 'Subcontractors', {
+                                subcontractor_name: data.subcontractor_name || oldData.subcontractor_name || 'مقاول',
+                                project_name: pName,
+                                amount: data.amount || oldData.amount || 0,
+                                doc_no: id,
+                                payment_method: data.payment_method || 'شيك/حوالة'
+                            });
+                        }
+                    }
+                } else if (type === 'purchase_orders') {
+                    if (data.status && data.status !== oldData.status && (data.status === 'Approved' || data.status === 'معتمد')) {
+                        await eventService.emit('PO_APPROVED', 'Procurement', {
+                            doc_no: data.po_number || oldData.po_number || id,
+                            supplier_name: data.supplier_name || oldData.supplier_name || 'مورد',
+                            project_name: data.project_name || oldData.project_name || 'مشروع',
+                            amount: data.total_amount || oldData.total_amount || 0
+                        });
+                    }
+                } else if (type === 'custodies') {
+                    if (data.status && data.status !== oldData.status && (data.status === 'Approved' || data.status === 'معتمد')) {
+                        await eventService.emit('CUSTODY_APPROVED', 'Finance', {
+                            employee_name: data.custodian_name || oldData.custodian_name || 'موظف',
+                            amount: data.assigned_amount || oldData.assigned_amount || 0
+                        });
+                    }
+                } else if (type === 'expenses') {
+                    if (data.status && data.status !== oldData.status && (data.status === 'Approved' || data.status === 'معتمد')) {
+                        await eventService.emit('EXPENSE_APPROVED', 'Finance', {
+                            doc_no: id,
+                            category: data.expense_category || oldData.expense_category || 'عام',
+                            amount: data.amount || oldData.amount || 0
+                        });
+                    }
+                }
+            } catch (evtErr) {
+                console.error("🔥 Trigger Event Notification Alert Error:", evtErr.message);
+            }
 
             // --- 🌟 Package 5 Supply Chain & Landed Cost Engine Interceptors (CBM Volume Proration) 🌟 ---
             if (type === 'shipment_expenses') {

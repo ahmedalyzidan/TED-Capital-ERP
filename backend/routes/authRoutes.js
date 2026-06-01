@@ -80,8 +80,19 @@ router.post('/public/forgot-password', async (req, res) => {
             if (!user.email || user.email.toLowerCase() !== (email || '').toLowerCase().trim()) {
                 return res.status(400).json({ success: false, error: "البريد الإلكتروني المدخل لا يتطابق مع البريد المسجل في النظام." });
             }
-            console.log(`📧 [PASSWORD RECOVERY] Sending recovery email to ${user.email} for user ${user.username}`);
-            return res.json({ success: true, message: "تم إرسال تعليمات استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح." });
+            // Generate temporary password
+            const tempPassword = 'TEMP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+            const hash = await bcrypt.hash(tempPassword, 10);
+            
+            await pool.query("UPDATE users SET password_hash = $1, must_change_password = TRUE WHERE id = $2", [hash, user.id]);
+            
+            const { sendEmailNotification } = require('../config/mailer');
+            const emailBody = `مرحباً ${user.username}،\n\nلقد طلبت استعادة كلمة المرور الخاصة بك في نظام TED ERP.\n\nكلمة المرور المؤقتة الخاصة بك هي: ${tempPassword}\n\nيرجى تسجيل الدخول باستخدام كلمة المرور هذه، وسيُطلب منك إعداد كلمة مرور جديدة فور تسجيل الدخول.`;
+            
+            await sendEmailNotification(user.email, "استعادة كلمة المرور المؤقتة - TED ERP", emailBody, true);
+            
+            console.log(`📧 [PASSWORD RECOVERY] Sending recovery email to ${user.email} with temporary password for user ${user.username}`);
+            return res.json({ success: true, message: "تم توليد كلمة مرور مؤقتة وإرسالها إلى بريدك الإلكتروني بنجاح." });
         } else if (recoveryType === 'whatsapp') {
             if (!phone || phone.trim().length < 8) {
                 return res.status(400).json({ success: false, error: "يرجى إدخال رقم جوال صحيح لإرسال كود الواتساب." });
@@ -219,6 +230,7 @@ router.post('/2fa/validate', async (req, res) => {
             success: true,
             token: accessToken,
             refreshToken: refreshToken,
+            mustChangePassword: user.must_change_password,
             user: { id: user.id, username: user.username, role: user.role, photo: user.photo, permissions: user.permissions || {} }
         });
     } catch (err) {

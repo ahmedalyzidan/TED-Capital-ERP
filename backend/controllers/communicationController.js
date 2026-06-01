@@ -5,12 +5,23 @@ const { sendWhatsAppMessage } = require('../services/whatsappService');
 class CommunicationController {
     // 1. إدارة القوالب
     async createTemplate(req, res) {
-        const { name, type, subject, body } = req.body;
+        const { id, name, type, subject, body, recipient_type, recipient_users } = req.body;
         try {
-            const result = await pool.query(
-                `INSERT INTO crm_templates (name, type, subject, body) VALUES ($1, $2, $3, $4) RETURNING *`,
-                [name, type, subject || null, body]
-            );
+            let result;
+            if (id) {
+                result = await pool.query(
+                    `UPDATE crm_templates 
+                     SET name = $1, type = $2, subject = $3, body = $4, recipient_type = $5, recipient_users = $6 
+                     WHERE id = $7 RETURNING *`,
+                    [name, type, subject || null, body, recipient_type || 'Both', JSON.stringify(recipient_users || {roles:[], userIds:[]}), id]
+                );
+            } else {
+                result = await pool.query(
+                    `INSERT INTO crm_templates (name, type, subject, body, recipient_type, recipient_users) 
+                     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                    [name, type, subject || null, body, recipient_type || 'Both', JSON.stringify(recipient_users || {roles:[], userIds:[]})]
+                );
+            }
             res.json({ success: true, template: result.rows[0] });
         } catch (error) {
             res.status(500).json({ error: error.message });

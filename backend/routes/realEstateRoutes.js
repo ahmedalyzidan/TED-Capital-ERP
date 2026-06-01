@@ -11,6 +11,11 @@ router.use(authenticateToken);
 router.post('/projects', realEstateController.addProject);
 router.post('/units', realEstateController.addUnit);
 
+// ─── الوسطاء والعمولات ────────────────────────────────────────────────────────
+router.post('/brokers', realEstateController.addBroker);
+router.get('/brokers', realEstateController.getBrokers);
+router.post('/commissions/pay', realEstateController.payBrokerCommission);
+
 // ─── العقود والأقساط ──────────────────────────────────────────────────────────
 router.post('/contracts', realEstateController.createContract);
 router.post('/installments/pay', realEstateController.payInstallment);

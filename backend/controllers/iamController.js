@@ -229,11 +229,18 @@ const updateUser = async (req, res) => {
         const { id } = req.params;
         const { username, email, password, role, status, full_name, phone, department, employee_id, linked_employee_id, linked_company, linked_project, two_factor, permissions, photo } = req.body;
 
-        // Protection for hardcoded 'admin' user
+        // Protection for hardcoded 'admin' user: enforce core credentials, allow detail updates
         const checkRes = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
         const existingUsername = (checkRes.rows[0]?.username || '').toLowerCase().trim();
+        
+        let finalUsername = username;
+        let finalRole = role;
+        let finalStatus = status;
+
         if (existingUsername === 'admin') {
-            return res.status(403).json({ error: "The root 'admin' user is protected and cannot be modified or re-assigned." });
+            finalUsername = 'admin';
+            finalRole = 'Super Admin';
+            finalStatus = 'Active';
         }
         
         if (password) {
@@ -243,18 +250,18 @@ const updateUser = async (req, res) => {
             await pool.query(
                 `UPDATE users SET username = $1, email = $2, password_hash = $3, role = $4, status = $5, full_name = $6, phone = $7, 
                  department = $8, employee_id = $9, linked_employee_id = $10, linked_company = $11, linked_project = $12, two_factor = $13, permissions = $14, photo = $15, must_change_password = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $16`,
-                [username, email, hash, role, status, full_name, phone, department, employee_id, linked_employee_id ? parseInt(linked_employee_id) : null, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), photo, id]
+                [finalUsername, email, hash, finalRole, finalStatus, full_name, phone, department, employee_id, linked_employee_id ? parseInt(linked_employee_id) : null, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), photo, id]
             );
         } else {
             await pool.query(
                 `UPDATE users SET username = $1, email = $2, role = $3, status = $4, full_name = $5, phone = $6, 
                  department = $7, employee_id = $8, linked_employee_id = $9, linked_company = $10, linked_project = $11, two_factor = $12, permissions = $13, photo = $14, updated_at = CURRENT_TIMESTAMP WHERE id = $15`,
-                [username, email, role, status, full_name, phone, department, employee_id, linked_employee_id ? parseInt(linked_employee_id) : null, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), photo, id]
+                [finalUsername, email, finalRole, finalStatus, full_name, phone, department, employee_id, linked_employee_id ? parseInt(linked_employee_id) : null, linked_company, linked_project, two_factor, JSON.stringify(permissions || {}), photo, id]
             );
         }
 
         // Update role mapping in user_roles table
-        const roleRes = await pool.query("SELECT id FROM roles WHERE name = $1", [role]);
+        const roleRes = await pool.query("SELECT id FROM roles WHERE name = $1", [finalRole]);
         if (roleRes.rows.length > 0) {
             const roleId = roleRes.rows[0].id;
             await pool.query("DELETE FROM user_roles WHERE user_id = $1", [id]);

@@ -14,6 +14,12 @@ export default function Settings() {
   const [selectedPurgeTables, setSelectedPurgeTables] = useState([]);
   const [resetKey, setResetKey] = useState('');
 
+  // Notification & Event Settings States
+  const [templates, setTemplates] = useState([]);
+  const [commLogs, setCommLogs] = useState([]);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ id: null, name: '', type: 'WhatsApp', subject: '', body: '', recipient_type: 'Both', recipient_users: { roles: [], userIds: [] } });
+
   const t = {
     ar: {
       title: "إعدادات النظام والصيانة",
@@ -90,7 +96,23 @@ export default function Settings() {
   useEffect(() => {
     fetchSettings();
     fetchBackups();
+    fetchTemplates();
+    fetchCommLogs();
   }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const { data } = await api.get('/communication/templates');
+      setTemplates(data.templates || []);
+    } catch (e) { console.error("Failed to load templates:", e); }
+  };
+
+  const fetchCommLogs = async () => {
+    try {
+      const { data } = await api.get('/communication/logs');
+      setCommLogs(data.logs || []);
+    } catch (e) { console.error("Failed to load messaging logs:", e); }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -540,10 +562,7 @@ export default function Settings() {
                        </h5>
                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Max Share per Vendor (%)</label>
                        <input 
-                        type="number" 
-                        value={formData.vendor_concentration_pct} 
-                        onChange={e => setFormData({...formData, vendor_concentration_pct: e.target.value})}
-                        className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-600 outline-none border border-transparent focus:border-amber-100" 
+className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-600 outline-none border border-transparent focus:border-amber-100" 
                        />
                     </div>
                  </div>
@@ -552,6 +571,278 @@ export default function Settings() {
            </div>
         </div>
       </div>
+
+      {/* ✉️ NOTIFICATION EVENT TEMPLATES & MESSAGING LOGS PANEL ✉️ */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden xl:col-span-2 mt-10">
+         <div className="p-8 border-b border-slate-100 bg-[#1e293b] text-white flex justify-between items-center">
+           <h3 className="text-xl font-black flex items-center gap-3 text-white">
+             <span className="p-2 bg-white/10 rounded-xl backdrop-blur-md text-white">✉️</span>
+             إعدادات وقوالب تنبيهات الأحداث (Event Notifications & Templates)
+           </h3>
+           <button 
+             onClick={() => {
+               setTemplateForm({ id: null, name: '', type: 'WhatsApp', subject: '', body: '', recipient_type: 'Both', recipient_users: { roles: [], userIds: [] } });
+               setIsTemplateModalOpen(true);
+             }}
+             className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2"
+           >
+             + قالب جديد
+           </button>
+         </div>
+         
+         <div className="p-10 space-y-10">
+           {/* Templates Grid */}
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {templates.map(tpl => (
+               <div key={tpl.id} className="bg-slate-50 border border-slate-200 rounded-[1.8rem] p-6 hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
+                 <div>
+                   <div className="flex justify-between items-start mb-4">
+                     <span className="px-3 py-1 bg-slate-200/60 text-slate-700 text-[10px] font-black rounded-lg uppercase tracking-wider">{tpl.type}</span>
+                     <span className="text-[10px] font-mono text-slate-400">ID-#{tpl.id}</span>
+                   </div>
+                   <h4 className="text-base font-black text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">{tpl.name}</h4>
+                   <p className="text-[11px] font-bold text-slate-400 mb-3">
+                      {tpl.name === 'SUB_INVOICE_SUBMITTED' && 'تقديم مستخلص مقاول جديد (Site Submission)'}
+                      {tpl.name === 'SUB_INVOICE_TECH_APPROVED' && 'الاعتماد الفني للمستخلص في الموقع (Tech Approval)'}
+                      {tpl.name === 'SUB_INVOICE_FIN_APPROVED' && 'الاعتماد المالي للمستخلص في الإدارة (Fin Approval)'}
+                      {tpl.name === 'SUB_INVOICE_PAID' && 'سداد دفعة المستخلص للمقاول (Subcontractor Payout)'}
+                      {tpl.name === 'CLIENT_INVOICE_ISSUED' && 'إصدار فاتورة أعمال جديدة للعميل (Client Invoiced)'}
+                      {tpl.name === 'CLIENT_RECEIPT_RECORDED' && 'استلام سند قبض من عميل (Client Receipt)'}
+                      {tpl.name === 'CLIENT_INSTALLMENT_OVERDUE' && 'تنبيه تأخر سداد قسط عميل (Installment Overdue)'}
+                      {tpl.name === 'RE_RENT_INVOICE_ISSUED' && 'مطالبة الإيجار الشهرية للوحدة (Rental Invoice)'}
+                      {tpl.name === 'RE_RENT_OVERDUE' && 'تنبيه تأخر سداد دفعة الإيجار (Rental Overdue)'}
+                      {tpl.name === 'PO_CREATED' && 'طلب شراء جديد (PO Created)'}
+                      {tpl.name === 'PO_APPROVED' && 'اعتماد طلب الشراء (PO Approved)'}
+                      {tpl.name === 'STOCK_TRANSFER' && 'تحويل مخزني بين المستودعات (Stock Transfer)'}
+                      {tpl.name === 'STOCK_LOW' && 'انخفاض المخزون عن الحد الآمن (Low Stock Warning)'}
+                      {tpl.name === 'STOCK_EXPIRY' && 'اقتراب انتهاء صلاحية صنف (Near Expiry Alert)'}
+                      {tpl.name === 'STOCK_VARIANCE' && 'تسجيل عجز/زيادة في جرد المخزن (Inventory Variance)'}
+                      {tpl.name === 'CUSTODY_REQUESTED' && 'طلب عهدة مالية جديدة للموظف (Custody Request)'}
+                      {tpl.name === 'CUSTODY_EXPENSE_SUBMITTED' && 'تقديم تسوية مصروف عهدة للمراجعة (Custody Expense)'}
+                      {tpl.name === 'CUSTODY_APPROVED' && 'اعتماد تسوية العهدة ماليًا (Custody Approved)'}
+                      {tpl.name === 'EXPENSE_SUBMITTED' && 'تقديم طلب مصروف عام جديد (Expense Requested)'}
+                      {tpl.name === 'EXPENSE_APPROVED' && 'اعتماد صرف مصروف عام (Expense Approved)'}
+                      {tpl.name === 'MANUAL_GL_ENTRY_ALERT' && '🔒 قيد أمان: إجراء تسوية مالي يدوي (Manual GL Entry)'}
+                      {tpl.name === 'STAFF_ABSENT' && 'تنبيه غياب موظف بدون إذن (Staff Absenteeism)'}
+                      {tpl.name === 'PAYROLL_PROCESSED' && 'اعتماد مسير رواتب الشهر (Payroll Approved)'}
+                   </p>
+                   <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-6 bg-white p-3 rounded-xl border border-slate-100/80 font-medium">
+                     {tpl.body}
+                   </p>
+                 </div>
+                 <button
+                   onClick={() => {
+                     setTemplateForm({
+                       ...tpl,
+                       recipient_type: tpl.recipient_type || 'Both',
+                       recipient_users: typeof tpl.recipient_users === 'string' ? JSON.parse(tpl.recipient_users) : (tpl.recipient_users || { roles: [], userIds: [] })
+                     });
+                     setIsTemplateModalOpen(true);
+                   }}
+                   className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-900 hover:text-white hover:border-slate-900 text-slate-700 rounded-xl text-xs font-black transition-all"
+                 >
+                   تعديل القالب ✏️
+                 </button>
+               </div>
+             ))}
+
+             {templates.length === 0 && (
+               <div className="col-span-full py-12 text-center text-slate-400 font-bold text-sm bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                 لا توجد قوالب تنبيهات مخصصة مسجلة حالياً.
+               </div>
+             )}
+           </div>
+
+           {/* Messaging Delivery Logs */}
+           <div className="pt-8 border-t border-slate-100">
+             <h4 className="text-base font-black text-slate-800 mb-6 flex items-center gap-2">
+               📋 سجل الإرسال ومراقبة جودة التسليم (Unified Message Logs)
+             </h4>
+             <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm max-h-[350px] overflow-y-auto custom-scrollbar">
+               <table className="w-full text-right border-collapse bg-white">
+                 <thead className="bg-slate-50 text-slate-400 text-xs font-black uppercase tracking-wider sticky top-0 z-10 border-b border-slate-100">
+                   <tr>
+                     <th className="px-6 py-4">المستلم</th>
+                     <th className="px-6 py-4">القناة</th>
+                     <th className="px-6 py-4">محتوى الرسالة</th>
+                     <th className="px-6 py-4 text-center">الحالة</th>
+                     <th className="px-6 py-4 text-center">تاريخ الإرسال</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-100 text-sm">
+                   {commLogs.map(log => (
+                     <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                       <td className="px-6 py-4 font-bold text-slate-800">
+                         <div className="flex flex-col">
+                           <span>{log.recipient_name}</span>
+                           <span className="text-[10px] text-slate-400 font-mono mt-0.5">{log.recipient_phone || log.recipient_email || '---'}</span>
+                         </div>
+                       </td>
+                       <td className="px-6 py-4">
+                         <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
+                           {log.channel}
+                         </span>
+                       </td>
+                       <td className="px-6 py-4 max-w-xs truncate text-xs text-slate-600 font-medium" title={log.message_content}>
+                         {log.message_content}
+                       </td>
+                       <td className="px-6 py-4 text-center">
+                         <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${log.status === 'Sent' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                           {log.status === 'Sent' ? 'تم الإرسال ✓' : 'فشل الإرسال ✕'}
+                         </span>
+                       </td>
+                       <td className="px-6 py-4 text-xs font-mono text-slate-400 text-center">
+                         {new Date(log.sent_at).toLocaleString('ar-EG')}
+                       </td>
+                     </tr>
+                   ))}
+                   {commLogs.length === 0 && (
+                     <tr>
+                       <td colSpan="5" className="text-center py-10 text-slate-400 font-black">لا توجد رسائل مرسلة مؤخراً في السجل.</td>
+                     </tr>
+                   )}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         </div>
+      </div>
+
+      {/* Template Edit/Add Modal */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl flex items-center justify-center z-[110] p-4 animate-fade-in animate-scale-in">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-hidden">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-slate-900">{templateForm.id ? 'تعديل قالب تنبيه' : 'إضافة قالب تنبيه جديد'}</h3>
+              <button onClick={() => setIsTemplateModalOpen(false)} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 hover:bg-slate-900 hover:text-white text-slate-400 transition-all border border-slate-200">✕</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSubmitting(true);
+              try {
+                await api.post('/communication/templates', templateForm);
+                fetchTemplates();
+                setIsTemplateModalOpen(false);
+              } catch (err) { alert(err?.response?.data?.error || 'خطأ أثناء حفظ القالب'); }
+              finally { setIsSubmitting(false); }
+            }} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-right">اسم الحدث / نوع التنبيه</label>
+                <select 
+                  required 
+                  value={templateForm.name} 
+                  onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })} 
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"
+                >
+                  <option value="">-- اختر نوع الحدث العقاري/المالي --</option>
+                  
+                  <optgroup label="🏗️ المقاولات والمستخلصات (Subcontractors)">
+                    <option value="SUB_INVOICE_SUBMITTED">📝 تقديم مستخلص مقاول جديد (Site Submission)</option>
+                    <option value="SUB_INVOICE_TECH_APPROVED">⚖️ الاعتماد الفني للمستخلص في الموقع (Tech Approval)</option>
+                    <option value="SUB_INVOICE_FIN_APPROVED">🎉 الاعتماد المالي للمستخلص في الإدارة (Fin Approval)</option>
+                    <option value="SUB_INVOICE_PAID">💸 سداد دفعة المستخلص للمقاول (Subcontractor Payout)</option>
+                  </optgroup>
+
+                  <optgroup label="🏢 التطوير العقاري وعقود المبيعات (Real Estate)">
+                    <option value="CLIENT_INVOICE_ISSUED">🧾 إصدار فاتورة أعمال جديدة للعميل (Client Invoiced)</option>
+                    <option value="CLIENT_RECEIPT_RECORDED">💳 استلام سند قبض من عميل (Client Receipt)</option>
+                    <option value="CLIENT_INSTALLMENT_OVERDUE">🚨 تنبيه تأخر سداد قسط عميل (Installment Overdue)</option>
+                    <option value="RE_RENT_INVOICE_ISSUED">📅 مطالبة الإيجار الشهرية للوحدة (Rental Invoice)</option>
+                    <option value="RE_RENT_OVERDUE">🚨 تنبيه تأخر سداد دفعة الإيجار (Rental Overdue)</option>
+                  </optgroup>
+
+                  <optgroup label="📦 المخازن والمشتريات (Inventory & Procurement)">
+                    <option value="PO_CREATED">🛒 طلب شراء جديد (PO Created)</option>
+                    <option value="PO_APPROVED">✅ اعتماد طلب الشراء (PO Approved)</option>
+                    <option value="STOCK_TRANSFER">🚚 تحويل مخزني بين المستودعات (Stock Transfer)</option>
+                    <option value="STOCK_LOW">⚠️ انخفاض المخزون عن الحد الآمن (Low Stock Warning)</option>
+                    <option value="STOCK_EXPIRY">⏰ اقتراب انتهاء صلاحية صنف (Near Expiry Alert)</option>
+                    <option value="STOCK_VARIANCE">🔍 تسجيل عجز/زيادة في جرد المخزن (Inventory Variance)</option>
+                  </optgroup>
+
+                  <optgroup label="💰 المالية والعهد والمصروفات (Finance & Expenses)">
+                    <option value="CUSTODY_REQUESTED">💵 طلب عهدة مالية جديدة للموظف (Custody Request)</option>
+                    <option value="CUSTODY_EXPENSE_SUBMITTED">🧾 تقديم تسوية مصروف عهدة للمراجعة (Custody Expense)</option>
+                    <option value="CUSTODY_APPROVED">⚖️ اعتماد تسوية العهدة ماليًا (Custody Approved)</option>
+                    <option value="EXPENSE_SUBMITTED">📉 تقديم طلب مصروف عام جديد (Expense Requested)</option>
+                    <option value="EXPENSE_APPROVED">💸 اعتماد صرف مصروف عام (Expense Approved)</option>
+                    <option value="MANUAL_GL_ENTRY_ALERT">🔒 قيد أمان: إجراء تسوية مالي يدوي (Manual GL Entry)</option>
+                  </optgroup>
+
+                  <optgroup label="👥 الموارد البشرية والرواتب (HR & Payroll)">
+                    <option value="STAFF_ABSENT">🚨 تنبيه غياب موظف بدون إذن (Staff Absenteeism)</option>
+                    <option value="PAYROLL_PROCESSED">💰 اعتماد مسير رواتب الشهر (Payroll Approved)</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-right">قناة الإرسال</label>
+                <select value={templateForm.type} onChange={e => setTemplateForm({ ...templateForm, type: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900">
+                  <option value="WhatsApp">WhatsApp Message</option>
+                  <option value="Email">Email Template</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-right">نوع المستلم (Recipient Type)</label>
+                <select 
+                  value={templateForm.recipient_type || 'Both'} 
+                  onChange={e => setTemplateForm({ ...templateForm, recipient_type: e.target.value })} 
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"
+                >
+                  <option value="Both">الاثنين (العميل والمستلم الداخلي)</option>
+                  <option value="Customer">العميل فقط (Customer Only)</option>
+                  <option value="User">مستخدمي السيستم فقط (System Users Only)</option>
+                </select>
+              </div>
+
+              {((templateForm.recipient_type || 'Both') === 'User' || (templateForm.recipient_type || 'Both') === 'Both') && (
+                <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-right mb-2">أدوار المستخدمين المستهدفة (Target Roles)</label>
+                  <div className="grid grid-cols-2 gap-3 text-right">
+                    {['Admin', 'Finance', 'Project Manager', 'Site Engineer', 'HR'].map(role => (
+                      <label key={role} className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={templateForm.recipient_users?.roles?.includes(role)}
+                          onChange={(e) => {
+                            const roles = templateForm.recipient_users?.roles || [];
+                            const updatedRoles = e.target.checked 
+                              ? [...roles, role] 
+                              : roles.filter(r => r !== role);
+                            setTemplateForm({
+                              ...templateForm,
+                              recipient_users: {
+                                ...templateForm.recipient_users,
+                                roles: updatedRoles
+                              }
+                            });
+                          }}
+                          className="rounded accent-slate-900"
+                        />
+                        {role === 'Admin' && 'المدراء (Admin)'}
+                        {role === 'Finance' && 'الإدارة المالية (Finance)'}
+                        {role === 'Project Manager' && 'مدير المشروع (Project Manager)'}
+                        {role === 'Site Engineer' && 'مهندس الموقع (Site Engineer)'}
+                        {role === 'HR' && 'الموارد البشرية (HR)'}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-right">الموضوع (للبريد الإلكتروني فقط)</label>
+                <input placeholder="موضوع الرسالة" value={templateForm.subject || ''} onChange={e => setTemplateForm({ ...templateForm, subject: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-right">نص القالب (يمكن استخدام متغيرات مثل {`{customer_name}`})</label>
+                <textarea required placeholder="نص الرسالة..." value={templateForm.body} onChange={e => setTemplateForm({ ...templateForm, body: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none h-32 resize-none focus:border-slate-900" />
+              </div>
+              <button type="submit" className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black transition-all">حفظ بيانات القالب</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL: FACTORY RESET --- */}
       {isResetModalOpen && (

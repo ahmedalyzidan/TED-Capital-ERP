@@ -43,7 +43,13 @@ export default function Login() {
       login: "تسجيل الدخول",
       forgotPassword: "نسيت كلمة المرور؟",
       otpCode: "كود التحقق الأمني (OTP)",
-      verify: "تأكيد الهوية"
+      verify: "تأكيد الهوية",
+      changePassTitle: "إعداد كلمة مرور جديدة",
+      tempPasswordLabel: "كلمة المرور المؤقتة المستلمة",
+      newPasswordLabel: "كلمة المرور الجديدة",
+      confirmPasswordLabel: "تأكيد كلمة المرور الجديدة",
+      saveAndLogin: "حفظ كلمة المرور وتسجيل الدخول",
+      passMismatch: "كلمتا المرور غير متطابقتين."
     },
     en: {
       integratedSystem: "Integrated Management System",
@@ -78,7 +84,13 @@ export default function Login() {
       login: "Log In",
       forgotPassword: "Forgot Password?",
       otpCode: "Security Code (OTP)",
-      verify: "Confirm Identity"
+      verify: "Confirm Identity",
+      changePassTitle: "Set New Password",
+      tempPasswordLabel: "Temporary Password Received",
+      newPasswordLabel: "New Password",
+      confirmPasswordLabel: "Confirm New Password",
+      saveAndLogin: "Save Password & Log In",
+      passMismatch: "Passwords do not match."
     }
   }[language === 'en' ? 'en' : 'ar'];
 
@@ -91,6 +103,8 @@ export default function Login() {
   const [tempToken, setTempToken] = useState(null);
   const [tempRefresh, setTempRefresh] = useState(null);
   const [partialToken, setPartialToken] = useState(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [changePassData, setChangePassData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -155,10 +169,15 @@ export default function Login() {
         const userObj = response.data.user;
         const tokenObj = response.data.token;
         const refreshObj = response.data.refreshToken;
+        const mcp = response.data.mustChangePassword;
 
         setAuthenticatedUser(userObj);
         setTempToken(tokenObj);
         setTempRefresh(refreshObj);
+        setMustChangePassword(!!mcp);
+        if (mcp) {
+          setChangePassData(prev => ({ ...prev, currentPassword: formData.password }));
+        }
 
         // 🌟 تحديد الشركات المسموحة للمستخدم بناءً على مصفوفة الصلاحيات
         const allCompanyNames = publicCompanies.map(c => c.name).filter(n => n !== 'كل الشركات' && n !== 'ALL');
@@ -222,10 +241,15 @@ export default function Login() {
         const userObj = response.data.user;
         const tokenObj = response.data.token;
         const refreshObj = response.data.refreshToken;
+        const mcp = response.data.mustChangePassword;
 
         setAuthenticatedUser(userObj);
         setTempToken(tokenObj);
         setTempRefresh(refreshObj);
+        setMustChangePassword(!!mcp);
+        if (mcp) {
+          setChangePassData(prev => ({ ...prev, currentPassword: formData.password }));
+        }
 
         // 🌟 تحديد الشركات المسموحة للمستخدم
         const allCompanyNames2 = publicCompanies.map(c => c.name).filter(n => n !== 'كل الشركات' && n !== 'ALL');
@@ -284,12 +308,51 @@ export default function Login() {
       };
 
       localStorage.setItem('user', JSON.stringify(enrichedUser));
+
+      if (mustChangePassword) {
+        setStep('change_password');
+        setLoading(false);
+        return;
+      }
+
       login(enrichedUser, tempToken, tempRefresh, formData.company);
 
       // التوجيه للصفحة الرئيسية
       window.location.href = '/';
     } catch (err) {
       setError(t.sessionSetupError);
+      setLoading(false);
+    }
+  };
+
+  // 🌟 معالجة تغيير كلمة المرور الإجباري عند الدخول لأول مرة أو بعد الاستعادة
+  const handleForcePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    if (changePassData.newPassword !== changePassData.confirmPassword) {
+      setError(t.passMismatch);
+      return;
+    }
+    setLoading(true);
+
+    try {
+      await api.post('/change-password', {
+        currentPassword: changePassData.currentPassword,
+        newPassword: changePassData.newPassword
+      });
+
+      const enrichedUser = {
+        ...authenticatedUser,
+        selectedCompany: formData.company
+      };
+      localStorage.setItem('user', JSON.stringify(enrichedUser));
+      login(enrichedUser, tempToken, tempRefresh, formData.company);
+
+      window.location.href = '/';
+    } catch (err) {
+      setError(err.response?.data?.error || t.recoveryError);
+    } finally {
       setLoading(false);
     }
   };
@@ -408,6 +471,11 @@ export default function Login() {
               <h1 className={`text-3xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
                 }`}>
                 {t.forgotPassTitle}
+              </h1>
+            ) : step === 'change_password' ? (
+              <h1 className={`text-2xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                {t.changePassTitle}
               </h1>
             ) : (
               <h1 className={`text-4xl font-black tracking-tighter mb-2 uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'
@@ -609,6 +677,64 @@ export default function Login() {
                       <span className={`text-xl ${language === 'ar' ? 'rotate-0' : 'rotate-180'}`}>←</span>
                     </>
                   )}
+                </span>
+              </button>
+            </form>
+          )}
+
+          {/* --- STEP: CHANGE PASSWORD (FORCE) --- */}
+          {step === 'change_password' && (
+            <form onSubmit={handleForcePasswordSubmit} className="flex flex-col gap-6 animate-fade-in">
+              <div className="space-y-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.tempPasswordLabel}
+                </label>
+                <input
+                  type="password"
+                  value={changePassData.currentPassword}
+                  onChange={e => setChangePassData({ ...changePassData, currentPassword: e.target.value })}
+                  required
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                  placeholder="TEMP-XXXXXX"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.newPasswordLabel}
+                </label>
+                <input
+                  type="password"
+                  value={changePassData.newPassword}
+                  onChange={e => setChangePassData({ ...changePassData, newPassword: e.target.value })}
+                  required
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t.confirmPasswordLabel}
+                </label>
+                <input
+                  type="password"
+                  value={changePassData.confirmPassword}
+                  onChange={e => setChangePassData({ ...changePassData, confirmPassword: e.target.value })}
+                  required
+                  className={`w-full p-4 rounded-2xl border outline-none transition-all font-bold ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50' : 'bg-slate-50 border-slate-200 focus:bg-white text-slate-900'}`}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full overflow-hidden rounded-2xl p-4 transition-all active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+                <span className="relative font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                  {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : t.saveAndLogin}
                 </span>
               </button>
             </form>

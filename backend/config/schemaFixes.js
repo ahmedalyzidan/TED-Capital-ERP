@@ -297,6 +297,307 @@ const applySchemaFixes = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+        await runQuery("CRM Templates recipient_type", `ALTER TABLE crm_templates ADD COLUMN IF NOT EXISTS recipient_type VARCHAR(50) DEFAULT 'Both'`);
+        await runQuery("CRM Templates recipient_users", `ALTER TABLE crm_templates ADD COLUMN IF NOT EXISTS recipient_users JSONB DEFAULT '{"roles":[], "userIds":[]}'::jsonb`);        const defaultTemplates = [
+            // Subcontractor Invoices WhatsApp & Email
+            {
+                name: 'SUB_INVOICE_SUBMITTED',
+                type: 'WhatsApp',
+                subject: 'تقديم مستخلص مقاول جديد',
+                body: '📝 تم تقديم مستخلص جديد للمقاول {{subcontractor_name}} لمشروع {{project_name}} بقيمة {{amount}} ج.م. يرجى مراجعته واعتماده فنيًا.'
+            },
+            {
+                name: 'SUB_INVOICE_SUBMITTED',
+                type: 'Email',
+                subject: 'إشعار بتقديم مستخلص مقاول جديد - {{company_name}}',
+                body: 'عزيزي المهندس/المدير،\n\nنود إفادتكم بأنه قد تم تقديم مستخلص أعمال جديد (Site Submission) في النظام:\n\n- المقاول: {{subcontractor_name}}\n- المشروع: {{project_name}}\n- القيمة الإجمالية: {{amount}} ج.م\n- رقم المستخلص: {{doc_no}}\n\nيرجى مراجعة تفاصيل المستخلص الفنية واعتماده من خلال نظام {{company_name}}.\n\nمع تحيات إدارة النظام.'
+            },
+            {
+                name: 'SUB_INVOICE_TECH_APPROVED',
+                type: 'WhatsApp',
+                subject: 'الاعتماد الفني للمستخلص',
+                body: '⚖️ الاعتماد الفني: تم اعتماد مستخلص المقاول {{subcontractor_name}} فنيًا لمشروع {{project_name}} برقم مستند {{doc_no}} وبقيمة {{amount}} ج.م وبانتظار المراجعة والاعتماد المالي.'
+            },
+            {
+                name: 'SUB_INVOICE_TECH_APPROVED',
+                type: 'Email',
+                subject: 'إشعار بالاعتماد الفني لمستخلص مقاول - {{company_name}}',
+                body: 'السادة إدارة الشؤون المالية،\n\nتم الانتهاء من المراجعة والاعتماد الفني لمستخلص المقاول التالي:\n\n- المقاول: {{subcontractor_name}}\n- المشروع: {{project_name}}\n- رقم المستند: {{doc_no}}\n- القيمة المعتمدة فنيًا: {{amount}} ج.م\n\nالمستند بانتظار التوجيه المحاسبي والاعتماد المالي النهائي للصرف.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'SUB_INVOICE_FIN_APPROVED',
+                type: 'WhatsApp',
+                subject: 'الاعتماد المالي للمستخلص',
+                body: '🎉 تم الاعتماد المالي لمستخلص المقاول {{subcontractor_name}} لمشروع {{project_name}} بقيمة {{amount}} ج.م. تم تجهيز الدفعة للصرف.'
+            },
+            {
+                name: 'SUB_INVOICE_FIN_APPROVED',
+                type: 'Email',
+                subject: 'إشعار بالاعتماد المالي النهائي للمستخلص - {{company_name}}',
+                body: 'شريكنا العزيز {{subcontractor_name}}،\n\nيسعدنا إبلاغكم بأنه تم الاعتماد المالي النهائي لمستخلصكم رقم {{doc_no}} الخاص بمشروع {{project_name}}:\n\n- القيمة الصافية المعتمدة: {{amount}} ج.م\n\nسيتم إشعاركم فور إتمام تحويل الدفعة أو إصدار الشيك.\n\nنشكركم على حسن تعاونكم.'
+            },
+            {
+                name: 'SUB_INVOICE_PAID',
+                type: 'WhatsApp',
+                subject: 'سداد دفعة مستخلص المقاول',
+                body: '💸 تم صرف دفعة مالية بقيمة {{amount}} ج.م للمقاول {{subcontractor_name}} مقابل المستخلص رقم {{doc_no}} عبر {{payment_method}}. شكراً لتعاونكم.'
+            },
+            {
+                name: 'SUB_INVOICE_PAID',
+                type: 'Email',
+                subject: 'إشعار بصرف وتحويل دفعة مالية - {{company_name}}',
+                body: 'عزيزي شريك النجاح {{subcontractor_name}}،\n\nنود إحاطتكم بأنه تم صرف وتحويل مستحقاتكم عن المستخلص رقم {{doc_no}} كالتالي:\n\n- المبلغ المصروف: {{amount}} ج.م\n- طريقة السداد: {{payment_method}}\n\nنرجو تأكيد الاستلام فور وصول المبالغ لحسابكم.\n\nشكرًا لتعاونكم.'
+            },
+            // Real Estate / Client Invoices & Receipts
+            {
+                name: 'CLIENT_INVOICE_ISSUED',
+                type: 'WhatsApp',
+                subject: 'إصدار فاتورة أعمال للعميل',
+                body: '🧾 السادة {{customer_name}}، تم إصدار فاتورة مستخلص الأعمال رقم {{doc_no}} لمشروع {{project_name}} بقيمة إجمالية {{amount}} ج.م، تستحق في {{due_date}}. يرجى التكرم بالسداد.'
+            },
+            {
+                name: 'CLIENT_INVOICE_ISSUED',
+                type: 'Email',
+                subject: 'إصدار مطالبة مالية / فاتورة مستخلص أعمال - {{company_name}}',
+                body: 'السادة الكرام / {{customer_name}}،\n\nنرفق لكم فاتورة مستخلص الأعمال الصادرة عن مشروع {{project_name}} كالتالي:\n\n- رقم المطالبة: {{doc_no}}\n- إجمالي المبلغ المستحق: {{amount}} ج.م\n- تاريخ الاستحقاق: {{due_date}}\n\nيرجى التكرم بتحويل المبالغ لحسابات الشركة البنكية في الموعد المحدد.\n\nوتفضلوا بقبول وافر الاحترام والتقدير.'
+            },
+            {
+                name: 'CLIENT_RECEIPT_RECORDED',
+                type: 'WhatsApp',
+                subject: 'استلام سند قبض من عميل',
+                body: '💳 نشكركم على تعاونكم. تم استلام دفعة بقيمة {{amount}} ج.م من السادة {{customer_name}} وقيدها لصالح حسابكم (الرصيد المتبقي: {{balance}} ج.م).'
+            },
+            {
+                name: 'CLIENT_RECEIPT_RECORDED',
+                type: 'Email',
+                subject: 'سند قبض وإثبات استلام دفعة مالية - {{company_name}}',
+                body: 'السادة الأفاضل / {{customer_name}}،\n\nنشكركم على سداد مستحقاتكم. نؤكد استلامنا للدفعة المالية التالية وقيدها في حسابكم:\n\n- المبلغ المستلم: {{amount}} ج.م\n- رصيد حسابكم المتبقي لدينا: {{balance}} ج.م\n\nمرفق لكم سند القبض المعتمد دفترياً.\n\nتمنياتنا لكم بالتوفيق.'
+            },
+            {
+                name: 'CLIENT_INSTALLMENT_OVERDUE',
+                type: 'WhatsApp',
+                subject: 'تنبيه تأخر سداد قسط عميل',
+                body: '🚨 تذكير هام: عميلنا العزيز {{customer_name}}، نود إحاطتكم بتأخر سداد القسط المستحق بقيمة {{amount}} ج.م الخاص بالوحدة {{unit_no}} والذي استحق بتاريخ {{due_date}}. يرجى السداد لتجنب الغرامات.'
+            },
+            {
+                name: 'CLIENT_INSTALLMENT_OVERDUE',
+                type: 'Email',
+                subject: 'تنبيه عاجل: تأخر سداد قسط مستحق - {{company_name}}',
+                body: 'عزيزي العميل {{customer_name}}،\n\nنود تذكيركم بلطف بتأخر سداد الدفعة المستحقة على وحدتكم رقم {{unit_no}}:\n\n- قيمة القسط المتأخر: {{amount}} ج.م\n- تاريخ الاستحقاق الأصلي: {{due_date}}\n\nنرجو سرعة السداد لتجنب احتساب غرامات تأخير أو اتخاذ إجراءات قانونية.\n\nشاكرين تفهمكم وتعاونكم.'
+            },
+            {
+                name: 'RE_RENT_INVOICE_ISSUED',
+                type: 'WhatsApp',
+                subject: 'مطالبة الإيجار الشهرية للوحدة',
+                body: '📅 عزيزي المستأجر {{customer_name}}، تم إصدار فاتورة الإيجار الشهرية للوحدة رقم {{unit_no}} لشهر {{month}}/{{year}} بقيمة {{amount}} ج.م. يرجى السداد قبل تاريخ الاستحقاق.'
+            },
+            {
+                name: 'RE_RENT_INVOICE_ISSUED',
+                type: 'Email',
+                subject: 'مطالبة الإيجار الشهرية للوحدة - {{company_name}}',
+                body: 'عزيزي المستأجر {{customer_name}}،\n\nنحيطكم علماً بأنه قد تم إصدار فاتورة الإيجار الشهرية للوحدة رقم {{unit_no}}:\n\n- الفترة: شهر {{month}} / {{year}}\n- القيمة المستحقة: {{amount}} ج.م\n\nيرجى سداد القيمة المطلوبة قبل تاريخ الاستحقاق لتفادي غرامات التأخير.\n\nدمتم بخير.'
+            },
+            {
+                name: 'RE_RENT_OVERDUE',
+                type: 'WhatsApp',
+                subject: 'تنبيه تأخر سداد دفعة الإيجار',
+                body: '🚨 تنبيه سداد: دفعة إيجار الوحدة رقم {{unit_no}} متأخرة السداد. قيمة المطالبة المستحقة حالياً شاملة الغرامات هي {{amount}} ج.م. يرجى السداد فوراً.'
+            },
+            {
+                name: 'RE_RENT_OVERDUE',
+                type: 'Email',
+                subject: 'تنبيه عاجل: تأخر سداد دفعة الإيجار الشهرية - {{company_name}}',
+                body: 'عاجل وهام / السيد المستأجر {{customer_name}}،\n\nنحيطكم علماً بتجاوزكم المهلة المحددة لسداد دفعة إيجار الوحدة رقم {{unit_no}}:\n\n- إجمالي المبلغ المستحق (شاملاً الغرامات): {{amount}} ج.م\n\nيرجى السداد فوراً تفادياً لقطع الخدمات أو اتخاذ إجراءات قانونية لفسخ التعاقد.\n\nشاكرين لكم سرعة التجاوب.'
+            },
+            // Procurement / Inventory
+            {
+                name: 'PO_CREATED',
+                type: 'WhatsApp',
+                subject: 'طلب شراء جديد',
+                body: '🛒 تم إنشاء طلب شراء جديد رقم {{doc_no}} للمورد {{supplier_name}} لشراء مواد بمشروع {{project_name}} بقيمة تقديرية {{amount}} ج.م. بانتظار الاعتماد.'
+            },
+            {
+                name: 'PO_CREATED',
+                type: 'Email',
+                subject: 'طلب شراء جديد قيد المراجعة والاعتماد - {{company_name}}',
+                body: 'السيد مدير المشتريات / المدير العام،\n\nتم تسجيل طلب شراء (Purchase Order) جديد بالنظام وبانتظار المراجعة والاعتماد:\n\n- رقم الطلب: {{doc_no}}\n- المورد المقترح: {{supplier_name}}\n- المشروع المستهدف: {{project_name}}\n- إجمالي القيمة التقديرية: {{amount}} ج.م\n\nيرجى الدخول للنظام للموافقة أو التعديل.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'PO_APPROVED',
+                type: 'WhatsApp',
+                subject: 'اعتماد طلب الشراء',
+                body: '✅ تم اعتماد طلب الشراء رقم {{doc_no}} للمورد {{supplier_name}} بقيمة {{amount}} ج.م. يرجى بدء التوريد للموقع.'
+            },
+            {
+                name: 'PO_APPROVED',
+                type: 'Email',
+                subject: 'اعتماد طلب الشراء لبدء التوريد - {{company_name}}',
+                body: 'السادة إدارة المخازن والموقع،\n\nنحيطكم علمًا بأنه تم اعتماد طلب الشراء رقم {{doc_no}} رسميًا:\n\n- المورد: {{supplier_name}}\n- إجمالي القيمة: {{amount}} ج.م\n\nيرجى التواصل مع المورد لبدء التوريد والتنسيق مع أمين المستودع للاستلام والفحص.\n\nشكرًا لتعاونكم.'
+            },
+            {
+                name: 'STOCK_TRANSFER',
+                type: 'WhatsApp',
+                subject: 'تحويل مخزني بين المستودعات',
+                body: '🚚 تم تحويل كميات مخزنية من مستودع {{from_warehouse}} إلى مستودع {{to_warehouse}} برقم إذن {{doc_no}}. الأصناف: {{items_summary}}.'
+            },
+            {
+                name: 'STOCK_TRANSFER',
+                type: 'Email',
+                subject: 'إشعار بتحويل مخزني بين المستودعات - {{company_name}}',
+                body: 'أمين المستودع المستلم،\n\nيرجى العلم بأنه تم تسجيل حركة تحويل مخزني جديدة بالرقم {{doc_no}}:\n\n- من مستودع: {{from_warehouse}}\n- إلى مستودع: {{to_warehouse}}\n- بيان الأصناف: {{items_summary}}\n\nيرجى مراجعة الكميات الواردة ومطابقتها وتأكيد الاستلام على السيستم.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'STOCK_LOW',
+                type: 'WhatsApp',
+                subject: 'انخفاض المخزون عن الحد الآمن',
+                body: '⚠️ انخفاض المخزون: مستوى الصنف {{item_name}} في المستودع وصل للحد الأدنى المسموح به (الكمية الحالية: {{current_qty}} {{unit}}). يرجى إعادة الطلب.'
+            },
+            {
+                name: 'STOCK_LOW',
+                type: 'Email',
+                subject: 'تحذير: انخفاض كميات صنف مخزني - {{company_name}}',
+                body: 'إلى مسؤول المشتريات والمخازن،\n\nيرجى العلم بأن الصنف التالي قد تجاوز حد الأمان للمخزون بالنظام:\n\n- اسم الصنف: {{item_name}}\n- الكمية المتوفرة حالياً: {{current_qty}}\n- الحد الأدنى المطلوب: {{min_qty}}\n\nيرجى اتخاذ اللازم لطلب توريد كميات إضافية لضمان استمرارية التشغيل.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'STOCK_EXPIRY',
+                type: 'WhatsApp',
+                subject: 'اقتراب انتهاء صلاحية صنف',
+                body: '⏰ صلاحية أوشكت على الانتهاء: الصنف {{item_name}} (باتش رقم {{batch_no}}) يقترب تاريخ انتهاء صلاحيته في {{expiry_date}}. الكمية المتبقية: {{qty}}.'
+            },
+            {
+                name: 'STOCK_EXPIRY',
+                type: 'Email',
+                subject: 'تنبيه: اقتراب انتهاء صلاحية صنف مخزني - {{company_name}}',
+                body: 'إلى إدارة الجودة والصيدلة والمخازن،\n\nيرجى اتخاذ الإجراءات اللازمة بخصوص صنف مخزني يقترب تاريخ انتهاء صلاحيته:\n\n- الصنف: {{item_name}}\n- رقم التشغيلة/الباتش: {{batch_no}}\n- تاريخ انتهاء الصلاحية: {{expiry_date}}\n- الكمية المتوفرة: {{qty}}\n\nيرجى جدولة الصنف للصرف السريع أو التنسيق للإرجاع للمورد.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'STOCK_VARIANCE',
+                type: 'WhatsApp',
+                subject: 'تسجيل فروقات جرد المخزن',
+                body: '🔍 تسجيل فروقات جرد: تم رصد وتسجيل عجز/زيادة في جرد مستودع {{warehouse_name}} بقيمة صافية {{amount}} ج.م بواسطة {{username}}. رقم محضر الجرد: {{doc_no}}.'
+            },
+            {
+                name: 'STOCK_VARIANCE',
+                type: 'Email',
+                subject: 'تسجيل محضر فروقات جرد المخزن - {{company_name}}',
+                body: 'إلى الإدارة المالية ورئيس الحسابات،\n\nنحيطكم علماً بأنه قد تم تسجيل وإثبات فروقات جرد (تسوية جردية) بالنظام:\n\n- المستودع: {{warehouse_name}}\n- إجمالي قيمة الفروقات: {{amount}} ج.م\n- القائم بالجرد: {{username}}\n- رقم المستند: {{doc_no}}\n\nيرجى الدخول للنظام لمراجعة الفروقات واعتماد التوجيه المالي.\n\nشكرًا لكم.'
+            },
+            // Finance / Custodies / Expenses
+            {
+                name: 'CUSTODY_REQUESTED',
+                type: 'WhatsApp',
+                subject: 'طلب عهدة مالية جديدة للموظف',
+                body: '💵 تم تقديم طلب عهدة مالية جديدة للموظف {{employee_name}} بقيمة {{amount}} ج.م بغرض {{purpose}}. بانتظار الموافقة المالية.'
+            },
+            {
+                name: 'CUSTODY_REQUESTED',
+                type: 'Email',
+                subject: 'طلب عهدة مالية جديدة للموظف - {{company_name}}',
+                body: 'إلى المدير المالي / رئيس الحسابات،\n\nتم تقديم طلب صرف عهدة مالية مؤقتة للموظف التالي:\n\n- اسم الموظف: {{employee_name}}\n- القيمة المطلوبة: {{amount}} ج.م\n- الغرض من الصرف: {{purpose}}\n\nيرجى مراجعة الطلب والموافقة لبدء إجراءات الصرف النقدي.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'CUSTODY_EXPENSE_SUBMITTED',
+                type: 'WhatsApp',
+                subject: 'تقديم تسوية مصروف عهدة للمراجعة',
+                body: '🧾 تم تقديم طلب تسوية مصروف عهدة للموظف {{employee_name}} بمبلغ {{amount}} ج.م للمراجعة والتسوية المعتمدة.'
+            },
+            {
+                name: 'CUSTODY_EXPENSE_SUBMITTED',
+                type: 'Email',
+                subject: 'تقديم تسوية مصروف عهدة للمراجعة - {{company_name}}',
+                body: 'إلى الإدارة المالية،\n\nقام الموظف {{employee_name}} برفع فواتير تسوية للعهدة المالية المنصرفة له سابقًا:\n\n- المبلغ الإجمالي للتسوية: {{amount}} ج.م\n\nيرجى مراجعة الفواتير المرفقة بالنظام للمطابقة وتأكيد إقفال العهدة أو قيد المتبقي.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'CUSTODY_APPROVED',
+                type: 'WhatsApp',
+                subject: 'اعتماد تسوية العهدة ماليًا',
+                body: '⚖️ تم اعتماد تسوية العهدة المالية للموظف {{employee_name}} بقيمة {{amount}} ج.م وإقفالها دفترياً بنجاح.'
+            },
+            {
+                name: 'CUSTODY_APPROVED',
+                type: 'Email',
+                subject: 'إشعار باعتماد تسوية وإغلاق العهدة - {{company_name}}',
+                body: 'عزيزي الموظف {{employee_name}}،\n\nنحيطك علماً بأن الإدارة المالية قد اعتمدت تسوية الفواتير المقدمة من طرفك بالكامل:\n\n- قيمة التسوية المعتمدة: {{amount}} ج.م\n- حالة العهدة الحالية: مغلقة ومسواة بالكامل دفترياً.\n\nنشكرك على التزامك بتقديم الفواتير في الوقت المحدد.\n\nتحياتنا.'
+            },
+            {
+                name: 'EXPENSE_SUBMITTED',
+                type: 'WhatsApp',
+                subject: 'تقديم طلب مصروف عام جديد',
+                body: '📉 تم تسجيل طلب مصروف عام جديد بقيمة {{amount}} ج.م تحت تصنيف {{category}} بواسطة {{username}}. يرجى الاعتماد.'
+            },
+            {
+                name: 'EXPENSE_SUBMITTED',
+                type: 'Email',
+                subject: 'تسجيل طلب مصروف عام جديد - {{company_name}}',
+                body: 'إلى الإدارة المالية والمدير العام،\n\nتم تسجيل مطالبة مصروف عام جديد بانتظار الاعتماد المالي والصرف:\n\n- التصنيف/البند: {{category}}\n- المبلغ المطلوب: {{amount}} ج.م\n- مقدم الطلب: {{username}}\n\nيرجى الدخول للنظام لاعتماد بند المصروف وتوجيهه على مراكز التكلفة.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'EXPENSE_APPROVED',
+                type: 'WhatsApp',
+                subject: 'اعتماد صرف مصروف عام',
+                body: '💸 تم اعتماد صرف المصروف العام رقم {{doc_no}} بقيمة {{amount}} ج.م تحت بند {{category}} وصرفه نقداً/شيك.'
+            },
+            {
+                name: 'EXPENSE_APPROVED',
+                type: 'Email',
+                subject: 'اعتماد وصرف مطالبة المصروف العام - {{company_name}}',
+                body: 'السادة قسم المدفوعات والخزينة،\n\nيرجى العلم بأنه تم اعتماد صرف المصروف التالي ويرجى إصدار النقدية/الشيك:\n\n- رقم المستند: {{doc_no}}\n- بند المصروف: {{category}}\n- المبلغ المعتمد: {{amount}} ج.م\n\nيرجى إثبات سند الصرف فور التسليم للمستفيد.\n\nشكرًا لكم.'
+            },
+            {
+                name: 'MANUAL_GL_ENTRY_ALERT',
+                type: 'WhatsApp',
+                subject: 'قيد أمان: إجراء تسوية مالي يدوي',
+                body: '🔒 قيد أمان: تم تسجيل قيد يومية يدوي رقم {{journal_no}} بمبلغ {{amount}} ج.م بواسطة {{username}}. التوجيه: {{description}}.'
+            },
+            {
+                name: 'MANUAL_GL_ENTRY_ALERT',
+                type: 'Email',
+                subject: 'تحذير أمان: إجراء قيد تسوية يدوي - {{company_name}}',
+                body: 'تنبيه أمان للمدير المالي / المراقب الداخلي،\n\nتم رصد قيام مستخدم بإجراء قيد يومية يدوي (Manual Journal Entry) في دفاتر الحسابات العامة:\n\n- رقم القيد: {{journal_no}}\n- قيمة القيد الإجمالية: {{amount}} ج.م\n- منفذ العملية: {{username}}\n- شرح التوجيه: {{description}}\n\nتم تسجيل هذه الحركة في سجلات التدقيق الأمني (Audit Logs) للمراجعة الرقابية.\n\nتحياتنا.'
+            },
+            // HR / Payroll
+            {
+                name: 'STAFF_ABSENT',
+                type: 'WhatsApp',
+                subject: 'تنبيه غياب موظف بدون إذن',
+                body: '🚨 تنبيه غياب: تغيب الموظف {{employee_name}} (قسم {{department}}) اليوم {{date}} دون تقديم إذن مسبق أو طلب إجازة.'
+            },
+            {
+                name: 'STAFF_ABSENT',
+                type: 'Email',
+                subject: 'تقرير غياب موظف بدون إذن مسبق - {{company_name}}',
+                body: 'إلى مدير القسم / إدارة الموارد البشرية،\n\nتنبيه غياب تلقائي من نظام الحضور والانصراف الذكي:\n\n- اسم الموظف: {{employee_name}}\n- القسم التابع له: {{department}}\n- تاريخ الغياب: {{date}}\n- حالة الإذن: غياب غير مصرح به وبدون عذر مسجل حتى الآن.\n\nيرجى التواصل مع الموظف واتخاذ الإجراء اللازم بالنظام.\n\nتحياتنا.'
+            },
+            {
+                name: 'PAYROLL_PROCESSED',
+                type: 'WhatsApp',
+                subject: 'اعتماد مسير رواتب الشهر',
+                body: '💰 تم احتساب واعتماد مسير الرواتب والأجور لشهر {{month}}/{{year}} بإجمالي مبالغ {{amount}} ج.م. بانتظار صرف المستحقات للبنوك.'
+            },
+            {
+                name: 'PAYROLL_PROCESSED',
+                type: 'Email',
+                subject: 'اعتماد مسير رواتب الشهر - {{company_name}}',
+                body: 'إلى الإدارة العليا والمدير المالي،\n\nنحيطكم علماً بأنه قد تم احتساب واعتماد مسير رواتب الموظفين (Payroll Processed):\n\n- شهر الاستحقاق: {{month}} / {{year}}\n- إجمالي صافي الرواتب المستحقة: {{amount}} ج.م\n\nيرجى الدخول للنظام لمراجعة كشوف الرواتب وتوليد ملف التحويل البنكي للصرف.\n\nشكرًا لكم.'
+            }
+        ];
+
+        for (const tpl of defaultTemplates) {
+            const existRes = await targetPool.query("SELECT id FROM crm_templates WHERE name = $1 AND type = $2", [tpl.name, tpl.type]);
+            if (existRes.rows.length === 0) {
+                await targetPool.query(
+                    "INSERT INTO crm_templates (name, type, subject, body) VALUES ($1, $2, $3, $4)",
+                    [tpl.name, tpl.type, tpl.subject, tpl.body]
+                );
+            } else {
+                // Update and convert any hardcoded company names to the dynamic variable
+                await targetPool.query(
+                    "UPDATE crm_templates SET subject = REPLACE(REPLACE(subject, 'Ted ERP', '{{company_name}}'), 'TED ERP', '{{company_name}}'), body = REPLACE(REPLACE(body, 'Ted ERP', '{{company_name}}'), 'TED ERP', '{{company_name}}') WHERE id = $1",
+                    [existRes.rows[0].id]
+                );
+            }
+        }
+        console.log("🌱 Seeded 46 default CRM communication templates (WhatsApp & Email) successfully.");
         await runQuery("CRM Campaigns Table", `
         CREATE TABLE IF NOT EXISTS crm_campaigns (
             id SERIAL PRIMARY KEY,
@@ -866,6 +1167,27 @@ const applySchemaFixes = async () => {
     )`);
         await runQuery("RE Rental Payments idx invoice", `CREATE INDEX IF NOT EXISTS idx_rrp_invoice ON re_rental_payments(invoice_id)`);
 
+        // 6. الوسطاء والعمولات العقارية (Brokers & Commissions)
+        await runQuery("RE Brokers Table", `CREATE TABLE IF NOT EXISTS real_estate_brokers (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            company_name VARCHAR(255),
+            phone VARCHAR(50),
+            email VARCHAR(255),
+            commission_rate NUMERIC(5,2) DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        await runQuery("RE Broker Commissions Table", `CREATE TABLE IF NOT EXISTS broker_commissions (
+            id SERIAL PRIMARY KEY,
+            broker_id INTEGER REFERENCES real_estate_brokers(id) ON DELETE CASCADE,
+            contract_id INTEGER REFERENCES real_estate_contracts(id) ON DELETE CASCADE,
+            commission_amount NUMERIC(15,2) DEFAULT 0.00,
+            paid_amount NUMERIC(15,2) DEFAULT 0.00,
+            status VARCHAR(50) DEFAULT 'Unpaid',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+
         // Column upgrades on existing RE tables
         await runQuery("RE Projects linked_project_id", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS project_type_detail VARCHAR(50) DEFAULT 'Residential'`);
         await runQuery("RE Projects total_area", `ALTER TABLE real_estate_projects ADD COLUMN IF NOT EXISTS total_area NUMERIC(10,2) DEFAULT 0`);
@@ -876,6 +1198,10 @@ const applySchemaFixes = async () => {
         await runQuery("RE Units cost_per_meter_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS cost_per_meter NUMERIC(15,2) DEFAULT 0`);
         await runQuery("RE Units suggested_price_cached", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(20,2) DEFAULT 0`);
         await runQuery("RE Units rental_status", `ALTER TABLE real_estate_units ADD COLUMN IF NOT EXISTS rental_status VARCHAR(50) DEFAULT 'Available'`);
+        
+        await runQuery("RE Contracts broker_id", `ALTER TABLE real_estate_contracts ADD COLUMN IF NOT EXISTS broker_id INTEGER`);
+        await runQuery("RE Contracts broker_commission_rate", `ALTER TABLE real_estate_contracts ADD COLUMN IF NOT EXISTS broker_commission_rate NUMERIC(5,2) DEFAULT 0.00`);
+        await runQuery("RE Contracts broker_commission_amount", `ALTER TABLE real_estate_contracts ADD COLUMN IF NOT EXISTS broker_commission_amount NUMERIC(15,2) DEFAULT 0.00`);
 
         await runQuery("RFQ Table", `CREATE TABLE IF NOT EXISTS rfq (
         id SERIAL PRIMARY KEY,

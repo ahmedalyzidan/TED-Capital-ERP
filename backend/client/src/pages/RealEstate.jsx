@@ -31,6 +31,12 @@ export default function RealEstate() {
   const [allocating, setAllocating] = useState(false);
   const [targetMargin, setTargetMargin] = useState(30);
 
+  // Brokers & Visual Layout States
+  const [brokers, setBrokers] = useState([]);
+  const [brokerCommissions, setBrokerCommissions] = useState([]);
+  const [isBrokerModalOpen, setIsBrokerModalOpen] = useState(false);
+  const [brokerForm, setBrokerForm] = useState({ name: '', company_name: '', phone: '', email: '', commission_rate: '' });
+  const [isInteractiveLayout, setIsInteractiveLayout] = useState(false);
 
   // Modals
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -51,7 +57,8 @@ export default function RealEstate() {
   const [contractForm, setContractForm] = useState({ 
     unit_id: '', customer_id: '', total_price: '', 
     down_payment: '', installment_years: '', contract_date: new Date().toISOString().split('T')[0],
-    salesperson_id: '', commission_rate: '', frequency: 'Monthly'
+    salesperson_id: '', commission_rate: '', frequency: 'Monthly',
+    broker_id: '', broker_commission_rate: ''
   });
   const [payForm, setPayForm] = useState({ installment_id: '', paymentAmount: '', payment_method: 'Cash', reference_no: '' });
   const [selectedInst, setSelectedInst] = useState(null);
@@ -330,14 +337,16 @@ export default function RealEstate() {
       }
       setCustomers(dbCustomers);
 
-      // Fetch rental contracts & invoices
+      // Fetch rental contracts, invoices & brokers
       try {
-        const [rcRes, riRes] = await Promise.all([
+        const [rcRes, riRes, brRes] = await Promise.all([
           api.get('/real-estate/rental-contracts').catch(()=>({data:{data:[]}})),
           api.get('/real-estate/rental-invoices').catch(()=>({data:{data:[]}})),
+          api.get('/real-estate/brokers').catch(()=>({data:{data:[]}}))
         ]);
         setRentalContracts(rcRes.data?.data || []);
         setRentalInvoices(riRes.data?.data || []);
+        setBrokers(brRes.data?.data || []);
       } catch(_) {}
 
     } catch (error) {
@@ -489,7 +498,9 @@ export default function RealEstate() {
         unit_id: Number(contractForm.unit_id),
         total_price: Number(contractForm.total_price),
         down_payment: Number(contractForm.down_payment || 0),
-        installment_years: Number(contractForm.installment_years || 1)
+        installment_years: Number(contractForm.installment_years || 1),
+        broker_id: contractForm.broker_id ? Number(contractForm.broker_id) : null,
+        broker_commission_rate: contractForm.broker_commission_rate ? Number(contractForm.broker_commission_rate) : null
       };
 
       if (editingContract) {
@@ -582,6 +593,7 @@ export default function RealEstate() {
               { id: 'costs', label: 'تكاليف المشروع', icon: '📊' },
               { id: 'unit-costs', label: 'تكلفة الوحدات', icon: '📐' },
               { id: 'rentals', label: 'عقود الإيجار', icon: '🏭' },
+              { id: 'brokers', label: 'الوسطاء والعمولات', icon: '🤝' },
 
             ].map((tab) => (
               <button
@@ -763,46 +775,112 @@ export default function RealEstate() {
                       <span className="text-xs font-black text-slate-600 uppercase tracking-widest">{cur.available}</span>
                     </div>
                     <div className="flex items-center gap-3 bg-white px-5 py-2 rounded-2xl border border-slate-200 shadow-sm">
-                      <span className="w-3 h-3 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]"></span> 
-                      <span className="text-xs font-black text-slate-600 uppercase tracking-widest">{cur.sold}</span>
+                      <span className="w-3 h-3 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></span> 
+                      <span className="text-xs font-black text-slate-600 uppercase tracking-widest">مؤجر</span>
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => { setEditingUnit(null); setUnitForm({ project_id: '', unit_number: '', type: 'Apartment', area: '', floor: '', price: '' }); setIsUnitModalOpen(true); }}
-                  className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3 hover:-translate-y-1 active:translate-y-0"
-                >
-                  <span className="text-xl">+</span> {cur.addUnit}
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsInteractiveLayout(!isInteractiveLayout)}
+                    className={`px-6 py-4 rounded-2xl font-black text-sm transition-all border shadow-sm ${isInteractiveLayout ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                  >
+                    🏢 {isInteractiveLayout ? 'العرض العادي' : 'المخطط التفاعلي للوحدات'}
+                  </button>
+                  <button 
+                    onClick={() => { setEditingUnit(null); setUnitForm({ project_id: '', unit_number: '', type: 'Apartment', area: '', floor: '', price: '' }); setIsUnitModalOpen(true); }}
+                    className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3 hover:-translate-y-1 active:translate-y-0"
+                  >
+                    <span className="text-xl">+</span> {cur.addUnit}
+                  </button>
+                </div>
               </div>
 
-              <div className="p-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                {units.filter(u => u.unit_number?.toLowerCase().includes(searchTerm.toLowerCase()) || u.project_name?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && !loading && (
-                  <div className="col-span-full py-40 text-center text-slate-400 font-black uppercase tracking-[0.3em] text-xs italic">{cur.noUnitsFound}</div>
-                )}
-                {units
-                  .filter(u => u.unit_number?.toLowerCase().includes(searchTerm.toLowerCase()) || u.project_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map(u => (
-                  <div key={u.id} className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 hover:border-slate-900 transition-all duration-500 relative group shadow-sm hover:shadow-2xl hover:-translate-y-1">
-                    <div className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} opacity-0 group-hover:opacity-100 transition-all flex gap-2 scale-90 group-hover:scale-100`}>
-                      <button onClick={() => { setEditingUnit(u); setUnitForm(u); setIsUnitModalOpen(true); }} className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-lg flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-md">✏️</button>
-                      <button onClick={() => handleDelete('units', u.id)} className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-lg flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-md">🗑️</button>
+              {isInteractiveLayout ? (
+                <div className="p-10 space-y-12">
+                  {projects.map(proj => {
+                    const projUnits = units.filter(u => Number(u.project_id) === Number(proj.id));
+                    if (projUnits.length === 0) return null;
+                    
+                    // Group by floor
+                    const floors = {};
+                    projUnits.forEach(u => {
+                      const f = u.floor || 0;
+                      if (!floors[f]) floors[f] = [];
+                      floors[f].push(u);
+                    });
+                    
+                    // Sort floors descending (top floor first)
+                    const sortedFloorNums = Object.keys(floors).map(Number).sort((a, b) => b - a);
+
+                    return (
+                      <div key={proj.id} className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
+                        <h4 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+                          🏗️ {proj.name} <span className="text-xs text-slate-400 font-bold font-mono">({projUnits.length} وحدة)</span>
+                        </h4>
+                        
+                        <div className="space-y-4">
+                          {sortedFloorNums.map(floorNum => (
+                            <div key={floorNum} className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                              <div className="w-24 bg-slate-900 text-white text-xs font-black py-2 rounded-xl text-center shadow-sm">
+                                الطابق {floorNum === 0 ? 'الأرضي' : floorNum}
+                              </div>
+                              <div className="flex flex-wrap gap-3 flex-1">
+                                {floors[floorNum].sort((a,b) => (a.unit_number || '').localeCompare(b.unit_number || '')).map(u => {
+                                  const isRented = u.rental_status === 'Rented';
+                                  const isSold = u.status === 'Sold';
+                                  let statusBg = 'bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border-emerald-200';
+                                  if (isSold) statusBg = 'bg-rose-50 hover:bg-rose-100/80 text-rose-800 border-rose-200';
+                                  else if (isRented) statusBg = 'bg-amber-50 hover:bg-amber-100/80 text-amber-800 border-amber-200';
+
+                                  return (
+                                    <div 
+                                      key={u.id}
+                                      onClick={() => { setEditingUnit(u); setUnitForm(u); setIsUnitModalOpen(true); }}
+                                      className={`px-4 py-3 rounded-xl border text-xs font-black cursor-pointer transition-all flex flex-col items-center min-w-[90px] shadow-sm select-none hover:scale-105 active:scale-95 ${statusBg}`}
+                                    >
+                                      <span>{u.unit_number}</span>
+                                      <span className="text-[10px] text-slate-400 font-bold mt-1 font-mono">{u.area} م²</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                  {units.filter(u => u.unit_number?.toLowerCase().includes(searchTerm.toLowerCase()) || u.project_name?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && !loading && (
+                    <div className="col-span-full py-40 text-center text-slate-400 font-black uppercase tracking-[0.3em] text-xs italic">{cur.noUnitsFound}</div>
+                  )}
+                  {units
+                    .filter(u => u.unit_number?.toLowerCase().includes(searchTerm.toLowerCase()) || u.project_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map(u => (
+                    <div key={u.id} className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 hover:border-slate-900 transition-all duration-500 relative group shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                      <div className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} opacity-0 group-hover:opacity-100 transition-all flex gap-2 scale-90 group-hover:scale-100`}>
+                        <button onClick={() => { setEditingUnit(u); setUnitForm(u); setIsUnitModalOpen(true); }} className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-lg flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-md">✏️</button>
+                        <button onClick={() => handleDelete('units', u.id)} className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-lg flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-md">🗑️</button>
+                      </div>
+                      <div className="text-center pt-2">
+                        <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em]">{cur.unit} {u.unit_number || '---'}</p>
+                        <h4 className="text-3xl font-black text-slate-900 font-mono mb-2 tracking-tighter">
+                          {u.floor || '0'}-{(u.unit_number || '').slice(-2) || '??'}
+                        </h4>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-4">
+                          {u.type} | {u.area}M²
+                        </p>
+                        <span className={`inline-block px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${u.status === 'Available' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                          {u.status === 'Available' ? cur.available : cur.sold}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-center pt-2">
-                      <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em]">{cur.unit} {u.unit_number || '---'}</p>
-                      <h4 className="text-3xl font-black text-slate-900 font-mono mb-2 tracking-tighter">
-                        {u.floor || '0'}-{(u.unit_number || '').slice(-2) || '??'}
-                      </h4>
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-4">
-                        {u.type} | {u.area}M²
-                      </p>
-                      <span className={`inline-block px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${u.status === 'Available' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
-                        {u.status === 'Available' ? cur.available : cur.sold}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1369,6 +1447,88 @@ export default function RealEstate() {
             </div>
           )}
 
+          {/* Brokers & Commissions Tab */}
+          {activeTab === 'brokers' && (
+            <div className="animate-fade-in">
+              <div className="p-10 border-b border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row justify-between items-center gap-8">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 bg-white text-slate-900 rounded-[1.5rem] text-3xl border border-slate-200 shadow-md flex items-center justify-center transform -rotate-3">🤝</div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">الوسطاء والعمولات العقارية</h3>
+                    <p className="text-slate-400 font-medium text-sm mt-1">سجل الوكلاء والمسوقين وتتبع العمولات المستحقة والصرف المالي</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setBrokerForm({ name: '', company_name: '', phone: '', email: '', commission_rate: '' }); setIsBrokerModalOpen(true); }}
+                  className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3 hover:-translate-y-1 active:translate-y-0"
+                >
+                  <span className="text-xl">+</span> إضافة وسيط جديد
+                </button>
+              </div>
+
+              <div className="p-10">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-slate-100 text-slate-400 text-xs font-black uppercase tracking-widest">
+                        <th className="pb-6">الاسم</th>
+                        <th className="pb-6">الجهة / الشركة</th>
+                        <th className="pb-6">الهاتف</th>
+                        <th className="pb-6">البريد</th>
+                        <th className="pb-6 text-center">العمولة الافتراضية (%)</th>
+                        <th className="pb-6 text-center">تاريخ التسجيل</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {brokers.map(b => (
+                        <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-5 font-bold text-slate-900">{b.name}</td>
+                          <td className="py-5 text-sm text-slate-500 font-medium">{b.company_name || 'مستقل'}</td>
+                          <td className="py-5 text-sm text-slate-500 font-mono">{b.phone || '---'}</td>
+                          <td className="py-5 text-sm text-slate-500">{b.email || '---'}</td>
+                          <td className="py-5 text-sm text-slate-900 font-mono text-center">{b.commission_rate}%</td>
+                          <td className="py-5 text-xs text-slate-400 text-center">{b.created_at?.split('T')[0]}</td>
+                        </tr>
+                      ))}
+                      {brokers.length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="text-center py-20 text-slate-400 font-black text-sm">لم يتم تسجيل وسطاء بعد. اضغط على زر "إضافة وسيط جديد" للبدء.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Add Broker Modal */}
+              {isBrokerModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl flex items-center justify-center z-[100] p-4 overflow-y-auto">
+                  <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl p-10 my-8">
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-xl font-black text-slate-900">تسجيل وسيط عقاري جديد</h3>
+                      <button onClick={()=>setIsBrokerModalOpen(false)} className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all">✕</button>
+                    </div>
+                    <form onSubmit={async(e)=>{
+                      e.preventDefault();
+                      try {
+                        await api.post('/real-estate/brokers', brokerForm);
+                        fetchData();
+                        setIsBrokerModalOpen(false);
+                      } catch(err){alert(err?.response?.data?.error||'خطأ');}
+                    }} className="space-y-4">
+                      <input required placeholder="اسم الوسيط / الوكيل" value={brokerForm.name} onChange={e=>setBrokerForm({...brokerForm,name:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input placeholder="الشركة أو الوكالة التابع لها (اختياري)" value={brokerForm.company_name} onChange={e=>setBrokerForm({...brokerForm,company_name:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input required placeholder="رقم الهاتف" value={brokerForm.phone} onChange={e=>setBrokerForm({...brokerForm,phone:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input placeholder="البريد الإلكتروني" value={brokerForm.email} onChange={e=>setBrokerForm({...brokerForm,email:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <input type="number" step="0.01" placeholder="نسبة العمولة الافتراضية (%)" value={brokerForm.commission_rate} onChange={e=>setBrokerForm({...brokerForm,commission_rate:e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-slate-900"/>
+                      <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-xl font-black hover:bg-slate-800 transition-all">حفظ البيانات</button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1708,21 +1868,49 @@ export default function RealEstate() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.frequency}</label>
-                    <div className="relative group">
-                      <select 
-                        value={contractForm.frequency} 
-                        onChange={(e) => setContractForm({...contractForm, frequency: e.target.value})} 
-                        className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none shadow-inner"
-                      >
-                        <option value="Monthly">{cur.monthly}</option>
-                        <option value="Quarterly">{cur.quarterly}</option>
-                        <option value="Semi-Annual">{cur.semiAnnual}</option>
-                        <option value="Annual">{cur.annual}</option>
-                      </select>
-                      <div className={`absolute inset-y-0 ${language === 'ar' ? 'left-6' : 'right-6'} flex items-center pointer-events-none text-slate-300 group-focus-within:text-slate-900 transition-colors`}>▼</div>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{cur.frequency}</label>
+                      <div className="relative group">
+                        <select 
+                          value={contractForm.frequency} 
+                          onChange={(e) => setContractForm({...contractForm, frequency: e.target.value})} 
+                          className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none shadow-inner"
+                        >
+                          <option value="Monthly">{cur.monthly}</option>
+                          <option value="Quarterly">{cur.quarterly}</option>
+                          <option value="Semi-Annual">{cur.semiAnnual}</option>
+                          <option value="Annual">{cur.annual}</option>
+                        </select>
+                        <div className={`absolute inset-y-0 ${language === 'ar' ? 'left-6' : 'right-6'} flex items-center pointer-events-none text-slate-300 group-focus-within:text-slate-900 transition-colors`}>▼</div>
+                      </div>
                     </div>
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">الوسيط العقاري (Broker)</label>
+                      <div className="relative group">
+                        <select 
+                          value={contractForm.broker_id} 
+                          onChange={(e) => setContractForm({...contractForm, broker_id: e.target.value})} 
+                          className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none shadow-inner"
+                        >
+                          <option value="">-- بدون وسيط --</option>
+                          {brokers.map(b => (
+                            <option key={b.id} value={b.id}>{b.name} ({b.company_name || 'مستقل'})</option>
+                          ))}
+                        </select>
+                        <div className={`absolute inset-y-0 ${language === 'ar' ? 'left-6' : 'right-6'} flex items-center pointer-events-none text-slate-300 group-focus-within:text-slate-900 transition-colors`}>▼</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">نسبة عمولة الوسيط (%)</label>
+                    <input 
+                      type="number" 
+                      placeholder="مثال: 2.5"
+                      value={contractForm.broker_commission_rate} 
+                      onChange={(e) => setContractForm({...contractForm, broker_commission_rate: e.target.value})} 
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-black text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all font-mono shadow-inner" 
+                    />
                   </div>
                 </div>
               </div>

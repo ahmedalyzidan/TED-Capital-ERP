@@ -1,4 +1,17 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+
+// Global Date Formatter Override to DD/MM/YYYY
+const originalToLocaleDateString = Date.prototype.toLocaleDateString;
+Date.prototype.toLocaleDateString = function(locale, options) {
+    if (options && (options.month === 'long' || options.month === 'short' || options.dateStyle === 'full')) {
+        return originalToLocaleDateString.call(this, locale, options);
+    }
+    const day = String(this.getDate()).padStart(2, '0');
+    const month = String(this.getMonth() + 1).padStart(2, '0');
+    const year = this.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');

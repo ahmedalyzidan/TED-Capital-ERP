@@ -20,25 +20,63 @@ async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirec
             }
         }
 
-        if (userEmail) {
-            const mailOptions = {
-                from: process.env.EMAIL_USER || 'tedcapital.org@GMAIL.COM',
-                to: userEmail,
-                subject: `TED ERP System Alert: ${title}`,
-                text: message
-            };
-            if (attachments && Array.isArray(attachments)) {
-                mailOptions.attachments = attachments;
+        // Fetch Admin email from central database dynamically
+        let adminEmail = 'ahmedzidan2013@gmail.com';
+        try {
+            const { centralPool } = require('./db');
+            const adminRes = await centralPool.query("SELECT email FROM users WHERE username = 'admin' LIMIT 1");
+            if (adminRes.rows.length > 0 && adminRes.rows[0].email) {
+                adminEmail = adminRes.rows[0].email;
             }
-            await transporter.sendMail(mailOptions);
-            await pool.query("INSERT INTO email_logs (recipient, subject, body, sent_by, status) VALUES ($1, $2, $3, $4, $5)", [userEmail, `TED ERP System Alert: ${title}`, message, 'System Auto', 'Sent']);
-            console.log(`📧 Email sent to ${userEmail} regarding: ${title} (Attachments: ${attachments ? attachments.length : 0})`);
+        } catch (adminErr) {
+            console.error("Failed to fetch admin email for copy:", adminErr.message);
+        }
+
+        // Fetch Company email from central database dynamically based on active DB
+        let companyEmail = process.env.EMAIL_USER || 'tedcapital.org@GMAIL.COM';
+        try {
+            const dbRes = await pool.query('SELECT current_database() AS db');
+            const activeDb = dbRes.rows[0]?.db || 'erp_ted_capital';
+            
+            const { centralPool } = require('./db');
+            const compRes = await centralPool.query("SELECT email FROM companies WHERE db_name = $1 LIMIT 1", [activeDb]);
+            if (compRes.rows.length > 0 && compRes.rows[0].email) {
+                companyEmail = compRes.rows[0].email;
+            }
+        } catch (compErr) {
+            console.error("Failed to fetch company email:", compErr.message);
+        }
+
+        // Build unique recipient list (sending to primary recipient and admin copy)
+        const recipients = [];
+        if (userEmail && userEmail.trim() !== '') {
+            recipients.push(userEmail.trim().toLowerCase());
+        }
+        if (adminEmail && adminEmail.trim() !== '' && !recipients.includes(adminEmail.trim().toLowerCase())) {
+            recipients.push(adminEmail.trim().toLowerCase());
+        }
+
+        for (const recipient of recipients) {
+            try {
+                const mailOptions = {
+                    from: companyEmail,
+                    to: recipient,
+                    subject: title,
+                    text: message
+                };
+                if (attachments && Array.isArray(attachments)) {
+                    mailOptions.attachments = attachments;
+                }
+                await transporter.sendMail(mailOptions);
+                await pool.query("INSERT INTO email_logs (recipient, subject, body, sent_by, status) VALUES ($1, $2, $3, $4, $5)", [recipient, title, message, 'System Auto', 'Sent']);
+                console.log(`📧 Email sent from ${companyEmail} to ${recipient} regarding: ${title} (Attachments: ${attachments ? attachments.length : 0})`);
+            } catch (sendErr) {
+                console.error(`🔥 Email send failed for recipient ${recipient}:`, sendErr.message);
+                await pool.query("INSERT INTO email_logs (recipient, subject, body, sent_by, status) VALUES ($1, $2, $3, $4, $5)", [recipient, title, message, 'System Auto', 'Failed: ' + sendErr.message]);
+            }
         }
     } catch(e) {
-        console.error("🔥 Email send failed:", e.message);
-        if(userEmail) {
-            await pool.query("INSERT INTO email_logs (recipient, subject, body, sent_by, status) VALUES ($1, $2, $3, $4, $5)", [userEmail, `TED ERP System Alert: ${title}`, message, 'System Auto', 'Failed: ' + e.message]);
-        }
+        console.error("🔥 Email notification process failed:", e.message);
     }
 }
 
