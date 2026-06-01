@@ -1677,6 +1677,14 @@ export default function Inventory() {
                               <span>🚀</span> Deliver
                             </button>
                           )}
+                          {book.status === 'Expired' && (
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-rose-600 font-black text-[10px] uppercase flex items-center justify-center gap-1.5 py-1">
+                                <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
+                                {language === 'ar' ? 'تجاوز مدة الحجز' : 'Expired'}
+                              </span>
+                            </div>
+                          )}
                           {book.status === 'Completed' && (
                             <div className="flex flex-col items-center gap-2">
                               <span className="text-emerald-600 font-black text-[10px] uppercase flex items-center justify-center gap-1.5 py-1">

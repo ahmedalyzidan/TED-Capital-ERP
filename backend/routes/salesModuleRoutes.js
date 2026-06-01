@@ -15,6 +15,17 @@ const companyWhere = (req, alias = '') => {
 router.get('/invoices', async (req, res) => {
   try {
     const cf = companyWhere(req, 'i');
+    // Self-healing: auto-correct status based on actual numeric balances
+    await pool.query(`
+      UPDATE sales_invoices 
+      SET status = CASE 
+        WHEN remaining_balance <= 0 THEN 'مدفوعة'
+        WHEN amount_paid > 0 AND remaining_balance > 0 THEN 'مدفوعة جزئياً'
+        ELSE 'غير مدفوعة'
+      END
+      WHERE status IN ('غير مدفوعة', 'مدفوعة', 'مدفوعة جزئياً', 'مسودة')
+    `);
+
     const { rows } = await pool.query(`
       SELECT i.*, c.name AS customer_name
       FROM sales_invoices i
@@ -31,7 +42,7 @@ router.post('/invoices/:id/pay', async (req, res) => {
   try {
     await client.query('BEGIN');
     const { id } = req.params;
-    const { amount } = req.body;
+    const { amount, payment_method } = req.body;
 
     // 1. Fetch Invoice
     const invRes = await client.query("SELECT * FROM sales_invoices WHERE id = $1", [id]);
@@ -44,24 +55,40 @@ router.post('/invoices/:id/pay', async (req, res) => {
     const newRemaining = Math.max(0, totalAmt - newPaid);
     const newStatus = newRemaining <= 0 ? 'مدفوعة' : 'مدفوعة جزئياً';
 
+    const selectedMethod = payment_method || inv.payment_method || 'Cash';
+
+    // Wallet check and update
+    if (inv.customer_id && (selectedMethod === 'Customer Wallet' || selectedMethod === 'محفظة العميل')) {
+      const custRes = await client.query("SELECT credit_balance FROM customers WHERE id = $1", [inv.customer_id]);
+      if (custRes.rows.length === 0) throw new Error("العميل غير موجود.");
+      const balance = parseFloat(custRes.rows[0].credit_balance || 0);
+      if (balance < amount) {
+        throw new Error(`رصيد محفظة العميل غير كافٍ. المتاح: ${balance}`);
+      }
+      await client.query(
+        `UPDATE customers SET credit_balance = credit_balance - $1 WHERE id = $2`,
+        [amount, inv.customer_id]
+      );
+    }
+
     // 2. Update Invoice
     await client.query(
       `UPDATE sales_invoices 
-       SET amount_paid = $1, remaining_balance = $2, status = $3 
-       WHERE id = $4`,
-      [newPaid, newRemaining, newStatus, id]
+       SET amount_paid = $1, remaining_balance = $2, status = $3, payment_method = $4
+       WHERE id = $5`,
+      [newPaid, newRemaining, newStatus, selectedMethod, id]
     );
 
     // 3. Post General Ledger Entry
     const AccountingService = require('../services/accountingService');
-    const cashBankAcc = inv.payment_method === 'Bank' || inv.payment_method === 'Bank Transfer' ? '1111' : '1101';
+    const cashBankAcc = ['Bank', 'Bank Transfer', 'Card'].includes(selectedMethod) ? '1111' : (['Customer Wallet', 'محفظة العميل'].includes(selectedMethod) ? '2105' : '1101');
     
     await AccountingService.recordDoubleEntry(client, {
       debitAccount: cashBankAcc,
       creditAccount: '1120', // Credit Accounts Receivable (AR)
       amount: parseFloat(amount),
       costCenter: 'General',
-      description: `سداد دفعة من فاتورة مبيعات رقم ${inv.invoice_number}`,
+      description: `سداد دفعة من فاتورة مبيعات رقم ${inv.invoice_number} باستخدام ${selectedMethod === 'Customer Wallet' ? 'محفظة العميل' : selectedMethod}`,
       username: req.user?.username || 'System',
       referenceNo: inv.invoice_number,
       company: inv.company
@@ -139,13 +166,37 @@ router.post('/invoices', async (req, res) => {
       }
     }
 
+    const amtPaid = parseFloat(amount_paid) || 0;
+    const remainingBal = Math.max(0, parseFloat((totalAmt - amtPaid).toFixed(4)));
+    
+    let finalStatus = 'غير مدفوعة';
+    if (remainingBal <= 0) {
+      finalStatus = 'مدفوعة';
+    } else if (amtPaid > 0) {
+      finalStatus = 'مدفوعة جزئياً';
+    } else {
+      finalStatus = status || 'غير مدفوعة';
+    }
+
     const { rows } = await client.query(
       `INSERT INTO sales_invoices (customer_id, invoice_number, total_amount, tax_amount, discount, due_date, status, notes, company, created_by, salesperson_id, sales_type, commission_rate, commission_amount, payment_method, amount_paid, remaining_balance, items)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
-      [customer_id||null, autoNum, totalAmt, tax_amount||0, discount||0, due_date||null, status||'مسودة', notes, company, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt, payment_method||'Cash', parseFloat(amount_paid)||0, parseFloat(remaining_balance)||0, JSON.stringify(parsedItems)]
+      [customer_id||null, autoNum, totalAmt, tax_amount||0, discount||0, due_date||null, finalStatus, notes, company, req.user?.username, salesperson_id||null, sales_type||'Inventory', commRate, commAmt, payment_method||'Cash', amtPaid, remainingBal, JSON.stringify(parsedItems)]
     );
 
     const invoice = rows[0];
+
+    // If it's a direct issue or does not have a source_order_id, we can create an Invoiced Sales Order record for visibility
+    if (sales_type === 'DirectIssue') {
+      const soNum = `SO-${Date.now().toString(36).toUpperCase()}`;
+      await client.query(
+        `INSERT INTO sales_orders (order_number, customer_id, items, total_amount, tax_amount, discount, status, company, notes, created_by, payment_method, project_id)
+         VALUES ($1,$2,$3,$4,$5,$6,'Invoiced',$7,$8,$9,$10,$11)`,
+        [
+          soNum, customer_id||null, JSON.stringify(parsedItems), totalAmt, tax_amount||0, discount||0, company, `الربط التلقائي للبيع المباشر: ${notes || ''}`, req.user?.username || 'System', payment_method||'Cash', req.body.project_id||null
+        ]
+      );
+    }
 
     // Integrate with system notifications
     try {
@@ -531,12 +582,33 @@ router.get('/quotations', async (req, res) => {
 });
 
 router.post('/quotations', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const { customer_id, valid_until, items, total_amount, tax_amount, discount, notes, booking_duration, amount_paid, is_partial, payment_method, project_id } = req.body;
     const company = req.selectedCompany || req.headers['x-selected-company'] || '';
     const qNum = `QT-${Date.now().toString(36).toUpperCase()}`;
 
-    const { rows } = await pool.query(
+    // 1. If Booking, reserve stock
+    if (payment_method === 'Booking' || payment_method === 'حجز مؤقت') {
+      const parsedItems = Array.isArray(items) ? items : (typeof items === 'string' ? JSON.parse(items) : []);
+      for (const item of parsedItems) {
+        const item_id = item.id || item.inventory_id;
+        const qty = parseFloat(item.qty || 0);
+        if (item_id && qty > 0) {
+          const stockRes = await client.query("SELECT remaining_qty, item_name FROM inventory_items WHERE id = $1 FOR UPDATE", [item_id]);
+          if (stockRes.rows.length === 0) throw new Error(`الصنف غير موجود بالمخزن.`);
+          const avail = parseFloat(stockRes.rows[0].remaining_qty || 0);
+          if (avail < qty) {
+            throw new Error(`الكمية غير كافية بالمخزن للصنف "${stockRes.rows[0].item_name}". المتاح: ${avail}`);
+          }
+          await client.query("UPDATE inventory_items SET remaining_qty = remaining_qty - $1 WHERE id = $2", [qty, item_id]);
+        }
+      }
+    }
+
+    // 2. Insert Quotation
+    const { rows } = await client.query(
       `INSERT INTO sales_quotations (quotation_number, customer_id, valid_until, items, total_amount, tax_amount, discount, status, company, notes, created_by, booking_duration, amount_paid, is_partial, payment_method, project_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'Draft',$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [
@@ -545,8 +617,14 @@ router.post('/quotations', async (req, res) => {
       ]
     );
 
+    await client.query('COMMIT');
     res.json({ success: true, data: rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
 });
 
 router.post('/quotations/:id/convert', async (req, res) => {
@@ -639,15 +717,29 @@ router.post('/orders/:id/invoice', async (req, res) => {
     if (so.status === 'Invoiced') throw new Error("تم إصدار فاتورة لأمر البيع هذا بالفعل.");
 
     const items = typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []);
-    
+
+    // Check column existence dynamically to prevent schema crashes
+    const colCheck = await client.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'inventory_items' AND column_name IN ('product_type', 'invoicing_policy', 'costing_method')
+    `);
+    const hasProductType = colCheck.rows.some(r => r.column_name === 'product_type');
+    const hasInvoicingPolicy = colCheck.rows.some(r => r.column_name === 'invoicing_policy');
+    const hasCostingMethod = colCheck.rows.some(r => r.column_name === 'costing_method');
+
     // Check Invoicing Policies
     for (const item of items) {
+      let queryFields = ['id'];
+      if (hasProductType) queryFields.push('product_type');
+      if (hasInvoicingPolicy) queryFields.push('invoicing_policy');
+
       const itemInfo = await client.query(
-        "SELECT product_type, invoicing_policy FROM inventory_items WHERE item_name ILIKE $1 LIMIT 1",
+        `SELECT ${queryFields.join(', ')} FROM inventory_items WHERE item_name ILIKE $1 LIMIT 1`,
         [item.name]
       );
       if (itemInfo.rows.length > 0) {
-        const { product_type, invoicing_policy } = itemInfo.rows[0];
+        const product_type = hasProductType ? itemInfo.rows[0].product_type : 'Storable';
+        const invoicing_policy = hasInvoicingPolicy ? itemInfo.rows[0].invoicing_policy : 'Ordered';
         if (invoicing_policy === 'Delivered' && product_type === 'Storable') {
           const dnRes = await client.query(
             `SELECT COALESCE(SUM((elem->>'qty')::numeric), 0) as delivered_qty 
@@ -688,15 +780,18 @@ router.post('/orders/:id/invoice', async (req, res) => {
         const qty = parseFloat(item.qty) || 0;
         if (qty <= 0) continue;
 
+        let queryFields2 = ['id', 'remaining_qty', 'buy_price', 'avg_cost', 'item_name'];
+        if (hasProductType) queryFields2.push('product_type');
+        if (hasCostingMethod) queryFields2.push('costing_method');
+
         const itemRes = await client.query(
-          `SELECT id, remaining_qty, buy_price, avg_cost, item_name, product_type, costing_method FROM inventory_items 
-           WHERE item_name ILIKE $1 LIMIT 1`,
+          `SELECT ${queryFields2.join(', ')} FROM inventory_items WHERE item_name ILIKE $1 LIMIT 1`,
           [item.name]
         );
 
         if (itemRes.rows.length > 0) {
           const invItem = itemRes.rows[0];
-          const prodType = invItem.product_type || 'Storable';
+          const prodType = hasProductType ? (invItem.product_type || 'Storable') : 'Storable';
 
           if (prodType === 'Service') continue;
 
@@ -706,8 +801,9 @@ router.post('/orders/:id/invoice', async (req, res) => {
 
           let cogsAmount = 0;
           const buyPrice = parseFloat(invItem.buy_price || invItem.avg_cost || 0);
+          const costingMethod = hasCostingMethod ? (invItem.costing_method || 'AVCO') : 'AVCO';
 
-          if (invItem.costing_method === 'FIFO') {
+          if (costingMethod === 'FIFO') {
             const poRes = await client.query(
               `SELECT id, qty, estimated_cost as unit_price FROM purchase_orders 
                WHERE item_description ILIKE $1 AND qty > 0 ORDER BY created_at ASC`,

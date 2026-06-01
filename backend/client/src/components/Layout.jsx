@@ -965,7 +965,7 @@ export default function Layout() {
         <div className={`flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar print:p-0 print:overflow-visible transition-colors duration-300 ${theme !== 'dark' ? 'bg-slate-50/50' : ''}`}
           style={theme === 'dark' ? { backgroundColor: '#1d2026' } : {}}>
           <div className="max-w-full">
-            <Outlet key={refreshKey} />
+            <Outlet />
           </div>
         </div>
       </main>

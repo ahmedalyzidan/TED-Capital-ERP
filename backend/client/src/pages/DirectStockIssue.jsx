@@ -2049,9 +2049,10 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                       ⚙️ {language === 'ar' ? 'نوع حركة الصرف *' : 'Issue Movement Type *'}
                     </label>
                     <select
-                      value={issueType}
+                      value={paymentMethod === 'Booking' ? 'quotation' : issueType}
                       onChange={(e) => setIssueType(e.target.value)}
-                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass}`}
+                      disabled={paymentMethod === 'Booking'}
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-bold text-slate-800 outline-none focus:bg-white transition-all ${focusBorderClass} disabled:opacity-75 disabled:cursor-not-allowed`}
                     >
                       <option value="invoice">{language === 'ar' ? 'صرف مخزني مباشر وفاتورة' : 'Direct Stock Issue & Invoice'}</option>
                       <option value="quotation">{language === 'ar' ? 'عرض سعر مسودة (مسوّدة فقط)' : 'Quotation Draft (Draft Only)'}</option>
@@ -2240,6 +2241,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
                             setWalletAction('none');
                             setWalletPayAmount(0);
                             setWalletDepositAmount(0);
+                            setIssueType('quotation');
                           }
                         }}
                         className={`py-3 px-1 border rounded-xl font-black text-[9px] flex flex-col items-center gap-1.5 transition-all ${paymentMethod === method.id ? (activeTab === 'issue' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-amber-600 border-amber-600 text-white shadow-lg') : 'bg-slate-50 border-slate-100 hover:bg-slate-100 text-slate-600'}`}

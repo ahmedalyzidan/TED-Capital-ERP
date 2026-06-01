@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -1124,6 +1124,98 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
   const [clientSearch, setClientSearch] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [submittingEInvoice, setSubmittingEInvoice] = useState(false);
+  const [payForm, setPayForm] = useState({ amount: '', method: 'Cash' });
+  const [paying, setPaying] = useState(false);
+
+  const handleRegisterPayment = async (invoice) => {
+    const amt = parseFloat(payForm.amount);
+    if (!amt || amt <= 0) {
+      alert(ar ? "يرجى إدخال مبلغ صحيح أكبر من الصفر" : "Please enter a valid amount greater than zero");
+      return;
+    }
+    const remainingVal = invoice.total_amount - (invoice.amount_paid || 0);
+    if (amt > remainingVal) {
+      alert(ar ? `لا يمكن سداد مبلغ أكبر من المتبقي (${remainingVal})` : `Cannot pay more than remaining balance (${remainingVal})`);
+      return;
+    }
+
+    setPaying(true);
+    try {
+      const res = await api.post(`/sales/invoices/${invoice.id}/pay`, {
+        amount: amt,
+        payment_method: payForm.method
+      });
+      alert(res.data.message || (ar ? "تم تسجيل السداد بنجاح!" : "Payment registered successfully!"));
+      setPayForm({ amount: '', method: 'Cash' });
+      setViewingInvoice(null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handlePrintInvoice = () => {
+    const content = document.getElementById('printable-invoice').innerHTML;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow.document;
+    doc.write(`
+      <html>
+        <head>
+          <title>Invoice</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; direction: ${ar ? 'rtl' : 'ltr'}; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: ${ar ? 'right' : 'left'}; }
+            .text-center { text-align: center; }
+            .text-left { text-align: left; }
+            .text-right { text-align: right; }
+            .flex { display: flex; }
+            .justify-between { display: flex; justify-content: space-between; }
+            .items-start { align-items: flex-start; }
+            .grid { display: grid; }
+            .grid-cols-2 { display: grid; grid-template-cols: 1fr 1fr; }
+            .gap-6 { gap: 24px; }
+            .bg-slate-50 { background-color: #f8fafc; }
+            .p-4 { padding: 16px; }
+            .rounded-2xl { border-radius: 16px; }
+            .font-bold { font-weight: bold; }
+            .font-black { font-weight: 900; }
+            .text-indigo-600 { color: #4f46e5; }
+            .border-t { border-top: 1px solid #e2e8f0; }
+            .pt-4 { padding-top: 16px; }
+            .w-72 { width: 288px; }
+            .space-y-2 > * + * { margin-top: 8px; }
+            .p-2 { padding: 8px; }
+            .border { border: 1px solid #e2e8f0; }
+            .bg-emerald-50 { background-color: #ecfdf5; }
+            .text-emerald-700 { color: #047857; }
+            .bg-rose-50 { background-color: #fff1f2; }
+            .text-rose-700 { color: #be123c; }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+    
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      document.body.removeChild(iframe);
+    }, 500);
+  };
 
   const handleEInvoiceSubmit = async (invoiceId) => {
     setSubmittingEInvoice(true);
@@ -1669,6 +1761,67 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
                 </div>
               </div>
 
+              {/* Payment Registration Section */}
+              {viewingInvoice.status !== 'مدفوعة' && (viewingInvoice.total_amount - (viewingInvoice.amount_paid || 0)) > 0 && (
+                <div className={`p-5 rounded-2xl border transition-all duration-300 ${
+                  darkMode ? 'bg-[#22252e] border-[#3e4452]' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider mb-3">
+                    💵 {ar ? 'تسجيل سداد دفعة / سداد كلي' : 'Register Payment'}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-505 mb-1 uppercase">{ar ? 'المبلغ المراد سداده' : 'Payment Amount'}</label>
+                      <input 
+                        type="number"
+                        placeholder={ar ? 'أدخل المبلغ...' : 'Enter amount...'}
+                        value={payForm.amount}
+                        onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-505 mb-1 uppercase">{ar ? 'طريقة السداد' : 'Payment Method'}</label>
+                      <select 
+                        value={payForm.method}
+                        onChange={e => setPayForm(p => ({ ...p, method: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white"
+                      >
+                        <option value="Cash">{ar ? 'نقدي (Cash)' : 'Cash'}</option>
+                        <option value="Card">{ar ? 'بطاقة ائتمان (Card)' : 'Card'}</option>
+                        <option value="Bank Transfer">{ar ? 'تحويل بنكي (Bank)' : 'Bank Transfer'}</option>
+                        <option value="Customer Wallet">{ar ? 'محفظة العميل (Customer Wallet)' : 'Customer Wallet'}</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <Btn 
+                        type="button" 
+                        variant="success" 
+                        className="flex-1"
+                        onClick={() => handleRegisterPayment(viewingInvoice)}
+                        disabled={paying}
+                      >
+                        {paying ? (ar ? 'جاري السداد...' : 'Paying...') : (ar ? 'تأكيد السداد' : 'Confirm')}
+                      </Btn>
+                      <Btn 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPayForm(p => ({ ...p, amount: (viewingInvoice.total_amount - (viewingInvoice.amount_paid || 0)).toFixed(2) }))}
+                      >
+                        {ar ? 'سداد كامل' : 'Pay Full'}
+                      </Btn>
+                    </div>
+                  </div>
+                  {payForm.method === 'Customer Wallet' && (
+                    <div className="mt-3 text-xs text-indigo-700 font-bold bg-indigo-50 p-2.5 rounded-xl border border-indigo-100 flex justify-between items-center">
+                      <span>⚡ {ar ? `رصيد محفظة العميل: ` : `Customer Wallet Balance: `}</span>
+                      <span>{fmt(clients.find(c => c.id === parseInt(viewingInvoice.customer_id))?.credit_balance || 0)} {defaultCurrency || 'EGP'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
             <div className="flex justify-end gap-2 pt-2">
               <Btn variant="outline" onClick={() => exportInvoiceCSV(viewingInvoice)}>
@@ -1677,14 +1830,7 @@ function InvoicingTab({ clients, staff = [], language, defaultCurrency, onNewCli
               <Btn variant="outline" onClick={(e) => handleAttachClick(viewingInvoice, e)}>
                 📎 {ar ? 'المرفقات' : 'Attachments'}
               </Btn>
-              <Btn variant="primary" onClick={() => {
-                const printContents = document.getElementById('printable-invoice').innerHTML;
-                const originalContents = document.body.innerHTML;
-                document.body.innerHTML = printContents;
-                window.print();
-                document.body.innerHTML = originalContents;
-                window.location.reload();
-              }}>
+              <Btn variant="primary" onClick={handlePrintInvoice}>
                 🖨️ {ar ? 'طباعة الفاتورة' : 'Print Invoice'}
               </Btn>
               <Btn variant="ghost" onClick={() => setViewingInvoice(null)}>{ar ? 'إغلاق' : 'Close'}</Btn>
@@ -2389,16 +2535,12 @@ const TABS = [
 export default function Sales() {
   const { language, theme } = useLanguage();
   const { user } = useAuth();
-  const { search } = useLocation();
-  const queryTab = new URLSearchParams(search).get('tab');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'analytics';
+  const setActiveTab = (tabId) => {
+    setSearchParams({ tab: tabId });
+  };
   const ar = language === 'ar';
-  const [activeTab, setActiveTab] = useState(queryTab || 'analytics');
-
-  useEffect(() => {
-    if (queryTab) {
-      setActiveTab(queryTab);
-    }
-  }, [queryTab]);
   const [clients, setClients] = useState([]);
   const [staff, setStaff] = useState([]);
   const [newClientOpen, setNewClientOpen] = useState(false);

@@ -26,8 +26,7 @@ ChartJS.register(
 
 export default function Dashboard() {
    const { user } = useAuth();
-   const context = useLanguage();
-   const language = context?.language || 'ar';
+   const { language, theme } = useLanguage();
 
    const [loading, setLoading] = useState(true);
    const [stats, setStats] = useState({ totalProjects: 0, totalBudget: 0, totalExpenses: 0, availableCash: 0 });
@@ -234,7 +233,7 @@ export default function Dashboard() {
    );
 
    return (
-      <div className="bg-[#f8fafc]/50 min-h-screen p-4 sm:p-10 space-y-10 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="bg-[#fafafa] min-h-screen p-4 sm:p-10 space-y-10 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
          
          {/* --- DETAIL MODAL (ELITE UI) --- */}
          {detailModal.isOpen && (
@@ -297,7 +296,7 @@ export default function Dashboard() {
 
             {/* --- WELCOME HEADER --- */}
             <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/50 rounded-full -translate-y-40 translate-x-40 blur-3xl opacity-60"></div>
+               <div className="absolute top-0 right-0 w-80 h-80 bg-slate-100/50 rounded-full -translate-y-40 translate-x-40 blur-3xl opacity-60"></div>
 
                <div className="relative z-10">
                   <div className="flex items-center gap-4 mb-2">
@@ -363,19 +362,27 @@ export default function Dashboard() {
                   </div>
                </div>
 
-               {/* Available Cash (The Solid One) */}
+               {/* Available Cash (Adapts dynamically to Light/Dark theme) */}
                <div 
                   onClick={() => fetchDetailData('cash')}
-                  className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95"
+                  className={`rounded-[2.5rem] p-8 group cursor-pointer active:scale-95 transition-all duration-300 relative overflow-hidden ${
+                     theme === 'dark'
+                        ? 'bg-slate-900 border border-transparent shadow-2xl text-white'
+                        : 'bg-white border border-slate-200 shadow-sm text-slate-900 hover:shadow-xl'
+                  }`}
                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+                  {theme === 'dark' && <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>}
                   <div className="flex justify-between items-start mb-6 relative z-10">
-                     <div className="w-14 h-14 bg-white/10 text-white rounded-2xl flex items-center justify-center text-2xl border border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform">🏦</div>
+                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border group-hover:scale-110 transition-transform ${
+                        theme === 'dark'
+                           ? 'bg-white/10 text-white border-white/10 backdrop-blur-md'
+                           : 'bg-slate-50 text-slate-900 border-slate-100 shadow-inner'
+                     }`}>🏦</div>
                   </div>
                   <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1 relative z-10">{t.kpis.availableCash}</p>
                   <div className="flex items-baseline gap-2 relative z-10">
-                     <h3 className="text-3xl font-black text-white font-mono tracking-tighter">{stats.availableCash.toLocaleString()}</h3>
-                     <span className="text-[10px] font-black text-slate-500 uppercase">{t.kpis.currency}</span>
+                     <h3 className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{stats.availableCash.toLocaleString()}</h3>
+                     <span className={`text-[10px] font-black uppercase ${theme === 'dark' ? 'text-slate-500' : 'text-slate-300'}`}>{t.kpis.currency}</span>
                   </div>
                </div>
             </div>
