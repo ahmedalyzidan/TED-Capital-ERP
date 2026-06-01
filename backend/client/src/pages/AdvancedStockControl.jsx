@@ -29,6 +29,8 @@ function AdvancedStockControl({ isSubcomponent }) {
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState('ALL'); // ALL, MAIN, CAPITAL, CHEMICAL, PHARMA
   const [selectedVelocity, setSelectedVelocity] = useState('ALL'); // ALL, FAST, SLOW, OBSOLETE
+  const [fastThresholdDays, setFastThresholdDays] = useState(30);
+  const [obsoleteThresholdDays, setObsoleteThresholdDays] = useState(90);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Add/Adjust Item Modal State
@@ -136,172 +138,7 @@ function AdvancedStockControl({ isSubcomponent }) {
         };
       });
 
-      // If database has very few items, add a few premium executive mock items to enrich the master view
       let finalItems = hydratedItems;
-      if (finalItems.length < 10) {
-        const extraMocks = isPharma ? [
-          {
-            id: 9001,
-            item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
-            active_substance: 'Paracetamol 500mg + Caffeine 65mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            current_qty_display: 1420,
-            unit_cost_display: 45,
-            total_value: 1420 * 45,
-            batch_no: 'PH-2026-A10',
-            expiry_date: '2028-05-20',
-            supplier: 'شركة جلاكسو سميث كلاين (GSK)',
-            min_stock_level: 100,
-            uom: 'علبة',
-            warehouse_display: 'مستودع الأدوية الرئيسي',
-            velocity_flag: 'FAST',
-            category_display: 'OTC'
-          },
-          {
-            id: 9002,
-            item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
-            active_substance: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-            dosage_form: 'أقراص (Tablets)',
-            pharma_category: 'OTC',
-            storage_temp: '20-25°C (غرفة)',
-            current_qty_display: 510,
-            unit_cost_display: 130,
-            total_value: 510 * 130,
-            batch_no: 'PH-2026-B88',
-            expiry_date: '2027-11-15',
-            supplier: 'شركة إيفا فارما',
-            min_stock_level: 50,
-            uom: 'علبة',
-            warehouse_display: 'مستودع الأدوية الرئيسي',
-            velocity_flag: 'FAST',
-            category_display: 'OTC'
-          },
-          {
-            id: 9003,
-            item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
-            active_substance: 'Morphine Sulfate 10mg/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'CONTROLLED',
-            storage_temp: '20-25°C (قفل أمني)',
-            current_qty_display: 45,
-            unit_cost_display: 350,
-            total_value: 45 * 350,
-            batch_no: 'NAR-2026-X01',
-            expiry_date: '2027-02-01',
-            supplier: 'هيئة الشراء الموحد (مراقبة)',
-            min_stock_level: 10,
-            uom: 'فيال',
-            warehouse_display: 'خزينة المواد الخاضعة للرقابة (Controlled)',
-            velocity_flag: 'SLOW',
-            category_display: 'CONTROLLED'
-          },
-          {
-            id: 9004,
-            item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
-            active_substance: 'Insulin Glargine 100 IU/ml',
-            dosage_form: 'حقن فيال (Vials)',
-            pharma_category: 'COLD_CHAIN',
-            storage_temp: '2-8°C (ثلاجة)',
-            current_qty_display: 185,
-            unit_cost_display: 280,
-            total_value: 185 * 280,
-            batch_no: 'COLD-2026-99',
-            expiry_date: '2026-12-10',
-            supplier: 'شركة سانوفي (Sanofi)',
-            min_stock_level: 30,
-            uom: 'فيال',
-            warehouse_display: 'مستودع سلسلة التبريد (Cold Chain)',
-            velocity_flag: 'FAST',
-            category_display: 'COLD_CHAIN'
-          },
-          {
-            id: 9005,
-            item_name: 'محلول ملح 0.9% (Normal Saline 500ml)',
-            active_substance: 'Sodium Chloride 0.9%',
-            dosage_form: 'محلول وريدي (IV Infusion)',
-            pharma_category: 'CONSUMABLE',
-            storage_temp: '20-25°C (غرفة)',
-            current_qty_display: 2650,
-            unit_cost_display: 25,
-            total_value: 2650 * 25,
-            batch_no: 'NS-2026-777',
-            expiry_date: '2029-01-01',
-            supplier: 'شركة النيل للأدوية',
-            min_stock_level: 500,
-            uom: 'عبوة',
-            warehouse_display: 'مستودع الأدوية الرئيسي',
-            velocity_flag: 'FAST',
-            category_display: 'CONSUMABLE'
-          }
-        ] : [
-          {
-            id: 8001,
-            item_name: 'أسمنت بورتلاندي معبأ 50 كجم',
-            warehouse_display: 'مخزن الكيماويات والأسمنت',
-            velocity_flag: 'FAST',
-            category_display: 'مواد بناء',
-            current_qty_display: 4500,
-            unit_cost_display: 120,
-            total_value: 4500 * 120,
-            uom: 'شيكارة',
-            min_stock_level: 500
-          },
-          {
-            id: 8002,
-            item_name: 'حديد تسليح عز 16 مم',
-            warehouse_display: 'مخزن موقع العاصمة',
-            velocity_flag: 'FAST',
-            category_display: 'معادن وحديد',
-            current_qty_display: 320,
-            unit_cost_display: 42000,
-            total_value: 320 * 42000,
-            uom: 'طن',
-            min_stock_level: 50
-          },
-          {
-            id: 8003,
-            item_name: 'مواشير مياه بلاستيك PVC 4 بوصة',
-            warehouse_display: 'المخزن الرئيسي',
-            velocity_flag: 'SLOW',
-            category_display: 'سباكة ومواسير',
-            current_qty_display: 150,
-            unit_cost_display: 450,
-            total_value: 150 * 450,
-            uom: 'متر',
-            min_stock_level: 30
-          },
-          {
-            id: 8004,
-            item_name: 'بلاط سيراميك كليوباترا فرز أول',
-            warehouse_display: 'مخزن موقع العاصمة',
-            velocity_flag: 'SLOW',
-            category_display: 'تشطيبات',
-            current_qty_display: 800,
-            unit_cost_display: 210,
-            total_value: 800 * 210,
-            uom: 'متر مربع',
-            min_stock_level: 100
-          },
-          {
-            id: 8005,
-            item_name: 'قطع غيار رافعات هيدروليكية قديمة',
-            warehouse_display: 'المخزن الرئيسي',
-            velocity_flag: 'OBSOLETE',
-            category_display: 'قطع غيار معدات',
-            current_qty_display: 12,
-            unit_cost_display: 15000,
-            total_value: 12 * 15000,
-            uom: 'مجموعة',
-            min_stock_level: 2
-          }
-        ];
-        // Filter out duplicates by ID
-        const existingIds = new Set(finalItems.map(i => i.id));
-        const newMocks = extraMocks.filter(m => !existingIds.has(m.id));
-        finalItems = [...finalItems, ...newMocks];
-      }
 
       setItems(finalItems);
     } catch (err) {
@@ -689,8 +526,56 @@ function AdvancedStockControl({ isSubcomponent }) {
     }
   };
 
+  const computeItemVelocity = (item, sales, fastDays, obsoleteDays) => {
+    const itemSales = sales.filter(s => 
+      String(s.inventory_id) === String(item.id) || 
+      String(s.item_name || '').toLowerCase().trim() === String(item.item_name || '').toLowerCase().trim()
+    );
+    
+    if (itemSales.length === 0) {
+      return 'OBSOLETE';
+    }
+
+    const now = new Date();
+    
+    // Fast moving criteria: sales/issues in fastDays
+    const recentFastSales = itemSales.filter(s => {
+      const sDate = new Date(s.date || s.created_at);
+      const diffTime = Math.abs(now - sDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= fastDays;
+    });
+    const totalFastQty = recentFastSales.reduce((sum, s) => sum + Math.abs(Number(s.qty || 0)), 0);
+
+    // Obsolete moving criteria: no sales/issues within obsoleteDays
+    const recentObsoleteSales = itemSales.filter(s => {
+      const sDate = new Date(s.date || s.created_at);
+      const diffTime = Math.abs(now - sDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= obsoleteDays;
+    });
+
+    if (recentFastSales.length >= 3 || totalFastQty >= 50) {
+      return 'FAST';
+    } else if (recentObsoleteSales.length >= 1) {
+      return 'SLOW';
+    } else {
+      return 'OBSOLETE';
+    }
+  };
+
+  const computedItems = React.useMemo(() => {
+    return items.map(item => {
+      const vel = computeItemVelocity(item, salesHistory, fastThresholdDays, obsoleteThresholdDays);
+      return {
+        ...item,
+        velocity_flag: vel
+      };
+    });
+  }, [items, salesHistory, fastThresholdDays, obsoleteThresholdDays]);
+
   // Filtered items
-  const filteredItems = items.filter(item => {
+  const filteredItems = computedItems.filter(item => {
     if (activeComp) {
       const matchedCompany = companies.find(c => 
         c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
@@ -739,14 +624,14 @@ function AdvancedStockControl({ isSubcomponent }) {
   });
 
   // Stats
-  const itemsForStats = activeComp ? items.filter(item => {
+  const itemsForStats = activeComp ? computedItems.filter(item => {
     const matchedCompany = companies.find(c => 
       c.name.toLowerCase().trim() === activeComp.toLowerCase().trim() ||
       activeComp.toLowerCase().trim().includes(c.name.toLowerCase().trim()) ||
       c.name.toLowerCase().trim().includes(activeComp.toLowerCase().trim())
     );
     return !matchedCompany || !item.company_id || Number(item.company_id) === Number(matchedCompany.id);
-  }) : items;
+  }) : computedItems;
 
   const totalValuation = itemsForStats.reduce((sum, i) => sum + i.total_value, 0);
   const fastMovingCount = itemsForStats.filter(i => i.velocity_flag === 'FAST').length;
@@ -964,7 +849,7 @@ function AdvancedStockControl({ isSubcomponent }) {
               <div>
                 <span className="text-[9px] text-slate-400 font-bold block leading-none">{language === 'ar' ? 'نواقص حرجة:' : 'Critical items:'}</span>
                 <span className="text-xs font-black font-mono text-rose-600">
-                  {items.filter(i => Number(i.current_qty_display) <= Number(i.min_stock_level || 10)).length} {language === 'ar' ? 'أصناف' : 'items'}
+                  {computedItems.filter(i => Number(i.current_qty_display) <= Number(i.min_stock_level || 10)).length} {language === 'ar' ? 'أصناف' : 'items'}
                 </span>
               </div>
             </div>
@@ -1115,6 +1000,28 @@ function AdvancedStockControl({ isSubcomponent }) {
             >
               <span>🚨</span> {language === 'ar' ? 'راكدة / منعدمة الحركة (Obsolete)' : 'Obsolete Stock'}
             </button>
+            <div className="flex items-center gap-4 bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl ml-2 shadow-inner">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-500">{language === 'ar' ? 'أيام السريع:' : 'Fast Days:'}</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={fastThresholdDays} 
+                  onChange={e => setFastThresholdDays(Math.max(1, Number(e.target.value)))} 
+                  className="w-16 p-1.5 text-xs font-black bg-white border border-slate-250 rounded-lg text-center focus:border-indigo-500 outline-none shadow-sm" 
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-500">{language === 'ar' ? 'أيام الراكد:' : 'Obsolete Days:'}</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={obsoleteThresholdDays} 
+                  onChange={e => setObsoleteThresholdDays(Math.max(1, Number(e.target.value)))} 
+                  className="w-16 p-1.5 text-xs font-black bg-white border border-slate-250 rounded-lg text-center focus:border-indigo-500 outline-none shadow-sm" 
+                />
+              </div>
+            </div>
           </div>
 
           <div className="relative w-full lg:w-96">

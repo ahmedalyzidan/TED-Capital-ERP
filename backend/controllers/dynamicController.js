@@ -425,6 +425,13 @@ class DynamicController {
                 }
                 fieldsToRemove.forEach(f => delete data[f]);
 
+                // Guard dynamically: only keep fields that exist in the database table
+                Object.keys(data).forEach(key => {
+                    if (!columns.includes(key)) {
+                        delete data[key];
+                    }
+                });
+
                 const keys = Object.keys(data);
                 const values = Object.values(data);
                 const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
@@ -666,6 +673,13 @@ class DynamicController {
             let data = req.body;
             if (!hasAccess(req.user, type, 'update')) throw new Error("Access Denied.");
 
+            // Fetch table columns to filter request body safely
+            const columnsRes = await client.query(
+                `SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+                [type]
+            );
+            const columns = columnsRes.rows.map(r => r.column_name);
+
             let oldData = {};
             const oldRes = await client.query(`SELECT * FROM ${type} WHERE id = $1`, [id]);
             if (oldRes.rows.length > 0) oldData = oldRes.rows[0];
@@ -693,6 +707,13 @@ class DynamicController {
                 fieldsToRemove = calcFields.filter(f => f !== 'client_name');
             }
             fieldsToRemove.forEach(f => delete data[f]);
+
+            // Guard dynamically: only keep fields that exist in the database table
+            Object.keys(data).forEach(key => {
+                if (!columns.includes(key)) {
+                    delete data[key];
+                }
+            });
 
             const keys = Object.keys(data);
             const values = Object.values(data);

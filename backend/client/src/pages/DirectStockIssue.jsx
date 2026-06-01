@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import AdvancedStockControl from './AdvancedStockControl';
 
 const boqCategories = [
   "أعمال صحي",
@@ -482,7 +483,7 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
       });
 
       let finalItems = mappedItems;
-      if (mappedItems.length < 5) {
+      if (mappedItems.length < 5 && !embedded && isPharma) {
         if (isPharma) {
           const mockPharma = [
             {
@@ -1830,6 +1831,17 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
           >
             <span>📁</span> {language === 'ar' ? 'كشف حساب عميل' : 'Customer Statements'}
           </button>
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('balances')}
+            className={`flex-1 min-w-[150px] py-3 text-xs font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'balances' 
+                ? (embedded ? 'bg-[#1e293b] border border-indigo-500/30 text-indigo-400 shadow-md' : 'bg-indigo-600 text-white shadow-md') 
+                : (embedded ? 'text-slate-400 hover:text-slate-200 hover:bg-[#131b2e]' : 'text-slate-600 hover:text-slate-900')
+            }`}
+          >
+            <span>🏢</span> {language === 'ar' ? 'أرصدة المخزون الفعلي' : 'Physical Stock Balances'}
+          </button>
         </div>
       )}
 
@@ -2672,6 +2684,12 @@ export default function DirectStockIssue({ defaultTab = 'issue', embedded = fals
           </div>
 
         </form>
+      )}
+
+      {activeTab === 'balances' && (
+        <div className="animate-in fade-in duration-300 bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
+          <AdvancedStockControl isSubcomponent={true} />
+        </div>
       )}
 
       {/* TAB 3: CUSTOMER INVOICES LIST */}

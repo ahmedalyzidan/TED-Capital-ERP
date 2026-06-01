@@ -19,7 +19,7 @@
 
 ## 3. DEFENSIVE UI & SCHEMA INTEGRITY
 - **Defensive Rendering:** MUST use optional chaining (`?.`) and fallbacks (`|| 'Default'`) in frontend components to prevent runtime crashes.
-- **Schema First:** Verify SQL tables in `schemaFixes.js` before adding modules. 
+- **Schema First & Company Isolation:** Verify SQL tables in `schemaFixes.js` before adding modules. For any shared, cross-company, or modified tables, MUST include the `company` (VARCHAR) or `company_id` (INT) columns and handle them dynamically in `dynamicController.js` to ensure seamless data isolation without code breaks.
 - **Zero Console Errors:** Clear all red console errors immediately after any UI/Backend update.
 
 ## 4. GATED CLOUD DEPLOYMENT (STRICT)

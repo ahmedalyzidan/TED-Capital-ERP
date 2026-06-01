@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export default function FinancialTransactions({ embedded = false, projectId = '' }) {
+export default function FinancialTransactions({ embedded = false, projectId = '', onTransactionSuccess }) {
   const { language } = useLanguage();
   const ar = language === 'ar';
 
@@ -477,7 +477,8 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         notes: ''
       });
       fetchMasterData();
-      fetchLogs();
+      await fetchLogs();
+      if (onTransactionSuccess) onTransactionSuccess();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل تسجيل التحصيل' : 'Failed to record collection'));
     } finally {
@@ -525,7 +526,8 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
         notes: ''
       });
       fetchMasterData();
-      fetchLogs();
+      await fetchLogs();
+      if (onTransactionSuccess) onTransactionSuccess();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل تسجيل السداد' : 'Failed to record payment'));
     } finally {
@@ -596,7 +598,8 @@ export default function FinancialTransactions({ embedded = false, projectId = ''
       
       triggerAlert('success', ar ? 'تم عكس المعاملة وإلغاء القيود بنجاح' : 'Transaction reversed successfully');
       fetchMasterData();
-      fetchLogs();
+      await fetchLogs();
+      if (onTransactionSuccess) onTransactionSuccess();
     } catch (err) {
       triggerAlert('danger', err.response?.data?.error || (ar ? 'فشل إلغاء المعاملة' : 'Failed to reverse transaction'));
     } finally {

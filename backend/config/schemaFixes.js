@@ -1235,6 +1235,7 @@ const applySchemaFixes = async () => {
         description TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+        await runQuery("Committees Add Company", `ALTER TABLE committees ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
         await runQuery("Org Units Table", `CREATE TABLE IF NOT EXISTS org_units (
         id SERIAL PRIMARY KEY,
@@ -1243,6 +1244,9 @@ const applySchemaFixes = async () => {
         parent_id INTEGER REFERENCES org_units(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+        await runQuery("Org Units Add Company", `ALTER TABLE org_units ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
+
+        await runQuery("Tasks Add Company", `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS company VARCHAR(255)`);
 
         await runQuery("User Org Units Table", `CREATE TABLE IF NOT EXISTS user_org_units (
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

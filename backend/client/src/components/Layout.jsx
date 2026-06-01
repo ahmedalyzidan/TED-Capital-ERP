@@ -26,6 +26,17 @@ export default function Layout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const handleMutation = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    window.addEventListener('api-mutate', handleMutation);
+    return () => {
+      window.removeEventListener('api-mutate', handleMutation);
+    };
+  }, []);
 
   const translations = {
     ar: {
@@ -955,7 +966,7 @@ export default function Layout() {
         <div className={`flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar print:p-0 print:overflow-visible transition-colors duration-300 ${theme !== 'dark' ? 'bg-slate-50/50' : ''}`}
           style={theme === 'dark' ? { backgroundColor: '#1d2026' } : {}}>
           <div className="max-w-full">
-            <Outlet />
+            <Outlet key={refreshKey} />
           </div>
         </div>
       </main>

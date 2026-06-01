@@ -3065,7 +3065,7 @@ export default function ContractorSuite() {
               { id: 'dashboard', label: language === 'ar' ? 'لوحة القيادة' : 'Dashboard', icon: '📊' },
               { id: 'boq', label: language === 'ar' ? 'المقايسة والبنود' : 'BOQ & Items', icon: '📋' },
               { id: 'expenses', label: language === 'ar' ? 'المصروفات الفعلية' : 'Actual Expenses', icon: '💸' },
-              { id: 'client', label: language === 'ar' ? 'دفعات العميل' : 'Client Payments', icon: '💳' },
+              { id: 'client', label: language === 'ar' ? 'مستخلصات' : 'Certificates', icon: '💳' },
               { id: 'financial_summary', label: language === 'ar' ? 'موقف العميل والمقاول' : 'Financial Summary', icon: '📊' },
               { id: 'warehouses', label: language === 'ar' ? 'المخازن' : 'Warehouses', icon: '📦' },
               { id: 'transactions', label: language === 'ar' ? 'التحصيلات والمدفوعات' : 'Collections & Payments', icon: '💸' },
@@ -5479,14 +5479,14 @@ export default function ContractorSuite() {
         {/* 5.1 WAREHOUSES VIEW */}
         {activeTab === 'warehouses' && (
           <div className="animate-in fade-in duration-500">
-            <DirectStockIssue defaultTab="issue" embedded={true} projectId={activeProjectId} />
+            <DirectStockIssue defaultTab="issue" embedded={true} projectId={activeProjectId} onSuccess={fetchAllData} />
           </div>
         )}
 
         {/* 5.2 FINANCIAL TRANSACTIONS VIEW */}
         {activeTab === 'transactions' && (
           <div className="animate-in fade-in duration-500">
-            <FinancialTransactions embedded={true} projectId={activeProjectId} />
+            <FinancialTransactions embedded={true} projectId={activeProjectId} onTransactionSuccess={fetchAllData} />
           </div>
         )}
 
