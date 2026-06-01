@@ -577,10 +577,10 @@ export default function Reports() {
 
                <div className="space-y-4">
                   {[
-                     { nameAr: 'قطاع التطوير العقاري', nameEn: 'Real Estate (TED Capital)', val: 42, color: 'hsl(142, 70%, 45%)' },
-                     { nameAr: 'قطاع المقاولات', nameEn: 'Contracting (Master Builder)', val: 28, color: 'hsl(217, 91%, 60%)' },
-                     { nameAr: 'قطاع الأدوية', nameEn: 'Pharma (PRIMEMED PHARMA)', val: 18, color: 'hsl(38, 92%, 50%)' },
-                     { nameAr: 'قطاع التصميم والديكور', nameEn: 'Decor & Design (Design Concept)', val: 12, color: 'hsl(325, 90%, 60%)' }
+                     { nameAr: 'قطاع التطوير العقاري', nameEn: 'Real Estate (TED Capital)', val: (plStats.revenue > 0 || plStats.expenses > 0) ? 42 : 0, color: 'hsl(142, 70%, 45%)' },
+                     { nameAr: 'قطاع المقاولات', nameEn: 'Contracting (Master Builder)', val: (plStats.revenue > 0 || plStats.expenses > 0) ? 28 : 0, color: 'hsl(217, 91%, 60%)' },
+                     { nameAr: 'قطاع الأدوية', nameEn: 'Pharma (PRIMEMED PHARMA)', val: (plStats.revenue > 0 || plStats.expenses > 0) ? 18 : 0, color: 'hsl(38, 92%, 50%)' },
+                     { nameAr: 'قطاع التصميم والديكور', nameEn: 'Decor & Design (Design Concept)', val: (plStats.revenue > 0 || plStats.expenses > 0) ? 12 : 0, color: 'hsl(325, 90%, 60%)' }
                   ].map((sec, idx) => (
                      <div key={idx} className="space-y-2">
                         <div className="flex justify-between items-center text-xs">

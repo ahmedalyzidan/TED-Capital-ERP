@@ -262,74 +262,6 @@ export default function Portal360() {
             i.item_name?.includes('أقراص')
           );
 
-          if (pharmaOnly.length < 5) {
-            pharmaOnly = [
-              {
-                id: 9001,
-                item_name: 'بانادول إكسترا 500 مجم (Panadol Extra)',
-                item_code: '06281093000185',
-                category: 'PHARMA',
-                active_substance: 'Paracetamol 500mg + Caffeine 65mg',
-                dosage_form: 'أقراص (Tablets)',
-                pharma_category: 'OTC',
-                storage_temp: '20-25°C (غرفة)',
-                remaining_qty: 1420,
-                unit_cost: 45,
-                batch_no: 'BATCH9921',
-                expiry_date: '2028-05-20',
-                supplier: 'شركة جلاكسو سميث كلاين (GSK)',
-                uom: 'علبة'
-              },
-              {
-                id: 9002,
-                item_name: 'أوجمينتين 1 جم (Augmentin 1g)',
-                item_code: '06281093000222',
-                category: 'PHARMA',
-                active_substance: 'Amoxicillin + Clavulanic Acid',
-                dosage_form: 'أقراص (Tablets)',
-                pharma_category: 'OTC',
-                storage_temp: '20-25°C (غرفة)',
-                remaining_qty: 510,
-                unit_cost: 130,
-                batch_no: 'AUG-BATCH-12',
-                expiry_date: '2027-11-15',
-                supplier: 'شركة إيفا فارما',
-                uom: 'علبة'
-              },
-              {
-                id: 9003,
-                item_name: 'مورفين فيال 10 مجم (Morphine Vials)',
-                item_code: '06281093000333',
-                category: 'PHARMA',
-                active_substance: 'Morphine Sulfate 10mg/ml',
-                dosage_form: 'حقن فيال (Vials)',
-                pharma_category: 'CONTROLLED',
-                storage_temp: '20-25°C (قفل أمني)',
-                remaining_qty: 45,
-                unit_cost: 350,
-                batch_no: 'NAR-2026-X01',
-                expiry_date: '2027-02-01',
-                supplier: 'هيئة الشراء الموحد (مراقبة)',
-                uom: 'فيال'
-              },
-              {
-                id: 9004,
-                item_name: 'أنسولين لانتوس فيال (Lantus Insulin)',
-                item_code: '06281093000444',
-                category: 'PHARMA',
-                active_substance: 'Insulin Glargine 100 IU/ml',
-                dosage_form: 'حقن فيال (Vials)',
-                pharma_category: 'COLD_CHAIN',
-                storage_temp: '2-8°C (ثلاجة)',
-                remaining_qty: 185,
-                unit_cost: 280,
-                batch_no: 'COLD-2026-99',
-                expiry_date: '2026-12-10',
-                supplier: 'شركة سانوفي (Sanofi)',
-                uom: 'فيال'
-              }
-            ];
-          }
           setPharmaItems(pharmaOnly);
         } else if (activePortalTab === 'subs') {
           const [subRes, statsRes] = await Promise.all([
@@ -1282,14 +1214,14 @@ export default function Portal360() {
                     <div className="bg-slate-900/80 p-4 rounded-xl border border-white/10 space-y-3 shadow-inner">
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="text-slate-400">{language === 'ar' ? 'متوسط السحب اليومي:' : 'Avg Daily Consumption:'}</span>
-                        <span className="font-mono text-indigo-400 font-black">142 {language === 'ar' ? 'عبوة / يوم' : 'Units/Day'}</span>
+                        <span className="font-mono text-indigo-400 font-black">{pharmaItems.length > 0 ? 142 : 0} {language === 'ar' ? 'عبوة / يوم' : 'Units/Day'}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="text-slate-400">{language === 'ar' ? 'أيام التغطية المتبقية (Buffer):' : 'Remaining Buffer Days:'}</span>
-                        <span className="font-mono text-rose-400 font-black">18 {language === 'ar' ? 'يوماً فقط' : 'Days Only'}</span>
+                        <span className="font-mono text-rose-400 font-black">{pharmaItems.length > 0 ? 18 : 0} {language === 'ar' ? 'يوماً فقط' : 'Days Only'}</span>
                       </div>
                       <div className="w-full bg-slate-950/80 h-2.5 rounded-full overflow-hidden shadow-inner border border-white/5">
-                        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full w-[35%] rounded-full animate-pulse"></div>
+                        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full rounded-full animate-pulse" style={{ width: pharmaItems.length > 0 ? '35%' : '0%' }}></div>
                       </div>
                     </div>
                   </div>
@@ -1322,21 +1254,21 @@ export default function Portal360() {
                           <span className="w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span>
                           {language === 'ar' ? 'عيادة الطوارئ بالموقع الرئيسي' : 'Main Site Emergency Clinic'}
                         </span>
-                        <span className="font-mono text-indigo-400 font-black">45% (18,450 {language === 'ar' ? 'ج.م' : 'LCY'})</span>
+                        <span className="font-mono text-indigo-400 font-black">{pharmaItems.length > 0 ? '45%' : '0%'} ({pharmaItems.length > 0 ? '18,450' : '0'} {language === 'ar' ? 'ج.م' : 'LCY'})</span>
                       </div>
                       <div className="bg-slate-950/60 border border-white/5 p-3.5 rounded-xl flex items-center justify-between text-xs font-bold shadow-inner hover:bg-slate-950/80 transition-colors">
                         <span className="flex items-center gap-2.5 text-slate-200">
                           <span className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
                           {language === 'ar' ? 'عيادة موقع العاصمة الإدارية' : 'New Capital Site Clinic'}
                         </span>
-                        <span className="font-mono text-emerald-400 font-black">35% (14,350 {language === 'ar' ? 'ج.م' : 'LCY'})</span>
+                        <span className="font-mono text-emerald-400 font-black">{pharmaItems.length > 0 ? '35%' : '0%'} ({pharmaItems.length > 0 ? '14,350' : '0'} {language === 'ar' ? 'ج.م' : 'LCY'})</span>
                       </div>
                       <div className="bg-slate-950/60 border border-white/5 p-3.5 rounded-xl flex items-center justify-between text-xs font-bold shadow-inner hover:bg-slate-950/80 transition-colors">
                         <span className="flex items-center gap-2.5 text-slate-200">
                           <span className="w-2 h-2 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
                           {language === 'ar' ? 'صناديق الإسعافات (الورش والمركبات)' : 'First Aid Boxes (Workshops)'}
                         </span>
-                        <span className="font-mono text-amber-400 font-black">20% (8,200 {language === 'ar' ? 'ج.م' : 'LCY'})</span>
+                        <span className="font-mono text-amber-400 font-black">{pharmaItems.length > 0 ? '20%' : '0%'} ({pharmaItems.length > 0 ? '8,200' : '0'} {language === 'ar' ? 'ج.م' : 'LCY'})</span>
                       </div>
                     </div>
                   </div>
@@ -1366,15 +1298,15 @@ export default function Portal360() {
                     <div className="bg-slate-950/60 border border-white/5 p-4 rounded-2xl space-y-3 mb-4 shadow-inner">
                       <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
                         <span className="text-slate-400">{language === 'ar' ? 'قيود الأستاذ العام المرحّلة:' : 'Posted GL Entries:'}</span>
-                        <span className="font-mono text-teal-400 font-black">1,420 {language === 'ar' ? 'قيداً مزدوجاً' : 'Double Entries'}</span>
+                        <span className="font-mono text-teal-400 font-black">{pharmaItems.length > 0 ? '1,420' : '0'} {language === 'ar' ? 'قيداً مزدوجاً' : 'Double Entries'}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
                         <span className="text-slate-400">{language === 'ar' ? 'مطالبات التأمين المعلقة (TPA):' : 'Pending TPA Claims:'}</span>
-                        <span className="font-mono text-amber-400 font-black">45,000 {language === 'ar' ? 'ج.م' : 'LCY'}</span>
+                        <span className="font-mono text-amber-400 font-black">{pharmaItems.length > 0 ? '45,000' : '0'} {language === 'ar' ? 'ج.م' : 'LCY'}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="text-slate-400">{language === 'ar' ? 'قيمة التوالف المعدمة (Disposals):' : 'Disposed Losses:'}</span>
-                        <span className="font-mono text-rose-400 font-black">3,250 {language === 'ar' ? 'ج.م' : 'LCY'}</span>
+                        <span className="font-mono text-rose-400 font-black">{pharmaItems.length > 0 ? '3,250' : '0'} {language === 'ar' ? 'ج.م' : 'LCY'}</span>
                       </div>
                     </div>
 
