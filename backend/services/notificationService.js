@@ -95,14 +95,17 @@ class NotificationService {
     }
 
     async sendWhatsApp(phone, message) {
-        console.log(`📱 [WHATSAPP SIMULATOR] To: ${phone} | Message: ${message}`);
+        console.log(`📱 [WHATSAPP] To: ${phone} | Message: ${message}`);
         try {
+            const { sendWhatsAppMessage } = require('./whatsappService');
+            const res = await sendWhatsAppMessage(phone, message);
+            
             await pool.query(
                 "INSERT INTO system_events (event_type, event_source, description, metadata) VALUES ($1, $2, $3, $4)",
-                ['WHATSAPP_SENT', 'NotificationService', `WhatsApp message sent to ${phone}`, JSON.stringify({ message })]
+                ['WHATSAPP_SENT', 'NotificationService', `WhatsApp message sent to ${phone} (Result: ${res.success ? 'Success' : 'Failed'})`, JSON.stringify({ message, result: res })]
             );
         } catch (e) {
-            console.error("Failed to log WhatsApp event:", e.message);
+            console.error("Failed to send/log WhatsApp:", e.message);
         }
     }
 

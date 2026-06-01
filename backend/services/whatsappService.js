@@ -41,6 +41,21 @@ async function sendWhatsAppMessage(to, message) {
         const settings = settingsRes.rows[0];
         const metadata = settings.metadata || {};
 
+        // Fetch company sender phone dynamically based on active DB
+        let companyPhone = '';
+        try {
+            const dbRes = await pool.query('SELECT current_database() AS db');
+            const activeDb = dbRes.rows[0]?.db || 'erp_ted_capital';
+            
+            const { centralPool } = require('../config/db');
+            const compRes = await centralPool.query("SELECT phone FROM companies WHERE db_name = $1 LIMIT 1", [activeDb]);
+            if (compRes.rows.length > 0 && compRes.rows[0].phone) {
+                companyPhone = compRes.rows[0].phone;
+            }
+        } catch (compErr) {
+            console.error("Failed to fetch company phone for WhatsApp:", compErr.message);
+        }
+
         // 2. Check if WhatsApp alerts are enabled
         if (!settings.whatsapp_enabled) {
             console.log("⚠️ [WhatsApp Service] WhatsApp is disabled globally in Settings.");
@@ -64,12 +79,12 @@ async function sendWhatsAppMessage(to, message) {
         const token = metadata.whatsapp_token || process.env.WHATSAPP_TOKEN;
 
         if (!instanceId || !token) {
-            console.log(`ℹ️ [WhatsApp Service Simulated] To: ${cleanPhone} | Message: ${message}`);
-            return { success: true, simulated: true };
+            console.log(`ℹ️ [WhatsApp Service Simulated] From Company Phone: ${companyPhone || 'System'} | To: ${cleanPhone} | Message: ${message}`);
+            return { success: true, simulated: true, from: companyPhone };
         }
 
         // 5. Fire the actual HTTP request to Ultramsg
-        console.log(`📡 [WhatsApp Service] Sending auto-message to ${cleanPhone} via instance ${instanceId}...`);
+        console.log(`📡 [WhatsApp Service] Sending auto-message to ${cleanPhone} from company phone ${companyPhone || 'System'} via instance ${instanceId}...`);
         const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
         const response = await axios.post(url, {
             token: token,
@@ -79,7 +94,7 @@ async function sendWhatsAppMessage(to, message) {
 
         if (response.data && (response.data.sent === 'true' || response.data.sent === true || response.data.success)) {
             console.log(`✅ [WhatsApp Service] Sent successfully to ${cleanPhone}. Message ID: ${response.data.id || response.data.message_id}`);
-            return { success: true, messageId: response.data.id || response.data.message_id };
+            return { success: true, messageId: response.data.id || response.data.message_id, from: companyPhone };
         } else {
             throw new Error(JSON.stringify(response.data || "Unknown API error"));
         }

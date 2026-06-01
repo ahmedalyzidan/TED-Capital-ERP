@@ -34,14 +34,18 @@ async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirec
 
         // Fetch Company email from central database dynamically based on active DB
         let companyEmail = process.env.EMAIL_USER || 'tedcapital.org@GMAIL.COM';
+        let companyDisplayName = 'TED Capital';
         try {
             const dbRes = await pool.query('SELECT current_database() AS db');
             const activeDb = dbRes.rows[0]?.db || 'erp_ted_capital';
             
             const { centralPool } = require('./db');
-            const compRes = await centralPool.query("SELECT email FROM companies WHERE db_name = $1 LIMIT 1", [activeDb]);
-            if (compRes.rows.length > 0 && compRes.rows[0].email) {
-                companyEmail = compRes.rows[0].email;
+            const compRes = await centralPool.query("SELECT email, display_name, name FROM companies WHERE db_name = $1 LIMIT 1", [activeDb]);
+            if (compRes.rows.length > 0) {
+                if (compRes.rows[0].email) {
+                    companyEmail = compRes.rows[0].email;
+                }
+                companyDisplayName = compRes.rows[0].display_name || compRes.rows[0].name || companyDisplayName;
             }
         } catch (compErr) {
             console.error("Failed to fetch company email:", compErr.message);
@@ -59,7 +63,7 @@ async function sendEmailNotification(userIdOrEmail, title, message, isEmailDirec
         for (const recipient of recipients) {
             try {
                 const mailOptions = {
-                    from: companyEmail,
+                    from: `"${companyDisplayName}" <${companyEmail}>`,
                     to: recipient,
                     subject: title,
                     text: message
