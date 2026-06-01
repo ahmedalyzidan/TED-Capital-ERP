@@ -46,6 +46,12 @@ if [ ! -f .env ]; then
     echo "WARNING: .env created from example. Please update it with production secrets!"
 fi
 
+# Ensure nginx.conf is SSL version on production
+if [ -f nginx.ssl.conf ]; then
+    cp nginx.ssl.conf nginx.conf
+    echo "SSL Nginx configuration applied."
+fi
+
 echo "Building and starting containers..."
 sudo docker-compose up -d --build
 
