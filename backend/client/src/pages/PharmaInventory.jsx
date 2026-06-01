@@ -390,9 +390,7 @@ function PharmaInventory() {
           warehouse: 'مخزن الصيدليات والأدوية'
         }
       ];
-      const existingNames = new Set(mappedPharma.map(i => i.item_name?.toLowerCase().trim()));
-      const newMocks = mockPharma.filter(m => !existingNames.has(m.item_name?.toLowerCase().trim()));
-      pharmaItems = [...mappedPharma, ...newMocks].map(i => ({
+      pharmaItems = mappedPharma.map(i => ({
         ...i,
         shelf_location: i.shelf_location || 'الرف A-1',
         rasad_status: i.rasad_status || 'مسودة (Draft)'
