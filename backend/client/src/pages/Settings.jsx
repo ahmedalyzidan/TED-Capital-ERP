@@ -156,7 +156,11 @@ export default function Settings() {
     try {
       const { data } = await api.get('/system/purgeable-tables');
       setPurgeableTables(data.data || []);
-      setSelectedPurgeTables(data.data || []);
+      
+      // Keep configurations and critical mappings unchecked by default
+      const configTables = ['companies', 'settings', 'gl_mappings', 'crm_templates'];
+      const defaultSelected = (data.data || []).filter(t => !configTables.includes(t.toLowerCase()));
+      setSelectedPurgeTables(defaultSelected);
     } catch (e) { console.error(e); }
   };
 
@@ -876,25 +880,25 @@ className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-60
                     id: 'finance', 
                     icon: '💰', 
                     title: language === 'ar' ? 'المالية والمحاسبة' : 'Finance & Accounting',
-                    tables: ['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods'] 
+                    tables: ['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'payment_receipts', 'installments', 'contracts', 'client_consumptions', 'client_refunds', 'client_delayed_payments'] 
                   },
                   { 
                     id: 'inventory', 
                     icon: '📦', 
                     title: language === 'ar' ? 'المخازن والمشتريات' : 'Inventory & Procurement',
-                    tables: ['inventory_items', 'inventory_movements', 'inventory_sales', 'purchase_orders', 'inventory_bookings', 'material_usage'] 
+                    tables: ['inventory_items', 'inventory_movements', 'inventory_sales', 'inventory_transfers', 'purchase_orders', 'inventory_bookings', 'material_usage', 'rfq', 'po_ddp_charges', 'po_ddp_lcy_charges'] 
                   },
                   { 
                     id: 'operations', 
                     icon: '🏗️', 
                     title: language === 'ar' ? 'المشاريع والعمليات' : 'Projects & Ops',
-                    tables: ['projects', 'subcontractors', 'subcontractor_invoices', 'clients', 'customers', 'partners'] 
+                    tables: ['projects', 'subcontractors', 'subcontractor_invoices', 'subcontractor_items', 'subcontractor_statements', 'boq', 'clients', 'customers', 'partners', 'partner_deposits', 'partner_withdrawals', 'tasks', 'daily_reports', 'committees'] 
                   },
                   { 
                     id: 'system', 
                     icon: '🛡️', 
                     title: language === 'ar' ? 'النظام والأمان' : 'System & Security',
-                    tables: ['users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events'] 
+                    tables: ['users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events', 'notifications', 'companies', 'settings', 'crm_templates'] 
                   }
                 ].map(group => {
                   const groupTables = purgeableTables.filter(t => group.tables.includes(t.toLowerCase()));
@@ -927,11 +931,11 @@ className="w-full p-4 bg-slate-50 rounded-2xl font-black font-mono text-amber-60
                 })}
 
                 {/* Other Tables not caught in groups */}
-                {purgeableTables.filter(t => !['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'inventory_items', 'inventory_movements', 'inventory_sales', 'purchase_orders', 'inventory_bookings', 'material_usage', 'projects', 'subcontractors', 'subcontractor_invoices', 'clients', 'customers', 'partners', 'users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events'].includes(t.toLowerCase())).length > 0 && (
+                {purgeableTables.filter(t => !['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'payment_receipts', 'installments', 'contracts', 'client_consumptions', 'client_refunds', 'client_delayed_payments', 'inventory_items', 'inventory_movements', 'inventory_sales', 'inventory_transfers', 'purchase_orders', 'inventory_bookings', 'material_usage', 'rfq', 'po_ddp_charges', 'po_ddp_lcy_charges', 'projects', 'subcontractors', 'subcontractor_invoices', 'subcontractor_items', 'subcontractor_statements', 'boq', 'clients', 'customers', 'partners', 'partner_deposits', 'partner_withdrawals', 'tasks', 'daily_reports', 'committees', 'users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events', 'notifications', 'companies', 'settings', 'crm_templates'].includes(t.toLowerCase())).length > 0 && (
                   <div className="space-y-4">
                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">Other Data</h4>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {purgeableTables.filter(t => !['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'inventory_items', 'inventory_movements', 'inventory_sales', 'purchase_orders', 'inventory_bookings', 'material_usage', 'projects', 'subcontractors', 'subcontractor_invoices', 'clients', 'customers', 'partners', 'users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events'].includes(t.toLowerCase())).map(table => (
+                        {purgeableTables.filter(t => !['ledger', 'chart_of_accounts', 'ar_invoices', 'ar_invoice_items', 'fixed_assets', 'gl_mappings', 'fiscal_periods', 'payment_receipts', 'installments', 'contracts', 'client_consumptions', 'client_refunds', 'client_delayed_payments', 'inventory_items', 'inventory_movements', 'inventory_sales', 'inventory_transfers', 'purchase_orders', 'inventory_bookings', 'material_usage', 'rfq', 'po_ddp_charges', 'po_ddp_lcy_charges', 'projects', 'subcontractors', 'subcontractor_invoices', 'subcontractor_items', 'subcontractor_statements', 'boq', 'clients', 'customers', 'partners', 'partner_deposits', 'partner_withdrawals', 'tasks', 'daily_reports', 'committees', 'users', 'roles', 'permissions', 'audit_logs', 'workflow_instances', 'active_sessions', 'email_logs', 'system_events', 'notifications', 'companies', 'settings', 'crm_templates'].includes(t.toLowerCase())).map(table => (
                           <label key={table} className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${selectedPurgeTables.includes(table) ? 'border-rose-300 bg-rose-50/50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
                             <span className="font-bold text-[11px] uppercase tracking-tight text-slate-600 group-hover:text-rose-600 transition-colors">{table.replace(/_/g, ' ')}</span>
                             <input 
