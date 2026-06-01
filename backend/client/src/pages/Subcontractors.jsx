@@ -516,11 +516,11 @@ export default function Subcontractors() {
   const openPaymentModal = (invoice) => {
     const projName = invoice.project_name || invoice.project_id || '';
     const proj = projects.find(p => String(p.name).toLowerCase().trim() === String(projName).toLowerCase().trim() || String(p.id) === String(projName));
-    
+
     let defaultSource = 'نقدية بالبنوك والصندوق';
     if (proj && proj.company) {
-      const matchingAcc = coaAccounts.find(acc => 
-        acc.company_entity === proj.company && 
+      const matchingAcc = coaAccounts.find(acc =>
+        acc.company_entity === proj.company &&
         acc.account_code.startsWith('110')
       );
       if (matchingAcc) {
@@ -541,8 +541,8 @@ export default function Subcontractors() {
       payment_date: new Date().toISOString().split('T')[0],
       payment_method: 'InstaPay',
       reference_no: '',
-      notes: language === 'ar' 
-        ? `صرف مستخلص جاري رقم ${invoice.id} للمقاول` 
+      notes: language === 'ar'
+        ? `صرف مستخلص جاري رقم ${invoice.id} للمقاول`
         : `Disbursement for claim #${invoice.id}`,
       source_account: defaultSource
     });
@@ -955,7 +955,7 @@ export default function Subcontractors() {
                           </td>
                           <td className="px-8 py-4 text-center">
                             <span className={`px-3 py-1 rounded-xl text-[9px] font-black ${item.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                                item.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-100 text-slate-500'
+                              item.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-100 text-slate-500'
                               }`}>
                               {item.status || 'Not Started'}
                             </span>
@@ -1104,8 +1104,8 @@ export default function Subcontractors() {
                               </span>
                               {inv.remaining_amount !== undefined && (
                                 <span className="text-[10px] text-slate-450 font-normal mt-0.5">
-                                  {language === 'ar' 
-                                    ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} من أصل ${Number(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                  {language === 'ar'
+                                    ? `تم صرف: ${Number(inv.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} من أصل ${Number(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                     : `Paid: ${Number(inv.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${Number(inv.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                 </span>
                               )}
@@ -1160,803 +1160,801 @@ export default function Subcontractors() {
         </div>
       </div>
 
-    {/* Register Subcontractor Modal */}
-    {isSubModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsSubModalOpen(false)}></div>
-        <form onSubmit={submitSubcontractor} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-black uppercase text-slate-900 italic tracking-tighter">{cur.modalSub.title}</h2>
-            <button type="button" onClick={() => setIsSubModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.name}</label>
-              <input type="text" name="name" value={subForm.name} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.phone}</label>
-              <input type="text" name="phone" value={subForm.phone} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.project}</label>
-              <select
-                name="project_id"
-                value={subForm.project_id}
-                onChange={handleSubChange}
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-              >
-                <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
-              <input 
-                type="text" 
-                name="company" 
-                value={subForm.company} 
-                onChange={handleSubChange} 
-                disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
-                className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${
-                  activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
-                }`}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax ID / VAT</label>
-                <input type="text" name="tax_id" value={subForm.tax_id} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License No.</label>
-                <input type="text" name="license_number" value={subForm.license_number} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insurance Expiry Date</label>
-              <input type="date" name="insurance_expiry" value={subForm.insurance_expiry} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-            </div>
-          </div>
-          <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
-            {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{cur.modalSub.save}</>}
-          </button>
-        </form>
-      </div>
-    )
-  }
-
-  {/* Edit Subcontractor Modal */ }
-  {
-    isEditSubModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsEditSubModalOpen(false)}></div>
-        <form onSubmit={submitEditSubcontractor} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-black uppercase text-slate-900 italic tracking-tighter">
-              {language === 'ar' ? 'تعديل بيانات المقاول' : 'Edit Subcontractor'}
-            </h2>
-            <button type="button" onClick={() => setIsEditSubModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.name}</label>
-              <input type="text" name="name" value={editSubForm.name} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.phone}</label>
-              <input type="text" name="phone" value={editSubForm.phone} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.project}</label>
-              <select
-                name="project_id"
-                value={editSubForm.project_id}
-                onChange={handleEditSubChange}
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-              >
-                <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
-              <input 
-                type="text" 
-                name="company" 
-                value={editSubForm.company} 
-                onChange={handleEditSubChange} 
-                disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
-                className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${
-                  activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
-                }`}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax ID / VAT</label>
-                <input type="text" name="tax_id" value={editSubForm.tax_id} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License No.</label>
-                <input type="text" name="license_number" value={editSubForm.license_number} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insurance Expiry Date</label>
-              <input type="date" name="insurance_expiry" value={editSubForm.insurance_expiry} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-            </div>
-          </div>
-          <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
-            {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{language === 'ar' ? 'تحديث البيانات' : 'Update Data'}</>}
-          </button>
-        </form>
-      </div>
-    )
-  }
-
-  {/* Global Add BOQ Modal */ }
-  {
-    isBoqModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsBoqModalOpen(false)}></div>
-        <form onSubmit={handleBoqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? 'إضافة بند أعمال جديد (BOQ)' : 'Add New BOQ Item'}</h2>
-            <button type="button" onClick={() => setIsBoqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
-          </div>
-
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المشروع المستهدف *' : 'Target Project *'}</label>
-              <select
-                value={boqForm.project_name}
-                onChange={(e) => setBoqForm({ ...boqForm, project_name: e.target.value })}
-                required
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-              >
-                <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
-                {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-              </select>
+      {/* Register Subcontractor Modal */}
+      {isSubModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsSubModalOpen(false)}></div>
+          <form onSubmit={submitSubcontractor} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-black uppercase text-slate-900 italic tracking-tighter">{cur.modalSub.title}</h2>
+              <button type="button" onClick={() => setIsSubModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'اسم البند *' : 'Item Name *'}</label>
-                <input type="text" value={boqForm.item_name} onChange={(e) => setBoqForm({ ...boqForm, item_name: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.name}</label>
+                <input type="text" name="name" value={subForm.name} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'فئة المواد (التصنيف)' : 'Material Category'}</label>
-                <input type="text" value={boqForm.material_category} onChange={(e) => setBoqForm({ ...boqForm, material_category: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'وحدة القياس *' : 'UOM *'}</label>
-                <input type="text" value={boqForm.uom} onChange={(e) => setBoqForm({ ...boqForm, uom: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" placeholder="M3, LM" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.phone}</label>
+                <input type="text" name="phone" value={subForm.phone} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المقدرة *' : 'Est. Qty *'}</label>
-                <input type="number" value={boqForm.est_qty} onChange={(e) => setBoqForm({ ...boqForm, est_qty: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.project}</label>
+                <select
+                  name="project_id"
+                  value={subForm.project_id}
+                  onChange={handleSubChange}
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                >
+                  <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'سعر الوحدة المقدر *' : 'Est. Price *'}</label>
-                <input type="number" value={boqForm.est_unit_price} onChange={(e) => setBoqForm({ ...boqForm, est_unit_price: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
+                <input
+                  type="text"
+                  name="company"
+                  value={subForm.company}
+                  onChange={handleSubChange}
+                  disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                  className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                    }`}
+                />
               </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-2xl space-y-3">
-              <p className="text-[10px] font-black text-slate-500">{language === 'ar' ? '💰 تفصيل ميزانية التكاليف المقدرة:' : '💰 Estimated Cost Breakdown:'}</p>
-
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'الكمية التشغيلية للمواد' : 'Est. Material Qty'}</label>
-                  <input type="number" value={boqForm.est_material_qty} onChange={(e) => setBoqForm({ ...boqForm, est_material_qty: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax ID / VAT</label>
+                  <input type="text" name="tax_id" value={subForm.tax_id} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المواد التقديرية' : 'Est. Material Cost'}</label>
-                  <input type="number" value={boqForm.est_material_cost} onChange={(e) => setBoqForm({ ...boqForm, est_material_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة العمالة المقدرة' : 'Est. Labor Cost'}</label>
-                  <input type="number" value={boqForm.est_labor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_labor_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المقاولين التقديرية' : 'Est. Subcontractor Cost'}</label>
-                  <input type="number" value={boqForm.est_subcontractor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_subcontractor_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License No.</label>
+                  <input type="text" name="license_number" value={subForm.license_number} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
                 </div>
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insurance Expiry Date</label>
+                <input type="date" name="insurance_expiry" value={subForm.insurance_expiry} onChange={handleSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+              </div>
             </div>
-          </div>
+            <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
+              {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{cur.modalSub.save}</>}
+            </button>
+          </form>
+        </div>
+      )
+      }
 
-          <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
-            {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'حفظ البند بالمقايسة' : 'Save BOQ Item'}</>}
-          </button>
-        </form>
-      </div>
-    )
-  }
-
-  {/* Global Requisition Modal */ }
-  {
-    isReqModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsReqModalOpen(false)}></div>
-        <form onSubmit={handleReqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? '🏗️ صرف مواد للبند المعتمد' : '🏗️ Issue Materials to BOQ'}</h2>
-            <button type="button" onClick={() => setIsReqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
-          </div>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-xs font-bold text-blue-700">
-              {language === 'ar' ? `البند المستهدف: ${selectedBoq?.item_name} (${selectedBoq?.project_name})` : `Target BOQ: ${selectedBoq?.item_name} (${selectedBoq?.project_name})`}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المستودع (Warehouse) *' : 'Warehouse *'}</label>
-              <select
-                value={reqForm.warehouse_id}
-                onChange={(e) => setReqForm({ ...reqForm, warehouse_id: e.target.value, inventory_id: '' })}
-                required
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-              >
-                <option value="">-- {language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'} --</option>
-                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.location})</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الصنف المطلوب صرفه *' : 'Inventory Item *'}</label>
-              <select
-                value={reqForm.inventory_id}
-                onChange={(e) => setReqForm({ ...reqForm, inventory_id: e.target.value })}
-                required
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-              >
-                <option value="">-- {language === 'ar' ? 'اختر الصنف المخزني' : 'Select Inventory Item'} --</option>
-                {inventoryItems
-                  .filter(item => {
-                    if (!reqForm.warehouse_id) return true;
-                    const selectedWh = warehouses.find(w => w.id === parseInt(reqForm.warehouse_id));
-                    if (!selectedWh) return true;
-
-                    // Robust multi-criteria matching
-                    if (item.warehouse_id === selectedWh.id) return true;
-                    if (item.warehouse && item.warehouse.trim().toLowerCase() === selectedWh.name.trim().toLowerCase()) return true;
-
-                    // Semantic keyword fallback (e.g. Main Store vs المخزن الرئيسي)
-                    const isMainWhMatch = (
-                      (selectedWh.name.toLowerCase().includes('main') || selectedWh.name.includes('رئيسي')) &&
-                      (item.warehouse?.toLowerCase().includes('main') || item.warehouse?.includes('رئيسي'))
-                    );
-                    if (isMainWhMatch) return true;
-
-                    return false;
-                  })
-                  .map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.item_name || item.name} (المتاح: {item.remaining_qty} {item.uom})
-                    </option>
-                  ))
-                }
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المطلوب صرفها *' : 'Qty to Issue *'}</label>
-              <input
-                type="number"
-                step="any"
-                value={reqForm.qty}
-                onChange={(e) => setReqForm({ ...reqForm, qty: e.target.value })}
-                required
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-lg outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'ملاحظات / مستلم المواد' : 'Notes / Receiver Name'}</label>
-              <input
-                type="text"
-                value={reqForm.notes}
-                onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner"
-                placeholder={language === 'ar' ? 'اسم المهندس أو رقم التوزيع' : 'Engineer name / distribution ID'}
-              />
-            </div>
-          </div>
-
-          <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
-            {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'اعتماد وصرف المواد للمشروع' : 'Authorize & Issue Materials'}</>}
-          </button>
-        </form>
-      </div>
-    )
-  }
-
-  {/* 📝 Subcontractor Progress Claim Wizard Modal */ }
-  {
-    isClaimModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsClaimModalOpen(false)}></div>
-        <div className="bg-white w-full max-w-6xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[90vh]">
-
-          <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <div className="flex items-center gap-3">
-              <span className="p-2 bg-slate-900 text-white rounded-xl text-xl">📝</span>
-              <div className="text-right">
-                <h2 className="text-xl font-black text-slate-950">
-                  {language === 'ar' ? 'منشئ مستخلصات الباطن الذكي' : 'Engineering Subcontractor Claim Wizard'}
+      {/* Edit Subcontractor Modal */}
+      {
+        isEditSubModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsEditSubModalOpen(false)}></div>
+            <form onSubmit={submitEditSubcontractor} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black uppercase text-slate-900 italic tracking-tighter">
+                  {language === 'ar' ? 'تعديل بيانات المقاول' : 'Edit Subcontractor'}
                 </h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                  {language === 'ar' ? 'نظام الحسابات والكميات المزدوجة المتوافق مع معايير IFRS' : 'IFRS-Compliant Double-Entry Quantity System'}
-                </p>
+                <button type="button" onClick={() => setIsEditSubModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
               </div>
-            </div>
-            <button onClick={() => setIsClaimModalOpen(false)} className="text-slate-400 hover:text-slate-950 transition-colors text-2xl">✖</button>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Form Side */}
-            <form onSubmit={handleClaimSubmit} className="lg:col-span-7 space-y-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Subcontractor Select */}
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'مقاول الباطن المستهدف *' : 'Target Subcontractor *'}
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.name}</label>
+                  <input type="text" name="name" value={editSubForm.name} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.phone}</label>
+                  <input type="text" name="phone" value={editSubForm.phone} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.project}</label>
                   <select
-                    value={claimForm.subcontractor_id}
-                    onChange={(e) => handleClaimSubcontractorChange(e.target.value)}
-                    required
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner cursor-pointer"
+                    name="project_id"
+                    value={editSubForm.project_id}
+                    onChange={handleEditSubChange}
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
                   >
-                    <option value="">-- {language === 'ar' ? 'اختر مقاول الباطن' : 'Select Subcontractor'} --</option>
-                    {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name} ({s.company || 'Private'})</option>)}
+                    <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
-
-                {/* Contract Select */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'عقد المقاولة المسند *' : 'Active Contract *'}
-                  </label>
-                  <select
-                    value={claimForm.contract_id}
-                    onChange={(e) => handleClaimFieldChange('contract_id', e.target.value)}
-                    required
-                    disabled={!claimForm.subcontractor_id}
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
-                  >
-                    <option value="">-- {language === 'ar' ? 'اختر العقد النشط' : 'Select Contract'} --</option>
-                    {subcontractorIntelligence.contracts.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.contract_number} (قيمة: {Number(c.total_value).toLocaleString()} LCY)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* BOQ Item Select */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'بند الأعمال الهندسي *' : 'BOQ Work Item *'}
-                  </label>
-                  <select
-                    value={claimForm.sub_item_id}
-                    onChange={(e) => handleClaimFieldChange('sub_item_id', e.target.value)}
-                    required
-                    disabled={!claimForm.contract_id}
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
-                  >
-                    <option value="">-- {language === 'ar' ? 'اختر بند الأعمال' : 'Select BOQ Item'} --</option>
-                    {subcontractorIntelligence.boqs.map(b => (
-                      <option key={b.boq_id} value={b.boq_id}>
-                        {b.item_name} ({b.assigned_qty} {b.uom} | فئة: {Number(b.sub_unit_price).toLocaleString()} LCY)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Quantity Executed */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'الكمية المنفذة الحالية *' : 'Current Executed Qty *'}
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{cur.modalSub.company}</label>
                   <input
-                    type="number"
-                    step="any"
-                    required
-                    disabled={!claimForm.sub_item_id}
-                    value={claimForm.curr_qty}
-                    onChange={(e) => handleClaimFieldChange('curr_qty', e.target.value)}
-                    placeholder="0.00"
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center disabled:opacity-50"
+                    type="text"
+                    name="company"
+                    value={editSubForm.company}
+                    onChange={handleEditSubChange}
+                    disabled={activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies'}
+                    className={`w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner ${activeCompany && activeCompany !== 'كل الشركات' && activeCompany !== 'All Companies' ? 'pointer-events-none opacity-80' : ''
+                      }`}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Materials Deduction */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'خصم خامات مجهزة (المقاول الرئيسي)' : 'Materials Supplied Deduction'}
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={claimForm.material_deduction}
-                    onChange={(e) => handleClaimFieldChange('material_deduction', e.target.value)}
-                    placeholder="0.00 LCY"
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax ID / VAT</label>
+                    <input type="text" name="tax_id" value={editSubForm.tax_id} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License No.</label>
+                    <input type="text" name="license_number" value={editSubForm.license_number} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
                 </div>
-
-                {/* Tax Deduction */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'خصم ضرائب وأعباء استقطاع' : 'Tax / Withholding Deduction'}
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={claimForm.tax_deduction}
-                    onChange={(e) => handleClaimFieldChange('tax_deduction', e.target.value)}
-                    placeholder="0.00 LCY"
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
-                  />
-                </div>
-
-                {/* Date Input */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    {language === 'ar' ? 'تاريخ المستخلص' : 'Claim Date'}
-                  </label>
-                  <input
-                    type="date"
-                    value={claimForm.date}
-                    onChange={(e) => handleClaimFieldChange('date', e.target.value)}
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
-                  />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insurance Expiry Date</label>
+                  <input type="date" name="insurance_expiry" value={editSubForm.insurance_expiry} onChange={handleEditSubChange} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
                 </div>
               </div>
-
-              {/* Description Statement */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                  {language === 'ar' ? 'البيان الهندسي للمستخلص *' : 'Engineering Description *'}
-                </label>
-                <textarea
-                  required
-                  value={claimForm.description}
-                  onChange={(e) => handleClaimFieldChange('description', e.target.value)}
-                  rows="2"
-                  placeholder={language === 'ar' ? 'ادخل تفاصيل الأعمال المنجزة والنسب الهندسية...' : 'Describe the progress of works...'}
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none"
-                ></textarea>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmittingClaim}
-                className="w-full py-5 bg-slate-900 hover:bg-slate-950 text-white rounded-[2rem] font-black text-sm transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {isSubmittingClaim ? (
-                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <span>🚀</span>
-                    {language === 'ar' ? 'تسجيل المستخلص واعتماد التوازن المالي' : 'Register Claim & Commit Ledger'}
-                  </>
-                )}
+              <button type="submit" disabled={isSubmitting} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : <>{language === 'ar' ? 'تحديث البيانات' : 'Update Data'}</>}
               </button>
             </form>
-
-            {/* Real-time Calculation Waterfall & IFRS Double Entry Preview */}
-            <div className="lg:col-span-5 flex flex-col gap-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-
-              {/* Real-time Cascade Container */}
-              <div className="bg-slate-950 text-white rounded-[2.5rem] p-8 border border-white/10 relative overflow-hidden flex flex-col justify-between flex-1 min-h-[350px]">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-amber-500/5"></div>
-
-                <div className="relative z-10 space-y-6">
-                  <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      {language === 'ar' ? 'شلال تصفية المستخلص الهندسي' : 'Progress claim waterfall'}
-                    </span>
-                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-bold">
-                      {language === 'ar' ? 'احتساب تلقائي' : 'Auto Calculate'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Subtotal metrics */}
-                    <div className="flex justify-between text-xs font-bold text-slate-400">
-                      <span>{language === 'ar' ? 'الكمية السابقة المنفذة:' : 'Previous Executed Qty:'}</span>
-                      <span className="font-mono text-white">{claimForm.prev_qty}</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-400">
-                      <span>{language === 'ar' ? 'الكمية المنفذة الحالية:' : 'Current Executed Qty:'}</span>
-                      <span className="font-mono text-white">{claimForm.curr_qty || 0}</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-400 border-b border-white/5 pb-3">
-                      <span>{language === 'ar' ? 'نسبة الإنجاز الإجمالية:' : 'Total Progress Percent:'}</span>
-                      <span className="font-mono text-indigo-400">{claimForm.progress_percent || 0}%</span>
-                    </div>
-
-                    {/* Financials waterfall */}
-                    <div className="flex justify-between text-sm font-black text-slate-200">
-                      <span>{language === 'ar' ? 'قيمة الأعمال الإجمالية (Gross):' : 'Total Work Value (Gross):'}</span>
-                      <span className="font-mono text-slate-100">{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-rose-400">
-                      <span>{language === 'ar' ? '(-) استقطاع ضمان أعمال (تأمين 5%):' : '(-) Retention Guarantee (5%):'}</span>
-                      <span className="font-mono">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-amber-500">
-                      <span>{language === 'ar' ? '(-) استرداد دفعة مقدمة (10%):' : '(-) Advance Recovery (10%):'}</span>
-                      <span className="font-mono">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-400">
-                      <span>{language === 'ar' ? '(-) خصم خامات ومواد مجهزة:' : '(-) Materials Supplied Offset:'}</span>
-                      <span className="font-mono">-{Number(claimForm.material_deduction || 0).toLocaleString()} LCY</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-400">
-                      <span>{language === 'ar' ? '(-) أعباء وضرائب الخصم:' : '(-) Tax & WHT Withheld:'}</span>
-                      <span className="font-mono">-{Number(claimForm.tax_deduction || 0).toLocaleString()} LCY</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative z-10 border-t border-white/5 pt-6 mt-6">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                    {language === 'ar' ? 'صافي مستحق الصرف (Net Payable)' : 'Net Amount Payable'}
-                  </span>
-                  <div className="text-3xl font-black text-emerald-400 font-mono tracking-tighter">
-                    {Number(claimForm.net_amount).toLocaleString()} <span className="text-xs text-white opacity-40 font-sans">LCY</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* IFRS Entry Preview Widget */}
-              <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-200 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <span>📊</span> {language === 'ar' ? 'معاينة القيد المزدوج المعياري (IFRS)' : 'IFRS Ledger Entry Preview'}
-                  </span>
-                  <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                    {language === 'ar' ? 'متوازن' : 'Balanced'}
-                  </span>
-                </div>
-
-                <div className="space-y-2.5 text-xs">
-                  {/* Debit Line */}
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex flex-col">
-                      <span className="font-black text-indigo-600">{language === 'ar' ? 'Debit (مدين)' : 'Debit'}</span>
-                      <span className="text-[10px] font-bold text-slate-600">تكلفة مقاولي الباطن (COGS)</span>
-                    </div>
-                    <span className="font-mono font-black text-slate-900">+{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
-                  </div>
-
-                  {/* Credit Line 1 */}
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex flex-col">
-                      <span className="font-black text-emerald-600">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
-                      <span className="text-[10px] font-bold text-slate-600">مقاولي الباطن (Accounts Payable)</span>
-                    </div>
-                    <span className="font-mono font-black text-slate-900">-{Number(claimForm.net_amount).toLocaleString()} LCY</span>
-                  </div>
-
-                  {/* Credit Line 2 (Retention) */}
-                  {parseFloat(claimForm.retention_deduction) > 0 && (
-                    <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-                      <div className="flex flex-col">
-                        <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
-                        <span className="text-[10px] font-bold text-slate-600">تأمينات مستقطعة لجهات خارجية</span>
-                      </div>
-                      <span className="font-mono font-black text-slate-900">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
-                    </div>
-                  )}
-
-                  {/* Credit Line 3 (Advance Recovery) */}
-                  {parseFloat(claimForm.dp_recovery) > 0 && (
-                    <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-                      <div className="flex flex-col">
-                        <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
-                        <span className="text-[10px] font-bold text-slate-600">دفعات مقدمة لمقاولي الباطن</span>
-                      </div>
-                      <span className="font-mono font-black text-slate-900">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
           </div>
+        )
+      }
 
-        </div>
-      </div>
-    )
-  }
+      {/* Global Add BOQ Modal */}
+      {
+        isBoqModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsBoqModalOpen(false)}></div>
+            <form onSubmit={handleBoqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? 'إضافة بند أعمال جديد (BOQ)' : 'Add New BOQ Item'}</h2>
+                <button type="button" onClick={() => setIsBoqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+              </div>
 
-  {/* 🖨️ Printable Engineering Payment Certificate Modal */ }
-  {
-    selectedPrintInvoice && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-slate-900/60 backdrop-blur-xl">
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المشروع المستهدف *' : 'Target Project *'}</label>
+                  <select
+                    value={boqForm.project_name}
+                    onChange={(e) => setBoqForm({ ...boqForm, project_name: e.target.value })}
+                    required
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                  >
+                    <option value="">-- {language === 'ar' ? 'اختر المشروع' : 'Select Project'} --</option>
+                    {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                </div>
 
-        <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-hidden">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'اسم البند *' : 'Item Name *'}</label>
+                    <input type="text" value={boqForm.item_name} onChange={(e) => setBoqForm({ ...boqForm, item_name: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'فئة المواد (التصنيف)' : 'Material Category'}</label>
+                    <input type="text" value={boqForm.material_category} onChange={(e) => setBoqForm({ ...boqForm, material_category: e.target.value })} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" />
+                  </div>
+                </div>
 
-          {/* Modal Actions Bar (Non-Printable) */}
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 no-print">
-            <span className="text-sm font-black text-slate-950 flex items-center gap-2">
-              <span>🖨️</span> {language === 'ar' ? 'أمر طباعة وتوجيه المستخلص الهندسي' : 'Print Subcontractor Progress Certificate'}
-            </span>
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 active:scale-95 transition-all"
-              >
-                {language === 'ar' ? '🖨️ طباعة المستخلص' : 'Print Certificate'}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'وحدة القياس *' : 'UOM *'}</label>
+                    <input type="text" value={boqForm.uom} onChange={(e) => setBoqForm({ ...boqForm, uom: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" placeholder="M3, LM" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المقدرة *' : 'Est. Qty *'}</label>
+                    <input type="number" value={boqForm.est_qty} onChange={(e) => setBoqForm({ ...boqForm, est_qty: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'سعر الوحدة المقدر *' : 'Est. Price *'}</label>
+                    <input type="number" value={boqForm.est_unit_price} onChange={(e) => setBoqForm({ ...boqForm, est_unit_price: e.target.value })} required className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center" />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl space-y-3">
+                  <p className="text-[10px] font-black text-slate-500">{language === 'ar' ? '💰 تفصيل ميزانية التكاليف المقدرة:' : '💰 Estimated Cost Breakdown:'}</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'الكمية التشغيلية للمواد' : 'Est. Material Qty'}</label>
+                      <input type="number" value={boqForm.est_material_qty} onChange={(e) => setBoqForm({ ...boqForm, est_material_qty: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المواد التقديرية' : 'Est. Material Cost'}</label>
+                      <input type="number" value={boqForm.est_material_cost} onChange={(e) => setBoqForm({ ...boqForm, est_material_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة العمالة المقدرة' : 'Est. Labor Cost'}</label>
+                      <input type="number" value={boqForm.est_labor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_labor_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 block">{language === 'ar' ? 'تكلفة المقاولين التقديرية' : 'Est. Subcontractor Cost'}</label>
+                      <input type="number" value={boqForm.est_subcontractor_cost} onChange={(e) => setBoqForm({ ...boqForm, est_subcontractor_cost: e.target.value })} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'حفظ البند بالمقايسة' : 'Save BOQ Item'}</>}
               </button>
-              <button
-                onClick={() => setSelectedPrintInvoice(null)}
-                className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-black active:scale-95 transition-all"
-              >
-                {language === 'ar' ? 'إغلاق' : 'Close'}
+            </form>
+          </div>
+        )
+      }
+
+      {/* Global Requisition Modal */}
+      {
+        isReqModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsReqModalOpen(false)}></div>
+            <form onSubmit={handleReqSubmit} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-white/20 animate-in zoom-in-95 duration-300 text-right">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-slate-900">{language === 'ar' ? '🏗️ صرف مواد للبند المعتمد' : '🏗️ Issue Materials to BOQ'}</h2>
+                <button type="button" onClick={() => setIsReqModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-xs font-bold text-blue-700">
+                  {language === 'ar' ? `البند المستهدف: ${selectedBoq?.item_name} (${selectedBoq?.project_name})` : `Target BOQ: ${selectedBoq?.item_name} (${selectedBoq?.project_name})`}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'المستودع (Warehouse) *' : 'Warehouse *'}</label>
+                  <select
+                    value={reqForm.warehouse_id}
+                    onChange={(e) => setReqForm({ ...reqForm, warehouse_id: e.target.value, inventory_id: '' })}
+                    required
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                  >
+                    <option value="">-- {language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'} --</option>
+                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.location})</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الصنف المطلوب صرفه *' : 'Inventory Item *'}</label>
+                  <select
+                    value={reqForm.inventory_id}
+                    onChange={(e) => setReqForm({ ...reqForm, inventory_id: e.target.value })}
+                    required
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                  >
+                    <option value="">-- {language === 'ar' ? 'اختر الصنف المخزني' : 'Select Inventory Item'} --</option>
+                    {inventoryItems
+                      .filter(item => {
+                        if (!reqForm.warehouse_id) return true;
+                        const selectedWh = warehouses.find(w => w.id === parseInt(reqForm.warehouse_id));
+                        if (!selectedWh) return true;
+
+                        // Robust multi-criteria matching
+                        if (item.warehouse_id === selectedWh.id) return true;
+                        if (item.warehouse && item.warehouse.trim().toLowerCase() === selectedWh.name.trim().toLowerCase()) return true;
+
+                        // Semantic keyword fallback (e.g. Main Store vs المخزن الرئيسي)
+                        const isMainWhMatch = (
+                          (selectedWh.name.toLowerCase().includes('main') || selectedWh.name.includes('رئيسي')) &&
+                          (item.warehouse?.toLowerCase().includes('main') || item.warehouse?.includes('رئيسي'))
+                        );
+                        if (isMainWhMatch) return true;
+
+                        return false;
+                      })
+                      .map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.item_name || item.name} (المتاح: {item.remaining_qty} {item.uom})
+                        </option>
+                      ))
+                    }
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'الكمية المطلوب صرفها *' : 'Qty to Issue *'}</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={reqForm.qty}
+                    onChange={(e) => setReqForm({ ...reqForm, qty: e.target.value })}
+                    required
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-lg outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{language === 'ar' ? 'ملاحظات / مستلم المواد' : 'Notes / Receiver Name'}</label>
+                  <input
+                    type="text"
+                    value={reqForm.notes}
+                    onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner"
+                    placeholder={language === 'ar' ? 'اسم المهندس أو رقم التوزيع' : 'Engineer name / distribution ID'}
+                  />
+                </div>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-sm hover:bg-slate-800 transition-all shadow-2xl active:scale-[0.98] mt-4">
+                {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div> : <>{language === 'ar' ? 'اعتماد وصرف المواد للمشروع' : 'Authorize & Issue Materials'}</>}
               </button>
+            </form>
+          </div>
+        )
+      }
+
+      {/* 📝 Subcontractor Progress Claim Wizard Modal */}
+      {
+        isClaimModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsClaimModalOpen(false)}></div>
+            <div className="bg-white w-full max-w-6xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[90vh]">
+
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <span className="p-2 bg-slate-900 text-white rounded-xl text-xl">📝</span>
+                  <div className="text-right">
+                    <h2 className="text-xl font-black text-slate-950">
+                      {language === 'ar' ? 'منشئ مستخلصات الباطن الذكي' : 'Engineering Subcontractor Claim Wizard'}
+                    </h2>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                      {language === 'ar' ? 'نظام الحسابات والكميات المزدوجة المتوافق مع معايير IFRS' : 'IFRS-Compliant Double-Entry Quantity System'}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setIsClaimModalOpen(false)} className="text-slate-400 hover:text-slate-950 transition-colors text-2xl">✖</button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Form Side */}
+                <form onSubmit={handleClaimSubmit} className="lg:col-span-7 space-y-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Subcontractor Select */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'مقاول الباطن المستهدف *' : 'Target Subcontractor *'}
+                      </label>
+                      <select
+                        value={claimForm.subcontractor_id}
+                        onChange={(e) => handleClaimSubcontractorChange(e.target.value)}
+                        required
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner cursor-pointer"
+                      >
+                        <option value="">-- {language === 'ar' ? 'اختر مقاول الباطن' : 'Select Subcontractor'} --</option>
+                        {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name} ({s.company || 'Private'})</option>)}
+                      </select>
+                    </div>
+
+                    {/* Contract Select */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'عقد المقاولة المسند *' : 'Active Contract *'}
+                      </label>
+                      <select
+                        value={claimForm.contract_id}
+                        onChange={(e) => handleClaimFieldChange('contract_id', e.target.value)}
+                        required
+                        disabled={!claimForm.subcontractor_id}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
+                      >
+                        <option value="">-- {language === 'ar' ? 'اختر العقد النشط' : 'Select Contract'} --</option>
+                        {subcontractorIntelligence.contracts.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.contract_number} (قيمة: {Number(c.total_value).toLocaleString()} LCY)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* BOQ Item Select */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'بند الأعمال الهندسي *' : 'BOQ Work Item *'}
+                      </label>
+                      <select
+                        value={claimForm.sub_item_id}
+                        onChange={(e) => handleClaimFieldChange('sub_item_id', e.target.value)}
+                        required
+                        disabled={!claimForm.contract_id}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner disabled:opacity-50 cursor-pointer"
+                      >
+                        <option value="">-- {language === 'ar' ? 'اختر بند الأعمال' : 'Select BOQ Item'} --</option>
+                        {subcontractorIntelligence.boqs.map(b => (
+                          <option key={b.boq_id} value={b.boq_id}>
+                            {b.item_name} ({b.assigned_qty} {b.uom} | فئة: {Number(b.sub_unit_price).toLocaleString()} LCY)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Quantity Executed */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'الكمية المنفذة الحالية *' : 'Current Executed Qty *'}
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        disabled={!claimForm.sub_item_id}
+                        value={claimForm.curr_qty}
+                        onChange={(e) => handleClaimFieldChange('curr_qty', e.target.value)}
+                        placeholder="0.00"
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Materials Deduction */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'خصم خامات مجهزة (المقاول الرئيسي)' : 'Materials Supplied Deduction'}
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={claimForm.material_deduction}
+                        onChange={(e) => handleClaimFieldChange('material_deduction', e.target.value)}
+                        placeholder="0.00 LCY"
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                      />
+                    </div>
+
+                    {/* Tax Deduction */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'خصم ضرائب وأعباء استقطاع' : 'Tax / Withholding Deduction'}
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={claimForm.tax_deduction}
+                        onChange={(e) => handleClaimFieldChange('tax_deduction', e.target.value)}
+                        placeholder="0.00 LCY"
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                      />
+                    </div>
+
+                    {/* Date Input */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        {language === 'ar' ? 'تاريخ المستخلص' : 'Claim Date'}
+                      </label>
+                      <input
+                        type="date"
+                        value={claimForm.date}
+                        onChange={(e) => handleClaimFieldChange('date', e.target.value)}
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description Statement */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {language === 'ar' ? 'البيان الهندسي للمستخلص *' : 'Engineering Description *'}
+                    </label>
+                    <textarea
+                      required
+                      value={claimForm.description}
+                      onChange={(e) => handleClaimFieldChange('description', e.target.value)}
+                      rows="2"
+                      placeholder={language === 'ar' ? 'ادخل تفاصيل الأعمال المنجزة والنسب الهندسية...' : 'Describe the progress of works...'}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none"
+                    ></textarea>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingClaim}
+                    className="w-full py-5 bg-slate-900 hover:bg-slate-950 text-white rounded-[2rem] font-black text-sm transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {isSubmittingClaim ? (
+                      <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <span>🚀</span>
+                        {language === 'ar' ? 'تسجيل المستخلص واعتماد التوازن المالي' : 'Register Claim & Commit Ledger'}
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Real-time Calculation Waterfall & IFRS Double Entry Preview */}
+                <div className="lg:col-span-5 flex flex-col gap-6 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+
+                  {/* Real-time Cascade Container */}
+                  <div className="bg-slate-950 text-white rounded-[2.5rem] p-8 border border-white/10 relative overflow-hidden flex flex-col justify-between flex-1 min-h-[350px]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-amber-500/5"></div>
+
+                    <div className="relative z-10 space-y-6">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          {language === 'ar' ? 'شلال تصفية المستخلص الهندسي' : 'Progress claim waterfall'}
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-bold">
+                          {language === 'ar' ? 'احتساب تلقائي' : 'Auto Calculate'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* Subtotal metrics */}
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>{language === 'ar' ? 'الكمية السابقة المنفذة:' : 'Previous Executed Qty:'}</span>
+                          <span className="font-mono text-white">{claimForm.prev_qty}</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>{language === 'ar' ? 'الكمية المنفذة الحالية:' : 'Current Executed Qty:'}</span>
+                          <span className="font-mono text-white">{claimForm.curr_qty || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-slate-400 border-b border-white/5 pb-3">
+                          <span>{language === 'ar' ? 'نسبة الإنجاز الإجمالية:' : 'Total Progress Percent:'}</span>
+                          <span className="font-mono text-indigo-400">{claimForm.progress_percent || 0}%</span>
+                        </div>
+
+                        {/* Financials waterfall */}
+                        <div className="flex justify-between text-sm font-black text-slate-200">
+                          <span>{language === 'ar' ? 'قيمة الأعمال الإجمالية (Gross):' : 'Total Work Value (Gross):'}</span>
+                          <span className="font-mono text-slate-100">{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-rose-400">
+                          <span>{language === 'ar' ? '(-) استقطاع ضمان أعمال (تأمين 5%):' : '(-) Retention Guarantee (5%):'}</span>
+                          <span className="font-mono">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-amber-500">
+                          <span>{language === 'ar' ? '(-) استرداد دفعة مقدمة (10%):' : '(-) Advance Recovery (10%):'}</span>
+                          <span className="font-mono">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>{language === 'ar' ? '(-) خصم خامات ومواد مجهزة:' : '(-) Materials Supplied Offset:'}</span>
+                          <span className="font-mono">-{Number(claimForm.material_deduction || 0).toLocaleString()} LCY</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>{language === 'ar' ? '(-) أعباء وضرائب الخصم:' : '(-) Tax & WHT Withheld:'}</span>
+                          <span className="font-mono">-{Number(claimForm.tax_deduction || 0).toLocaleString()} LCY</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 border-t border-white/5 pt-6 mt-6">
+                      <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                        {language === 'ar' ? 'صافي مستحق الصرف (Net Payable)' : 'Net Amount Payable'}
+                      </span>
+                      <div className="text-3xl font-black text-emerald-400 font-mono tracking-tighter">
+                        {Number(claimForm.net_amount).toLocaleString()} <span className="text-xs text-white opacity-40 font-sans">LCY</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* IFRS Entry Preview Widget */}
+                  <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-200 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <span>📊</span> {language === 'ar' ? 'معاينة القيد المزدوج المعياري (IFRS)' : 'IFRS Ledger Entry Preview'}
+                      </span>
+                      <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                        {language === 'ar' ? 'متوازن' : 'Balanced'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs">
+                      {/* Debit Line */}
+                      <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-black text-indigo-600">{language === 'ar' ? 'Debit (مدين)' : 'Debit'}</span>
+                          <span className="text-[10px] font-bold text-slate-600">تكلفة مقاولي الباطن (COGS)</span>
+                        </div>
+                        <span className="font-mono font-black text-slate-900">+{Number(claimForm.gross_amount).toLocaleString()} LCY</span>
+                      </div>
+
+                      {/* Credit Line 1 */}
+                      <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-black text-emerald-600">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                          <span className="text-[10px] font-bold text-slate-600">مقاولي الباطن (Accounts Payable)</span>
+                        </div>
+                        <span className="font-mono font-black text-slate-900">-{Number(claimForm.net_amount).toLocaleString()} LCY</span>
+                      </div>
+
+                      {/* Credit Line 2 (Retention) */}
+                      {parseFloat(claimForm.retention_deduction) > 0 && (
+                        <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                            <span className="text-[10px] font-bold text-slate-600">تأمينات مستقطعة لجهات خارجية</span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900">-{Number(claimForm.retention_deduction).toLocaleString()} LCY</span>
+                        </div>
+                      )}
+
+                      {/* Credit Line 3 (Advance Recovery) */}
+                      {parseFloat(claimForm.dp_recovery) > 0 && (
+                        <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-500">{language === 'ar' ? 'Credit (دائن)' : 'Credit'}</span>
+                            <span className="text-[10px] font-bold text-slate-600">دفعات مقدمة لمقاولي الباطن</span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900">-{Number(claimForm.dp_recovery).toLocaleString()} LCY</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
             </div>
           </div>
+        )
+      }
 
-          {/* Printable Paper Mockup Content Area */}
-          <div className="flex-1 overflow-y-auto p-12 bg-white font-sans" id="printable-certificate" dir="rtl">
-            <div className="space-y-10">
+      {/* 🖨️ Printable Engineering Payment Certificate Modal */}
+      {
+        selectedPrintInvoice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-slate-900/60 backdrop-blur-xl">
 
-              {/* Certificate Header */}
-              <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
-                <div className="text-right">
-                  <h1 className="text-3xl font-black text-slate-950 tracking-tighter">{selectedPrintInvoice.company || localStorage.getItem('active_company') || 'شركة تيد كابيتال للمقاولات العامة'}</h1>
-                  <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">TED CAPITAL ERP | IFRS DOUBLE-ENTRY SYSTEM</p>
-                  <div className="text-xs text-slate-600 space-y-0.5 mt-4 font-bold">
-                    <div>المكتب الرئيسي: القاهرة الجديدة، التجمع الخامس</div>
-                    <div>الهاتف: +20 2 2489 1234</div>
-                    <div>الرقم الضريبي: 489-125-987</div>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <div className="w-16 h-16 bg-slate-950 text-white rounded-2xl flex items-center justify-center text-3xl font-bold font-sans">PMP</div>
-                  <div className="mt-4 text-xs font-black text-slate-900 space-y-1 text-right">
-                    <div className="bg-slate-900 text-white px-3 py-1 rounded text-center text-[10px] font-black uppercase tracking-wider">مستخلص أعمال مقاولة باطن جاري</div>
-                    <div>رقم المستخلص: <span className="font-mono text-sm">#INV-{selectedPrintInvoice.id}</span></div>
-                    <div>التاريخ: <span className="font-mono">{new Date(selectedPrintInvoice.date || selectedPrintInvoice.created_at).toLocaleDateString('ar-EG')}</span></div>
-                  </div>
-                </div>
-              </div>
+            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col border border-white/20 animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-hidden">
 
-              {/* Subcontractor & Contract Metadata Grid */}
-              <div className="grid grid-cols-2 gap-8 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-right">
-                <div className="space-y-2 text-xs font-bold text-slate-700">
-                  <div><span className="text-slate-400 ml-2">المشروع المستهدف:</span> {selectedPrintInvoice.project_name || 'العام'}</div>
-                  <div><span className="text-slate-400 ml-2">مقاول الباطن:</span> {selectedPrintInvoice.subcontractor_name || 'غير محدد'}</div>
-                  <div><span className="text-slate-400 ml-2">طبيعة الأعمال:</span> {selectedPrintInvoice.description || 'مستخلص أعمال جارية'}</div>
-                </div>
-                <div className="space-y-2 text-xs font-bold text-slate-700 text-left" dir="ltr">
-                  <div>Contract Ref: <span className="font-mono">{selectedPrintInvoice.contract_id ? `#CNT-${selectedPrintInvoice.contract_id}` : 'General'}</span></div>
-                  <div>Status: <span className="font-mono uppercase text-blue-600">{selectedPrintInvoice.status}</span></div>
-                  <div>Currency: <span className="font-mono">LCY (EGP)</span></div>
+              {/* Modal Actions Bar (Non-Printable) */}
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 no-print">
+                <span className="text-sm font-black text-slate-950 flex items-center gap-2">
+                  <span>🖨️</span> {language === 'ar' ? 'أمر طباعة وتوجيه المستخلص الهندسي' : 'Print Subcontractor Progress Certificate'}
+                </span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                  >
+                    {language === 'ar' ? '🖨️ طباعة المستخلص' : 'Print Certificate'}
+                  </button>
+                  <button
+                    onClick={() => setSelectedPrintInvoice(null)}
+                    className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-black active:scale-95 transition-all"
+                  >
+                    {language === 'ar' ? 'إغلاق' : 'Close'}
+                  </button>
                 </div>
               </div>
 
-              {/* Quantities & Pricing Ledger Table */}
-              <table className="w-full border-collapse border border-slate-300 text-xs text-right">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-900 font-black">
-                    <th className="border border-slate-300 px-4 py-3 text-center">البيان ومواصفة البند</th>
-                    <th className="border border-slate-300 px-4 py-3 text-center">الوحدة</th>
-                    <th className="border border-slate-300 px-4 py-3 text-center">الكمية السابقة</th>
-                    <th className="border border-slate-300 px-4 py-3 text-center">الكمية الحالية</th>
-                    <th className="border border-slate-300 px-4 py-3 text-center">الكمية الإجمالية</th>
-                    <th className="border border-slate-300 px-4 py-3 text-center">القيمة الإجمالية</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="text-slate-800 font-bold">
-                    <td className="border border-slate-300 px-4 py-4 text-center">{selectedPrintInvoice.description || 'أعمال هندسية مقاولة باطن'}</td>
-                    <td className="border border-slate-300 px-4 py-4 text-center">متر طولي / LM</td>
-                    <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number(selectedPrintInvoice.prev_qty || 0).toLocaleString()}</td>
-                    <td className="border border-slate-300 px-4 py-4 text-center font-mono text-indigo-600">{Number(selectedPrintInvoice.curr_qty || 0).toLocaleString()}</td>
-                    <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number((parseFloat(selectedPrintInvoice.prev_qty) || 0) + (parseFloat(selectedPrintInvoice.curr_qty) || 0)).toLocaleString()}</td>
-                    <td className="border border-slate-300 px-4 py-4 text-left font-mono">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</td>
-                  </tr>
-                </tbody>
-              </table>
+              {/* Printable Paper Mockup Content Area */}
+              <div className="flex-1 overflow-y-auto p-12 bg-white font-sans" id="printable-certificate" dir="rtl">
+                <div className="space-y-10">
 
-              {/* Deductions Waterfall Cascade */}
-              <div className="w-full max-w-md mr-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3 text-right">
-                <h3 className="text-xs font-black text-slate-900 border-b border-slate-300 pb-2 mb-3 flex items-center justify-between">
-                  <span>شلال التسويات والاستقطاعات المالية</span>
-                  <span className="text-[10px] text-slate-400 font-bold font-mono">FINANCIAL CASCADE</span>
-                </h3>
-
-                <div className="flex justify-between text-xs font-bold text-slate-700">
-                  <span>إجمالي قيمة الأعمال الحالية المنفذة (Gross):</span>
-                  <span className="font-mono text-slate-900">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
-                </div>
-
-                {parseFloat(selectedPrintInvoice.retention_deduction) > 0 && (
-                  <div className="flex justify-between text-xs font-bold text-rose-600">
-                    <span>(-) استقطاع ضمان أعمال نهائي (5%):</span>
-                    <span className="font-mono">-{Number(selectedPrintInvoice.retention_deduction).toLocaleString()} LCY</span>
+                  {/* Certificate Header */}
+                  <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
+                    <div className="text-right">
+                      <h1 className="text-3xl font-black text-slate-950 tracking-tighter">{selectedPrintInvoice.company || localStorage.getItem('active_company') || 'شركة تيد كابيتال للمقاولات العامة'}</h1>
+                      <p className="text-xs text-slate-400 font-bold tracking-widest mt-1">TED CAPITAL ERP | IFRS DOUBLE-ENTRY SYSTEM</p>
+                      <div className="text-xs text-slate-600 space-y-0.5 mt-4 font-bold">
+                        <div>المكتب الرئيسي: القاهرة الجديدة، التجمع الخامس</div>
+                        <div>الهاتف: +20 2 2489 1234</div>
+                        <div>الرقم الضريبي: 489-125-987</div>
+                      </div>
+                    </div>
+                    <div className="text-left">
+                      <div className="w-16 h-16 bg-slate-950 text-white rounded-2xl flex items-center justify-center text-3xl font-bold font-sans">PMP</div>
+                      <div className="mt-4 text-xs font-black text-slate-900 space-y-1 text-right">
+                        <div className="bg-slate-900 text-white px-3 py-1 rounded text-center text-[10px] font-black uppercase tracking-wider">مستخلص أعمال مقاولة باطن جاري</div>
+                        <div>رقم المستخلص: <span className="font-mono text-sm">#INV-{selectedPrintInvoice.id}</span></div>
+                        <div>التاريخ: <span className="font-mono">{new Date(selectedPrintInvoice.date || selectedPrintInvoice.created_at).toLocaleDateString('ar-EG')}</span></div>
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                {parseFloat(selectedPrintInvoice.dp_recovery) > 0 && (
-                  <div className="flex justify-between text-xs font-bold text-amber-600">
-                    <span>(-) استرداد دفعة مقدمة مستلمة (10%):</span>
-                    <span className="font-mono">-{Number(selectedPrintInvoice.dp_recovery).toLocaleString()} LCY</span>
+                  {/* Subcontractor & Contract Metadata Grid */}
+                  <div className="grid grid-cols-2 gap-8 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-right">
+                    <div className="space-y-2 text-xs font-bold text-slate-700">
+                      <div><span className="text-slate-400 ml-2">المشروع المستهدف:</span> {selectedPrintInvoice.project_name || 'العام'}</div>
+                      <div><span className="text-slate-400 ml-2">مقاول الباطن:</span> {selectedPrintInvoice.subcontractor_name || 'غير محدد'}</div>
+                      <div><span className="text-slate-400 ml-2">طبيعة الأعمال:</span> {selectedPrintInvoice.description || 'مستخلص أعمال جارية'}</div>
+                    </div>
+                    <div className="space-y-2 text-xs font-bold text-slate-700 text-left" dir="ltr">
+                      <div>Contract Ref: <span className="font-mono">{selectedPrintInvoice.contract_id ? `#CNT-${selectedPrintInvoice.contract_id}` : 'General'}</span></div>
+                      <div>Status: <span className="font-mono uppercase text-blue-600">{selectedPrintInvoice.status}</span></div>
+                      <div>Currency: <span className="font-mono">LCY (EGP)</span></div>
+                    </div>
                   </div>
-                )}
 
-                {parseFloat(selectedPrintInvoice.material_deduction) > 0 && (
-                  <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>(-) خصم خامات ومواد مجهزة للشركاء:</span>
-                    <span className="font-mono">-{Number(selectedPrintInvoice.material_deduction).toLocaleString()} LCY</span>
+                  {/* Quantities & Pricing Ledger Table */}
+                  <table className="w-full border-collapse border border-slate-300 text-xs text-right">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-900 font-black">
+                        <th className="border border-slate-300 px-4 py-3 text-center">البيان ومواصفة البند</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center">الوحدة</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center">الكمية السابقة</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center">الكمية الحالية</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center">الكمية الإجمالية</th>
+                        <th className="border border-slate-300 px-4 py-3 text-center">القيمة الإجمالية</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="text-slate-800 font-bold">
+                        <td className="border border-slate-300 px-4 py-4 text-center">{selectedPrintInvoice.description || 'أعمال هندسية مقاولة باطن'}</td>
+                        <td className="border border-slate-300 px-4 py-4 text-center">متر طولي / LM</td>
+                        <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number(selectedPrintInvoice.prev_qty || 0).toLocaleString()}</td>
+                        <td className="border border-slate-300 px-4 py-4 text-center font-mono text-indigo-600">{Number(selectedPrintInvoice.curr_qty || 0).toLocaleString()}</td>
+                        <td className="border border-slate-300 px-4 py-4 text-center font-mono">{Number((parseFloat(selectedPrintInvoice.prev_qty) || 0) + (parseFloat(selectedPrintInvoice.curr_qty) || 0)).toLocaleString()}</td>
+                        <td className="border border-slate-300 px-4 py-4 text-left font-mono">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Deductions Waterfall Cascade */}
+                  <div className="w-full max-w-md mr-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3 text-right">
+                    <h3 className="text-xs font-black text-slate-900 border-b border-slate-300 pb-2 mb-3 flex items-center justify-between">
+                      <span>شلال التسويات والاستقطاعات المالية</span>
+                      <span className="text-[10px] text-slate-400 font-bold font-mono">FINANCIAL CASCADE</span>
+                    </h3>
+
+                    <div className="flex justify-between text-xs font-bold text-slate-700">
+                      <span>إجمالي قيمة الأعمال الحالية المنفذة (Gross):</span>
+                      <span className="font-mono text-slate-900">{Number(selectedPrintInvoice.gross_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
+                    </div>
+
+                    {parseFloat(selectedPrintInvoice.retention_deduction) > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-rose-600">
+                        <span>(-) استقطاع ضمان أعمال نهائي (5%):</span>
+                        <span className="font-mono">-{Number(selectedPrintInvoice.retention_deduction).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+
+                    {parseFloat(selectedPrintInvoice.dp_recovery) > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-amber-600">
+                        <span>(-) استرداد دفعة مقدمة مستلمة (10%):</span>
+                        <span className="font-mono">-{Number(selectedPrintInvoice.dp_recovery).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+
+                    {parseFloat(selectedPrintInvoice.material_deduction) > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>(-) خصم خامات ومواد مجهزة للشركاء:</span>
+                        <span className="font-mono">-{Number(selectedPrintInvoice.material_deduction).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+
+                    {parseFloat(selectedPrintInvoice.tax_deduction) > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>(-) استقطاع ضرائب الخصم المنبع:</span>
+                        <span className="font-mono">-{Number(selectedPrintInvoice.tax_deduction).toLocaleString()} LCY</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-300 pt-3 mt-3">
+                      <span>صافي القيمة المستحقة للصرف (Net Payable):</span>
+                      <span className="font-mono text-emerald-600 text-base">{Number(selectedPrintInvoice.net_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
+                    </div>
                   </div>
-                )}
 
-                {parseFloat(selectedPrintInvoice.tax_deduction) > 0 && (
-                  <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>(-) استقطاع ضرائب الخصم المنبع:</span>
-                    <span className="font-mono">-{Number(selectedPrintInvoice.tax_deduction).toLocaleString()} LCY</span>
+                  {/* Signatures & Execution Section */}
+                  <div className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-200">
+                    <div className="space-y-4 text-center">
+                      <div className="text-xs font-black text-slate-900">إعداد / مهندس الموقع</div>
+                      <div className="h-16 border-b border-dashed border-slate-400"></div>
+                      <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                    </div>
+                    <div className="space-y-4 text-center">
+                      <div className="text-xs font-black text-slate-900">مراجعة / المدير المالي للحسابات</div>
+                      <div className="h-16 border-b border-dashed border-slate-400"></div>
+                      <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                    </div>
+                    <div className="space-y-4 text-center">
+                      <div className="text-xs font-black text-slate-900">اعتماد / رئيس مجلس الإدارة</div>
+                      <div className="h-16 border-b border-dashed border-slate-400"></div>
+                      <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
+                    </div>
                   </div>
-                )}
 
-                <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-300 pt-3 mt-3">
-                  <span>صافي القيمة المستحقة للصرف (Net Payable):</span>
-                  <span className="font-mono text-emerald-600 text-base">{Number(selectedPrintInvoice.net_amount || selectedPrintInvoice.amount || 0).toLocaleString()} LCY</span>
-                </div>
-              </div>
-
-              {/* Signatures & Execution Section */}
-              <div className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-200">
-                <div className="space-y-4 text-center">
-                  <div className="text-xs font-black text-slate-900">إعداد / مهندس الموقع</div>
-                  <div className="h-16 border-b border-dashed border-slate-400"></div>
-                  <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
-                </div>
-                <div className="space-y-4 text-center">
-                  <div className="text-xs font-black text-slate-900">مراجعة / المدير المالي للحسابات</div>
-                  <div className="h-16 border-b border-dashed border-slate-400"></div>
-                  <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
-                </div>
-                <div className="space-y-4 text-center">
-                  <div className="text-xs font-black text-slate-900">اعتماد / رئيس مجلس الإدارة</div>
-                  <div className="h-16 border-b border-dashed border-slate-400"></div>
-                  <div className="text-[10px] text-slate-400 font-bold">التوقيع والختم</div>
                 </div>
               </div>
 
             </div>
           </div>
+        )
+      }
 
-        </div>
-      </div>
-    )
-  }
-
-  {/* Inject Print-CSS Rules dynamically */ }
-  <style dangerouslySetInnerHTML={{
-    __html: `
+      {/* Inject Print-CSS Rules dynamically */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           body * {
             visibility: hidden !important;
@@ -1980,180 +1978,180 @@ export default function Subcontractors() {
         }
       `}} />
 
-  {isPaymentModalOpen && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsPaymentModalOpen(false)}></div>
-      <form onSubmit={handlePaymentSubmit} className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-slate-200 animate-in zoom-in-95 duration-300 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl shadow-sm text-xl">💸</span>
-            <h2 className="text-xl font-black text-slate-900">
-              {language === 'ar' ? 'صرف مستخلص للمقاول الباطن' : 'Disburse Subcontractor Payment'}
-            </h2>
-          </div>
-          <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsPaymentModalOpen(false)}></div>
+          <form onSubmit={handlePaymentSubmit} className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col p-10 border border-slate-200 animate-in zoom-in-95 duration-300 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl shadow-sm text-xl">💸</span>
+                <h2 className="text-xl font-black text-slate-900">
+                  {language === 'ar' ? 'صرف مستخلص للمقاول الباطن' : 'Disburse Subcontractor Payment'}
+                </h2>
+              </div>
+              <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors text-2xl">✖</button>
+            </div>
+
+            <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Info Cards */}
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                    {language === 'ar' ? 'المقاول' : 'Subcontractor'}
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {subcontractors.find(s => s.id === paymentForm.subcontractor_id)?.name || (language === 'ar' ? 'مقاول غير معروف' : 'Unknown Subcontractor')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                    {language === 'ar' ? 'المشروع' : 'Project'}
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {paymentForm.project_name}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                    {language === 'ar' ? 'رقم المستخلص' : 'Claim ID'}
+                  </span>
+                  <span className="font-bold text-blue-600 text-sm font-mono">
+                    INV-#{paymentForm.invoice_id}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
+                    {language === 'ar' ? 'صافي القيمة المستحقة' : 'Net Amount Due'}
+                  </span>
+                  <span className="font-black text-emerald-650 text-sm font-mono">
+                    {Number(invoices.find(i => i.id === paymentForm.invoice_id)?.net_amount || 0).toLocaleString()} LCY
+                  </span>
+                </div>
+              </div>
+
+              {/* Inputs */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      {language === 'ar' ? 'مبلغ الصرف الفعلي *' : 'Amount Paid *'}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={paymentForm.amount_paid}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount_paid: e.target.value })}
+                      required
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      {language === 'ar' ? 'تاريخ الصرف *' : 'Payment Date *'}
+                    </label>
+                    <input
+                      type="date"
+                      value={paymentForm.payment_date}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                      required
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      {language === 'ar' ? 'طريقة الدفع *' : 'Payment Method *'}
+                    </label>
+                    <select
+                      value={paymentForm.payment_method}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
+                      required
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
+                    >
+                      <option value="Cash">{language === 'ar' ? 'نقدي (Cash)' : 'Cash'}</option>
+                      <option value="Bank Transfer">{language === 'ar' ? 'تحويل بنكي' : 'Bank Transfer'}</option>
+                      <option value="InstaPay">{language === 'ar' ? 'إنيستاباي (InstaPay)' : 'InstaPay'}</option>
+                      <option value="Cheque">{language === 'ar' ? 'شيك (Cheque)' : 'Cheque'}</option>
+                      <option value="Wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'Digital Wallet'}</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      {language === 'ar' ? 'حساب الصرف المالي *' : 'Financial Source Account *'}
+                    </label>
+                    <select
+                      value={paymentForm.source_account}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, source_account: e.target.value })}
+                      required
+                      disabled
+                      className="w-full p-4 bg-slate-150 border-none rounded-2xl font-black text-slate-500 text-xs outline-none cursor-not-allowed appearance-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر حساب الصرف --' : '-- Select Source Account --'}</option>
+                      {coaAccounts.map(acc => (
+                        <option key={acc.id} value={acc.account_name}>
+                          {acc.account_name} ({acc.account_code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                    {language === 'ar' ? 'رقم المعاملة / مرجع الدفع' : 'Transaction Ref No.'}
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentForm.reference_no}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, reference_no: e.target.value })}
+                    placeholder={language === 'ar' ? 'مثال: TXN987654321 أو رقم الشيك' : 'e.g. TXN987654321 or Cheque number'}
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                    {language === 'ar' ? 'ملاحظات الصرف والبيان' : 'Payment Notes'}
+                  </label>
+                  <textarea
+                    value={paymentForm.notes}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                    rows="2"
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmittingPayment}
+              className="w-full py-5 bg-emerald-600 text-white rounded-[2rem] font-black text-sm hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/10 flex items-center justify-center gap-3 active:scale-[0.98] mt-6"
+            >
+              {isSubmittingPayment ? (
+                <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span>💸</span>
+                  {language === 'ar' ? 'ترحيل قيد الصرف وتأكيد السداد' : 'Post Payment & Confirm Payout'}
+                </>
+              )}
+            </button>
+          </form>
         </div>
+      )}
 
-        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
-          {/* Info Cards */}
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
-            <div>
-              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
-                {language === 'ar' ? 'المقاول' : 'Subcontractor'}
-              </span>
-              <span className="font-bold text-slate-900 text-sm">
-                {subcontractors.find(s => s.id === paymentForm.subcontractor_id)?.name || (language === 'ar' ? 'مقاول غير معروف' : 'Unknown Subcontractor')}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
-                {language === 'ar' ? 'المشروع' : 'Project'}
-              </span>
-              <span className="font-bold text-slate-900 text-sm">
-                {paymentForm.project_name}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
-                {language === 'ar' ? 'رقم المستخلص' : 'Claim ID'}
-              </span>
-              <span className="font-bold text-blue-600 text-sm font-mono">
-                INV-#{paymentForm.invoice_id}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase tracking-widest">
-                {language === 'ar' ? 'صافي القيمة المستحقة' : 'Net Amount Due'}
-              </span>
-              <span className="font-black text-emerald-650 text-sm font-mono">
-                {Number(invoices.find(i => i.id === paymentForm.invoice_id)?.net_amount || 0).toLocaleString()} LCY
-              </span>
-            </div>
-          </div>
-
-          {/* Inputs */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                  {language === 'ar' ? 'مبلغ الصرف الفعلي *' : 'Amount Paid *'}
-                </label>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  value={paymentForm.amount_paid} 
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amount_paid: e.target.value })} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                  {language === 'ar' ? 'تاريخ الصرف *' : 'Payment Date *'}
-                </label>
-                <input 
-                  type="date" 
-                  value={paymentForm.payment_date} 
-                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner text-center font-mono" 
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                  {language === 'ar' ? 'طريقة الدفع *' : 'Payment Method *'}
-                </label>
-                <select
-                  value={paymentForm.payment_method}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
-                  required
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner appearance-none cursor-pointer"
-                >
-                  <option value="Cash">{language === 'ar' ? 'نقدي (Cash)' : 'Cash'}</option>
-                  <option value="Bank Transfer">{language === 'ar' ? 'تحويل بنكي' : 'Bank Transfer'}</option>
-                  <option value="InstaPay">{language === 'ar' ? 'إنيستاباي (InstaPay)' : 'InstaPay'}</option>
-                  <option value="Cheque">{language === 'ar' ? 'شيك (Cheque)' : 'Cheque'}</option>
-                  <option value="Wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'Digital Wallet'}</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                  {language === 'ar' ? 'حساب الصرف المالي *' : 'Financial Source Account *'}
-                </label>
-                <select
-                  value={paymentForm.source_account}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, source_account: e.target.value })}
-                  required
-                  disabled
-                  className="w-full p-4 bg-slate-150 border-none rounded-2xl font-black text-slate-500 text-xs outline-none cursor-not-allowed appearance-none"
-                >
-                  <option value="">{language === 'ar' ? '-- اختر حساب الصرف --' : '-- Select Source Account --'}</option>
-                  {coaAccounts.map(acc => (
-                    <option key={acc.id} value={acc.account_name}>
-                      {acc.account_name} ({acc.account_code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                {language === 'ar' ? 'رقم المعاملة / مرجع الدفع' : 'Transaction Ref No.'}
-              </label>
-              <input 
-                type="text" 
-                value={paymentForm.reference_no} 
-                onChange={(e) => setPaymentForm({ ...paymentForm, reference_no: e.target.value })} 
-                placeholder={language === 'ar' ? 'مثال: TXN987654321 أو رقم الشيك' : 'e.g. TXN987654321 or Cheque number'}
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner" 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
-                {language === 'ar' ? 'ملاحظات الصرف والبيان' : 'Payment Notes'}
-              </label>
-              <textarea 
-                value={paymentForm.notes} 
-                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} 
-                rows="2"
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-black text-slate-900 text-xs outline-none focus:bg-white focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner resize-none" 
-              />
-            </div>
-          </div>
-        </div>
-
-        <button 
-          type="submit" 
-          disabled={isSubmittingPayment} 
-          className="w-full py-5 bg-emerald-600 text-white rounded-[2rem] font-black text-sm hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/10 flex items-center justify-center gap-3 active:scale-[0.98] mt-6"
-        >
-          {isSubmittingPayment ? (
-            <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-          ) : (
-            <>
-              <span>💸</span>
-              {language === 'ar' ? 'ترحيل قيد الصرف وتأكيد السداد' : 'Post Payment & Confirm Payout'}
-            </>
-          )}
-        </button>
-      </form>
-    </div>
-  )}
-
-  {
-    selectedSubId && (
-      <Subcontractor360
-        subId={selectedSubId}
-        onClose={() => setSelectedSubId(null)}
-        language={language}
-      />
-    )
-  }
+      {
+        selectedSubId && (
+          <Subcontractor360
+            subId={selectedSubId}
+            onClose={() => setSelectedSubId(null)}
+            language={language}
+          />
+        )
+      }
     </div >
   );
 }

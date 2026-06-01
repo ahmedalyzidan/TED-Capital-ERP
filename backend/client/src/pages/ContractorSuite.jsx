@@ -79,7 +79,7 @@ function tafqeet(number) {
 }
 
 export default function ContractorSuite() {
-  const { language } = useLanguage();
+  const { language, theme } = useLanguage();
 
   // --- 1. PERSISTED STATE / MULTI-PROJECT ENGINE ---
   // We initialize the state by reading from localStorage, or using the preloaded "Villa E109" as our seed project.
@@ -2651,12 +2651,12 @@ export default function ContractorSuite() {
   const isMasterBuilder = activeProject?.company && (activeProject.company.toUpperCase().includes('MASTER BUILDER') || activeProject.company.includes('ماستر بيلدر'));
 
   return (
-    <div className="contractor-suite-light bg-[#f7f8fc] text-slate-800 min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-white font-sans print:bg-white print:text-black relative overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen p-4 sm:p-8 selection:bg-cyan-500 selection:text-white font-sans print:bg-white print:text-black relative overflow-hidden ${theme === 'dark' ? 'dark bg-[#1d2026] text-slate-100' : 'contractor-suite-light bg-[#f7f8fc] text-slate-800'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Background Radial Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[350px] bg-gradient-to-b from-indigo-500/10 via-sky-500/5 to-transparent rounded-full blur-[140px] pointer-events-none no-print"></div>
 
       {/* Printable page layout adjustments */}
-      <style dangerouslySetInnerHTML={{
+      {theme !== 'dark' && <style dangerouslySetInnerHTML={{
         __html: `
         /* ═══════════════════════════════════════════════════════════
            PREMIUM WHITE THEME ENGINE — ContractorSuite
@@ -2905,7 +2905,35 @@ export default function ContractorSuite() {
           .print\\:grid { display: grid !important; }
           .print\\:gap-4 { gap: 16px !important; }
         }
-      `}} />
+      `}} />}
+
+      {theme === 'dark' && <style dangerouslySetInnerHTML={{
+        __html: `
+        /* Scoped overrides for dark mode to match ERP slate theme */
+        .dark .bg-\\[\\#161e2f\\] {
+          background-color: #171920 !important;
+        }
+        .dark .bg-\\[\\#1b2336\\] {
+          background-color: #272a33 !important;
+        }
+        .dark .bg-\\[\\#090d16\\] {
+          background-color: #171920 !important;
+        }
+        .dark .bg-\\[\\#070a13\\] {
+          background-color: #171920 !important;
+        }
+        .dark button.bg-\\[\\#1e293b\\] {
+          background-color: #29384e !important;
+          border-color: rgba(217,167,112,0.5) !important;
+          color: #d9a770 !important;
+        }
+        .dark button.bg-\\[\\#0f172a\\]\\/40 {
+          background-color: #22252e !important;
+          border-color: #3e4452 !important;
+          color: #94a3b8 !important;
+        }
+        `
+      }} />}
 
       {/* --- TOAST NOTIFICATIONS --- */}
       {notification && (
@@ -3529,8 +3557,8 @@ export default function ContractorSuite() {
 
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => { setShowAddBoq(false); setEditingItemId(null); }} className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white transition-all">إلغاء</button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isSubmittingBoq}
                     className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-black text-slate-955 transition-all"
                   >
@@ -5000,314 +5028,314 @@ export default function ContractorSuite() {
         {/* 11. FINANCIAL SUMMARY (CLIENT & CONTRACTOR POSITION) VIEW */}
         {activeTab === 'financial_summary' && (
           <div className="space-y-8 animate-in fade-in duration-500">
-                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
-                  <div>
-                    <h3 className="text-lg font-black text-white flex items-center gap-3">
-                      <span className="p-2 bg-orange-500/10 rounded-xl border border-orange-500/25 text-orange-400">📊</span> الخلاصة المالية للمقاولين (موقف المقاولين)
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات المقاولين والمبالغ المنصرفة والمتبقية لهم على مستوى المشروع (اضغط على مقاول لعرض تفاصيله)</p>
-                  </div>
+            <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-3">
+                  <span className="p-2 bg-orange-500/10 rounded-xl border border-orange-500/25 text-orange-400">📊</span> الخلاصة المالية للمقاولين (موقف المقاولين)
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات المقاولين والمبالغ المنصرفة والمتبقية لهم على مستوى المشروع (اضغط على مقاول لعرض تفاصيله)</p>
+              </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
-                    <table className="w-full text-right text-[11px]">
-                      <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
-                        <tr>
-                          <th className="p-3 text-right">اسم المقاول</th>
-                          <th className="p-3 text-center">عدد المستخلصات</th>
-                          <th className="p-3 text-center">إجمالي المستخلصات</th>
-                          <th className="p-3 text-center">إجمالي المنصرف (المدفوع)</th>
-                          <th className="p-3 text-center">إجمالي المتبقي</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {(() => {
-                          const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
-                          const contractorNames = Array.from(new Set(
-                            projectContractorVals.flatMap(v => v.lines?.map(ln => (ln.contractorName || contractorValuationContractorName)?.trim()).filter(Boolean) || [])
-                          ));
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
+                <table className="w-full text-right text-[11px]">
+                  <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3 text-right">اسم المقاول</th>
+                      <th className="p-3 text-center">عدد المستخلصات</th>
+                      <th className="p-3 text-center">إجمالي المستخلصات</th>
+                      <th className="p-3 text-center">إجمالي المنصرف (المدفوع)</th>
+                      <th className="p-3 text-center">إجمالي المتبقي</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {(() => {
+                      const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
+                      const contractorNames = Array.from(new Set(
+                        projectContractorVals.flatMap(v => v.lines?.map(ln => (ln.contractorName || contractorValuationContractorName)?.trim()).filter(Boolean) || [])
+                      ));
 
-                          if (contractorNames.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات للمقاولين بعد لهذا المشروع.</td>
-                              </tr>
-                            );
-                          }
+                      if (contractorNames.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات للمقاولين بعد لهذا المشروع.</td>
+                          </tr>
+                        );
+                      }
 
-                          return contractorNames.map(cName => {
-                            const cVals = projectContractorVals.filter(v =>
-                              v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
-                            );
-                            const countValuations = cVals.length;
-                            const pos = getContractorFinancialPosition(cName, null, null, []);
+                      return contractorNames.map(cName => {
+                        const cVals = projectContractorVals.filter(v =>
+                          v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
+                        );
+                        const countValuations = cVals.length;
+                        const pos = getContractorFinancialPosition(cName, null, null, []);
 
-                            return (
-                              <tr
-                                key={cName}
-                                onClick={() => {
-                                  setSelectedContractorForDetails(selectedContractorForDetails === cName ? null : cName);
-                                  setSelectedClientForDetails(null);
-                                }}
-                                className={`hover:bg-white/[0.04] active:scale-[0.99] transition-all cursor-pointer text-slate-355 font-bold ${selectedContractorForDetails === cName ? 'bg-orange-500/10 border-r-4 border-orange-500' : ''}`}
-                              >
-                                <td className="p-3 text-right text-orange-400 font-black">{cName}</td>
-                                <td className="p-3 text-center font-mono text-slate-400">{countValuations}</td>
-                                <td className="p-3 text-center font-mono text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
-                                <td className="p-3 text-center font-mono text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
-                                <td className={`p-3 text-center font-mono font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-450'}`}>
-                                  {pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* detailed panel for subcontractor */}
-                  {selectedContractorForDetails && (() => {
-                    const cName = selectedContractorForDetails;
-                    const pos = getContractorFinancialPosition(cName, null, null, []);
-
-                    const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
-                    const subValuations = projectContractorVals.filter(v =>
-                      v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
-                    );
-
-                    const allExpenses = [...expenses, ...dbExpenses];
-                    const subPayments = allExpenses.filter(e => {
-                      const projObj = projects.find(p => String(p.id) === String(e.projectId));
-                      const isProjectMatch = costCenterMode === 'company'
-                        ? companyProjects.some(cp => String(cp.id) === String(e.projectId))
-                        : (String(e.projectId) === String(activeProjectId) || (projObj && activeProject && projObj.name.trim().toLowerCase() === activeProject.name.trim().toLowerCase()));
-
-                      const isBeneficiaryMatch = e.beneficiary?.trim().toLowerCase() === cName.toLowerCase();
-                      return isProjectMatch && isBeneficiaryMatch;
-                    });
-
-                    return (
-                      <div className="bg-[#0f172a] border border-orange-500/20 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                          <h4 className="text-sm font-black text-orange-400 flex items-center gap-2">
-                            <span>👷</span> التفاصيل والتدفقات المالية للمقاول: {cName}
-                          </h4>
-                          <button
-                            onClick={() => setSelectedContractorForDetails(null)}
-                            className="text-slate-400 hover:text-white text-xs font-bold"
+                        return (
+                          <tr
+                            key={cName}
+                            onClick={() => {
+                              setSelectedContractorForDetails(selectedContractorForDetails === cName ? null : cName);
+                              setSelectedClientForDetails(null);
+                            }}
+                            className={`hover:bg-white/[0.04] active:scale-[0.99] transition-all cursor-pointer text-slate-355 font-bold ${selectedContractorForDetails === cName ? 'bg-orange-500/10 border-r-4 border-orange-500' : ''}`}
                           >
-                            إغلاق التفاصيل ❌
-                          </button>
-                        </div>
+                            <td className="p-3 text-right text-orange-400 font-black">{cName}</td>
+                            <td className="p-3 text-center font-mono text-slate-400">{countValuations}</td>
+                            <td className="p-3 text-center font-mono text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                            <td className="p-3 text-center font-mono text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                            <td className={`p-3 text-center font-mono font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-450'}`}>
+                              {pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المستخلصات (قيمة الأعمال)</div>
-                            <div className="font-mono text-xs font-black text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المنصرف (المدفوعات)</div>
-                            <div className="font-mono text-xs font-black text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">صافي المستحق المتبقي له</div>
-                            <div className={`font-mono text-xs font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                        </div>
+              {/* detailed panel for subcontractor */}
+              {selectedContractorForDetails && (() => {
+                const cName = selectedContractorForDetails;
+                const pos = getContractorFinancialPosition(cName, null, null, []);
 
-                        <div className="space-y-2">
-                          <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
-                            <span>📑</span> فواتير ومستخلصات المقاول المعتمدة ({subValuations.length})
-                          </h5>
-                          {subValuations.length === 0 ? (
-                            <p className="text-[10px] text-slate-500 italic">لا توجد مستخلصات مسجلة.</p>
-                          ) : (
-                            <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
-                              {subValuations.map(val => (
-                                <div key={val.id} className="p-2.5 flex justify-between items-center text-[10px]">
-                                  <div>
-                                    <span className="font-black text-orange-400 mr-2">{val.claimNo}</span>
-                                    <span className="text-slate-500">📅 {val.date}</span>
-                                  </div>
-                                  <span className="font-mono font-black text-white">{(val.totalCurrent || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                const projectContractorVals = valuations.filter(v => v.isContractor && (costCenterMode === 'company' ? companyProjects.some(cp => String(cp.id) === String(v.projectId)) : String(v.projectId) === String(activeProjectId)));
+                const subValuations = projectContractorVals.filter(v =>
+                  v.lines?.some(ln => (ln.contractorName || contractorValuationContractorName)?.trim().toLowerCase() === cName.toLowerCase())
+                );
 
-                        <div className="space-y-2">
-                          <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
-                            <span>💳</span> المنصرف والدفعات النقدية والبنكية المسددة له ({subPayments.length})
-                          </h5>
-                          {subPayments.length === 0 ? (
-                            <p className="text-[10px] text-slate-500 italic">لم يتم تحويل أو صرف دفعات مالية بعد.</p>
-                          ) : (
-                            <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
-                              {subPayments.map(pay => (
-                                <div key={pay.id} className="p-2.5 flex justify-between items-center text-[10px]">
-                                  <div>
-                                    <span className="text-slate-200 font-bold">{pay.notes || 'صرف دفعة مالية'}</span>
-                                    <span className="text-slate-500 ml-2">📅 {pay.date} | {pay.paymentMethod || 'نقدًا'}</span>
-                                  </div>
-                                  <span className="font-mono font-black text-rose-400">{(pay.total || pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                const allExpenses = [...expenses, ...dbExpenses];
+                const subPayments = allExpenses.filter(e => {
+                  const projObj = projects.find(p => String(p.id) === String(e.projectId));
+                  const isProjectMatch = costCenterMode === 'company'
+                    ? companyProjects.some(cp => String(cp.id) === String(e.projectId))
+                    : (String(e.projectId) === String(activeProjectId) || (projObj && activeProject && projObj.name.trim().toLowerCase() === activeProject.name.trim().toLowerCase()));
+
+                  const isBeneficiaryMatch = e.beneficiary?.trim().toLowerCase() === cName.toLowerCase();
+                  return isProjectMatch && isBeneficiaryMatch;
+                });
+
+                return (
+                  <div className="bg-[#0f172a] border border-orange-500/20 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <h4 className="text-sm font-black text-orange-400 flex items-center gap-2">
+                        <span>👷</span> التفاصيل والتدفقات المالية للمقاول: {cName}
+                      </h4>
+                      <button
+                        onClick={() => setSelectedContractorForDetails(null)}
+                        className="text-slate-400 hover:text-white text-xs font-bold"
+                      >
+                        إغلاق التفاصيل ❌
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المستخلصات (قيمة الأعمال)</div>
+                        <div className="font-mono text-xs font-black text-white">{pos.cumulativeWorks.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                       </div>
-                    );
-                  })()}
-                </div>
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المنصرف (المدفوعات)</div>
+                        <div className="font-mono text-xs font-black text-rose-400">{pos.previousSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                      </div>
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">صافي المستحق المتبقي له</div>
+                        <div className={`font-mono text-xs font-black ${pos.currentNetDue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{pos.currentNetDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                      </div>
+                    </div>
 
-                {/* ════════════════════════════════════════
+                    <div className="space-y-2">
+                      <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
+                        <span>📑</span> فواتير ومستخلصات المقاول المعتمدة ({subValuations.length})
+                      </h5>
+                      {subValuations.length === 0 ? (
+                        <p className="text-[10px] text-slate-500 italic">لا توجد مستخلصات مسجلة.</p>
+                      ) : (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
+                          {subValuations.map(val => (
+                            <div key={val.id} className="p-2.5 flex justify-between items-center text-[10px]">
+                              <div>
+                                <span className="font-black text-orange-400 mr-2">{val.claimNo}</span>
+                                <span className="text-slate-500">📅 {val.date}</span>
+                              </div>
+                              <span className="font-mono font-black text-white">{(val.totalCurrent || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
+                        <span>💳</span> المنصرف والدفعات النقدية والبنكية المسددة له ({subPayments.length})
+                      </h5>
+                      {subPayments.length === 0 ? (
+                        <p className="text-[10px] text-slate-500 italic">لم يتم تحويل أو صرف دفعات مالية بعد.</p>
+                      ) : (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
+                          {subPayments.map(pay => (
+                            <div key={pay.id} className="p-2.5 flex justify-between items-center text-[10px]">
+                              <div>
+                                <span className="text-slate-200 font-bold">{pay.notes || 'صرف دفعة مالية'}</span>
+                                <span className="text-slate-500 ml-2">📅 {pay.date} | {pay.paymentMethod || 'نقدًا'}</span>
+                              </div>
+                              <span className="font-mono font-black text-rose-400">{(pay.total || pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* ════════════════════════════════════════
                     📊 الخلاصة المالية للعملاء (موقف العملاء)
                 ════════════════════════════════════════ */}
-                <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
-                  <div>
-                    <h3 className="text-lg font-black text-white flex items-center gap-3">
-                      <span className="p-2 bg-[#0ea5e9]/10 rounded-xl border border-[#0ea5e9]/25 text-[#38bdf8]">📊</span> الخلاصة المالية للعملاء (موقف العملاء)
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات العملاء والمبالغ المحصلة والمتبقية عليهم على مستوى المشروع (اضغط على عميل لعرض تفاصيله)</p>
-                  </div>
+            <div className="bg-[#131b2e] border border-slate-800 p-8 rounded-[2rem] shadow-2xl space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-3">
+                  <span className="p-2 bg-[#0ea5e9]/10 rounded-xl border border-[#0ea5e9]/25 text-[#38bdf8]">📊</span> الخلاصة المالية للعملاء (موقف العملاء)
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">ملخص القيمة التراكمية لمستخلصات العملاء والمبالغ المحصلة والمتبقية عليهم على مستوى المشروع (اضغط على عميل لعرض تفاصيله)</p>
+              </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
-                    <table className="w-full text-right text-[11px]">
-                      <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
-                        <tr>
-                          <th className="p-3 text-right">اسم العميل</th>
-                          <th className="p-3 text-center">عدد المستخلصات</th>
-                          <th className="p-3 text-center">إجمالي المستخلصات</th>
-                          <th className="p-3 text-center">إجمالي المقبوض (المدفوع)</th>
-                          <th className="p-3 text-center">إجمالي المتبقي بذمته</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {(() => {
-                          const clientNamesList = clientNames;
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#070a13]">
+                <table className="w-full text-right text-[11px]">
+                  <thead className="bg-[#0b0f19] text-slate-400 font-bold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3 text-right">اسم العميل</th>
+                      <th className="p-3 text-center">عدد المستخلصات</th>
+                      <th className="p-3 text-center">إجمالي المستخلصات</th>
+                      <th className="p-3 text-center">إجمالي المقبوض (المدفوع)</th>
+                      <th className="p-3 text-center">إجمالي المتبقي بذمته</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {(() => {
+                      const clientNamesList = clientNames;
 
-                          if (clientNamesList.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات أو عقود للعملاء بعد.</td>
-                              </tr>
-                            );
-                          }
+                      if (clientNamesList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="5" className="p-8 text-center text-xs text-slate-500 font-bold">لم يتم تسجيل أي مستخلصات أو عقود للعملاء بعد.</td>
+                          </tr>
+                        );
+                      }
 
-                          return clientNamesList.map(cName => {
-                            const pos = getClientFinancialPosition(cName);
+                      return clientNamesList.map(cName => {
+                        const pos = getClientFinancialPosition(cName);
 
-                            return (
-                              <tr
-                                key={cName}
-                                onClick={() => {
-                                  setSelectedClientForDetails(selectedClientForDetails === cName ? null : cName);
-                                  setSelectedContractorForDetails(null);
-                                }}
-                                className={`hover:bg-white/[0.04] active:scale-[0.99] transition-all cursor-pointer text-slate-350 font-bold ${selectedClientForDetails === cName ? 'bg-cyan-500/10 border-r-4 border-cyan-500' : ''}`}
-                              >
-                                <td className="p-3 text-right text-cyan-400 font-black">{cName}</td>
-                                <td className="p-3 text-center font-mono text-slate-400">{pos.countValuations}</td>
-                                <td className="p-3 text-center font-mono text-white">{pos.totalValuations.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
-                                <td className="p-3 text-center font-mono text-emerald-400">{pos.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
-                                <td className={`p-3 text-center font-mono font-black ${pos.remaining >= 0 ? 'text-amber-400' : 'text-emerald-450'}`}>
-                                  {pos.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* detailed panel for client */}
-                  {selectedClientForDetails && (() => {
-                    const cName = selectedClientForDetails;
-                    const pos = getClientFinancialPosition(cName);
-
-                    const projList = costCenterMode === 'company' ? companyProjects : (activeProject ? [activeProject] : []);
-                    const clientProjectIds = projList
-                      .filter(p => (p.clientName || p.client_name || 'عميل عام').trim().toLowerCase() === cName.toLowerCase())
-                      .map(p => String(p.id));
-                    const clientVals = valuations.filter(v => !v.isContractor && clientProjectIds.includes(String(v.projectId)));
-                    const clientInsts = installments.filter(inst => clientProjectIds.includes(String(inst.projectId)));
-
-                    return (
-                      <div className="bg-[#0f172a] border border-cyan-500/20 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                          <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
-                            <span>🏛️</span> التفاصيل والتحصيلات المالية للعميل: {cName}
-                          </h4>
-                          <button
-                            onClick={() => setSelectedClientForDetails(null)}
-                            className="text-slate-400 hover:text-white text-xs font-bold"
+                        return (
+                          <tr
+                            key={cName}
+                            onClick={() => {
+                              setSelectedClientForDetails(selectedClientForDetails === cName ? null : cName);
+                              setSelectedContractorForDetails(null);
+                            }}
+                            className={`hover:bg-white/[0.04] active:scale-[0.99] transition-all cursor-pointer text-slate-350 font-bold ${selectedClientForDetails === cName ? 'bg-cyan-500/10 border-r-4 border-cyan-500' : ''}`}
                           >
-                            إغلاق التفاصيل ❌
-                          </button>
-                        </div>
+                            <td className="p-3 text-right text-cyan-400 font-black">{cName}</td>
+                            <td className="p-3 text-center font-mono text-slate-400">{pos.countValuations}</td>
+                            <td className="p-3 text-center font-mono text-white">{pos.totalValuations.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                            <td className="p-3 text-center font-mono text-emerald-400">{pos.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</td>
+                            <td className={`p-3 text-center font-mono font-black ${pos.remaining >= 0 ? 'text-amber-400' : 'text-emerald-450'}`}>
+                              {pos.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المستخلصات المعتمدة</div>
-                            <div className="font-mono text-xs font-black text-white">{pos.totalValuations.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي التحصيلات (المقبوض)</div>
-                            <div className="font-mono text-xs font-black text-emerald-400">{pos.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                          <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">المتبقي على العميل (مديونية)</div>
-                            <div className={`font-mono text-xs font-black ${pos.remaining >= 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{pos.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
-                          </div>
-                        </div>
+              {/* detailed panel for client */}
+              {selectedClientForDetails && (() => {
+                const cName = selectedClientForDetails;
+                const pos = getClientFinancialPosition(cName);
 
-                        <div className="space-y-2">
-                          <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
-                            <span>📑</span> فواتير ومستخلصات العميل المعتمدة ({clientVals.length})
-                          </h5>
-                          {clientVals.length === 0 ? (
-                            <p className="text-[10px] text-slate-500 italic">لا توجد مستخلصات معتمدة مسجلة.</p>
-                          ) : (
-                            <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
-                              {clientVals.map(val => (
-                                <div key={val.id} className="p-2.5 flex justify-between items-center text-[10px]">
-                                  <div>
-                                    <span className="font-black text-cyan-400 mr-2">{val.claimNo}</span>
-                                    <span className="text-slate-500">📅 {val.date}</span>
-                                  </div>
-                                  <span className="font-mono font-black text-white">{(val.totalCurrent || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                const projList = costCenterMode === 'company' ? companyProjects : (activeProject ? [activeProject] : []);
+                const clientProjectIds = projList
+                  .filter(p => (p.clientName || p.client_name || 'عميل عام').trim().toLowerCase() === cName.toLowerCase())
+                  .map(p => String(p.id));
+                const clientVals = valuations.filter(v => !v.isContractor && clientProjectIds.includes(String(v.projectId)));
+                const clientInsts = installments.filter(inst => clientProjectIds.includes(String(inst.projectId)));
 
-                        <div className="space-y-2">
-                          <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
-                            <span>💳</span> سجل الدفعات والأقساط المستلمة من العميل ({clientInsts.length})
-                          </h5>
-                          {clientInsts.length === 0 ? (
-                            <p className="text-[10px] text-slate-500 italic">لم يتم تسجيل أي مقبوضات نقدية أو بنكية بعد.</p>
-                          ) : (
-                            <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
-                              {clientInsts.map(inst => (
-                                <div key={inst.id} className="p-2.5 flex justify-between items-center text-[10px]">
-                                  <div>
-                                    <span className="text-slate-200 font-bold">{inst.notes || 'تحصيل دفعة مالية'}</span>
-                                    <span className="text-slate-500 ml-2">📅 {inst.date} | {inst.paymentMethod || 'نقدًا'}</span>
-                                  </div>
-                                  <span className="font-mono font-black text-emerald-400">{(inst.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                return (
+                  <div className="bg-[#0f172a] border border-cyan-500/20 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <h4 className="text-sm font-black text-cyan-400 flex items-center gap-2">
+                        <span>🏛️</span> التفاصيل والتحصيلات المالية للعميل: {cName}
+                      </h4>
+                      <button
+                        onClick={() => setSelectedClientForDetails(null)}
+                        className="text-slate-400 hover:text-white text-xs font-bold"
+                      >
+                        إغلاق التفاصيل ❌
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي المستخلصات المعتمدة</div>
+                        <div className="font-mono text-xs font-black text-white">{pos.totalValuations.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
                       </div>
-                    );
-                  })()}
-                </div>
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">إجمالي التحصيلات (المقبوض)</div>
+                        <div className="font-mono text-xs font-black text-emerald-400">{pos.totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                      </div>
+                      <div className="bg-[#070a13] p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-500 font-bold mb-1">المتبقي على العميل (مديونية)</div>
+                        <div className={`font-mono text-xs font-black ${pos.remaining >= 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{pos.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
+                        <span>📑</span> فواتير ومستخلصات العميل المعتمدة ({clientVals.length})
+                      </h5>
+                      {clientVals.length === 0 ? (
+                        <p className="text-[10px] text-slate-500 italic">لا توجد مستخلصات معتمدة مسجلة.</p>
+                      ) : (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
+                          {clientVals.map(val => (
+                            <div key={val.id} className="p-2.5 flex justify-between items-center text-[10px]">
+                              <div>
+                                <span className="font-black text-cyan-400 mr-2">{val.claimNo}</span>
+                                <span className="text-slate-500">📅 {val.date}</span>
+                              </div>
+                              <span className="font-mono font-black text-white">{(val.totalCurrent || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h5 className="text-[10px] font-black text-slate-400 flex items-center gap-1.5">
+                        <span>💳</span> سجل الدفعات والأقساط المستلمة من العميل ({clientInsts.length})
+                      </h5>
+                      {clientInsts.length === 0 ? (
+                        <p className="text-[10px] text-slate-500 italic">لم يتم تسجيل أي مقبوضات نقدية أو بنكية بعد.</p>
+                      ) : (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 divide-y divide-white/5 bg-[#070a13]">
+                          {clientInsts.map(inst => (
+                            <div key={inst.id} className="p-2.5 flex justify-between items-center text-[10px]">
+                              <div>
+                                <span className="text-slate-200 font-bold">{inst.notes || 'تحصيل دفعة مالية'}</span>
+                                <span className="text-slate-500 ml-2">📅 {inst.date} | {inst.paymentMethod || 'نقدًا'}</span>
+                              </div>
+                              <span className="font-mono font-black text-emerald-400">{(inst.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
         {/* 5. FILES MANAGER VIEW (WITH LIVE INLINE EDITING & AUTO-SAVE INDICATORS) */}

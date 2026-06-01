@@ -712,188 +712,188 @@ export default function PharmaSupplyChain() {
       );
    };
 
-   return (
-      <div className={`min-h-screen pb-20 animate-fade-in font-sans ${theme === 'dark' ? 'dark text-slate-100 bg-[#0c0f16]' : 'pharma-supply-light text-slate-900 bg-slate-950'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-         {theme !== 'dark' && <style dangerouslySetInnerHTML={{
-            __html: `
-            /* ═══════════════════════════════════════════════════════════
-               PREMIUM WHITE THEME ENGINE — PharmaSupplyChain Scoped
-            ═══════════════════════════════════════════════════════════ */
-            .pharma-supply-light {
-               --ph-bg-page: #f8fafc;
-               --ph-bg-card: #ffffff;
-               --ph-bg-alt: #f1f5f9;
-               --ph-border: #e2e8f0;
-               --ph-text-primary: #0f172a;
-               --ph-text-secondary: #475569;
-            }
-
-            /* Root background */
-            .pharma-supply-light.min-h-screen {
-               background-color: var(--ph-bg-page) !important;
-               color: var(--ph-text-primary) !important;
-            }
-
-            /* Headers & Card Backings */
-            .pharma-supply-light .bg-\\[\\#161e2f\\],
-            .pharma-supply-light .bg-slate-950,
-            .pharma-supply-light .bg-slate-900,
-            .pharma-supply-light .bg-slate-950\\/50,
-            .pharma-supply-light .bg-\\[\\#131b2e\\] {
-               background-color: var(--ph-bg-card) !important;
-               border-color: var(--ph-border) !important;
-               color: var(--ph-text-primary) !important;
-            }
-
-            /* Tab Navigation Pill Bar Container */
-            .pharma-supply-light .bg-\\[\\#070a13\\] {
-               background-color: var(--ph-bg-alt) !important;
-               border-color: var(--ph-border) !important;
-            }
-
-            /* Inactive switcher buttons */
-            .pharma-supply-light .bg-\\[\\#070a13\\] button.text-slate-400 {
-               background-color: #ffffff !important;
-               border: 1.8px solid var(--ph-bg-alt) !important;
-               color: var(--ph-text-secondary) !important;
-               margin: 2px !important;
-            }
-            .pharma-supply-light .bg-\\[\\#070a13\\] button.text-slate-400:hover {
-               color: var(--ph-text-primary) !important;
-               background-color: #f8fafc !important;
-            }
-
-            /* Active switcher buttons */
-            .pharma-supply-light .bg-\\[\\#070a13\\] button.bg-slate-800 {
-               background-color: #ffffff !important;
-               border: 1.8px solid #0f172a !important;
-               color: #06b6d4 !important;
-               box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-               margin: 2px !important;
-            }
-
-            /* Text Elements */
-            .pharma-supply-light .text-white,
-            .pharma-supply-light .text-slate-100,
-            .pharma-supply-light .text-slate-200 {
-               color: var(--ph-text-primary) !important;
-            }
-            .pharma-supply-light .text-slate-300,
-            .pharma-supply-light .text-slate-400 {
-               color: var(--ph-text-secondary) !important;
-            }
-            .pharma-supply-light .border-slate-800,
-            .pharma-supply-light .border-slate-700 {
-               border-color: var(--ph-border) !important;
-            }
-
-            /* Tables */
-            .pharma-supply-light table {
-               background-color: var(--ph-bg-card) !important;
-            }
-            .pharma-supply-light tr.bg-\\[\\#070a13\\] {
-               background-color: var(--ph-bg-alt) !important;
-               border-color: var(--ph-border) !important;
-            }
-            .pharma-supply-light tr.bg-\\[\\#070a13\\] th {
-               color: var(--ph-text-secondary) !important;
-               border-color: var(--ph-border) !important;
-            }
-            .pharma-supply-light td {
-               border-color: var(--ph-border) !important;
-               color: #334155 !important;
-            }
-            .pharma-supply-light tbody tr:hover {
-               background-color: #f8fafc !important;
-            }
-
-            /* Inputs & Forms */
-            .pharma-supply-light input,
-            .pharma-supply-light select,
-            .pharma-supply-light textarea {
-               background-color: #ffffff !important;
-               border-color: var(--ph-border) !important;
-               color: var(--ph-text-primary) !important;
-            }
-            .pharma-supply-light input::placeholder {
-               color: #94a3b8 !important;
-            }
-            .pharma-supply-light input:focus,
-            .pharma-supply-light select:focus,
-            .pharma-supply-light textarea:focus {
-               border-color: #06b6d4 !important;
-               box-shadow: 0 0 0 3px rgba(6,182,212,0.1) !important;
-            }
-
-            /* Modals (Fixed position modals) */
-            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] {
-               background-color: rgba(15, 23, 42, 0.4) !important;
-               backdrop-blur: 12px !important;
-            }
-            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] > div {
-               background-color: #ffffff !important;
-               border: 1px solid var(--ph-border) !important;
-               color: var(--ph-text-primary) !important;
-               border-radius: 2.5rem !important;
-               box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-            }
-            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] div.bg-\\[\\#070a13\\] {
-               background-color: #ffffff !important;
-               border-color: var(--ph-border) !important;
-            }
-            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] h3 {
-               color: var(--ph-text-primary) !important;
-            }
-            .pharma-supply-light .fixed.inset-0.bg-\\[\\#070a13\\] select option {
-               background-color: #ffffff !important;
-               color: var(--ph-text-primary) !important;
-            }
-            `
-         }} />}
-         {/* Premium Header */}
-         <div className="bg-[#161e2f] border-b border-slate-800 sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
-            <div className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-8">
-               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div className="flex items-center gap-6">
-                     <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-3xl flex items-center justify-center text-3xl shadow-sm transform hover:rotate-6 transition-all duration-500 flex-shrink-0">
-                        🚛
-                     </div>
-                     <div>
-                        <div className="flex items-center gap-4 flex-wrap">
-                           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{t.title}</h1>
-                           <span className="px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">IFRS IAS 2</span>
-                        </div>
-                        <p className="text-slate-400 font-bold text-xs sm:text-sm mt-1.5 uppercase tracking-widest line-clamp-2">
-                           {t.subtitle}
-                        </p>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Gorgeous Tab Navigation Pill Container */}
-               <div className="bg-[#070a13] p-2.5 rounded-[2rem] border border-slate-800 shadow-inner flex flex-wrap items-center gap-2 sm:gap-3 w-full">
-                  {[
-                     { id: 'shipments', label: t.tabs.shipments, icon: '📍' },
-                     { id: 'items', label: t.tabs.items, icon: '📦' },
-                     { id: 'expenses', label: t.tabs.expenses, icon: '🚚' },
-                     { id: 'currencies', label: t.tabs.currencies, icon: '💱' }
-                  ].map(tab => (
-                     <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 min-w-[240px] px-6 py-4 rounded-2xl text-xs uppercase font-black tracking-wider transition-all duration-300 flex items-center justify-center gap-3 border ${
-                           activeTab === tab.id
-                              ? 'bg-[#1e293b] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-0.5'
-                              : 'bg-[#131b2e] text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/80 hover:border-slate-700'
-                        }`}
-                     >
-                        <span className="text-lg">{tab.icon}</span> 
-                        <span className="truncate">{tab.label}</span>
-                     </button>
-                  ))}
-               </div>
-            </div>
-         </div>
+    return (
+       <div className={`min-h-screen pb-20 animate-fade-in font-sans ${theme === 'dark' ? 'dark text-slate-100 bg-[#1d2026]' : 'pharma-supply-light text-slate-900 bg-slate-950'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          {theme !== 'dark' && <style dangerouslySetInnerHTML={{
+             __html: `
+             /* ═══════════════════════════════════════════════════════════
+                PREMIUM WHITE THEME ENGINE — PharmaSupplyChain Scoped
+             ═══════════════════════════════════════════════════════════ */
+             .pharma-supply-light {
+                --ph-bg-page: #f8fafc;
+                --ph-bg-card: #ffffff;
+                --ph-bg-alt: #f1f5f9;
+                --ph-border: #e2e8f0;
+                --ph-text-primary: #0f172a;
+                --ph-text-secondary: #475569;
+             }
+ 
+             /* Root background */
+             .pharma-supply-light.min-h-screen {
+                background-color: var(--ph-bg-page) !important;
+                color: var(--ph-text-primary) !important;
+             }
+ 
+             /* Headers & Card Backings */
+             .pharma-supply-light .bg-\\[\\#171920\\],
+             .pharma-supply-light .bg-slate-950,
+             .pharma-supply-light .bg-slate-900,
+             .pharma-supply-light .bg-slate-950\\/50,
+             .pharma-supply-light .bg-\\[\\#272a33\\] {
+                background-color: var(--ph-bg-card) !important;
+                border-color: var(--ph-border) !important;
+                color: var(--ph-text-primary) !important;
+             }
+ 
+             /* Tab Navigation Pill Bar Container */
+             .pharma-supply-light .bg-\\[\\#171920\\] {
+                background-color: var(--ph-bg-alt) !important;
+                border-color: var(--ph-border) !important;
+             }
+ 
+             /* Inactive switcher buttons */
+             .pharma-supply-light .bg-\\[\\#171920\\] button.text-slate-400 {
+                background-color: #ffffff !important;
+                border: 1.8px solid var(--ph-bg-alt) !important;
+                color: var(--ph-text-secondary) !important;
+                margin: 2px !important;
+             }
+             .pharma-supply-light .bg-\\[\\#171920\\] button.text-slate-400:hover {
+                color: var(--ph-text-primary) !important;
+                background-color: #f8fafc !important;
+             }
+ 
+             /* Active switcher buttons */
+             .pharma-supply-light .bg-\\[\\#171920\\] button.bg-slate-800 {
+                background-color: #ffffff !important;
+                border: 1.8px solid #0f172a !important;
+                color: #06b6d4 !important;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+                margin: 2px !important;
+             }
+ 
+             /* Text Elements */
+             .pharma-supply-light .text-white,
+             .pharma-supply-light .text-slate-100,
+             .pharma-supply-light .text-slate-200 {
+                color: var(--ph-text-primary) !important;
+             }
+             .pharma-supply-light .text-slate-300,
+             .pharma-supply-light .text-slate-400 {
+                color: var(--ph-text-secondary) !important;
+             }
+             .pharma-supply-light .border-slate-800,
+             .pharma-supply-light .border-slate-700 {
+                border-color: var(--ph-border) !important;
+             }
+ 
+             /* Tables */
+             .pharma-supply-light table {
+                background-color: var(--ph-bg-card) !important;
+             }
+             .pharma-supply-light tr.bg-\\[\\#171920\\] {
+                background-color: var(--ph-bg-alt) !important;
+                border-color: var(--ph-border) !important;
+             }
+             .pharma-supply-light tr.bg-\\[\\#171920\\] th {
+                color: var(--ph-text-secondary) !important;
+                border-color: var(--ph-border) !important;
+             }
+             .pharma-supply-light td {
+                border-color: var(--ph-border) !important;
+                color: #334155 !important;
+             }
+             .pharma-supply-light tbody tr:hover {
+                background-color: #f8fafc !important;
+             }
+ 
+             /* Inputs & Forms */
+             .pharma-supply-light input,
+             .pharma-supply-light select,
+             .pharma-supply-light textarea {
+                background-color: #ffffff !important;
+                border-color: var(--ph-border) !important;
+                color: var(--ph-text-primary) !important;
+             }
+             .pharma-supply-light input::placeholder {
+                color: #94a3b8 !important;
+             }
+             .pharma-supply-light input:focus,
+             .pharma-supply-light select:focus,
+             .pharma-supply-light textarea:focus {
+                border-color: #06b6d4 !important;
+                box-shadow: 0 0 0 3px rgba(6,182,212,0.1) !important;
+             }
+ 
+             /* Modals (Fixed position modals) */
+             .pharma-supply-light .fixed.inset-0.bg-\\[\\#171920\\] {
+                background-color: rgba(15, 23, 42, 0.4) !important;
+                backdrop-blur: 12px !important;
+             }
+             .pharma-supply-light .fixed.inset-0.bg-\\[\\#171920\\] > div {
+                background-color: #ffffff !important;
+                border: 1px solid var(--ph-border) !important;
+                color: var(--ph-text-primary) !important;
+                border-radius: 2.5rem !important;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+             }
+             .pharma-supply-light .fixed.inset-0.bg-\\[\\#171920\\] div.bg-\\[\\#171920\\] {
+                background-color: #ffffff !important;
+                border-color: var(--ph-border) !important;
+             }
+             .pharma-supply-light .fixed.inset-0.bg-\\[\\#171920\\] h3 {
+                color: var(--ph-text-primary) !important;
+             }
+             .pharma-supply-light .fixed.inset-0.bg-\\[\\#171920\\] select option {
+                background-color: #ffffff !important;
+                color: var(--ph-text-primary) !important;
+             }
+             `
+          }} />}
+          {/* Premium Header */}
+          <div className="bg-[#171920] border-b border-slate-800 sticky top-0 z-40 shadow-2xl shadow-slate-950/50">
+             <div className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                   <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-3xl flex items-center justify-center text-3xl shadow-sm transform hover:rotate-6 transition-all duration-500 flex-shrink-0">
+                         🚛
+                      </div>
+                      <div>
+                         <div className="flex items-center gap-4 flex-wrap">
+                            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{t.title}</h1>
+                            <span className="px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">IFRS IAS 2</span>
+                         </div>
+                         <p className="text-slate-400 font-bold text-xs sm:text-sm mt-1.5 uppercase tracking-widest line-clamp-2">
+                            {t.subtitle}
+                         </p>
+                      </div>
+                   </div>
+                </div>
+ 
+                {/* Gorgeous Tab Navigation Pill Container */}
+                <div className="bg-[#171920] p-2.5 rounded-[2rem] border border-slate-800 shadow-inner flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+                   {[
+                      { id: 'shipments', label: t.tabs.shipments, icon: '📍' },
+                      { id: 'items', label: t.tabs.items, icon: '📦' },
+                      { id: 'expenses', label: t.tabs.expenses, icon: '🚚' },
+                      { id: 'currencies', label: t.tabs.currencies, icon: '💱' }
+                   ].map(tab => (
+                      <button
+                         key={tab.id}
+                         onClick={() => setActiveTab(tab.id)}
+                         className={`flex-1 min-w-[240px] px-6 py-4 rounded-2xl text-xs uppercase font-black tracking-wider transition-all duration-300 flex items-center justify-center gap-3 border ${
+                            activeTab === tab.id
+                               ? 'bg-[#29384e] border-cyan-500/30 text-cyan-400 shadow-md transform -translate-y-0.5'
+                               : 'bg-[#272a33] text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/80 hover:border-slate-700'
+                         }`}
+                      >
+                         <span className="text-lg">{tab.icon}</span> 
+                         <span className="truncate">{tab.label}</span>
+                      </button>
+                   ))}
+                </div>
+             </div>
+          </div>
 
          <div className="max-w-[1600px] mx-auto px-10 py-12 space-y-12">
             {loading ? (
@@ -906,7 +906,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 1: SHIPMENTS TRACKER ================= */}
                   {activeTab === 'shipments' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex justify-between items-center bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <div className="flex justify-between items-center bg-[#272a33] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.shipments.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.shipments.sub}</p>
@@ -921,7 +921,7 @@ export default function PharmaSupplyChain() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                            {shipments.map(s => (
-                              <div key={s.id} className="bg-[#131b2e] border border-slate-800 rounded-3xl p-8 space-y-8 hover:border-slate-700 transition-all group flex flex-col justify-between shadow-xl shadow-slate-950/50">
+                              <div key={s.id} className="bg-[#272a33] border border-slate-800 rounded-3xl p-8 space-y-8 hover:border-slate-700 transition-all group flex flex-col justify-between shadow-xl shadow-slate-950/50">
                                  <div className="space-y-6">
                                     <div className="flex justify-between items-start">
                                        <div>
@@ -948,7 +948,7 @@ export default function PharmaSupplyChain() {
                                     </div>
 
                                     {/* Financial Breakdown */}
-                                    <div className="space-y-3 bg-slate-950/50 p-6 rounded-2xl border border-slate-800 font-mono">
+                                    <div className="space-y-3 bg-[#171920]/50 p-6 rounded-2xl border border-slate-800 font-mono">
                                        <div className="flex justify-between items-center text-xs">
                                           <span className="text-slate-400 font-sans font-bold">{t.shipments.invVal}</span>
                                           <span className="font-black text-white">{Number(s.initial_value).toLocaleString()} <span className="text-[10px] text-cyan-400 font-sans">{s.currency}</span></span>
@@ -981,7 +981,7 @@ export default function PharmaSupplyChain() {
                                        </button>
                                     </div>
 
-                                    <div className="flex items-center gap-2 bg-[#070a13] p-1.5 rounded-xl border border-slate-800">
+                                    <div className="flex items-center gap-2 bg-[#171920] p-1.5 rounded-xl border border-slate-800">
                                        <span className="text-[10px] font-black text-slate-500 px-3 uppercase tracking-widest">{t.shipments.updatePath}</span>
                                        <select
                                           value={s.status}
@@ -1020,7 +1020,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 1.5: SHIPMENT ITEMS (CBM PRORATION) ================= */}
                   {activeTab === 'items' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#272a33] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.items.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.items.sub}</p>
@@ -1112,19 +1112,19 @@ export default function PharmaSupplyChain() {
                            );
                         })()}
 
-                        <div className="bg-[#131b2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="bg-[#272a33] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
                            <div className="overflow-x-auto">
                               <table className="w-full text-right whitespace-nowrap">
                                  <thead>
-                                    <tr className="bg-[#070a13] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
+                                    <tr className="bg-[#171920] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
                                        <th className="px-8 py-6">{t.items.table.shipNo}</th>
                                        <th className="px-8 py-6">{t.items.table.itemName}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.qty}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.buyPrice}</th>
                                        <th className="px-8 py-6 text-center">{t.items.table.unitCbm}</th>
                                        <th className="px-8 py-6 text-center bg-slate-900/30">{t.items.table.totalCbm}</th>
-                                       <th className="px-8 py-6 text-center text-amber-400 bg-[#131b2e]">{t.items.table.shipShare}</th>
-                                       <th className="px-8 py-6 text-center text-emerald-400 bg-[#111827] font-black text-sm">{t.items.table.landedUnit}</th>
+                                       <th className="px-8 py-6 text-center text-amber-400 bg-[#272a33]">{t.items.table.shipShare}</th>
+                                       <th className="px-8 py-6 text-center text-emerald-400 bg-[#171920] font-black text-sm">{t.items.table.landedUnit}</th>
                                        <th className="px-8 py-6 text-center bg-slate-900/90">{t.items.table.actions}</th>
                                     </tr>
                                  </thead>
@@ -1151,16 +1151,16 @@ export default function PharmaSupplyChain() {
                                              <td className="px-8 py-6 font-black text-xs text-center text-cyan-400">
                                                 {Number(i.cbm_per_unit).toFixed(4)} <span className="text-[10px] text-slate-500">m³</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-sm text-center text-cyan-300 bg-[#131b2e]">
+                                             <td className="px-8 py-6 font-black text-sm text-center text-cyan-300 bg-[#272a33]">
                                                 {Number(i.total_cbm).toFixed(4)} <span className="text-[10px] text-slate-500">m³</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-sm text-center text-amber-400 bg-[#131b2e]">
+                                             <td className="px-8 py-6 font-black text-sm text-center text-amber-400 bg-[#272a33]">
                                                 {Number(i.allocated_shipping_ils).toLocaleString()} <span className="text-[10px] text-slate-500">ILS</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-lg text-center text-emerald-400 bg-[#161e2f] shadow-inner">
+                                             <td className="px-8 py-6 font-black text-lg text-center text-emerald-400 bg-[#272a33] shadow-inner">
                                                 {Number(i.landed_unit_cost_ils).toFixed(2)} <span className="text-xs text-slate-500 font-sans">ILS</span>
                                              </td>
-                                             <td className="px-8 py-6 font-black text-center bg-[#111827]">
+                                             <td className="px-8 py-6 font-black text-center bg-[#171920]">
                                                 <div className="flex items-center justify-center gap-2 font-sans">
                                                    <button
                                                       onClick={() => handleOpenEdit('shipment_items', i)}
@@ -1191,7 +1191,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 2: LANDED COST & EXPENSES ================= */}
                   {activeTab === 'expenses' && (
                      <div className="space-y-10 animate-fade-in">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#272a33] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.expenses.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.expenses.sub}</p>
@@ -1218,19 +1218,19 @@ export default function PharmaSupplyChain() {
                            </div>
                         </div>
 
-                        <div className="bg-[#131b2e] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="bg-[#272a33] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
                            <div className="overflow-x-auto">
                               <table className="w-full text-right whitespace-nowrap">
                                  <thead>
-                                    <tr className="bg-[#070a13] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
+                                    <tr className="bg-[#171920] text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-800">
                                        <th className="px-8 py-6">{t.expenses.table.shipNo}</th>
                                        <th className="px-8 py-6">{t.expenses.table.expType}</th>
                                        <th className="px-8 py-6">{t.expenses.table.paidTo}</th>
                                        <th className="px-8 py-6 text-center">{t.expenses.table.amount}</th>
                                        <th className="px-8 py-6 text-center">{t.expenses.table.rate}</th>
-                                       <th className="px-8 py-6 text-center bg-[#131b2e]">{t.expenses.table.amountIls}</th>
+                                       <th className="px-8 py-6 text-center bg-[#272a33]">{t.expenses.table.amountIls}</th>
                                        <th className="px-8 py-6">{t.expenses.table.ref}</th>
-                                       <th className="px-8 py-6 text-center bg-[#111827]">{t.expenses.table.actions}</th>
+                                       <th className="px-8 py-6 text-center bg-[#171920]">{t.expenses.table.actions}</th>
                                     </tr>
                                  </thead>
                                  <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -1256,7 +1256,7 @@ export default function PharmaSupplyChain() {
                                                 {Number(e.amount_ils).toLocaleString()} <span className="text-xs text-slate-500 font-sans">ILS</span>
                                              </td>
                                              <td className="px-8 py-6 font-black text-xs text-slate-500 uppercase">{e.reference_no || `EXP-${e.id}`}</td>
-                                             <td className="px-8 py-6 font-black text-center bg-[#161e2f]">
+                                             <td className="px-8 py-6 font-black text-center bg-[#272a33]">
                                                 <div className="flex items-center justify-center gap-2 font-sans">
                                                    <button
                                                       onClick={() => handleOpenEdit('shipment_expenses', e)}
@@ -1287,7 +1287,7 @@ export default function PharmaSupplyChain() {
                   {/* ================= TAB 3: CURRENCIES HUB ================= */}
                   {activeTab === 'currencies' && (
                      <div className="space-y-10 animate-fade-in max-w-5xl mx-auto">
-                        <div className="flex justify-between items-center bg-[#131b2e] border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <div className="flex justify-between items-center bg-[#272a33] border border-slate-800 p-8 rounded-3xl shadow-2xl">
                            <div>
                               <h3 className="text-xl font-black text-white tracking-tight">{t.currencies.header}</h3>
                               <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest uppercase">{t.currencies.sub}</p>
@@ -1302,7 +1302,7 @@ export default function PharmaSupplyChain() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                            {currencies.map(c => (
-                              <div key={c.id} className="bg-[#131b2e] border border-slate-800 rounded-3xl p-8 space-y-6 hover:border-slate-700 transition-all shadow-xl shadow-slate-950/50 flex flex-col justify-between">
+                              <div key={c.id} className="bg-[#272a33] border border-slate-800 rounded-3xl p-8 space-y-6 hover:border-slate-700 transition-all shadow-xl shadow-slate-950/50 flex flex-col justify-between">
                                  <div className="flex justify-between items-center border-b border-slate-800 pb-6">
                                     <div className="flex items-center gap-4">
                                        <span className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center font-mono font-black text-lg text-cyan-400 shadow-md">
@@ -1331,7 +1331,7 @@ export default function PharmaSupplyChain() {
                                     </div>
                                  </div>
 
-                                 <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-800 flex justify-between items-center font-mono">
+                                 <div className="bg-[#171920]/50 p-6 rounded-2xl border border-slate-800 flex justify-between items-center font-mono">
                                     <span className="text-slate-400 font-sans font-bold text-xs">{t.currencies.rateLabel}</span>
                                     <span className="text-2xl font-black text-white">{Number(c.rate_to_ils).toFixed(4)} <span className="text-xs text-cyan-400 font-sans">ILS</span></span>
                                  </div>
@@ -1350,9 +1350,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 1: CREATE/EDIT SHIPMENT ================= */}
          {isShipmentModalOpen && (
-            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
-               <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
+            <div className="fixed inset-0 bg-[#171920]/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+               <div className="bg-[#272a33] border border-[#3e4452] rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
+                  <div className="p-10 border-b border-[#3e4452] flex justify-between items-center bg-[#171920]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>📦</span> {editMode ? t.modals.shipment.editTitle : t.modals.shipment.addTitle}
                      </h3>
@@ -1367,7 +1367,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={shipmentForm.shipment_no}
                               onChange={(e) => setShipmentForm({...shipmentForm, shipment_no: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1375,7 +1375,7 @@ export default function PharmaSupplyChain() {
                            <select
                               value={shipmentForm.currency}
                               onChange={(e) => setShipmentForm({...shipmentForm, currency: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            >
                               <option value="USD">USD</option>
                               <option value="EGP">EGP</option>
@@ -1393,7 +1393,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={shipmentForm.origin}
                               onChange={(e) => setShipmentForm({...shipmentForm, origin: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1403,7 +1403,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={shipmentForm.destination}
                               onChange={(e) => setShipmentForm({...shipmentForm, destination: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1418,7 +1418,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.shipment.initValHolder}
                               value={shipmentForm.initial_value}
                               onChange={(e) => setShipmentForm({...shipmentForm, initial_value: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1429,7 +1429,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={shipmentForm.exchange_rate_initial}
                               onChange={(e) => setShipmentForm({...shipmentForm, exchange_rate_initial: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1441,11 +1441,11 @@ export default function PharmaSupplyChain() {
                            value={shipmentForm.notes}
                            onChange={(e) => setShipmentForm({...shipmentForm, notes: e.target.value})}
                            placeholder={t.modals.shipment.notesHolder}
-                           className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                           className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl p-6 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                         ></textarea>
                      </div>
 
-                     <div className="flex gap-4 pt-4 border-t border-slate-800">
+                     <div className="flex gap-4 pt-4 border-t border-[#3e4452]">
                         <button
                            type="submit"
                            className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-50 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
@@ -1455,7 +1455,7 @@ export default function PharmaSupplyChain() {
                         <button
                            type="button"
                            onClick={() => setIsShipmentModalOpen(false)}
-                           className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest transition-all"
+                           className="px-8 py-4 bg-[#171920] hover:bg-slate-800 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest border border-[#3e4452] transition-all"
                         >
                            {t.modals.cancel}
                         </button>
@@ -1467,9 +1467,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 1.5: CREATE/EDIT ITEM ================= */}
          {isItemModalOpen && (
-            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
-               <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
+            <div className="fixed inset-0 bg-[#171920]/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+               <div className="bg-[#272a33] border border-[#3e4452] rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
+                  <div className="p-10 border-b border-[#3e4452] flex justify-between items-center bg-[#171920]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>📦</span> {editMode ? t.modals.item.editTitle : t.modals.item.addTitle}
                      </h3>
@@ -1483,7 +1483,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={itemForm.shipment_id}
                               onChange={(e) => setItemForm({...itemForm, shipment_id: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            >
                               <option value="">{t.modals.item.shipSelectHolder}</option>
                               {shipments.map(s => (
@@ -1499,7 +1499,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.item.nameHolder}
                               value={itemForm.item_name}
                               onChange={(e) => setItemForm({...itemForm, item_name: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1513,7 +1513,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.item.qtyHolder}
                               value={itemForm.quantity}
                               onChange={(e) => setItemForm({...itemForm, quantity: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1525,7 +1525,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.item.buyPriceHolder}
                               value={itemForm.buy_price}
                               onChange={(e) => setItemForm({...itemForm, buy_price: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1536,7 +1536,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={itemForm.cbm_per_unit}
                               onChange={(e) => setItemForm({...itemForm, cbm_per_unit: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1548,7 +1548,7 @@ export default function PharmaSupplyChain() {
                               type="text"
                               value={itemForm.batch_no}
                               onChange={(e) => setItemForm({...itemForm, batch_no: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1557,12 +1557,12 @@ export default function PharmaSupplyChain() {
                               type="date"
                               value={itemForm.expiry_date}
                               onChange={(e) => setItemForm({...itemForm, expiry_date: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
 
-                     <div className="flex gap-4 pt-4 border-t border-slate-800">
+                     <div className="flex gap-4 pt-4 border-t border-[#3e4452]">
                         <button
                            type="submit"
                            className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
@@ -1572,7 +1572,7 @@ export default function PharmaSupplyChain() {
                         <button
                            type="button"
                            onClick={() => setIsItemModalOpen(false)}
-                           className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest transition-all"
+                           className="px-8 py-4 bg-[#171920] hover:bg-slate-800 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest border border-[#3e4452] transition-all"
                         >
                            {t.modals.cancel}
                         </button>
@@ -1584,9 +1584,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 2: CREATE/EDIT EXPENSE ================= */}
          {isExpenseModalOpen && (
-            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
-               <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
+            <div className="fixed inset-0 bg-[#171920]/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+               <div className="bg-[#272a33] border border-[#3e4452] rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
+                  <div className="p-10 border-b border-[#3e4452] flex justify-between items-center bg-[#171920]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>🚚</span> {editMode ? t.modals.expense.editTitle : t.modals.expense.addTitle}
                      </h3>
@@ -1600,7 +1600,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={expenseForm.shipment_id}
                               onChange={(e) => setExpenseForm({...expenseForm, shipment_id: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            >
                               <option value="">{t.modals.expense.shipSelectHolder}</option>
                               {shipments.map(s => (
@@ -1613,7 +1613,7 @@ export default function PharmaSupplyChain() {
                            <select
                               value={expenseForm.expense_type}
                               onChange={(e) => setExpenseForm({...expenseForm, expense_type: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            >
                               <option value={language === 'en' ? 'Inland Freight Egypt' : 'نقل بري مصر'}>{t.modals.expense.types.t1}</option>
                               <option value={language === 'en' ? 'Customs Clearance' : 'تخليص جمركي'}>{t.modals.expense.types.t2}</option>
@@ -1634,7 +1634,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.expense.amountHolder}
                               value={expenseForm.amount}
                               onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-amber-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1642,7 +1642,7 @@ export default function PharmaSupplyChain() {
                            <select
                               value={expenseForm.currency}
                               onChange={(e) => setExpenseForm({...expenseForm, currency: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            >
                               <option value="EGP">EGP</option>
                               <option value="USD">USD</option>
@@ -1658,7 +1658,7 @@ export default function PharmaSupplyChain() {
                               required
                               value={expenseForm.exchange_rate_to_ils}
                               onChange={(e) => setExpenseForm({...expenseForm, exchange_rate_to_ils: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-mono font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1671,7 +1671,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.expense.paidToHolder}
                               value={expenseForm.paid_to}
                               onChange={(e) => setExpenseForm({...expenseForm, paid_to: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                         <div className="space-y-3">
@@ -1681,7 +1681,7 @@ export default function PharmaSupplyChain() {
                               placeholder={t.modals.expense.refHolder}
                               value={expenseForm.reference_no}
                               onChange={(e) => setExpenseForm({...expenseForm, reference_no: e.target.value})}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                              className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                            />
                         </div>
                      </div>
@@ -1693,11 +1693,11 @@ export default function PharmaSupplyChain() {
                            value={expenseForm.notes}
                            onChange={(e) => setExpenseForm({...expenseForm, notes: e.target.value})}
                            placeholder={t.modals.expense.notesHolder}
-                           className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
+                           className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl p-6 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none shadow-inner"
                         ></textarea>
                      </div>
 
-                     <div className="flex gap-4 pt-4 border-t border-slate-800">
+                     <div className="flex gap-4 pt-4 border-t border-[#3e4452]">
                         <button
                            type="submit"
                            className="flex-1 py-4 bg-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-cyan-500/20 transition-all"
@@ -1707,7 +1707,7 @@ export default function PharmaSupplyChain() {
                         <button
                            type="button"
                            onClick={() => setIsExpenseModalOpen(false)}
-                           className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest transition-all"
+                           className="px-8 py-4 bg-[#171920] hover:bg-slate-800 text-slate-300 font-black rounded-2xl text-xs uppercase tracking-widest border border-[#3e4452] transition-all"
                         >
                            {t.modals.cancel}
                         </button>
@@ -1719,9 +1719,9 @@ export default function PharmaSupplyChain() {
 
          {/* ================= MODAL 3: CREATE/EDIT CURRENCY ================= */}
          {isCurrencyModalOpen && (
-            <div className="fixed inset-0 bg-[#070a13] flex items-center justify-center z-50 p-6 animate-fade-in">
-               <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
-                  <div className="p-10 border-b border-slate-800 flex justify-between items-center bg-[#070a13]">
+            <div className="fixed inset-0 bg-[#171920]/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+               <div className="bg-[#272a33] border border-[#3e4452] rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl shadow-cyan-500/10 animate-scale-up">
+                  <div className="p-10 border-b border-[#3e4452] flex justify-between items-center bg-[#171920]">
                      <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                         <span>💱</span> {editMode ? t.modals.currency.editTitle : t.modals.currency.addTitle}
                      </h3>
@@ -1734,7 +1734,7 @@ export default function PharmaSupplyChain() {
                            required
                            value={currencyForm.currency_code}
                            onChange={(e) => setCurrencyForm({...currencyForm, currency_code: e.target.value})}
-                           className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
+                           className="w-full bg-[#171920] border border-[#3e4452] rounded-2xl px-6 py-4 text-sm font-black text-cyan-400 focus:border-cyan-500 focus:outline-none shadow-inner"
                         >
                            <option value="">{t.modals.currency.codeHolder}</option>
                            <option value="USD">USD</option>
