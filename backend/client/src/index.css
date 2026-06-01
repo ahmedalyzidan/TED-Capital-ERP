@@ -1008,3 +1008,35 @@
   color: #cbd5e1 !important;
   border-color: #3e4452 !important;
 }
+
+/* Custom Date Input DD/MM/YYYY Display and Masking */
+input[type="date"] {
+  position: relative;
+  color: transparent !important;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  color: transparent !important;
+}
+
+input[type="date"]::before {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: inherit;
+  pointer-events: none;
+  display: block;
+}
+
+input[type="date"][data-placeholder-hidden="true"]::before {
+  content: attr(data-date);
+  color: #1e293b;
+}
+
+.dark input[type="date"][data-placeholder-hidden="true"]::before {
+  color: #f1f5f9;
+}
